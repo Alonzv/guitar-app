@@ -10,9 +10,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Guitar Composer',
-        short_name: 'GuitarComp',
-        description: 'Web guitar composition tool — chord builder, progressions, scales',
+        name: 'ScaleUp',
+        short_name: 'ScaleUp',
+        description: 'ScaleUp — chord builder, progressions, and scale visualizer',
         theme_color: '#1e1b4b',
         background_color: '#0d0c1a',
         display: 'standalone',

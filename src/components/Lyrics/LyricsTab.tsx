@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react';
 import type { ChordInProgression, ChordPlacement } from '../../types/music';
 import { formatChordName } from '../../utils/chordIdentifier';
+import { exportLyricsPDF } from '../../utils/pdfExport';
+import { useSongs } from '../../hooks/useSongs';
+import { useAuth } from '../../contexts/AuthContext';
 import { T, card } from '../../theme';
 
 interface Props {
@@ -24,8 +27,18 @@ export function LyricsTab({ progression }: Props) {
   const [lyricsText, setLyricsText] = useState('');
   const [lyricsChords, setLyricsChords] = useState<ChordPlacement[]>([]);
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
-  const [isRtl, setIsRtl] = useState(true); // default RTL for Hebrew
+  const [isRtl, setIsRtl] = useState(true);
+
+  // Save / Load state
+  const [saveTitle, setSaveTitle] = useState('');
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const dragData = useRef<{ type: 'new'; chordName: string } | { type: 'move'; placementId: string } | null>(null);
+
+  const { user } = useAuth();
+  const { songs, saveSong, deleteSong } = useSongs();
 
   const { lines } = tokenizeLyrics(lyricsText);
   const totalWords = lines.reduce((sum, l) => sum + l.length, 0);
@@ -83,11 +96,31 @@ export function LyricsTab({ progression }: Props) {
   const chordAtWord = (wordIndex: number) =>
     lyricsChords.find(c => c.wordIndex === wordIndex);
 
+  const handleSave = async () => {
+    if (!saveTitle.trim() || !user) return;
+    setSaving(true);
+    await saveSong({
+      title: saveTitle.trim(),
+      lyricsText,
+      lyricsChords,
+      progression,
+    });
+    setSaving(false);
+    setSaveTitle('');
+    setShowSaveInput(false);
+  };
+
+  const handleLoadSong = (song: ReturnType<typeof useSongs>['songs'][0]) => {
+    setLyricsText(song.lyricsText);
+    setLyricsChords(song.lyricsChords);
+    setShowSaved(false);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* ── RTL / LTR toggle ── */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      {/* ── Top bar: RTL toggle + Save/Export ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <button
           onClick={() => setIsRtl(v => !v)}
           style={{
@@ -100,7 +133,115 @@ export function LyricsTab({ progression }: Props) {
         >
           {isRtl ? 'כיוון: ימין ← שמאל' : 'Direction: Left → Right'}
         </button>
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          {lyricsText.trim() && (
+            <button
+              onClick={() => exportLyricsPDF(saveTitle || 'שיר', lyricsText, lyricsChords)}
+              style={{
+                padding: '5px 12px', borderRadius: 16, border: `1px solid ${T.border}`,
+                background: T.bgInput, color: T.textMuted, fontSize: 11, cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              📄 PDF
+            </button>
+          )}
+          {user ? (
+            <button
+              onClick={() => setShowSaveInput(v => !v)}
+              style={{
+                padding: '5px 12px', borderRadius: 16, border: `1px solid ${T.secondary}`,
+                background: showSaveInput ? T.secondaryBg : T.bgInput,
+                color: T.secondary, fontSize: 11, cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              💾 שמור שיר
+            </button>
+          ) : (
+            <span style={{ fontSize: 11, color: T.textDim, alignSelf: 'center' }}>כנס כדי לשמור</span>
+          )}
+        </div>
       </div>
+
+      {/* ── Save input ── */}
+      {showSaveInput && user && (
+        <div style={card({ display: 'flex', gap: 8 })}>
+          <input
+            value={saveTitle}
+            onChange={e => setSaveTitle(e.target.value)}
+            placeholder="שם השיר…"
+            onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+            style={{
+              flex: 1, padding: '8px 12px', borderRadius: 8,
+              border: `1px solid ${T.border}`, background: T.bgInput,
+              color: T.text, fontSize: 13, fontFamily: 'inherit', direction: 'rtl',
+            }}
+          />
+          <button
+            onClick={handleSave}
+            disabled={!saveTitle.trim() || saving}
+            style={{
+              padding: '8px 16px', borderRadius: 8, border: 'none',
+              background: !saveTitle.trim() || saving ? T.border : T.primary,
+              color: T.text, fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {saving ? '…' : 'שמור'}
+          </button>
+        </div>
+      )}
+
+      {/* ── My Songs ── */}
+      {user && songs.length > 0 && (
+        <div style={card()}>
+          <button
+            onClick={() => setShowSaved(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+              color: T.textMuted, fontSize: 12, fontWeight: 600, padding: 0,
+            }}
+          >
+            <span>🎵 השירים שלי ({songs.length})</span>
+            <span>{showSaved ? '▲' : '▼'}</span>
+          </button>
+
+          {showSaved && (
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {songs.map(s => (
+                <div key={s.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: T.bgInput, borderRadius: 8, padding: '8px 12px',
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: T.text, direction: 'rtl' }}>{s.title}</span>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button
+                      onClick={() => handleLoadSong(s)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 12,
+                        background: T.secondary, border: 'none',
+                        color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >
+                      טען
+                    </button>
+                    <button
+                      onClick={() => deleteSong(s.id)}
+                      style={{
+                        padding: '4px 8px', borderRadius: 12,
+                        background: 'none', border: `1px solid ${T.border}`,
+                        color: '#e05252', fontSize: 11, cursor: 'pointer',
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Chord strip ── */}
       <div style={card()}>
@@ -131,7 +272,7 @@ export function LyricsTab({ progression }: Props) {
                     cursor: 'grab',
                     userSelect: 'none',
                     transition: 'border-color 0.15s, background 0.15s',
-                    direction: 'ltr', // chord names are always LTR
+                    direction: 'ltr',
                   }}
                 >
                   {name}
@@ -214,7 +355,6 @@ export function LyricsTab({ progression }: Props) {
                         style={{
                           position: 'relative',
                           display: 'inline-block',
-                          // In RTL mode, margin goes on the left side (before the word in visual order)
                           marginLeft: isRtl ? 8 : 0,
                           marginRight: isRtl ? 0 : 8,
                           paddingTop: 22,
@@ -225,7 +365,7 @@ export function LyricsTab({ progression }: Props) {
                         onDrop={e => handleWordDrop(e, globalIdx)}
                         onClick={() => handleWordClick(globalIdx)}
                       >
-                        {/* Chord label — always LTR regardless of text direction */}
+                        {/* Chord label */}
                         {placement && (
                           <span
                             draggable
@@ -234,7 +374,6 @@ export function LyricsTab({ progression }: Props) {
                             style={{
                               position: 'absolute',
                               top: 0,
-                              // In RTL, align chord label to the right edge of the word span
                               right: isRtl ? 0 : 'auto',
                               left: isRtl ? 'auto' : 0,
                               fontSize: 12,
@@ -244,7 +383,7 @@ export function LyricsTab({ progression }: Props) {
                               whiteSpace: 'nowrap',
                               userSelect: 'none',
                               lineHeight: 1,
-                              direction: 'ltr', // chord names are always LTR
+                              direction: 'ltr',
                             }}
                             title="לחץ להסרה · גרור להזזה"
                           >

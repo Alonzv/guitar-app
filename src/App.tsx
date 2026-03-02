@@ -6,6 +6,8 @@ import { LyricsTab } from './components/Lyrics/LyricsTab';
 import { ScaleDetector } from './components/ScalePanel/ScaleDetector';
 import { ScaleVisualizer } from './components/ScalePanel/ScaleVisualizer';
 import { ScaleExplorer } from './components/ScalePanel/ScaleExplorer';
+import { AuthModal } from './components/Auth/AuthModal';
+import { useAuth } from './contexts/AuthContext';
 import { T } from './theme';
 
 type Tab = 'chord' | 'picker' | 'explorer' | 'scales' | 'visualizer' | 'lyrics';
@@ -23,15 +25,91 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chord');
   const [progression, setProgression] = useState<ChordInProgression[]>([]);
   const [selectedScale, setSelectedScale] = useState<ScaleMatch | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const { user, logout, loading } = useAuth();
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* ── Header ── */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
-        <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-h1-size)', fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.3px' }}>
-          🎸 Guitar Composer
-        </h1>
+
+        {/* Title row with auth button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--gc-h1-mb)' }}>
+          <div style={{ width: 36 }} /> {/* spacer for centering */}
+          <h1 style={{ fontSize: 'var(--gc-h1-size)', fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.3px' }}>
+            ScaleUp
+          </h1>
+
+          {/* Auth button */}
+          {!loading && (
+            user ? (
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowUserMenu(v => !v)}
+                  style={{
+                    width: 36, height: 36, borderRadius: '50%', border: `2px solid ${T.secondary}`,
+                    background: T.bgCard, cursor: 'pointer', padding: 0, overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  title={user.displayName ?? user.email ?? 'משתמש'}
+                >
+                  {user.photoURL
+                    ? <img src={user.photoURL} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
+                    : <span style={{ fontSize: 16, color: T.text }}>{(user.displayName ?? user.email ?? '?')[0].toUpperCase()}</span>
+                  }
+                </button>
+
+                {showUserMenu && (
+                  <div
+                    onClick={() => setShowUserMenu(false)}
+                    style={{
+                      position: 'fixed', inset: 0, zIndex: 500,
+                    }}
+                  >
+                    <div
+                      onClick={e => e.stopPropagation()}
+                      style={{
+                        position: 'absolute', top: 44, right: 0,
+                        background: T.bgCard, border: `1px solid ${T.border}`,
+                        borderRadius: 12, padding: '12px 0', minWidth: 180, zIndex: 501,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                      }}
+                    >
+                      <p style={{ margin: '0 16px 10px', fontSize: 12, color: T.textMuted, borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
+                        {user.displayName ?? user.email}
+                      </p>
+                      <button
+                        onClick={async () => { setShowUserMenu(false); await logout(); }}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'right',
+                          padding: '8px 16px', background: 'none', border: 'none',
+                          color: '#e05252', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        יציאה
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuth(true)}
+                style={{
+                  padding: '6px 12px', borderRadius: 20,
+                  background: T.primary, border: 'none',
+                  color: T.text, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                כניסה
+              </button>
+            )
+          )}
+          {loading && <div style={{ width: 36 }} />}
+        </div>
 
         {/* Tab buttons */}
         <div className="gc-tabs">
@@ -67,6 +145,7 @@ export default function App() {
             progression={progression}
             onAddToProgression={(item) => setProgression(prev => [...prev, item])}
             onRemoveFromProgression={(id) => setProgression(prev => prev.filter(c => c.id !== id))}
+            onLoadProgression={(prog) => setProgression(prog)}
           />
         )}
         {activeTab === 'picker' && (
@@ -86,6 +165,8 @@ export default function App() {
           <LyricsTab progression={progression} />
         )}
       </main>
+
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
   );
 }

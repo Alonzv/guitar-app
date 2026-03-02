@@ -7,12 +7,16 @@ import { VoicingVariations } from './VoicingVariations';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { suggestNextChords } from '../../utils/progressionHelper';
 import { findChordVoicings } from '../../utils/chordVoicings';
+import { exportProgressionPDF } from '../../utils/pdfExport';
+import { useProgressions } from '../../hooks/useProgressions';
+import { useAuth } from '../../contexts/AuthContext';
 import { T, card, btn } from '../../theme';
 
 interface Props {
   progression: ChordInProgression[];
   onAddToProgression: (item: ChordInProgression) => void;
   onRemoveFromProgression: (id: string) => void;
+  onLoadProgression: (prog: ChordInProgression[]) => void;
 }
 
 interface HoverPreview {
@@ -32,13 +36,22 @@ const GENRES: { id: Genre; label: string }[] = [
 
 const CHORD_ACCENTS = [T.primary, T.secondary, '#8b6914', '#7a3a6a', '#2a6a8a', '#4a7a3a'];
 
-export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromProgression }: Props) {
+export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromProgression, onLoadProgression }: Props) {
   const [activeDots, setActiveDots] = useState<FretPosition[]>([]);
   const [genre, setGenre] = useState<Genre>('any');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showVariations, setShowVariations] = useState(false);
   const [selectedVariationIndex, setSelectedVariationIndex] = useState<number | undefined>(undefined);
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
+
+  // Save / Load state
+  const [saveInput, setSaveInput] = useState('');
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const { user } = useAuth();
+  const { progressions, saveProgression, deleteProgression } = useProgressions();
 
   const handleToggle = (pos: FretPosition) => {
     setActiveDots(prev => {
@@ -63,13 +76,21 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
     setHoverPreview(null);
   };
 
+  const handleSave = async () => {
+    if (!saveInput.trim() || !user) return;
+    setSaving(true);
+    await saveProgression(saveInput.trim(), progression);
+    setSaving(false);
+    setSaveInput('');
+    setShowSaveInput(false);
+  };
+
   const chords = identifyChord(activeDots);
   const suggestions = suggestNextChords(progression, genre);
   const voicings = showVariations && chords.length > 0
     ? findChordVoicings(chords[0].name)
     : [];
 
-  // Lazy-compute the voicing for the hover preview
   const previewVoicings = hoverPreview
     ? findChordVoicings(hoverPreview.suggestion.chord.name, 1)
     : [];
@@ -128,9 +149,65 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
       {/* ── Progression section ── */}
       {progression.length > 0 && (
         <div style={card()}>
-          <p style={{ margin: '0 0 12px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Your Progression · {progression.length} chord{progression.length > 1 ? 's' : ''}
-          </p>
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
+            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Your Progression · {progression.length} chord{progression.length > 1 ? 's' : ''}
+            </p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => exportProgressionPDF('My Progression', progression)}
+                style={{
+                  padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.border}`,
+                  background: T.bgInput, color: T.textMuted, fontSize: 11, cursor: 'pointer', fontWeight: 600,
+                }}
+                title="Export as PDF"
+              >
+                📄 PDF
+              </button>
+              {user ? (
+                <button
+                  onClick={() => setShowSaveInput(v => !v)}
+                  style={{
+                    padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.secondary}`,
+                    background: showSaveInput ? T.secondaryBg : T.bgInput,
+                    color: T.secondary, fontSize: 11, cursor: 'pointer', fontWeight: 600,
+                  }}
+                >
+                  💾 Save
+                </button>
+              ) : (
+                <span style={{ fontSize: 11, color: T.textDim, alignSelf: 'center' }}>
+                  כנס כדי לשמור
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Save input */}
+          {showSaveInput && user && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              <input
+                value={saveInput}
+                onChange={e => setSaveInput(e.target.value)}
+                placeholder="שם הפרוגרסיה…"
+                onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+                style={{
+                  flex: 1, padding: '7px 10px', borderRadius: 8,
+                  border: `1px solid ${T.border}`, background: T.bgInput,
+                  color: T.text, fontSize: 13, fontFamily: 'inherit',
+                  direction: 'rtl',
+                }}
+              />
+              <button
+                onClick={handleSave}
+                disabled={!saveInput.trim() || saving}
+                style={{ ...btn.primary(!saveInput.trim() || saving), padding: '7px 14px', flex: 'none' }}
+              >
+                {saving ? '…' : 'שמור'}
+              </button>
+            </div>
+          )}
 
           {/* Chord cards */}
           <div className="gc-chip-strip">
@@ -188,6 +265,63 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
                 }}>
                 {showSuggestions ? 'Hide Suggestions' : '✨ Suggest Next Chord'}
               </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Saved Progressions ── */}
+      {user && progressions.length > 0 && (
+        <div style={card()}>
+          <button
+            onClick={() => setShowSaved(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+              color: T.textMuted, fontSize: 12, fontWeight: 600, padding: 0,
+            }}
+          >
+            <span>📂 הפרוגרסיות שלי ({progressions.length})</span>
+            <span>{showSaved ? '▲' : '▼'}</span>
+          </button>
+
+          {showSaved && (
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {progressions.map(p => (
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: T.bgInput, borderRadius: 8, padding: '8px 12px',
+                }}>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: T.text, direction: 'rtl', display: 'block' }}>{p.name}</span>
+                    <span style={{ fontSize: 11, color: T.textMuted }}>
+                      {p.progression.map(c => formatChordName(c.chord.name)).join(' – ')}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button
+                      onClick={() => onLoadProgression(p.progression)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 12,
+                        background: T.secondary, border: 'none',
+                        color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >
+                      טען
+                    </button>
+                    <button
+                      onClick={() => deleteProgression(p.id)}
+                      style={{
+                        padding: '4px 8px', borderRadius: 12,
+                        background: 'none', border: `1px solid ${T.border}`,
+                        color: '#e05252', fontSize: 11, cursor: 'pointer',
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
