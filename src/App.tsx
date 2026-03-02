@@ -28,7 +28,7 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading, isAvailable } = useAuth();
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -43,8 +43,8 @@ export default function App() {
             ScaleUp
           </h1>
 
-          {/* Auth button */}
-          {!loading && (
+          {/* Auth button — only shown when Firebase is configured */}
+          {isAvailable && !loading && (
             user ? (
               <div style={{ position: 'relative' }}>
                 <button
@@ -108,7 +108,7 @@ export default function App() {
               </button>
             )
           )}
-          {loading && <div style={{ width: 36 }} />}
+          {(!isAvailable || loading) && <div style={{ width: 36 }} />}
         </div>
 
         {/* Tab buttons */}

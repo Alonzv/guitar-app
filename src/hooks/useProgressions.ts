@@ -3,7 +3,7 @@ import {
   collection, addDoc, deleteDoc,
   doc, query, orderBy, onSnapshot, serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, firebaseReady } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import type { ChordInProgression } from '../types/music';
 
@@ -20,7 +20,7 @@ export function useProgressions() {
   const [loading,      setLoading]      = useState(false);
 
   useEffect(() => {
-    if (!user) { setProgressions([]); return; }
+    if (!user || !firebaseReady) { setProgressions([]); return; }
     setLoading(true);
     const ref = collection(db, 'users', user.uid, 'progressions');
     const q   = query(ref, orderBy('updatedAt', 'desc'));
@@ -32,13 +32,13 @@ export function useProgressions() {
   }, [user]);
 
   const saveProgression = async (name: string, progression: ChordInProgression[]) => {
-    if (!user) return;
+    if (!user || !firebaseReady) return;
     const ref = collection(db, 'users', user.uid, 'progressions');
     await addDoc(ref, { name, progression, updatedAt: serverTimestamp() });
   };
 
   const deleteProgression = async (id: string) => {
-    if (!user) return;
+    if (!user || !firebaseReady) return;
     await deleteDoc(doc(db, 'users', user.uid, 'progressions', id));
   };
 

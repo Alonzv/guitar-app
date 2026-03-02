@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
-  collection, addDoc, updateDoc, deleteDoc,
+  collection, addDoc, deleteDoc,
   doc, query, orderBy, onSnapshot, serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, firebaseReady } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import type { ChordInProgression, ChordPlacement } from '../types/music';
 
@@ -22,7 +22,7 @@ export function useSongs() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user) { setSongs([]); return; }
+    if (!user || !firebaseReady) { setSongs([]); return; }
     setLoading(true);
     const ref = collection(db, 'users', user.uid, 'songs');
     const q   = query(ref, orderBy('updatedAt', 'desc'));
@@ -34,21 +34,15 @@ export function useSongs() {
   }, [user]);
 
   const saveSong = async (song: Omit<SavedSong, 'id' | 'updatedAt'>) => {
-    if (!user) return;
+    if (!user || !firebaseReady) return;
     const ref = collection(db, 'users', user.uid, 'songs');
     await addDoc(ref, { ...song, updatedAt: serverTimestamp() });
   };
 
-  const updateSong = async (id: string, song: Partial<Omit<SavedSong, 'id'>>) => {
-    if (!user) return;
-    const ref = doc(db, 'users', user.uid, 'songs', id);
-    await updateDoc(ref, { ...song, updatedAt: serverTimestamp() });
-  };
-
   const deleteSong = async (id: string) => {
-    if (!user) return;
+    if (!user || !firebaseReady) return;
     await deleteDoc(doc(db, 'users', user.uid, 'songs', id));
   };
 
-  return { songs, loading, saveSong, updateSong, deleteSong };
+  return { songs, loading, saveSong, deleteSong };
 }
