@@ -3,7 +3,7 @@ import { Scale } from '@tonaljs/tonal';
 import type { Note } from '../../types/music';
 import { DisplayFretboard, type DisplayDot } from '../Fretboard/DisplayFretboard';
 import { getScalePositions } from '../../utils/scaleUtils';
-import { fretToNote } from '../../utils/musicTheory';
+import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
 import { T, card } from '../../theme';
 
 const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -49,6 +49,7 @@ export function ScaleExplorer() {
   const [root, setRoot]           = useState<Note>('A');
   const [scaleType, setScaleType] = useState('minor pentatonic');
   const [pos, setPos]             = useState<number | null>(null);
+  const [viewMode, setViewMode]   = useState<'fretboard' | 'tab'>('fretboard');
 
   const scale       = useMemo(() => Scale.get(`${root} ${scaleType}`), [root, scaleType]);
   const allPos      = useMemo(() => getScalePositions(root, scaleType), [root, scaleType]);
@@ -67,6 +68,21 @@ export function ScaleExplorer() {
     }),
     [displayPos, root, pos]
   );
+
+  const generateTab = () => {
+    const stringNames = ['e', 'B', 'G', 'D', 'A', 'E'];
+    const lines: string[][] = Array.from({ length: STRING_COUNT }, () => []);
+    for (let s = 0; s < STRING_COUNT; s++) {
+      lines[s] = displayPos
+        .filter(p => p.string === s)
+        .sort((a, b) => a.fret - b.fret)
+        .map(p => String(p.fret));
+    }
+    const maxLen = Math.max(...lines.map(l => l.length), 1);
+    return lines
+      .map((line, s) => `${stringNames[STRING_COUNT - 1 - s]}|${Array.from({ length: maxLen }, (_, i) => (line[i] ?? '-').padEnd(2, '-')).join('-')}|`)
+      .join('\n');
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -153,6 +169,20 @@ export function ScaleExplorer() {
             </div>
           </div>
 
+          {/* ── View toggle ── */}
+          <div style={{ display: 'flex', gap: 7 }}>
+            {(['fretboard', 'tab'] as const).map(v => (
+              <button key={v} onClick={() => setViewMode(v)} style={{
+                flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer',
+                fontSize: 13, fontWeight: viewMode === v ? 700 : 400, border: 'none',
+                background: viewMode === v ? T.primary : T.bgCard,
+                color: viewMode === v ? T.text : T.textMuted,
+              }}>
+                {v === 'fretboard' ? '🎸 Fretboard' : '📋 Tab'}
+              </button>
+            ))}
+          </div>
+
           {/* ── Position selector ── */}
           <div className="gc-pos-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: T.textMuted }}>Position:</span>
@@ -182,13 +212,21 @@ export function ScaleExplorer() {
             ))}
           </div>
 
-          {/* ── Fretboard ── */}
-          <div style={card()}>
-            {dots.length > 0
-              ? <DisplayFretboard dots={dots} compact />
-              : <p style={{ textAlign: 'center', color: T.textDim, fontSize: 13, margin: 0 }}>No notes in this position</p>
-            }
-          </div>
+          {/* ── Fretboard / Tab ── */}
+          {viewMode === 'fretboard' ? (
+            <div style={card()}>
+              {dots.length > 0
+                ? <DisplayFretboard dots={dots} compact />
+                : <p style={{ textAlign: 'center', color: T.textDim, fontSize: 13, margin: 0 }}>No notes in this position</p>
+              }
+            </div>
+          ) : (
+            <div style={{ ...card(), background: T.bgDeep, overflowX: 'auto' }}>
+              <pre style={{ fontSize: 12, color: T.secondary, fontFamily: 'monospace', lineHeight: 1.7, margin: 0, whiteSpace: 'pre' }}>
+                {generateTab()}
+              </pre>
+            </div>
+          )}
 
           {/* ── Legend ── */}
           <div style={{ display: 'flex', gap: 16, fontSize: 11, color: T.textMuted }}>
