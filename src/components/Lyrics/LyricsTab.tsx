@@ -167,15 +167,15 @@ export function LyricsTab({ progression }: Props) {
           />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <input
-              value={songComposer}
-              onChange={e => setSongComposer(e.target.value)}
-              placeholder={isRtl ? 'מלחין…' : 'Composer…'}
-              style={inputStyle(isRtl)}
-            />
-            <input
               value={songWriter}
               onChange={e => setSongWriter(e.target.value)}
               placeholder={isRtl ? 'כותב…' : 'Lyricist…'}
+              style={inputStyle(isRtl)}
+            />
+            <input
+              value={songComposer}
+              onChange={e => setSongComposer(e.target.value)}
+              placeholder={isRtl ? 'מלחין…' : 'Composer…'}
               style={inputStyle(isRtl)}
             />
           </div>
