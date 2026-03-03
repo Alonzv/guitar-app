@@ -1,27 +1,34 @@
-import { Chord as TonalChord } from '@tonaljs/tonal';
+import { Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import type { FretPosition } from '../types/music';
 import { fretToNote, STRING_COUNT, FRET_COUNT } from './musicTheory';
 
-const ENHARMONICS: Record<string, string> = {
-  'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb',
-  'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
-};
-
+// Compare pitches by chroma (0-11) — handles all enharmonics (C#=Db, E#=F, Cb=B, etc.)
 function samePitch(a: string, b: string): boolean {
-  return a === b || ENHARMONICS[a] === b || a === ENHARMONICS[b];
+  const ca = TonalNote.chroma(a);
+  const cb = TonalNote.chroma(b);
+  return ca !== undefined && cb !== undefined && ca === cb;
 }
 
 function noteInChord(note: string, chordNotes: string[]): boolean {
   return chordNotes.some(cn => samePitch(note, cn));
 }
 
-// Given a Tonal.js chord name (e.g. "CM", "Am7", "Dm7b5"),
+// Shell voicing: for chords with 4+ notes, only require root + 3rd + 7th.
+// This makes extended chords (9th, 11th, 13th) findable on a 4-fret window.
+function getRequiredNotes(chordNotes: string[]): string[] {
+  if (chordNotes.length <= 3) return chordNotes;
+  // indices: 0=root, 1=3rd, 3=7th  (skip 2=5th and any extensions)
+  return [chordNotes[0], chordNotes[1], chordNotes[3]].filter(Boolean);
+}
+
+// Given a Tonal.js chord name (e.g. "CM", "Am7", "Dm11"),
 // returns up to `count` distinct voicings as arrays of FretPosition.
 export function findChordVoicings(chordName: string, count = 8): FretPosition[][] {
   const info = TonalChord.get(chordName);
   const chordNotes = info.notes;
   if (chordNotes.length < 2) return [];
 
+  const required = getRequiredNotes(chordNotes);
   const voicings: FretPosition[][] = [];
   const seen = new Set<string>();
 
@@ -41,11 +48,11 @@ export function findChordVoicings(chordName: string, count = 8): FretPosition[][
       }
     }
 
-    // All chord notes must appear in the voicing, and ≥3 strings must be used
-    const allCovered = chordNotes.every(cn =>
-      voicing.some(p => samePitch(fretToNote(p.string, p.fret), cn))
+    // Required notes (shell voicing) must all appear, and ≥3 strings must be used
+    const requiredCovered = required.every(rn =>
+      voicing.some(p => samePitch(fretToNote(p.string, p.fret), rn))
     );
-    if (!allCovered || voicing.length < 3) continue;
+    if (!requiredCovered || voicing.length < 3) continue;
 
     const hash = voicing.map(p => `${p.string}:${p.fret}`).join(',');
     if (!seen.has(hash)) {
