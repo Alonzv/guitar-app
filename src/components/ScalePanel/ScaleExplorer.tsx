@@ -154,7 +154,7 @@ export function ScaleExplorer() {
           </div>
 
           {/* ── Position selector ── */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="gc-pos-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: T.textMuted }}>Position:</span>
             <button onClick={() => setPos(null)} style={{
               padding: '4px 13px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11,
@@ -185,7 +185,7 @@ export function ScaleExplorer() {
           {/* ── Fretboard ── */}
           <div style={card()}>
             {dots.length > 0
-              ? <DisplayFretboard dots={dots} />
+              ? <DisplayFretboard dots={dots} compact />
               : <p style={{ textAlign: 'center', color: T.textDim, fontSize: 13, margin: 0 }}>No notes in this position</p>
             }
           </div>

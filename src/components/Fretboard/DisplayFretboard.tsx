@@ -22,8 +22,8 @@ const fretX = (f: number) => f === 0 ? NUT_X - FRET_SP * 0.5 : NUT_X + (f - 0.5)
 const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 
 export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
-  <div className="gc-fretboard-wrap">
-    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block', minWidth: compact ? 0 : undefined }}>
+  <div className={compact ? 'gc-fretboard-compact' : 'gc-fretboard-wrap'}>
+    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block' }}>
 
       {/* Fret lines */}
       {Array.from({ length: FRET_COUNT + 1 }).map((_, i) => (

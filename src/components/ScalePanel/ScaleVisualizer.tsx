@@ -85,7 +85,7 @@ export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
       </div>
 
       {/* Position selector */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'nowrap', overflowX: 'auto', scrollbarWidth: 'none' }}>
+      <div className="gc-pos-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <span style={{ fontSize: 11, color: T.textMuted }}>Position:</span>
         <button onClick={() => setSelectedPos(null)} style={{
           padding: '4px 13px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11,

@@ -170,6 +170,26 @@ button:not(.gc-tab):not(:disabled):hover {
   display: block;
 }
 
+/* Compact fretboard — no min-width, no scroll; scales to fill container */
+.gc-fretboard-compact {
+  width: 100%;
+}
+.gc-fretboard-compact svg {
+  width: 100%;
+  display: block;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Position-selector row  (Scales tab) — single line, no scroll visible
+───────────────────────────────────────────────────────────── */
+.gc-pos-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.gc-pos-row::-webkit-scrollbar { display: none; }
+
 /* ─────────────────────────────────────────────────────────────
    Chord progression strip  (horizontal scroll)
 ───────────────────────────────────────────────────────────── */
