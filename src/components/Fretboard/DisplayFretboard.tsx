@@ -8,7 +8,7 @@ export interface DisplayDot extends FretPosition {
   label?: string;
 }
 
-interface Props { dots: DisplayDot[] }
+interface Props { dots: DisplayDot[]; compact?: boolean }
 
 const SVG_W = 660;
 const SVG_H = 168;
@@ -21,9 +21,9 @@ const DOT_R   = 9;
 const fretX = (f: number) => f === 0 ? NUT_X - FRET_SP * 0.5 : NUT_X + (f - 0.5) * FRET_SP;
 const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 
-export const DisplayFretboard: React.FC<Props> = ({ dots }) => (
+export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
   <div className="gc-fretboard-wrap">
-    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block' }}>
+    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block', minWidth: compact ? 0 : undefined }}>
 
       {/* Fret lines */}
       {Array.from({ length: FRET_COUNT + 1 }).map((_, i) => (

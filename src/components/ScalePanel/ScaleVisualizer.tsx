@@ -108,10 +108,8 @@ export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
       </div>
 
       {viewMode === 'fretboard' ? (
-        <div style={{ '--gc-fretboard-min': '0px' } as React.CSSProperties}>
-          <div style={card()}>
-            <DisplayFretboard dots={dots} />
-          </div>
+        <div style={card()}>
+          <DisplayFretboard dots={dots} compact />
         </div>
       ) : (
         <div style={{ ...card(), background: T.bgDeep, overflowX: 'auto' }}>
