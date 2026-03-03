@@ -14,7 +14,7 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
 
   return (
     <div style={card({ marginTop: 0 })}>
-      <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         Voicing Variations · tap to load
       </p>
       <div className="gc-voicing-grid">
@@ -23,6 +23,7 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
           return (
             <div
               key={i}
+              className="gc-voicing-tile"
               onClick={() => onSelect(voicing, i)}
               style={{
                 cursor: 'pointer',

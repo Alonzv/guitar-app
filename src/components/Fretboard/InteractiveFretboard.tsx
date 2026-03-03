@@ -27,7 +27,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
   return (
     <div className="gc-fretboard-wrap">
       <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        style={{ width: '100%', minWidth: 320, maxHeight: 195, userSelect: 'none', display: 'block' }}>
+        style={{ width: '100%', maxHeight: 195, userSelect: 'none', display: 'block' }}>
 
         {/* ── Fret position markers ── */}
         {[3, 5, 7, 9].map(f => (

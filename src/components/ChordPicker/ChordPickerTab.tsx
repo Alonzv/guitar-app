@@ -11,59 +11,68 @@ interface Props {
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-const QUALITY_GROUPS: { label: string; qualities: { display: string; suffix: string }[] }[] = [
-  {
-    label: 'Basic',
-    qualities: [
-      { display: 'Major', suffix: 'M' },
-      { display: 'Minor', suffix: 'm' },
-    ],
-  },
-  {
-    label: '7ths',
-    qualities: [
-      { display: '7', suffix: '7' },
-      { display: 'maj7', suffix: 'maj7' },
-      { display: 'm7', suffix: 'm7' },
-      { display: 'm7b5', suffix: 'm7b5' },
-      { display: 'dim7', suffix: 'dim7' },
-    ],
-  },
-  {
-    label: 'Extended',
-    qualities: [
-      { display: 'add9', suffix: 'add9' },
-      { display: '9', suffix: '9' },
-      { display: '11', suffix: '11' },
-      { display: '13', suffix: '13' },
-    ],
-  },
-  {
-    label: 'Sus',
-    qualities: [
-      { display: 'sus2', suffix: 'sus2' },
-      { display: 'sus4', suffix: 'sus4' },
-    ],
-  },
-  {
-    label: 'Other',
-    qualities: [
-      { display: 'dim', suffix: 'dim' },
-      { display: 'aug', suffix: 'aug' },
-      { display: '6', suffix: '6' },
-      { display: 'm6', suffix: 'm6' },
-    ],
-  },
+const TRIADS: { display: string; key: string }[] = [
+  { display: 'Major',  key: 'M'    },
+  { display: 'Minor',  key: 'm'    },
+  { display: 'dim',    key: 'dim'  },
+  { display: 'aug',    key: 'aug'  },
+  { display: 'sus2',   key: 'sus2' },
+  { display: 'sus4',   key: 'sus4' },
 ];
 
+const EXTENSIONS: { display: string; key: string }[] = [
+  { display: '—',     key: ''     },
+  { display: '+7',    key: '7'    },
+  { display: '+maj7', key: 'maj7' },
+  { display: '+9',    key: '9'    },
+  { display: '+add9', key: 'add9' },
+  { display: '+6',    key: '6'    },
+  { display: '+11',   key: '11'   },
+  { display: '+13',   key: '13'   },
+];
+
+// Which extensions are valid per triad
+const VALID_EXTENSIONS: Record<string, string[]> = {
+  'M':    ['', '7', 'maj7', '9', 'add9', '6', '11', '13'],
+  'm':    ['', '7', 'maj7', '9', 'add9', '6', '11', '13'],
+  'dim':  ['', '7'],
+  'aug':  ['', '7'],
+  'sus2': [''],
+  'sus4': [''],
+};
+
+// Full chord suffix derived from triad + extension
+const SUFFIX_MAP: Record<string, Record<string, string>> = {
+  'M':    { '': 'M',    '7': '7',    'maj7': 'maj7', '9': '9',   'add9': 'add9', '6': '6',   '11': '11',  '13': '13'  },
+  'm':    { '': 'm',    '7': 'm7',   'maj7': 'mM7',  '9': 'm9',  'add9': 'madd9','6': 'm6',  '11': 'm11', '13': 'm13' },
+  'dim':  { '': 'dim',  '7': 'dim7'  },
+  'aug':  { '': 'aug',  '7': 'aug7'  },
+  'sus2': { '': 'sus2' },
+  'sus4': { '': 'sus4' },
+};
+
+const LABEL_STYLE = {
+  margin: '0 0 10px',
+  fontSize: 11,
+  fontWeight: 700 as const,
+  color: T.textMuted,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.06em',
+};
+
 export function ChordPickerTab({ onAddToProgression }: Props) {
-  const [selectedRoot, setSelectedRoot] = useState<string | null>(null);
-  const [selectedSuffix, setSelectedSuffix] = useState<string | null>(null);
-  const [pickerDots, setPickerDots] = useState<FretPosition[]>([]);
+  const [selectedRoot,      setSelectedRoot]      = useState<string | null>(null);
+  const [selectedTriad,     setSelectedTriad]     = useState<string | null>(null);
+  const [selectedExtension, setSelectedExtension] = useState<string>('');
+  const [pickerDots,        setPickerDots]        = useState<FretPosition[]>([]);
   const [selectedVoicingIndex, setSelectedVoicingIndex] = useState<number | undefined>(undefined);
 
-  const chordName = selectedRoot && selectedSuffix !== null
-    ? `${selectedRoot}${selectedSuffix}`
+  const suffix = selectedTriad
+    ? (SUFFIX_MAP[selectedTriad]?.[selectedExtension] ?? SUFFIX_MAP[selectedTriad]?.[''] ?? '')
+    : null;
+
+  const chordName = selectedRoot && suffix !== null
+    ? `${selectedRoot}${suffix}`
     : null;
 
   const voicings = useMemo(() => {
@@ -77,8 +86,15 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
     setSelectedVoicingIndex(undefined);
   };
 
-  const handleSuffixSelect = (suffix: string) => {
-    setSelectedSuffix(suffix);
+  const handleTriadSelect = (key: string) => {
+    setSelectedTriad(key);
+    setSelectedExtension(''); // reset extension when triad changes
+    setPickerDots([]);
+    setSelectedVoicingIndex(undefined);
+  };
+
+  const handleExtensionSelect = (key: string) => {
+    setSelectedExtension(key);
     setPickerDots([]);
     setSelectedVoicingIndex(undefined);
   };
@@ -102,15 +118,14 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
 
   const canAdd = pickerDots.length >= 2;
   const displayName = chordName ? formatChordName(chordName) : null;
+  const validExt = selectedTriad ? (VALID_EXTENSIONS[selectedTriad] ?? ['']) : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* ── Root note selection ── */}
+      {/* ── Root note ── */}
       <div style={card()}>
-        <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Root Note
-        </p>
+        <p style={LABEL_STYLE}>Root Note</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
           {ROOTS.map(root => {
             const active = selectedRoot === root;
@@ -119,15 +134,12 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
                 key={root}
                 onClick={() => handleRootSelect(root)}
                 style={{
-                  padding: '8px 4px',
-                  borderRadius: 8,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 13,
+                  padding: '8px 4px', borderRadius: 8, border: 'none',
+                  cursor: 'pointer', fontSize: 13,
                   fontWeight: active ? 700 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? T.text : T.textMuted,
-                  transition: 'background 0.15s',
+                  transition: 'filter 0.15s, background 0.15s',
                 }}
               >
                 {root}
@@ -137,61 +149,79 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
         </div>
       </div>
 
-      {/* ── Quality selection ── */}
+      {/* ── Triad quality ── */}
       <div style={card()}>
-        <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Chord Quality
-        </p>
-        {QUALITY_GROUPS.map(group => (
-          <div key={group.label} style={{ marginBottom: 10 }}>
-            <p style={{ margin: '0 0 6px', fontSize: 10, color: T.textDim }}>{group.label}</p>
-            <div className="gc-pills">
-              {group.qualities.map(q => {
-                const active = selectedSuffix === q.suffix;
-                return (
-                  <button
-                    key={q.suffix}
-                    className="gc-pill"
-                    onClick={() => handleSuffixSelect(q.suffix)}
-                    style={{
-                      padding: '5px 14px',
-                      borderRadius: 20,
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      fontWeight: active ? 600 : 400,
-                      background: active ? T.primary : T.bgInput,
-                      color: active ? T.text : T.textMuted,
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    {q.display}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+        <p style={LABEL_STYLE}>Triad</p>
+        <div className="gc-pills">
+          {TRIADS.map(t => {
+            const active = selectedTriad === t.key;
+            return (
+              <button
+                key={t.key}
+                className="gc-pill"
+                onClick={() => handleTriadSelect(t.key)}
+                style={{
+                  padding: '6px 16px', borderRadius: 20, border: 'none',
+                  cursor: 'pointer', fontSize: 13,
+                  fontWeight: active ? 700 : 400,
+                  background: active ? T.primary : T.bgInput,
+                  color: active ? T.text : T.textMuted,
+                  transition: 'filter 0.15s, background 0.15s',
+                }}
+              >
+                {t.display}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ── Voicings grid ── */}
-      {chordName && (
-        <>
-          <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted }}>
-            {voicings.length > 0
-              ? `${voicings.length} voicing${voicings.length > 1 ? 's' : ''} found for `
-              : 'No voicings found for '}
-            <span style={{ color: T.text, fontWeight: 700 }}>{displayName}</span>
+      {/* ── Extension — only for Major/Minor/dim/aug ── */}
+      {selectedTriad && validExt.length > 1 && (
+        <div style={card()}>
+          <p style={LABEL_STYLE}>Extension</p>
+          <div className="gc-pills">
+            {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => {
+              const active = selectedExtension === e.key;
+              return (
+                <button
+                  key={e.key}
+                  className="gc-pill"
+                  onClick={() => handleExtensionSelect(e.key)}
+                  style={{
+                    padding: '6px 16px', borderRadius: 20, border: 'none',
+                    cursor: 'pointer', fontSize: 13,
+                    fontWeight: active ? 700 : 400,
+                    background: active ? T.secondary : T.bgInput,
+                    color: active ? '#fff' : T.textMuted,
+                    transition: 'filter 0.15s, background 0.15s',
+                  }}
+                >
+                  {e.display}
+                </button>
+              );
+            })}
           </div>
+        </div>
+      )}
 
-          {voicings.length > 0 && (
-            <VoicingVariations
-              voicings={voicings}
-              selectedIndex={selectedVoicingIndex}
-              onSelect={handleVoicingSelect}
-            />
-          )}
-        </>
+      {/* ── Result name ── */}
+      {chordName && (
+        <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted }}>
+          {voicings.length > 0
+            ? `${voicings.length} voicing${voicings.length > 1 ? 's' : ''} found for `
+            : 'No voicings found for '}
+          <span style={{ color: T.text, fontWeight: 800, fontSize: 16 }}>{displayName}</span>
+        </div>
+      )}
+
+      {/* ── Voicings grid ── */}
+      {chordName && voicings.length > 0 && (
+        <VoicingVariations
+          voicings={voicings}
+          selectedIndex={selectedVoicingIndex}
+          onSelect={handleVoicingSelect}
+        />
       )}
 
       {/* ── Add to Progression ── */}

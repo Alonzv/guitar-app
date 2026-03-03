@@ -23,7 +23,7 @@ const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 
 export const DisplayFretboard: React.FC<Props> = ({ dots }) => (
   <div className="gc-fretboard-wrap">
-    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', minWidth: 320, maxHeight: 190, display: 'block' }}>
+    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block' }}>
 
       {/* Fret lines */}
       {Array.from({ length: FRET_COUNT + 1 }).map((_, i) => (

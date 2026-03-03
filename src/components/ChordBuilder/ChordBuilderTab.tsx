@@ -8,15 +8,13 @@ import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { suggestNextChords } from '../../utils/progressionHelper';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { exportProgressionPDF } from '../../utils/pdfExport';
-import { useProgressions } from '../../hooks/useProgressions';
-import { useAuth } from '../../contexts/AuthContext';
 import { T, card, btn } from '../../theme';
 
 interface Props {
   progression: ChordInProgression[];
   onAddToProgression: (item: ChordInProgression) => void;
   onRemoveFromProgression: (id: string) => void;
-  onLoadProgression: (prog: ChordInProgression[]) => void;
+  onClearProgression: () => void;
 }
 
 interface HoverPreview {
@@ -36,22 +34,24 @@ const GENRES: { id: Genre; label: string }[] = [
 
 const CHORD_ACCENTS = [T.primary, T.secondary, '#8b6914', '#7a3a6a', '#2a6a8a', '#4a7a3a'];
 
-export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromProgression, onLoadProgression }: Props) {
+const LABEL_STYLE = {
+  margin: '0 0 10px',
+  fontSize: 11,
+  fontWeight: 700,
+  color: T.textMuted,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.06em',
+};
+
+export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromProgression, onClearProgression }: Props) {
   const [activeDots, setActiveDots] = useState<FretPosition[]>([]);
   const [genre, setGenre] = useState<Genre>('any');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showVariations, setShowVariations] = useState(false);
   const [selectedVariationIndex, setSelectedVariationIndex] = useState<number | undefined>(undefined);
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
-
-  // Save / Load state
-  const [saveInput, setSaveInput] = useState('');
-  const [showSaveInput, setShowSaveInput] = useState(false);
-  const [showSaved, setShowSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const { user } = useAuth();
-  const { progressions, saveProgression, deleteProgression } = useProgressions();
+  const [progressionName, setProgressionName] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   const handleToggle = (pos: FretPosition) => {
     setActiveDots(prev => {
@@ -76,13 +76,18 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
     setHoverPreview(null);
   };
 
-  const handleSave = async () => {
-    if (!saveInput.trim() || !user) return;
-    setSaving(true);
-    await saveProgression(saveInput.trim(), progression);
-    setSaving(false);
-    setSaveInput('');
-    setShowSaveInput(false);
+  const handleClear = () => {
+    onClearProgression();
+    setProgressionName('');
+  };
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      await exportProgressionPDF(progressionName || 'Chord Progression', progression);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const chords = identifyChord(activeDots);
@@ -100,9 +105,7 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
 
       {/* ── Fretboard ── */}
       <div style={card()}>
-        <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Click a fret to place a note · click again to remove
-        </p>
+        <p style={LABEL_STYLE}>Click a fret to place a note · click again to remove</p>
         <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} />
       </div>
 
@@ -117,6 +120,7 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
               cursor: 'pointer', fontSize: 12, fontWeight: 500,
               background: showVariations ? T.primaryBg : T.bgInput,
               color: showVariations ? T.primary : T.textMuted,
+              transition: 'filter 0.15s',
             }}
           >
             {showVariations ? 'Hide variations' : 'Show more variations'}
@@ -150,75 +154,59 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
       {progression.length > 0 && (
         <div style={card()}>
           {/* Header row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
-            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+            <p style={{ ...LABEL_STYLE, margin: 0 }}>
               Your Progression · {progression.length} chord{progression.length > 1 ? 's' : ''}
             </p>
             <div style={{ display: 'flex', gap: 6 }}>
               <button
-                onClick={() => exportProgressionPDF('My Progression', progression)}
+                onClick={handleClear}
                 style={{
                   padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.border}`,
                   background: T.bgInput, color: T.textMuted, fontSize: 11, cursor: 'pointer', fontWeight: 600,
+                  transition: 'filter 0.15s',
                 }}
-                title="Export as PDF"
               >
-                📄 PDF
+                Clear
               </button>
-              {user ? (
-                <button
-                  onClick={() => setShowSaveInput(v => !v)}
-                  style={{
-                    padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.secondary}`,
-                    background: showSaveInput ? T.secondaryBg : T.bgInput,
-                    color: T.secondary, fontSize: 11, cursor: 'pointer', fontWeight: 600,
-                  }}
-                >
-                  💾 Save
-                </button>
-              ) : (
-                <span style={{ fontSize: 11, color: T.textDim, alignSelf: 'center' }}>
-                  כנס כדי לשמור
-                </span>
-              )}
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
+                style={{
+                  padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.border}`,
+                  background: T.bgInput, color: T.textMuted, fontSize: 11,
+                  cursor: exporting ? 'not-allowed' : 'pointer', fontWeight: 600,
+                  transition: 'filter 0.15s',
+                }}
+              >
+                {exporting ? '…' : '📄 PDF'}
+              </button>
             </div>
           </div>
 
-          {/* Save input */}
-          {showSaveInput && user && (
-            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-              <input
-                value={saveInput}
-                onChange={e => setSaveInput(e.target.value)}
-                placeholder="שם הפרוגרסיה…"
-                onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
-                style={{
-                  flex: 1, padding: '7px 10px', borderRadius: 8,
-                  border: `1px solid ${T.border}`, background: T.bgInput,
-                  color: T.text, fontSize: 13, fontFamily: 'inherit',
-                  direction: 'rtl',
-                }}
-              />
-              <button
-                onClick={handleSave}
-                disabled={!saveInput.trim() || saving}
-                style={{ ...btn.primary(!saveInput.trim() || saving), padding: '7px 14px', flex: 'none' }}
-              >
-                {saving ? '…' : 'שמור'}
-              </button>
-            </div>
-          )}
+          {/* Progression name input */}
+          <input
+            value={progressionName}
+            onChange={e => setProgressionName(e.target.value)}
+            placeholder="Progression name (optional)…"
+            style={{
+              width: '100%', marginBottom: 12, padding: '7px 10px', borderRadius: 8,
+              border: `1px solid ${T.border}`, background: T.bgInput,
+              color: T.text, fontSize: 13, fontFamily: 'inherit',
+              boxSizing: 'border-box',
+            }}
+          />
 
-          {/* Chord cards */}
-          <div className="gc-chip-strip">
+          {/* Chord cards — extra padding-top so the × badge isn't clipped */}
+          <div className="gc-chip-strip" style={{ paddingTop: 10 }}>
             {progression.map((item, i) => {
               const accent = CHORD_ACCENTS[i % CHORD_ACCENTS.length];
               return (
                 <div key={item.id} style={{
                   position: 'relative', minWidth: 72, flexShrink: 0,
                   padding: '10px 14px', borderRadius: 12,
-                  background: T.bgInput, borderLeft: `3px solid ${accent}`,
-                  border: `1px solid ${T.border}`, borderLeftWidth: 3, borderLeftColor: accent,
+                  background: T.bgInput, border: `1px solid ${T.border}`,
+                  borderLeftWidth: 3, borderLeftColor: accent,
                   textAlign: 'center',
                 }}>
                   <span style={{ display: 'block', fontSize: 10, color: accent, marginBottom: 2, fontWeight: 600 }}>{i + 1}</span>
@@ -236,10 +224,10 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
             })}
           </div>
 
-          {/* Suggest section — only when 2+ chords */}
+          {/* Suggest section */}
           {progression.length >= 2 && (
             <div style={{ marginTop: 14 }}>
-              <p style={{ margin: '0 0 7px', fontSize: 11, color: T.textMuted }}>Mood:</p>
+              <p style={{ ...LABEL_STYLE, margin: '0 0 7px' }}>Mood:</p>
               <div className="gc-pills" style={{ marginBottom: 10 }}>
                 {GENRES.map(g => (
                   <button key={g.id} onClick={() => setGenre(g.id)}
@@ -249,6 +237,7 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
                       fontWeight: genre === g.id ? 700 : 400,
                       background: genre === g.id ? T.primary : T.bgInput,
                       color: genre === g.id ? T.text : T.textMuted,
+                      transition: 'filter 0.15s',
                     }}>
                     {g.label}
                   </button>
@@ -261,7 +250,7 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
                   width: '100%', padding: '11px 0', borderRadius: 10, border: `1px solid ${T.secondary}`,
                   cursor: 'pointer', fontSize: 14, fontWeight: 700,
                   background: showSuggestions ? T.secondaryBg : T.bgInput,
-                  color: T.secondary,
+                  color: T.secondary, transition: 'filter 0.15s',
                 }}>
                 {showSuggestions ? 'Hide Suggestions' : '✨ Suggest Next Chord'}
               </button>
@@ -270,69 +259,10 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
         </div>
       )}
 
-      {/* ── Saved Progressions ── */}
-      {user && progressions.length > 0 && (
-        <div style={card()}>
-          <button
-            onClick={() => setShowSaved(v => !v)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              width: '100%', background: 'none', border: 'none', cursor: 'pointer',
-              color: T.textMuted, fontSize: 12, fontWeight: 600, padding: 0,
-            }}
-          >
-            <span>📂 הפרוגרסיות שלי ({progressions.length})</span>
-            <span>{showSaved ? '▲' : '▼'}</span>
-          </button>
-
-          {showSaved && (
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {progressions.map(p => (
-                <div key={p.id} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: T.bgInput, borderRadius: 8, padding: '8px 12px',
-                }}>
-                  <div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: T.text, direction: 'rtl', display: 'block' }}>{p.name}</span>
-                    <span style={{ fontSize: 11, color: T.textMuted }}>
-                      {p.progression.map(c => formatChordName(c.chord.name)).join(' – ')}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button
-                      onClick={() => onLoadProgression(p.progression)}
-                      style={{
-                        padding: '4px 10px', borderRadius: 12,
-                        background: T.secondary, border: 'none',
-                        color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                      }}
-                    >
-                      טען
-                    </button>
-                    <button
-                      onClick={() => deleteProgression(p.id)}
-                      style={{
-                        padding: '4px 8px', borderRadius: 12,
-                        background: 'none', border: `1px solid ${T.border}`,
-                        color: '#e05252', fontSize: 11, cursor: 'pointer',
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* ── Suggestions grid ── */}
       {showSuggestions && (
         <div style={card()}>
-          <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Next Chord Suggestions · hover to preview
-          </p>
+          <p style={LABEL_STYLE}>Next Chord Suggestions · hover to preview</p>
           {suggestions.length > 0 ? (
             <div className="gc-suggest-grid">
               {suggestions.map((s, i) => (
@@ -348,6 +278,7 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
                     padding: 12, borderRadius: 10,
                     background: T.bgInput, border: `1px solid ${T.border}`,
                     cursor: 'pointer', color: T.text, textAlign: 'left',
+                    transition: 'filter 0.15s',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>

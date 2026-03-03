@@ -9,7 +9,7 @@ export const ChordName: React.FC<Props> = ({ positions }) => {
   const chords = identifyChord(positions);
 
   if (positions.length < 2) return (
-    <p style={{ color: T.textDim, fontSize: 13, margin: 0 }}>Place 2+ notes on the fretboard</p>
+    <p style={{ color: T.textDim, fontSize: 13, fontWeight: 700, margin: 0 }}>Place 2+ notes on the fretboard</p>
   );
 
   if (chords.length === 0) return (

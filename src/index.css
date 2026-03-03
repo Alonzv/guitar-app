@@ -31,6 +31,10 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 
   /* Interactive element sizes */
   --gc-pos-btn:     40px;   /* position-selector circles */
+
+  /* Fretboard minimum width — allows horizontal scroll on narrow screens
+     while keeping fret cells large enough to tap */
+  --gc-fretboard-min: 460px;
 }
 
 @media (min-width: 480px) {
@@ -42,6 +46,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     --gc-h1-mb:       12px;
     --gc-chord-big:   40px;
     --gc-pos-btn:     36px;
+    --gc-fretboard-min: 420px;
   }
 }
 
@@ -54,6 +59,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     --gc-h1-mb:       14px;
     --gc-chord-big:   46px;
     --gc-pos-btn:     32px;
+    --gc-fretboard-min: 360px;
   }
 }
 
@@ -64,6 +70,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   display: flex;
   gap: 5px;
   overflow-x: auto;
+  /* Extra top padding absorbs the hover translateY(-2px) so tabs don't clip */
+  padding-top: 4px;
   padding-bottom: 2px;
   /* hide scrollbar cross-browser */
   scrollbar-width: none;
@@ -99,10 +107,24 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   .gc-tab-label { display: inline; }
 }
 
-/* Hover lift — works alongside inline transition: all 0.15s */
+/* Hover lift */
 .gc-tab:hover {
   transform: translateY(-2px);
   filter: brightness(1.18);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Global button hover — applies to all <button> except tabs
+   (tabs have their own .gc-tab:hover rule above)
+───────────────────────────────────────────────────────────── */
+button:not(.gc-tab):not(:disabled):hover {
+  filter: brightness(1.14);
+  transition: filter 0.15s;
+}
+
+/* Voicing tiles are <div> elements — give them hover feedback */
+.gc-voicing-tile:hover {
+  filter: brightness(1.12);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -141,6 +163,13 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   -webkit-overflow-scrolling: touch;
 }
 
+/* The SVG inside — uses CSS variable for min-width */
+.gc-fretboard-wrap svg {
+  width: 100%;
+  min-width: var(--gc-fretboard-min);
+  display: block;
+}
+
 /* ─────────────────────────────────────────────────────────────
    Chord progression strip  (horizontal scroll)
 ───────────────────────────────────────────────────────────── */
@@ -148,6 +177,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   display: flex;
   gap: 8px;
   overflow-x: auto;
+  /* top padding so the absolute-positioned × badge isn't clipped */
+  padding-top: 10px;
   padding-bottom: 4px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
