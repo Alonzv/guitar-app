@@ -30,8 +30,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-chord-big:   32px;
 
   /* Brand / logo — mobile first */
-  --gc-brand-logo:  48px;
+  --gc-brand-logo:  34px;
   --gc-brand-text:  28px;
+  --gc-brand-gap:   6px;
   --gc-tab-title:   22px;
 
   /* Interactive element sizes */
@@ -53,8 +54,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     --gc-pos-btn:     36px;
     --gc-fretboard-min: 420px;
     /* Brand — tablet small */
-    --gc-brand-logo:  58px;
+    --gc-brand-logo:  42px;
     --gc-brand-text:  34px;
+    --gc-brand-gap:   8px;
     --gc-tab-title:   26px;
   }
 }
@@ -70,8 +72,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     --gc-pos-btn:     32px;
     --gc-fretboard-min: 360px;
     /* Brand — tablet / desktop */
-    --gc-brand-logo:  68px;
+    --gc-brand-logo:  50px;
     --gc-brand-text:  40px;
+    --gc-brand-gap:   10px;
     --gc-tab-title:   30px;
   }
 }

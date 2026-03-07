@@ -30,9 +30,9 @@ export default function App() {
       {/* ── Header ── */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
         {/* Brand row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--gc-brand-gap)', marginBottom: 4 }}>
           {/* Fretboard + pick logo mark */}
-          <svg viewBox="0 0 44 48" style={{ flexShrink: 0, width: 'var(--gc-brand-logo)', height: 'var(--gc-brand-logo)' }}>
+          <svg viewBox="0 0 44 48" style={{ flexShrink: 0, width: 'var(--gc-brand-logo)', height: 'var(--gc-brand-logo)', display: 'block' }}>
             {/* Fretboard frame */}
             <rect x="2" y="2" width="30" height="24" rx="1.5" fill="none" stroke="#3D5A6C" strokeWidth="1.8"/>
             {/* Vertical fret lines */}
