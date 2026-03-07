@@ -236,9 +236,10 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
                     <button
                       onClick={() => playChord(item.fretPositions)}
                       style={{
-                        display: 'block', width: '100%', marginTop: 4, padding: '2px 0',
-                        borderRadius: 6, border: 'none', background: T.primaryBg,
-                        color: T.primary, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                        display: 'block', width: '100%', marginTop: 6, padding: '7px 0',
+                        borderRadius: 8, border: 'none', background: T.primaryBg,
+                        color: T.primary, fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                        minHeight: 36,
                       }}
                     >▶</button>
                   )}

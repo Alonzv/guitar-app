@@ -105,19 +105,38 @@ export const Metronome: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
+  // handleStartStop MUST be the direct onClick handler so AudioContext
+  // is created inside a user gesture — required for iOS (incl. silent mode).
+  const handleStartStop = useCallback(() => {
     if (playing) {
-      const ctx = new AudioContext();
-      ctxRef.current = ctx;
-      nextBeatTimeRef.current = ctx.currentTime + 0.05;
-      beatNumRef.current = 0;
-      intervalRef.current = setInterval(schedule, 25);
-    } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
       ctxRef.current?.close().catch(() => {});
       ctxRef.current = null;
       setBeat(-1);
+      setPlaying(false);
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Ctx: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new Ctx();
+      // Play a silent 1-sample buffer — unlocks iOS audio session so
+      // Web Audio works even when the hardware silent switch is on.
+      const silent = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const silentSrc = ctx.createBufferSource();
+      silentSrc.buffer = silent;
+      silentSrc.connect(ctx.destination);
+      silentSrc.start(0);
+      ctx.resume().catch(() => {});
+      ctxRef.current = ctx;
+      nextBeatTimeRef.current = ctx.currentTime + 0.05;
+      beatNumRef.current = 0;
+      setPlaying(true);
     }
+  }, [playing]);
+
+  // Manage the scheduling interval in response to playing state.
+  useEffect(() => {
+    if (!playing) return;
+    intervalRef.current = setInterval(schedule, 25);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [playing, schedule]);
 
@@ -221,7 +240,7 @@ export const Metronome: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setPlaying(p => !p)}
+          onClick={handleStartStop}
           style={{
             width: '100%', padding: '14px 0', borderRadius: 12, border: 'none',
             background: playing ? T.coral : T.primary,
