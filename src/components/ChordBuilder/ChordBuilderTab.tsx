@@ -8,6 +8,7 @@ import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { suggestNextChords } from '../../utils/progressionHelper';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { exportProgressionPDF } from '../../utils/pdfExport';
+import { playChord } from '../../utils/audioPlayback';
 import { T, card, btn } from '../../theme';
 
 interface Props {
@@ -52,6 +53,7 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
   const [progressionName, setProgressionName] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleToggle = (pos: FretPosition) => {
     setActiveDots(prev => {
@@ -79,6 +81,14 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
   const handleClear = () => {
     onClearProgression();
     setProgressionName('');
+  };
+
+  const handleCopy = () => {
+    const text = progression.map(c => formatChordName(c.chord.name)).join(' – ');
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const handleExportPDF = async () => {
@@ -170,6 +180,17 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
                 Clear
               </button>
               <button
+                onClick={handleCopy}
+                style={{
+                  padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.border}`,
+                  background: copied ? T.secondaryBg : T.bgInput,
+                  color: copied ? T.secondary : T.textMuted, fontSize: 11,
+                  cursor: 'pointer', fontWeight: 600, transition: 'filter 0.15s',
+                }}
+              >
+                {copied ? '✓ Copied' : '📋 Copy'}
+              </button>
+              <button
                 onClick={handleExportPDF}
                 disabled={exporting}
                 style={{
@@ -211,6 +232,16 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
                 }}>
                   <span style={{ display: 'block', fontSize: 10, color: accent, marginBottom: 2, fontWeight: 600 }}>{i + 1}</span>
                   <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: T.text }}>{formatChordName(item.chord.name)}</span>
+                  {item.fretPositions.length > 0 && (
+                    <button
+                      onClick={() => playChord(item.fretPositions)}
+                      style={{
+                        display: 'block', width: '100%', marginTop: 4, padding: '2px 0',
+                        borderRadius: 6, border: 'none', background: T.primaryBg,
+                        color: T.primary, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >▶</button>
+                  )}
                   <button
                     onClick={() => onRemoveFromProgression(item.id)}
                     style={{

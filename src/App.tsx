@@ -1,31 +1,38 @@
 import { useState } from 'react';
 import type { ChordInProgression, ScaleMatch } from './types/music';
-import { ChordBuilderTab } from './components/ChordBuilder/ChordBuilderTab';
-import { ChordPickerTab } from './components/ChordPicker/ChordPickerTab';
+import { ChordsTab } from './components/ChordsTab';
+import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { LyricsTab } from './components/Lyrics/LyricsTab';
-import { ScaleDetector } from './components/ScalePanel/ScaleDetector';
-import { ScaleVisualizer } from './components/ScalePanel/ScaleVisualizer';
-import { ScaleExplorer } from './components/ScalePanel/ScaleExplorer';
+import { ToolsTab } from './components/Tools/ToolsTab';
+import { Onboarding } from './components/Onboarding';
 import { T } from './theme';
 
-type Tab = 'chord' | 'picker' | 'explorer' | 'scales' | 'visualizer' | 'lyrics';
+type Tab = 'chords' | 'scales' | 'lyrics' | 'tools';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'chord',      label: 'Chord Builder', icon: '🎸' },
-  { id: 'scales',     label: 'Detect Scales', icon: '🔍' },
-  { id: 'visualizer', label: 'Scale View',    icon: '📖' },
-  { id: 'picker',     label: 'Chord Finder',  icon: '🎹' },
-  { id: 'explorer',   label: 'Scales',        icon: '🎼' },
-  { id: 'lyrics',     label: 'Lyrics',        icon: '📝' },
+  { id: 'chords', label: 'Chords', icon: '🎸' },
+  { id: 'scales', label: 'Scales', icon: '🎼' },
+  { id: 'lyrics', label: 'Lyrics', icon: '📝' },
+  { id: 'tools',  label: 'Tools',  icon: '🔧' },
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('chord');
+  const [activeTab, setActiveTab]   = useState<Tab>('chords');
   const [progression, setProgression] = useState<ChordInProgression[]>([]);
   const [selectedScale, setSelectedScale] = useState<ScaleMatch | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem('scaleup_onboarded')
+  );
+
+  const handleDoneOnboarding = () => {
+    localStorage.setItem('scaleup_onboarded', '1');
+    setShowOnboarding(false);
+  };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+
+      {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 
       {/* ── Header ── */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
@@ -69,30 +76,23 @@ export default function App() {
 
       {/* ── Content ── */}
       <main style={{ flex: 1, overflowY: 'auto', padding: 'var(--gc-content-pad)', maxWidth: 700, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-        {activeTab === 'chord' && (
-          <ChordBuilderTab
+        {activeTab === 'chords' && (
+          <ChordsTab
             progression={progression}
             onAddToProgression={(item) => setProgression(prev => [...prev, item])}
             onRemoveFromProgression={(id) => setProgression(prev => prev.filter(c => c.id !== id))}
             onClearProgression={() => setProgression([])}
           />
         )}
-        {activeTab === 'picker' && (
-          <ChordPickerTab
-            onAddToProgression={(item) => setProgression(prev => [...prev, item])}
-          />
-        )}
-        {activeTab === 'explorer' && <ScaleExplorer />}
         {activeTab === 'scales' && (
-          <ScaleDetector
+          <ScalesTab
             progression={progression}
-            onSelectScale={(scale) => { setSelectedScale(scale); setActiveTab('visualizer'); }}
+            selectedScale={selectedScale}
+            onSelectScale={setSelectedScale}
           />
         )}
-        {activeTab === 'visualizer' && <ScaleVisualizer scale={selectedScale} />}
-        {activeTab === 'lyrics' && (
-          <LyricsTab progression={progression} />
-        )}
+        {activeTab === 'lyrics' && <LyricsTab progression={progression} />}
+        {activeTab === 'tools'  && <ToolsTab />}
       </main>
     </div>
   );

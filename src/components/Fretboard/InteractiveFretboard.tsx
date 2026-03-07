@@ -95,7 +95,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
             const cy = strY(s);
             return (
               <g key={`${s}-${f}`}
-                onClick={() => !readonly && onToggle({ string: s, fret: f })}
+                onClick={() => { if (readonly) return; navigator.vibrate?.(30); onToggle({ string: s, fret: f }); }}
                 style={{ cursor: readonly ? 'default' : 'pointer' }}>
                 {/* Invisible hit area */}
                 <rect x={cx - DOT_R - 3} y={cy - DOT_R - 3}
