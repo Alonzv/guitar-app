@@ -4,11 +4,7 @@ const OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AudioCtxClass: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
 
-// ── Single shared AudioContext (never closed) ─────────────────────────────
-// Creating a fresh context on every play-press is unreliable on iOS because
-// the context starts in "suspended" state and the resume() promise resolves
-// outside the user-gesture window, so scheduled audio plays too late or not at all.
-// One persistent context that we resume() once is far more reliable.
+// ── Single shared AudioContext ────────────────────────────────────────────
 let _ctx: AudioContext | null = null;
 
 export function getSharedContext(): AudioContext {
@@ -18,31 +14,58 @@ export function getSharedContext(): AudioContext {
   return _ctx;
 }
 
-// ── iOS silent-mode + autoplay unlock ────────────────────────────────────
-// Must be called from a native user-gesture handler (touchstart / click).
-// Safe to call many times — work is skipped after first success.
-const SILENT_WAV =
-  'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+// ── Generate a valid silent WAV programmatically ──────────────────────────
+// (avoids any base64 encoding errors)
+function makeSilentWAVUrl(): string {
+  const sampleRate = 22050;
+  const numSamples = Math.floor(sampleRate * 0.1); // 100 ms
+  const buf = new ArrayBuffer(44 + numSamples * 2);
+  const v = new DataView(buf);
+  const str = (o: number, s: string) =>
+    s.split('').forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + numSamples * 2, true); str(8, 'WAVE');
+  str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);                         // channels
+  v.setUint32(24, sampleRate, true);                // sample rate
+  v.setUint32(28, sampleRate * 2, true);            // byte rate
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); // block align, bits
+  str(36, 'data'); v.setUint32(40, numSamples * 2, true);
+  // audio data stays all zeros = silence
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
 
+let _silentURL: string | null = null;
+function getSilentURL() {
+  if (!_silentURL) _silentURL = makeSilentWAVUrl();
+  return _silentURL;
+}
+
+// ── iOS unlock ────────────────────────────────────────────────────────────
+// Call from every user-gesture handler before scheduling audio.
 let _silentUnlocked = false;
 
 export function unlockAudio(): void {
-  // 1. Resume the shared Web Audio context within the user gesture.
   const ctx = getSharedContext();
+
+  // 1. Resume Web Audio context within the user gesture.
   ctx.resume().catch(() => {});
 
-  // 2. Play a 1-sample silent Web Audio buffer — keeps the context "warm".
+  // 2. Warm-up: play a 1-sample silent buffer through the context.
   try {
-    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start(0);
+    const b = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const s = ctx.createBufferSource();
+    s.buffer = b; s.connect(ctx.destination); s.start(0);
   } catch { /* ignore */ }
 
-  // 3. Play through HTMLAudioElement (with playsinline, appended to DOM).
-  //    This is the only reliable way to switch the iOS AVAudioSession from
-  //    "ambient" (respects mute switch) to "playback" (ignores mute switch).
+  // 3. Tell iOS this is a media-playback app via MediaSession — this switches
+  //    AVAudioSession to "playback" category, which ignores the mute switch.
+  try {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({ title: 'ScaleUp' });
+    }
+  } catch { /* ignore */ }
+
+  // 4. Also play through HTMLAudioElement (belt-and-suspenders for older iOS).
   if (_silentUnlocked) return;
   _silentUnlocked = true;
   try {
@@ -50,7 +73,7 @@ export function unlockAudio(): void {
     audio.setAttribute('playsinline', '');
     audio.setAttribute('webkit-playsinline', '');
     audio.volume = 0.001;
-    audio.src = SILENT_WAV;
+    audio.src = getSilentURL();
     document.body.appendChild(audio);
     const p = audio.play();
     if (p) {
@@ -64,7 +87,7 @@ export function unlockAudio(): void {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────
 
 function synthesizeNote(ctx: AudioContext, freq: number, startTime: number): void {
   const osc    = ctx.createOscillator();
@@ -91,14 +114,25 @@ function synthesizeNote(ctx: AudioContext, freq: number, startTime: number): voi
 
 export interface FretPos { string: number; fret: number; }
 
-/** Arpeggiate a chord low → high string. Call only from a user gesture. */
+/** Arpeggiate a chord low → high. Call only from a user-gesture handler. */
 export function playChord(fretPositions: FretPos[]): void {
   if (fretPositions.length === 0) return;
   unlockAudio();
   const ctx = getSharedContext();
-  const sorted = [...fretPositions].sort((a, b) => a.string - b.string);
-  sorted.forEach((pos, i) => {
-    const freq = OPEN_FREQS[pos.string] * Math.pow(2, pos.fret / 12);
-    synthesizeNote(ctx, freq, ctx.currentTime + i * 0.065);
-  });
+
+  const schedule = () => {
+    const sorted = [...fretPositions].sort((a, b) => a.string - b.string);
+    // +0.1s offset so the context has time to reach "running" state
+    sorted.forEach((pos, i) => {
+      const freq = OPEN_FREQS[pos.string] * Math.pow(2, pos.fret / 12);
+      synthesizeNote(ctx, freq, ctx.currentTime + 0.1 + i * 0.065);
+    });
+  };
+
+  // Wait for the context to be running before scheduling notes.
+  if (ctx.state === 'running') {
+    schedule();
+  } else {
+    ctx.resume().then(schedule).catch(() => {});
+  }
 }

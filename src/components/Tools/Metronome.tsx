@@ -114,9 +114,20 @@ export const Metronome: React.FC = () => {
     } else {
       unlockAudio(); // resume shared context + unlock iOS silent mode
       const ctx = getSharedContext();
-      nextBeatTimeRef.current = ctx.currentTime + 0.05;
-      beatNumRef.current = 0;
-      setPlaying(true);
+
+      const start = () => {
+        // Set start time AFTER the context is confirmed "running" so
+        // ctx.currentTime is a real, advancing value — not frozen at 0.
+        nextBeatTimeRef.current = ctx.currentTime + 0.15;
+        beatNumRef.current = 0;
+        setPlaying(true);
+      };
+
+      if (ctx.state === 'running') {
+        start();
+      } else {
+        ctx.resume().then(start).catch(start);
+      }
     }
   }, [playing]);
 
