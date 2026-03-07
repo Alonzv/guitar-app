@@ -30,31 +30,7 @@ export default function App() {
       {/* ── Header ── */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
         {/* Brand row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--gc-brand-gap)', marginBottom: 4 }}>
-          {/* Fretboard + pick logo mark */}
-          <svg viewBox="0 0 44 48" style={{ flexShrink: 0, width: 'var(--gc-brand-logo)', height: 'var(--gc-brand-logo)', display: 'block' }}>
-            {/* Fretboard frame */}
-            <rect x="2" y="2" width="30" height="24" rx="1.5" fill="none" stroke="#3D5A6C" strokeWidth="1.8"/>
-            {/* Vertical fret lines */}
-            <line x1="10" y1="2" x2="10" y2="26" stroke="#3D5A6C" strokeWidth="1"/>
-            <line x1="18" y1="2" x2="18" y2="26" stroke="#3D5A6C" strokeWidth="1"/>
-            <line x1="26" y1="2" x2="26" y2="26" stroke="#3D5A6C" strokeWidth="1"/>
-            {/* Horizontal string lines */}
-            <line x1="2" y1="10" x2="32" y2="10" stroke="#3D5A6C" strokeWidth="1"/>
-            <line x1="2" y1="18" x2="32" y2="18" stroke="#3D5A6C" strokeWidth="1"/>
-            {/* Dots row 1 */}
-            <circle cx="6" cy="6" r="3.2" fill="#629677"/>
-            <circle cx="14" cy="6" r="3.2" fill="#3D5A6C"/>
-            <circle cx="30" cy="6" r="3.2" fill="#E8736A"/>
-            {/* Dots row 2 */}
-            <circle cx="6" cy="14" r="3.2" fill="#629677"/>
-            <circle cx="22" cy="14" r="3.2" fill="#E8736A"/>
-            {/* Dots row 3 */}
-            <circle cx="6" cy="22" r="3.2" fill="#629677"/>
-            {/* Guitar pick */}
-            <path d="M30 23 L38 33 Q36 43 30 41 Q24 43 22 33 Z" fill="#C44900"/>
-          </svg>
-          {/* Brand name */}
+        <div style={{ textAlign: 'center', marginBottom: 4 }}>
           <span style={{ fontSize: 'var(--gc-brand-text)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
             <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
           </span>
