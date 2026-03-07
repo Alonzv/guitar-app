@@ -51,10 +51,7 @@ const NoteIcons = {
 };
 
 const SUBDIVISIONS = [
-  { label: 'Whole',   beats: 1,  clicksPerBeat: 0.25, icon: NoteIcons.whole     },
-  { label: 'Half',    beats: 2,  clicksPerBeat: 0.5,  icon: NoteIcons.half      },
   { label: 'Quarter', beats: 4,  clicksPerBeat: 1,    icon: NoteIcons.quarter   },
-  { label: 'Triplet', beats: 3,  clicksPerBeat: 3,    icon: NoteIcons.triplet   },
   { label: 'Eighth',  beats: 8,  clicksPerBeat: 2,    icon: NoteIcons.eighth    },
   { label: '16th',    beats: 16, clicksPerBeat: 4,    icon: NoteIcons.sixteenth },
 ];

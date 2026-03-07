@@ -22,7 +22,7 @@ export const ChordsTab: React.FC<Props> = ({ progression, onAddToProgression, on
           <button key={id} onClick={() => setSub(id)} style={{
             flex: 1, padding: '11px 0', border: 'none', cursor: 'pointer',
             fontWeight: 700, fontSize: 13,
-            background: sub === id ? T.primary : T.bgInput,
+            background: sub === id ? T.secondary : T.bgInput,
             color: sub === id ? T.white : T.textMuted,
             transition: 'background 0.15s',
           }}>
