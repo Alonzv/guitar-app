@@ -60,7 +60,7 @@ export default function App() {
           </span>
         </div>
         {/* Active tab name */}
-        <h1 style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: T.textMuted, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+        <h1 style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.2px' }}>
           {TABS.find(t => t.id === activeTab)?.label ?? ''}
         </h1>
 
