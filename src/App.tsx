@@ -5,7 +5,7 @@ import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { LyricsTab } from './components/Lyrics/LyricsTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
 import { Onboarding } from './components/Onboarding';
-import { unlockSilentMode } from './utils/audioPlayback';
+import { unlockAudio } from './utils/audioPlayback';
 import { T } from './theme';
 
 type Tab = 'chords' | 'scales' | 'lyrics' | 'tools';
@@ -27,7 +27,7 @@ export default function App() {
 
   // Unlock iOS silent mode on the very first touch anywhere in the app.
   useEffect(() => {
-    const unlock = () => { unlockSilentMode(); };
+    const unlock = () => { unlockAudio(); };
     document.addEventListener('touchstart', unlock, { once: true, capture: true });
     document.addEventListener('click',      unlock, { once: true, capture: true });
     return () => {

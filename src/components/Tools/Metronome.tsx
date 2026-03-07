@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { T, card } from '../../theme';
-import { unlockSilentMode } from '../../utils/audioPlayback';
+import { unlockAudio, getSharedContext } from '../../utils/audioPlayback';
 
 // ── Inline SVG note icons (currentColor) ──────────────────────────────────
 const NoteIcons = {
@@ -77,7 +77,6 @@ export const Metronome: React.FC = () => {
   const [playing, setPlaying]           = useState(false);
   const [beat, setBeat]                 = useState(-1);
 
-  const ctxRef          = useRef<AudioContext | null>(null);
   const nextBeatTimeRef = useRef(0);
   const beatNumRef      = useRef(0);
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -94,8 +93,7 @@ export const Metronome: React.FC = () => {
   }, [subdivision]);
 
   const schedule = useCallback(() => {
-    if (!ctxRef.current) return;
-    const ctx = ctxRef.current;
+    const ctx = getSharedContext();
     while (nextBeatTimeRef.current < ctx.currentTime + 0.1) {
       const b = beatNumRef.current;
       beep(ctx, nextBeatTimeRef.current, b === 0);
@@ -106,29 +104,16 @@ export const Metronome: React.FC = () => {
     }
   }, []);
 
-  // handleStartStop MUST be the direct onClick handler so AudioContext
-  // is created inside a user gesture — required for iOS (incl. silent mode).
+  // handleStartStop MUST be the direct onClick so unlockAudio() runs
+  // inside a native user gesture — required for iOS audio + silent mode.
   const handleStartStop = useCallback(() => {
     if (playing) {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      ctxRef.current?.close().catch(() => {});
-      ctxRef.current = null;
       setBeat(-1);
       setPlaying(false);
     } else {
-      unlockSilentMode(); // switch iOS audio session to "playback" (bypasses mute switch)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const Ctx: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new Ctx();
-      // Play a silent 1-sample buffer — unlocks iOS audio session so
-      // Web Audio works even when the hardware silent switch is on.
-      const silent = ctx.createBuffer(1, 1, ctx.sampleRate);
-      const silentSrc = ctx.createBufferSource();
-      silentSrc.buffer = silent;
-      silentSrc.connect(ctx.destination);
-      silentSrc.start(0);
-      ctx.resume().catch(() => {});
-      ctxRef.current = ctx;
+      unlockAudio(); // resume shared context + unlock iOS silent mode
+      const ctx = getSharedContext();
       nextBeatTimeRef.current = ctx.currentTime + 0.05;
       beatNumRef.current = 0;
       setPlaying(true);
