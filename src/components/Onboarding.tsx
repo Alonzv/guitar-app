@@ -3,7 +3,7 @@ import { T } from '../theme';
 
 const SLIDES = [
   {
-    icon: '🎸',
+    icon: null,
     title: 'Welcome to ScaleUp',
     body: 'Your complete guitar toolkit — build chords, explore scales, write lyrics, and tune up with the built-in Tuner & Metronome.',
   },
@@ -37,7 +37,10 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         boxShadow: '0 24px 64px rgba(46,74,90,0.25)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
       }}>
-        <div style={{ fontSize: 56, lineHeight: 1 }}>{icon}</div>
+        {icon
+          ? <div style={{ fontSize: 56, lineHeight: 1 }}>{icon}</div>
+          : <img src="/favicon.png" alt="ScaleUp" style={{ width: 80, height: 80, borderRadius: 18 }} />
+        }
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: T.text, textAlign: 'center', letterSpacing: '-0.3px' }}>{title}</h2>
         <p style={{ margin: 0, fontSize: 15, color: T.textMuted, textAlign: 'center', lineHeight: 1.6 }}>{body}</p>
 
