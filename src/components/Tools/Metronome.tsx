@@ -117,10 +117,10 @@ export const Metronome: React.FC = () => {
       {/* BPM control */}
       <div style={card()}>
         {/* Large BPM display + manual input */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 6 }}>
           <button onClick={() => adjustBpm(-1)} style={{
-            width: 40, height: 40, borderRadius: '50%', border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.text, fontSize: 22, fontWeight: 700, cursor: 'pointer', lineHeight: 1,
+            width: 44, height: 44, borderRadius: '50%', border: `1px solid ${T.border}`,
+            background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 700, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
           }}>−</button>
           <input
             type="number" min={40} max={240}
@@ -129,14 +129,16 @@ export const Metronome: React.FC = () => {
             onBlur={e => applyBpm(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && applyBpm(bpmInput)}
             style={{
-              width: 90, textAlign: 'center', fontSize: 48, fontWeight: 800,
+              width: 110, textAlign: 'center', fontSize: 52, fontWeight: 800,
               color: T.text, background: 'transparent', border: 'none', outline: 'none',
-              fontFamily: 'inherit',
-            }}
+              fontFamily: 'inherit', padding: 0, boxSizing: 'border-box',
+              /* hide browser spinner arrows */
+              MozAppearance: 'textfield',
+            } as React.CSSProperties}
           />
           <button onClick={() => adjustBpm(1)} style={{
-            width: 40, height: 40, borderRadius: '50%', border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.text, fontSize: 22, fontWeight: 700, cursor: 'pointer', lineHeight: 1,
+            width: 44, height: 44, borderRadius: '50%', border: `1px solid ${T.border}`,
+            background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 700, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
           }}>+</button>
         </div>
         <div style={{ textAlign: 'center', fontSize: 12, color: T.textMuted, marginBottom: 16 }}>BPM</div>
@@ -151,17 +153,19 @@ export const Metronome: React.FC = () => {
         <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Time Signature
         </p>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+        <select
+          value={timeSig.label}
+          onChange={e => setTimeSig(TIME_SIGS.find(ts => ts.label === e.target.value)!)}
+          style={{
+            width: '100%', marginBottom: 20, padding: '10px 12px', borderRadius: 10,
+            border: `1px solid ${T.border}`, background: T.bgInput,
+            color: T.text, fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
+          }}
+        >
           {TIME_SIGS.map(ts => (
-            <button key={ts.label} onClick={() => setTimeSig(ts)} style={{
-              padding: '5px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-              border: `1px solid ${timeSig.label === ts.label ? T.primary : T.border}`,
-              background: timeSig.label === ts.label ? T.primaryBg : T.bgInput,
-              color: timeSig.label === ts.label ? T.primary : T.textMuted,
-              cursor: 'pointer',
-            }}>{ts.label}</button>
+            <option key={ts.label} value={ts.label}>{ts.label}</option>
           ))}
-        </div>
+        </select>
 
         <button
           onClick={() => setPlaying(p => !p)}
