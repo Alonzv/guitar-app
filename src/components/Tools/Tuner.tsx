@@ -10,35 +10,62 @@ const STRINGS = [
   { name: 'E4', freq: 329.63 },
 ];
 
-// Strip octave number: "E2" → "E", "D3" → "D"
 const noteName = (s: string) => s.replace(/\d/g, '');
 
-function autoCorrelate(buf: Float32Array, sampleRate: number): number {
+/**
+ * Normalized autocorrelation — guitar range only.
+ * Finds the FIRST strong peak (avoids octave errors where harmonics
+ * score higher than the fundamental).
+ */
+function detectPitch(buf: Float32Array, sampleRate: number): number {
   const SIZE = buf.length;
-  let rms = 0;
-  for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
-  if (Math.sqrt(rms / SIZE) < 0.012) return -1;
 
-  let r1 = 0, r2 = SIZE - 1;
-  for (let i = 0; i < SIZE / 2; i++) { if (Math.abs(buf[i]) < 0.2) { r1 = i; break; } }
-  for (let i = 1; i < SIZE / 2; i++) { if (Math.abs(buf[SIZE - i]) < 0.2) { r2 = SIZE - i; break; } }
+  // RMS gate — silence rejection
+  let rmsSum = 0;
+  for (let i = 0; i < SIZE; i++) rmsSum += buf[i] * buf[i];
+  if (Math.sqrt(rmsSum / SIZE) < 0.015) return -1;
 
-  const t = buf.slice(r1, r2 + 1);
-  const len = t.length;
-  const c = new Float32Array(len);
-  for (let i = 0; i < len; i++) for (let j = 0; j < len - i; j++) c[i] += t[j] * t[j + i];
+  // Guitar range: 70 Hz (below low E) → 380 Hz (above high E)
+  const lagMin = Math.floor(sampleRate / 380); // ≈ 116
+  const lagMax = Math.ceil(sampleRate / 70);   // ≈ 630
 
-  let d = 0;
-  while (d < len - 1 && c[d] > c[d + 1]) d++;
-  let maxVal = -1, maxPos = -1;
-  for (let i = d; i < len; i++) { if (c[i] > maxVal) { maxVal = c[i]; maxPos = i; } }
-  if (maxPos <= 0 || maxPos >= len - 1) return -1;
+  // Only autocorrelate over first 2048 samples to keep it fast
+  const N = Math.min(SIZE, 2048);
 
-  const [x1, x2, x3] = [c[maxPos - 1], c[maxPos], c[maxPos + 1]];
-  const a = (x1 + x3 - 2 * x2) / 2;
-  const b = (x3 - x1) / 2;
-  let T0 = maxPos;
-  if (a !== 0) T0 -= b / (2 * a);
+  // Normalisation constant (c[0])
+  let c0 = 0;
+  for (let i = 0; i < N; i++) c0 += buf[i] * buf[i];
+  if (c0 === 0) return -1;
+
+  // Compute normalised autocorrelation for relevant lags
+  const numLags = lagMax - lagMin + 1;
+  const c = new Float32Array(numLags);
+  for (let k = 0; k < numLags; k++) {
+    const lag = lagMin + k;
+    let sum = 0;
+    const end = N - lag;
+    for (let j = 0; j < end; j++) sum += buf[j] * buf[j + lag];
+    c[k] = sum / c0;
+  }
+
+  // Find the FIRST local peak above confidence threshold 0.5
+  // "First peak" avoids octave errors — harmonics appear at later lags
+  const CONFIDENCE = 0.5;
+  let peakK = -1;
+  for (let k = 1; k < numLags - 1; k++) {
+    if (c[k] > c[k - 1] && c[k] >= c[k + 1] && c[k] > CONFIDENCE) {
+      peakK = k;
+      break;
+    }
+  }
+  if (peakK < 0) return -1;
+
+  // Parabolic interpolation for sub-sample precision
+  const y0 = c[peakK - 1], y1 = c[peakK], y2 = c[peakK + 1];
+  const denom = 2 * (y0 - 2 * y1 + y2);
+  const frac = denom !== 0 ? (y0 - y2) / denom : 0;
+  const T0 = lagMin + peakK + Math.max(-0.5, Math.min(0.5, frac));
+
   return sampleRate / T0;
 }
 
@@ -52,44 +79,71 @@ function findClosest(freq: number) {
   return { string: best, cents: bestCents };
 }
 
-export const Tuner: React.FC = () => {
-  const [listening, setListening]   = useState(false);
-  const [display, setDisplay]       = useState<{ note: string; hz: number; cents: number } | null>(null);
-  const [error, setError]           = useState('');
+const MEDIAN_BUF = 24;   // rolling window size
+const OUTLIER_CENTS = 80; // reject readings more than this far from median
 
-  const ctxRef          = useRef<AudioContext | null>(null);
-  const analyserRef     = useRef<AnalyserNode | null>(null);
-  const streamRef       = useRef<MediaStream | null>(null);
-  const rafRef          = useRef<number | null>(null);
-  const smoothedFreqRef = useRef<number | null>(null);  // EMA for frequency
-  const lastValidRef    = useRef<number>(0);            // timestamp of last valid detection
+export const Tuner: React.FC = () => {
+  const [listening, setListening] = useState(false);
+  const [display, setDisplay]     = useState<{ note: string; hz: number; cents: number } | null>(null);
+  const [error, setError]         = useState('');
+
+  const ctxRef        = useRef<AudioContext | null>(null);
+  const analyserRef   = useRef<AnalyserNode | null>(null);
+  const streamRef     = useRef<MediaStream | null>(null);
+  const rafRef        = useRef<number | null>(null);
+  const freqBufRef    = useRef<number[]>([]);        // rolling valid readings
+  const lastValidRef  = useRef<number>(0);
+  const frameRef      = useRef(0);                   // for throttling
 
   const tick = useCallback(() => {
     if (!analyserRef.current || !ctxRef.current) return;
+
+    // Throttle to ~30 fps — enough for a tuner display
+    frameRef.current++;
+    if (frameRef.current % 2 === 0) {
+      rafRef.current = requestAnimationFrame(tick);
+      return;
+    }
+
     const buf = new Float32Array(analyserRef.current.fftSize);
     analyserRef.current.getFloatTimeDomainData(buf);
-    const detected = autoCorrelate(buf, ctxRef.current.sampleRate);
+    const detected = detectPitch(buf, ctxRef.current.sampleRate);
 
-    if (detected > 60 && detected < 420) {
-      lastValidRef.current = Date.now();
-      // EMA smoothing — alpha=0.12 → very stable needle
-      smoothedFreqRef.current = smoothedFreqRef.current === null
-        ? detected
-        : 0.12 * detected + 0.88 * smoothedFreqRef.current;
+    if (detected > 0) {
+      const ring = freqBufRef.current;
+      ring.push(detected);
+      if (ring.length > MEDIAN_BUF) ring.shift();
 
-      const { string: str, cents } = findClosest(smoothedFreqRef.current);
-      setDisplay({
-        note: noteName(str.name),
-        hz:   Math.round(smoothedFreqRef.current * 10) / 10,
-        cents: Math.round(cents),
-      });
+      if (ring.length >= 6) {
+        // Median of ring buffer
+        const sorted = [...ring].sort((a, b) => a - b);
+        const median = sorted[Math.floor(sorted.length / 2)];
+
+        // Reject outliers more than OUTLIER_CENTS away from median
+        const valid = ring.filter(
+          f => Math.abs(1200 * Math.log2(f / median)) < OUTLIER_CENTS
+        );
+
+        if (valid.length >= 4) {
+          // Mean of valid readings
+          const mean = valid.reduce((a, b) => a + b, 0) / valid.length;
+          lastValidRef.current = Date.now();
+          const { string, cents } = findClosest(mean);
+          setDisplay({
+            note:  noteName(string.name),
+            hz:    Math.round(mean * 10) / 10,
+            cents: Math.round(cents),
+          });
+        }
+      }
     } else {
-      // Persist last reading for 2 s after signal drops
+      // Persist display for 2 s after signal drops, then clear
       if (Date.now() - lastValidRef.current > 2000) {
-        smoothedFreqRef.current = null;
+        freqBufRef.current = [];
         setDisplay(null);
       }
     }
+
     rafRef.current = requestAnimationFrame(tick);
   }, []);
 
@@ -102,8 +156,8 @@ export const Tuner: React.FC = () => {
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 4096;                // larger buffer → better low-freq resolution
-      analyser.smoothingTimeConstant = 0.85;
+      analyser.fftSize = 4096;
+      analyser.smoothingTimeConstant = 0.0; // no smoothing — we do it ourselves
       source.connect(analyser);
       analyserRef.current = analyser;
       setListening(true);
@@ -118,29 +172,34 @@ export const Tuner: React.FC = () => {
     ctxRef.current?.close().catch(() => {});
     streamRef.current?.getTracks().forEach(t => t.stop());
     ctxRef.current = null; analyserRef.current = null; streamRef.current = null;
-    smoothedFreqRef.current = null;
+    freqBufRef.current = [];
     setListening(false); setDisplay(null);
   }, []);
 
   useEffect(() => () => stop(), [stop]);
 
-  const cents     = display?.cents ?? 0;
-  const absCents  = Math.abs(cents);
-  const tuneColor = !display ? T.border
-    : absCents <= 5  ? T.secondary
-    : absCents <= 20 ? '#D4A017'
+  const cents    = display?.cents ?? 0;
+  const absCents = Math.abs(cents);
+  const tuneColor = !display      ? T.border
+    : absCents <= 5               ? T.secondary
+    : absCents <= 20              ? '#D4A017'
     : T.coral;
 
-  // Map ±50 cents → 0–100 % (wider range = calmer needle movement)
-  const needlePct = display ? Math.min(100, Math.max(0, 50 + (cents / 50) * 50)) : 50;
+  // ±50 cents → 0–100 %
+  const needlePct = display
+    ? Math.min(100, Math.max(0, 50 + (cents / 50) * 50))
+    : 50;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* Main display */}
       <div style={card({ textAlign: 'center', padding: '28px 20px' })}>
-        {/* Note name */}
-        <div style={{ fontSize: 72, fontWeight: 800, color: tuneColor, lineHeight: 1, marginBottom: 4, transition: 'color 0.3s', minHeight: 80 }}>
+        <div style={{
+          fontSize: 80, fontWeight: 800, color: tuneColor,
+          lineHeight: 1, marginBottom: 4,
+          transition: 'color 0.3s', minHeight: 88,
+        }}>
           {display ? display.note : '—'}
         </div>
         <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 24, minHeight: 18 }}>
@@ -149,23 +208,28 @@ export const Tuner: React.FC = () => {
 
         {/* Needle bar */}
         <div style={{ position: 'relative', height: 10, borderRadius: 5, background: T.bgInput, marginBottom: 10, overflow: 'visible' }}>
-          {/* Centre line */}
-          <div style={{ position: 'absolute', left: '50%', top: -6, width: 2, height: 22, background: T.border, transform: 'translateX(-50%)', borderRadius: 1 }} />
-          {/* Needle */}
+          <div style={{
+            position: 'absolute', left: '50%', top: -6, width: 2, height: 22,
+            background: T.border, transform: 'translateX(-50%)', borderRadius: 1,
+          }} />
           <div style={{
             position: 'absolute', top: -4, width: 8, height: 18, borderRadius: 4,
             background: tuneColor, transform: 'translateX(-50%)',
             left: `${needlePct}%`,
-            transition: 'left 0.35s ease-out, background 0.3s',  // slow CSS transition for calm movement
+            // slow transition — the buffer already smooths the data,
+            // the CSS transition just makes it look silky
+            transition: 'left 0.25s ease-out, background 0.3s',
           }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 12 }}>
           <span>♭ Flat</span><span>In tune</span><span>Sharp ♯</span>
         </div>
 
-        {/* Status text */}
         <div style={{ fontSize: 15, fontWeight: 700, color: tuneColor, transition: 'color 0.3s', minHeight: 22 }}>
-          {!display ? '' : absCents <= 5 ? '✓ In tune!' : cents > 0 ? `+${cents}¢ — Tune down` : `${cents}¢ — Tune up`}
+          {!display ? ''
+            : absCents <= 5  ? '✓ In tune!'
+            : cents > 0 ? `+${cents}¢ — Tune down`
+            : `${cents}¢ — Tune up`}
         </div>
       </div>
 
