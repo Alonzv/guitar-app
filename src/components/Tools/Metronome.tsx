@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { T, card } from '../../theme';
+import { unlockSilentMode } from '../../utils/audioPlayback';
 
 // ── Inline SVG note icons (currentColor) ──────────────────────────────────
 const NoteIcons = {
@@ -115,6 +116,7 @@ export const Metronome: React.FC = () => {
       setBeat(-1);
       setPlaying(false);
     } else {
+      unlockSilentMode(); // switch iOS audio session to "playback" (bypasses mute switch)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const Ctx: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new Ctx();

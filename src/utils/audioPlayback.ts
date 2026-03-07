@@ -11,10 +11,26 @@ function getCtx(): AudioContext {
   return sharedCtx;
 }
 
-/** Must be called inside an onClick handler (user gesture) to unlock iOS audio. */
+// ── iOS silent-mode bypass ───────────────────────────────────────────────
+// Minimal valid silent WAV (44 bytes, 1 channel, 1 sample, 16-bit PCM).
+// Playing it through HTMLAudioElement switches the iOS AVAudioSession from
+// "ambient" (respects the hardware mute switch) to "playback" (ignores it).
+// After that, Web Audio API also plays in silent mode.
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
+let silentModeUnlocked = false;
+
+export function unlockSilentMode(): void {
+  if (silentModeUnlocked) return;
+  const a = new Audio(SILENT_WAV);
+  a.play()
+    .then(() => { silentModeUnlocked = true; })
+    .catch(() => {});
+}
+
+/** Resumes the shared AudioContext within a user gesture. */
 function unlockCtx(ctx: AudioContext): void {
-  // Play a 1-sample silent buffer — switches iOS audio session to "playback"
-  // so Web Audio API works even when the hardware silent switch is on.
   const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
   const src = ctx.createBufferSource();
   src.buffer = buf;
@@ -48,11 +64,12 @@ function synthesizeNote(ctx: AudioContext, freq: number, startTime: number): voi
 
 export interface FretPos { string: number; fret: number; }
 
-/** Arpeggiate a chord low → high string */
+/** Arpeggiate a chord low → high string. Call only from a user gesture. */
 export function playChord(fretPositions: FretPos[]): void {
   if (fretPositions.length === 0) return;
+  unlockSilentMode();          // switch iOS to playback audio session
   const ctx = getCtx();
-  unlockCtx(ctx);
+  unlockCtx(ctx);              // resume Web Audio context
   const sorted = [...fretPositions].sort((a, b) => a.string - b.string);
   sorted.forEach((pos, i) => {
     const freq = OPEN_FREQS[pos.string] * Math.pow(2, pos.fret / 12);
