@@ -30,9 +30,9 @@ export default function App() {
       {/* ── Header ── */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
         {/* Brand row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 6 }}>
           {/* Fretboard + pick logo mark */}
-          <svg viewBox="0 0 44 48" width="28" height="28" style={{ flexShrink: 0 }}>
+          <svg viewBox="0 0 44 48" style={{ flexShrink: 0, width: 'var(--gc-brand-logo)', height: 'var(--gc-brand-logo)' }}>
             {/* Fretboard frame */}
             <rect x="2" y="2" width="30" height="24" rx="1.5" fill="none" stroke="#3D5A6C" strokeWidth="1.8"/>
             {/* Vertical fret lines */}
@@ -55,12 +55,12 @@ export default function App() {
             <path d="M30 23 L38 33 Q36 43 30 41 Q24 43 22 33 Z" fill="#C44900"/>
           </svg>
           {/* Brand name */}
-          <span style={{ fontSize: 'var(--gc-h1-size)', fontWeight: 800, letterSpacing: '-0.3px' }}>
+          <span style={{ fontSize: 'var(--gc-brand-text)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
             <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
           </span>
         </div>
         {/* Active tab name */}
-        <h1 style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.2px' }}>
+        <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-tab-title)', fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.2px' }}>
           {TABS.find(t => t.id === activeTab)?.label ?? ''}
         </h1>
 
@@ -77,7 +77,7 @@ export default function App() {
                   borderRadius: 10,
                   border: active ? 'none' : `1px solid ${T.border}`,
                   background: active ? T.primary : T.bgCard,
-                  color: active ? T.text : T.textMuted,
+                  color: active ? T.white : T.textMuted,
                   fontWeight: 700,
                   boxShadow: active ? `0 2px 8px rgba(196,73,0,0.4)` : 'none',
                   transition: 'all 0.15s',
