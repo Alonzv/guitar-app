@@ -1,17 +1,62 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { T, card } from '../../theme';
 
-const TIME_SIGS = [
-  { label: '2/4',   beats: 2  },
-  { label: '3/4',   beats: 3  },
-  { label: '4/4',   beats: 4  },
-  { label: '5/4',   beats: 5  },
-  { label: '6/8',   beats: 6  },
-  { label: '7/8',   beats: 7  },
-  { label: '8/8',   beats: 8  },
-  { label: '9/8',   beats: 9  },
-  { label: '12/8',  beats: 12 },
-  { label: '16/16', beats: 16 },
+// ── Inline SVG note icons (currentColor) ──────────────────────────────────
+const NoteIcons = {
+  whole: (
+    <svg viewBox="0 0 22 14" width="22" height="14" style={{ display: 'block' }}>
+      <ellipse cx="11" cy="7" rx="9" ry="5.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+    </svg>
+  ),
+  half: (
+    <svg viewBox="0 0 16 28" width="14" height="26" style={{ display: 'block' }}>
+      <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" stroke="currentColor" strokeWidth="1.7"
+        fill="none" transform="rotate(-18,7.5,21)"/>
+      <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
+    </svg>
+  ),
+  quarter: (
+    <svg viewBox="0 0 16 28" width="14" height="26" style={{ display: 'block' }}>
+      <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" fill="currentColor" transform="rotate(-18,7.5,21)"/>
+      <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
+    </svg>
+  ),
+  triplet: (
+    <svg viewBox="0 0 50 30" width="50" height="30" style={{ display: 'block' }}>
+      <ellipse cx="6.5" cy="23" rx="5.5" ry="4" fill="currentColor" transform="rotate(-18,6.5,23)"/>
+      <line x1="11.5" y1="20" x2="11.5" y2="8" stroke="currentColor" strokeWidth="1.5"/>
+      <ellipse cx="25" cy="23" rx="5.5" ry="4" fill="currentColor" transform="rotate(-18,25,23)"/>
+      <line x1="30" y1="20" x2="30" y2="8" stroke="currentColor" strokeWidth="1.5"/>
+      <ellipse cx="43" cy="23" rx="5.5" ry="4" fill="currentColor" transform="rotate(-18,43,23)"/>
+      <line x1="48" y1="20" x2="48" y2="8" stroke="currentColor" strokeWidth="1.5"/>
+      <line x1="11.5" y1="8" x2="48" y2="8" stroke="currentColor" strokeWidth="2.2"/>
+      <text x="30" y="5.5" textAnchor="middle" fontSize="8" fill="currentColor" fontWeight="800">3</text>
+    </svg>
+  ),
+  eighth: (
+    <svg viewBox="0 0 20 28" width="16" height="26" style={{ display: 'block' }}>
+      <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" fill="currentColor" transform="rotate(-18,7.5,21)"/>
+      <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
+      <path d="M13.5,2 C18,5 19,12 15,17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+    </svg>
+  ),
+  sixteenth: (
+    <svg viewBox="0 0 20 28" width="16" height="26" style={{ display: 'block' }}>
+      <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" fill="currentColor" transform="rotate(-18,7.5,21)"/>
+      <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
+      <path d="M13.5,2 C18,5 19,12 15,17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+      <path d="M13.5,8 C18,11 19,18 15,22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+    </svg>
+  ),
+};
+
+const SUBDIVISIONS = [
+  { label: 'Whole',   beats: 1,  icon: NoteIcons.whole     },
+  { label: 'Half',    beats: 2,  icon: NoteIcons.half      },
+  { label: 'Quarter', beats: 4,  icon: NoteIcons.quarter   },
+  { label: 'Triplet', beats: 3,  icon: NoteIcons.triplet   },
+  { label: 'Eighth',  beats: 8,  icon: NoteIcons.eighth    },
+  { label: '16th',    beats: 16, icon: NoteIcons.sixteenth },
 ];
 
 function beep(ctx: AudioContext, time: number, accent: boolean): void {
@@ -28,25 +73,25 @@ function beep(ctx: AudioContext, time: number, accent: boolean): void {
 }
 
 export const Metronome: React.FC = () => {
-  const [bpm, setBpm]         = useState(100);
-  const [bpmInput, setBpmInput] = useState('100');
-  const [timeSig, setTimeSig] = useState(TIME_SIGS[2]); // default 4/4
-  const [playing, setPlaying] = useState(false);
-  const [beat, setBeat]       = useState(-1);
+  const [bpm, setBpm]                   = useState(100);
+  const [bpmInput, setBpmInput]         = useState('100');
+  const [subdivision, setSubdivision]   = useState(SUBDIVISIONS[2]); // Quarter default
+  const [playing, setPlaying]           = useState(false);
+  const [beat, setBeat]                 = useState(-1);
 
   const ctxRef          = useRef<AudioContext | null>(null);
   const nextBeatTimeRef = useRef(0);
   const beatNumRef      = useRef(0);
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const bpmRef          = useRef(bpm);
-  const beatsRef        = useRef(timeSig.beats);
+  const beatsRef        = useRef(subdivision.beats);
   bpmRef.current   = bpm;
-  beatsRef.current = timeSig.beats;
+  beatsRef.current = subdivision.beats;
 
-  // Reset beat counter when time signature changes while playing
+  // Reset beat counter when subdivision changes
   useEffect(() => {
     beatNumRef.current = 0;
-  }, [timeSig]);
+  }, [subdivision]);
 
   const schedule = useCallback(() => {
     if (!ctxRef.current) return;
@@ -93,8 +138,8 @@ export const Metronome: React.FC = () => {
   };
 
   // Dot sizing — shrink for many beats so they fit
-  const dotSize = timeSig.beats <= 7 ? 44 : timeSig.beats <= 9 ? 34 : 26;
-  const dotGap  = timeSig.beats <= 7 ? 12 : 8;
+  const dotSize = subdivision.beats <= 7 ? 44 : subdivision.beats <= 9 ? 34 : 26;
+  const dotGap  = subdivision.beats <= 7 ? 12 : 8;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -102,7 +147,7 @@ export const Metronome: React.FC = () => {
       {/* Beat dots */}
       <div style={card({ padding: '20px 12px' })}>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: dotGap }}>
-          {Array.from({ length: timeSig.beats }).map((_, i) => (
+          {Array.from({ length: subdivision.beats }).map((_, i) => (
             <div key={i} style={{
               width: dotSize, height: dotSize, borderRadius: '50%', flexShrink: 0,
               background: playing && beat === i ? (i === 0 ? T.primary : T.secondary) : T.bgInput,
@@ -132,7 +177,6 @@ export const Metronome: React.FC = () => {
               width: 110, textAlign: 'center', fontSize: 52, fontWeight: 800,
               color: T.text, background: 'transparent', border: 'none', outline: 'none',
               fontFamily: 'inherit', padding: 0, boxSizing: 'border-box',
-              /* hide browser spinner arrows */
               MozAppearance: 'textfield',
             } as React.CSSProperties}
           />
@@ -149,23 +193,33 @@ export const Metronome: React.FC = () => {
           style={{ width: '100%', marginBottom: 20, accentColor: T.primary, cursor: 'pointer' }}
         />
 
-        {/* Time signature */}
+        {/* Subdivision buttons */}
         <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Time Signature
+          Subdivision
         </p>
-        <select
-          value={timeSig.label}
-          onChange={e => setTimeSig(TIME_SIGS.find(ts => ts.label === e.target.value)!)}
-          style={{
-            width: '100%', marginBottom: 20, padding: '10px 12px', borderRadius: 10,
-            border: `1px solid ${T.border}`, background: T.bgInput,
-            color: T.text, fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
-          }}
-        >
-          {TIME_SIGS.map(ts => (
-            <option key={ts.label} value={ts.label}>{ts.label}</option>
-          ))}
-        </select>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+          {SUBDIVISIONS.map(sub => {
+            const active = subdivision.beats === sub.beats;
+            return (
+              <button
+                key={sub.label}
+                onClick={() => setSubdivision(sub)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, padding: '10px 4px', borderRadius: 10,
+                  border: `1.5px solid ${active ? T.primary : T.border}`,
+                  background: active ? T.primaryBg : T.bgInput,
+                  color: active ? T.primary : T.textMuted,
+                  cursor: 'pointer', fontSize: 11, fontWeight: active ? 700 : 500,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {sub.icon}
+                <span>{sub.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
         <button
           onClick={() => setPlaying(p => !p)}
