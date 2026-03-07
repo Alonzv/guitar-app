@@ -51,12 +51,12 @@ const NoteIcons = {
 };
 
 const SUBDIVISIONS = [
-  { label: 'Whole',   beats: 1,  icon: NoteIcons.whole     },
-  { label: 'Half',    beats: 2,  icon: NoteIcons.half      },
-  { label: 'Quarter', beats: 4,  icon: NoteIcons.quarter   },
-  { label: 'Triplet', beats: 3,  icon: NoteIcons.triplet   },
-  { label: 'Eighth',  beats: 8,  icon: NoteIcons.eighth    },
-  { label: '16th',    beats: 16, icon: NoteIcons.sixteenth },
+  { label: 'Whole',   beats: 1,  clicksPerBeat: 0.25, icon: NoteIcons.whole     },
+  { label: 'Half',    beats: 2,  clicksPerBeat: 0.5,  icon: NoteIcons.half      },
+  { label: 'Quarter', beats: 4,  clicksPerBeat: 1,    icon: NoteIcons.quarter   },
+  { label: 'Triplet', beats: 3,  clicksPerBeat: 3,    icon: NoteIcons.triplet   },
+  { label: 'Eighth',  beats: 8,  clicksPerBeat: 2,    icon: NoteIcons.eighth    },
+  { label: '16th',    beats: 16, clicksPerBeat: 4,    icon: NoteIcons.sixteenth },
 ];
 
 function beep(ctx: AudioContext, time: number, accent: boolean): void {
@@ -83,10 +83,12 @@ export const Metronome: React.FC = () => {
   const nextBeatTimeRef = useRef(0);
   const beatNumRef      = useRef(0);
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const bpmRef          = useRef(bpm);
-  const beatsRef        = useRef(subdivision.beats);
-  bpmRef.current   = bpm;
-  beatsRef.current = subdivision.beats;
+  const bpmRef           = useRef(bpm);
+  const beatsRef         = useRef(subdivision.beats);
+  const clicksPerBeatRef = useRef(subdivision.clicksPerBeat);
+  bpmRef.current          = bpm;
+  beatsRef.current        = subdivision.beats;
+  clicksPerBeatRef.current = subdivision.clicksPerBeat;
 
   // Reset beat counter when subdivision changes
   useEffect(() => {
@@ -101,7 +103,7 @@ export const Metronome: React.FC = () => {
       beep(ctx, nextBeatTimeRef.current, b === 0);
       const delay = Math.max(0, (nextBeatTimeRef.current - ctx.currentTime) * 1000);
       setTimeout(() => setBeat(b), delay);
-      nextBeatTimeRef.current += 60 / bpmRef.current;
+      nextBeatTimeRef.current += 60 / (bpmRef.current * clicksPerBeatRef.current);
       beatNumRef.current = (beatNumRef.current + 1) % beatsRef.current;
     }
   }, []);
