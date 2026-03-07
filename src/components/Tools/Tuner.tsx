@@ -10,11 +10,14 @@ const STRINGS = [
   { name: 'E4', freq: 329.63 },
 ];
 
+// Strip octave number: "E2" → "E", "D3" → "D"
+const noteName = (s: string) => s.replace(/\d/g, '');
+
 function autoCorrelate(buf: Float32Array, sampleRate: number): number {
   const SIZE = buf.length;
   let rms = 0;
   for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
-  if (Math.sqrt(rms / SIZE) < 0.01) return -1;
+  if (Math.sqrt(rms / SIZE) < 0.012) return -1;
 
   let r1 = 0, r2 = SIZE - 1;
   for (let i = 0; i < SIZE / 2; i++) { if (Math.abs(buf[i]) < 0.2) { r1 = i; break; } }
@@ -27,7 +30,6 @@ function autoCorrelate(buf: Float32Array, sampleRate: number): number {
 
   let d = 0;
   while (d < len - 1 && c[d] > c[d + 1]) d++;
-
   let maxVal = -1, maxPos = -1;
   for (let i = d; i < len; i++) { if (c[i] > maxVal) { maxVal = c[i]; maxPos = i; } }
   if (maxPos <= 0 || maxPos >= len - 1) return -1;
@@ -47,30 +49,46 @@ function findClosest(freq: number) {
     const cents = 1200 * Math.log2(freq / s.freq);
     if (Math.abs(cents) < Math.abs(bestCents)) { bestCents = cents; best = s; }
   }
-  return { string: best, cents: Math.round(bestCents) };
+  return { string: best, cents: bestCents };
 }
 
 export const Tuner: React.FC = () => {
-  const [listening, setListening] = useState(false);
-  const [freq, setFreq]           = useState<number | null>(null);
-  const [closest, setClosest]     = useState<ReturnType<typeof findClosest> | null>(null);
-  const [error, setError]         = useState('');
+  const [listening, setListening]   = useState(false);
+  const [display, setDisplay]       = useState<{ note: string; hz: number; cents: number } | null>(null);
+  const [error, setError]           = useState('');
 
-  const ctxRef      = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const streamRef   = useRef<MediaStream | null>(null);
-  const rafRef      = useRef<number | null>(null);
+  const ctxRef          = useRef<AudioContext | null>(null);
+  const analyserRef     = useRef<AnalyserNode | null>(null);
+  const streamRef       = useRef<MediaStream | null>(null);
+  const rafRef          = useRef<number | null>(null);
+  const smoothedFreqRef = useRef<number | null>(null);  // EMA for frequency
+  const lastValidRef    = useRef<number>(0);            // timestamp of last valid detection
 
   const tick = useCallback(() => {
     if (!analyserRef.current || !ctxRef.current) return;
     const buf = new Float32Array(analyserRef.current.fftSize);
     analyserRef.current.getFloatTimeDomainData(buf);
     const detected = autoCorrelate(buf, ctxRef.current.sampleRate);
+
     if (detected > 60 && detected < 420) {
-      setFreq(Math.round(detected * 10) / 10);
-      setClosest(findClosest(detected));
+      lastValidRef.current = Date.now();
+      // EMA smoothing — alpha=0.12 → very stable needle
+      smoothedFreqRef.current = smoothedFreqRef.current === null
+        ? detected
+        : 0.12 * detected + 0.88 * smoothedFreqRef.current;
+
+      const { string: str, cents } = findClosest(smoothedFreqRef.current);
+      setDisplay({
+        note: noteName(str.name),
+        hz:   Math.round(smoothedFreqRef.current * 10) / 10,
+        cents: Math.round(cents),
+      });
     } else {
-      setFreq(null);
+      // Persist last reading for 2 s after signal drops
+      if (Date.now() - lastValidRef.current > 2000) {
+        smoothedFreqRef.current = null;
+        setDisplay(null);
+      }
     }
     rafRef.current = requestAnimationFrame(tick);
   }, []);
@@ -84,8 +102,8 @@ export const Tuner: React.FC = () => {
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.8;
+      analyser.fftSize = 4096;                // larger buffer → better low-freq resolution
+      analyser.smoothingTimeConstant = 0.85;
       source.connect(analyser);
       analyserRef.current = analyser;
       setListening(true);
@@ -100,67 +118,59 @@ export const Tuner: React.FC = () => {
     ctxRef.current?.close().catch(() => {});
     streamRef.current?.getTracks().forEach(t => t.stop());
     ctxRef.current = null; analyserRef.current = null; streamRef.current = null;
-    setListening(false); setFreq(null); setClosest(null);
+    smoothedFreqRef.current = null;
+    setListening(false); setDisplay(null);
   }, []);
 
   useEffect(() => () => stop(), [stop]);
 
-  const cents     = closest?.cents ?? 0;
+  const cents     = display?.cents ?? 0;
   const absCents  = Math.abs(cents);
-  const tuneColor = !freq ? T.border : absCents <= 5 ? T.secondary : absCents <= 15 ? '#D4A017' : T.coral;
-  const needlePct = freq ? Math.min(100, Math.max(0, 50 + (cents / 30) * 50)) : 50;
+  const tuneColor = !display ? T.border
+    : absCents <= 5  ? T.secondary
+    : absCents <= 20 ? '#D4A017'
+    : T.coral;
+
+  // Map ±50 cents → 0–100 % (wider range = calmer needle movement)
+  const needlePct = display ? Math.min(100, Math.max(0, 50 + (cents / 50) * 50)) : 50;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* Main display */}
-      <div style={card({ textAlign: 'center', padding: '24px 20px' })}>
-        <div style={{ fontSize: 52, fontWeight: 800, color: tuneColor, lineHeight: 1, marginBottom: 6, transition: 'color 0.2s' }}>
-          {closest ? closest.string.name : '—'}
+      <div style={card({ textAlign: 'center', padding: '28px 20px' })}>
+        {/* Note name */}
+        <div style={{ fontSize: 72, fontWeight: 800, color: tuneColor, lineHeight: 1, marginBottom: 4, transition: 'color 0.3s', minHeight: 80 }}>
+          {display ? display.note : '—'}
         </div>
-        <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 20 }}>
-          {freq ? `${freq} Hz` : 'Play a string…'}
+        <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 24, minHeight: 18 }}>
+          {display ? `${display.hz} Hz` : 'Play a string…'}
         </div>
 
         {/* Needle bar */}
-        <div style={{ position: 'relative', height: 8, borderRadius: 4, background: T.bgInput, marginBottom: 10, overflow: 'visible' }}>
-          <div style={{ position: 'absolute', left: '50%', top: -5, width: 2, height: 18, background: T.border, transform: 'translateX(-50%)' }} />
+        <div style={{ position: 'relative', height: 10, borderRadius: 5, background: T.bgInput, marginBottom: 10, overflow: 'visible' }}>
+          {/* Centre line */}
+          <div style={{ position: 'absolute', left: '50%', top: -6, width: 2, height: 22, background: T.border, transform: 'translateX(-50%)', borderRadius: 1 }} />
+          {/* Needle */}
           <div style={{
-            position: 'absolute', top: -5, width: 6, height: 18, borderRadius: 3,
+            position: 'absolute', top: -4, width: 8, height: 18, borderRadius: 4,
             background: tuneColor, transform: 'translateX(-50%)',
-            left: `${needlePct}%`, transition: 'left 0.1s, background 0.2s',
+            left: `${needlePct}%`,
+            transition: 'left 0.35s ease-out, background 0.3s',  // slow CSS transition for calm movement
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 12 }}>
           <span>♭ Flat</span><span>In tune</span><span>Sharp ♯</span>
         </div>
 
-        <div style={{ fontSize: 13, fontWeight: 700, color: tuneColor, transition: 'color 0.2s', minHeight: 20 }}>
-          {!freq ? '' : absCents <= 5 ? '✓ In tune!' : cents > 0 ? `+${cents}¢ — Tune down` : `${cents}¢ — Tune up`}
+        {/* Status text */}
+        <div style={{ fontSize: 15, fontWeight: 700, color: tuneColor, transition: 'color 0.3s', minHeight: 22 }}>
+          {!display ? '' : absCents <= 5 ? '✓ In tune!' : cents > 0 ? `+${cents}¢ — Tune down` : `${cents}¢ — Tune up`}
         </div>
       </div>
 
-      {/* String reference + start */}
+      {/* Start / Stop */}
       <div style={card()}>
-        <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Standard Tuning
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
-          {STRINGS.map(s => {
-            const active = closest?.string.name === s.name && !!freq;
-            return (
-              <div key={s.name} style={{
-                padding: '8px 4px', borderRadius: 8, textAlign: 'center',
-                background: active ? T.primaryBg : T.bgInput,
-                border: `1px solid ${active ? tuneColor : T.border}`,
-                transition: 'all 0.2s',
-              }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>{s.name}</div>
-                <div style={{ fontSize: 10, color: T.textMuted }}>{s.freq} Hz</div>
-              </div>
-            );
-          })}
-        </div>
         {error && <p style={{ color: T.coral, fontSize: 12, margin: '0 0 12px' }}>{error}</p>}
         <button
           onClick={listening ? stop : start}
