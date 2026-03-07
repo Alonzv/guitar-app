@@ -1,18 +1,19 @@
 // ── Guitar Composer Design Tokens ──────────────────────────
 export const T = {
-  bgDeep:     '#243238',           // main background (dark #495D63)
-  bgCard:     '#354a51',           // card / panel
-  bgInput:    '#2b3f47',           // secondary dark (inputs, inner areas)
-  border:     '#495D63',           // all borders
-  primary:    '#C44900',           // burnt orange — CTAs, active, root notes
+  bgDeep:     '#F7F0DC',           // warm cream — main background
+  bgCard:     '#EDE6C8',           // slightly darker cream — cards / panels
+  bgInput:    '#E8DDBA',           // input areas, secondary surfaces
+  border:     '#CDBF96',           // tan / golden borders
+  primary:    '#C44900',           // burnt orange — CTAs, active, root notes (pick color)
   primaryHov: '#d95200',           // hover state of primary
-  primaryBg:  '#321200',           // dark surface for primary accent
+  primaryBg:  '#FAEBD4',           // very light warm surface for primary accent
   secondary:  '#629677',           // sage green — secondary actions, scale tones
-  secondaryBg:'#1a2e24',           // dark surface for secondary accent
-  text:       '#F9ECC3',           // cream — primary text
-  textMuted:  'rgba(249,236,195,0.55)',
-  textDim:    'rgba(249,236,195,0.28)',
-  white:      '#F9ECC3',           // alias
+  secondaryBg:'#DDF0EB',           // light surface for secondary accent
+  coral:      '#E8736A',           // coral / salmon — "Up" accent color
+  text:       '#2E4A5A',           // dark slate blue — primary text
+  textMuted:  'rgba(46,74,90,0.58)',
+  textDim:    'rgba(46,74,90,0.33)',
+  white:      '#F9ECC3',           // warm cream — for text on colored backgrounds
 } as const;
 
 export type Theme = typeof T;
@@ -39,7 +40,7 @@ export const btn = {
     fontWeight: 700,
     fontSize: 14,
     background: disabled ? T.border : T.primary,
-    color: disabled ? T.textDim : T.text,
+    color: disabled ? T.textDim : T.white,
     transition: 'background 0.15s',
   }),
   secondary: (): React.CSSProperties => ({
@@ -60,7 +61,7 @@ export const btn = {
     fontSize: 12,
     fontWeight: active ? 600 : 400,
     background: active ? T.primary : T.bgInput,
-    color: active ? T.text : T.textMuted,
+    color: active ? T.white : T.textMuted,
     transition: 'background 0.15s',
   }),
 };

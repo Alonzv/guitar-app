@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'ScaleUp',
         short_name: 'ScaleUp',
         description: 'ScaleUp — chord builder, progressions, and scale visualizer',
-        theme_color: '#1e1b4b',
-        background_color: '#0d0c1a',
+        theme_color: '#F7F0DC',
+        background_color: '#F7F0DC',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
