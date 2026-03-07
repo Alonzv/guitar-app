@@ -12,9 +12,10 @@ function getCtx(): AudioContext {
 }
 
 // ── iOS silent-mode bypass ───────────────────────────────────────────────
-// Minimal valid silent WAV (44 bytes, 1 channel, 1 sample, 16-bit PCM).
-// Playing it through HTMLAudioElement switches the iOS AVAudioSession from
-// "ambient" (respects the hardware mute switch) to "playback" (ignores it).
+// Minimal valid silent WAV (48 bytes).
+// Playing it through an HTMLAudioElement that is in the DOM and has the
+// playsinline attribute switches the iOS AVAudioSession from "ambient"
+// (respects the hardware mute switch) to "playback" (ignores it).
 // After that, Web Audio API also plays in silent mode.
 const SILENT_WAV =
   'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
@@ -23,10 +24,19 @@ let silentModeUnlocked = false;
 
 export function unlockSilentMode(): void {
   if (silentModeUnlocked) return;
-  const a = new Audio(SILENT_WAV);
-  a.play()
+  // Must use createElement + appendChild — new Audio() alone doesn't
+  // reliably trigger the iOS audio session category switch.
+  const audio = document.createElement('audio');
+  audio.setAttribute('playsinline', '');          // required for iOS
+  audio.setAttribute('webkit-playsinline', '');   // older iOS
+  audio.muted = false;
+  audio.volume = 0.001;
+  audio.src = SILENT_WAV;
+  document.body.appendChild(audio);
+  audio.play()
     .then(() => { silentModeUnlocked = true; })
-    .catch(() => {});
+    .catch(() => {})
+    .finally(() => { audio.remove(); });
 }
 
 /** Resumes the shared AudioContext within a user gesture. */

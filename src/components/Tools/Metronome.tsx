@@ -73,7 +73,7 @@ function beep(ctx: AudioContext, time: number, accent: boolean): void {
 export const Metronome: React.FC = () => {
   const [bpm, setBpm]                   = useState(100);
   const [bpmInput, setBpmInput]         = useState('100');
-  const [subdivision, setSubdivision]   = useState(SUBDIVISIONS[2]); // Quarter default
+  const [subdivision, setSubdivision]   = useState(SUBDIVISIONS[0]); // Quarter default
   const [playing, setPlaying]           = useState(false);
   const [beat, setBeat]                 = useState(-1);
 

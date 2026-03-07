@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ChordInProgression, ScaleMatch } from './types/music';
 import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { LyricsTab } from './components/Lyrics/LyricsTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
 import { Onboarding } from './components/Onboarding';
+import { unlockSilentMode } from './utils/audioPlayback';
 import { T } from './theme';
 
 type Tab = 'chords' | 'scales' | 'lyrics' | 'tools';
@@ -23,6 +24,17 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('scaleup_onboarded')
   );
+
+  // Unlock iOS silent mode on the very first touch anywhere in the app.
+  useEffect(() => {
+    const unlock = () => { unlockSilentMode(); };
+    document.addEventListener('touchstart', unlock, { once: true, capture: true });
+    document.addEventListener('click',      unlock, { once: true, capture: true });
+    return () => {
+      document.removeEventListener('touchstart', unlock, true);
+      document.removeEventListener('click',      unlock, true);
+    };
+  }, []);
 
   const handleDoneOnboarding = () => {
     localStorage.setItem('scaleup_onboarded', '1');
