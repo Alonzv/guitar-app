@@ -44,8 +44,8 @@ function findRawPeaks(data: Float32Array<ArrayBuffer>, sampleRate: number, fftSi
 
 /**
  * Score peaks by harmonic support: a peak that has other peaks at 2×, 3×, 4×, 5× above it
- * is likely a FUNDAMENTAL (not a harmonic itself). This reverses the guitar problem where
- * the 2nd harmonic is often louder than the fundamental.
+ * is likely a FUNDAMENTAL (not a harmonic itself). Peaks with NO harmonics above them
+ * (likely sympathetic resonance or noise) are heavily penalised.
  */
 function selectFundamentals(peaks: Peak[]): Peak[] {
   if (peaks.length === 0) return [];
@@ -55,16 +55,19 @@ function selectFundamentals(peaks: Peak[]): Peak[] {
       q.freq > p.freq &&
       [2, 3, 4, 5].some(n => Math.abs(q.freq / p.freq - n) < 0.07)
     ).length;
-    // Peaks with harmonics score higher; amplitude as tie-breaker
-    return { ...p, score: harmonicsAbove * 20 + (p.amp + 100) };
+    // Require harmonic support — lone peaks (resonance/noise) get a steep penalty
+    const score = harmonicsAbove > 0
+      ? harmonicsAbove * 30 + (p.amp + 100)
+      : (p.amp + 100) * 0.25;
+    return { ...p, score };
   });
 
   scored.sort((a, b) => b.score - a.score);
 
-  // Greedily collect fundamentals — skip anything that is a harmonic of a chosen fundamental
+  // Greedily collect up to 6 fundamentals — skip harmonics of already-chosen peaks
   const chosen: Peak[] = [];
   for (const c of scored) {
-    if (chosen.length >= 4) break;
+    if (chosen.length >= 6) break;
     const isHarmonic = chosen.some(f =>
       [2, 3, 4, 5].some(n => Math.abs(c.freq / f.freq - n) < 0.07)
     );
@@ -79,17 +82,30 @@ function detectFrame(
   fftSize: number,
 ): string | null {
   const rawPeaks = findRawPeaks(data, sampleRate, fftSize);
-  const top12    = [...rawPeaks].sort((a, b) => b.amp - a.amp).slice(0, 12);
-  const funds    = selectFundamentals(top12);
-  const notes    = [...new Set(funds.map(p => freqToPitchClass(p.freq)))];
-  if (notes.length < 2) return null;
-  const chords   = TonalChord.detect(notes);
-  return chords[0] ?? null;
+  // Use top 20 so harmonics needed for scoring are not cut off
+  const top20 = [...rawPeaks].sort((a, b) => b.amp - a.amp).slice(0, 20);
+  const funds = selectFundamentals(top20);
+
+  // Sort by frequency ascending — the lowest note is most likely the root/bass
+  funds.sort((a, b) => a.freq - b.freq);
+  const notes = [...new Set(funds.map(p => freqToPitchClass(p.freq)))];
+  if (notes.length < 3) return null; // need at least 3 distinct pitch classes
+
+  const suspectedRoot = notes[0];
+  const chords = TonalChord.detect(notes);
+  if (chords.length === 0) return null;
+
+  // Prefer a chord whose root matches the lowest detected note
+  const rootMatch = chords.find(c => {
+    const m = c.match(/^([A-G][b#]?)/);
+    return m && m[1] === suspectedRoot;
+  });
+  return rootMatch ?? chords[0];
 }
 
 // ── Stability ─────────────────────────────────────────────────────────────
 
-const HISTORY    = 12;  // rolling window length
+const HISTORY    = 8;   // rolling window length
 const LOCK_AT    = 5;   // chord must appear ≥ 5 / 12 frames to lock
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -148,8 +164,10 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       } else {
         // Show live notes while building up
         const rawPeaks = findRawPeaks(freqBufRef.current, ctxRef.current.sampleRate, analyserRef.current.fftSize);
-        const top = [...rawPeaks].sort((a, b) => b.amp - a.amp).slice(0, 12);
-        const notes = [...new Set(selectFundamentals(top).map(p => freqToPitchClass(p.freq)))];
+        const top20 = [...rawPeaks].sort((a, b) => b.amp - a.amp).slice(0, 20);
+        const lnotes = selectFundamentals(top20);
+        lnotes.sort((a, b) => a.freq - b.freq);
+        const notes = [...new Set(lnotes.map(p => freqToPitchClass(p.freq)))];
         setLiveNotes(notes);
       }
     }
