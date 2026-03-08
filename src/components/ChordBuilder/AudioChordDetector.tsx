@@ -76,26 +76,25 @@ function selectFundamentals(peaks: Peak[]): Peak[] {
   return chosen;
 }
 
-function detectFrame(
+/** Returns detected pitch classes for this frame, sorted lowest → highest frequency. */
+function detectNotes(
   data: Float32Array<ArrayBuffer>,
   sampleRate: number,
   fftSize: number,
-): string | null {
+): string[] {
   const rawPeaks = findRawPeaks(data, sampleRate, fftSize);
-  // Use top 20 so harmonics needed for scoring are not cut off
   const top20 = [...rawPeaks].sort((a, b) => b.amp - a.amp).slice(0, 20);
   const funds = selectFundamentals(top20);
+  funds.sort((a, b) => a.freq - b.freq); // ascending: lowest = likely root
+  return [...new Set(funds.map(p => freqToPitchClass(p.freq)))];
+}
 
-  // Sort by frequency ascending — the lowest note is most likely the root/bass
-  funds.sort((a, b) => a.freq - b.freq);
-  const notes = [...new Set(funds.map(p => freqToPitchClass(p.freq)))];
-  if (notes.length < 3) return null; // need at least 3 distinct pitch classes
-
+/** Given a stable set of notes (sorted lowest freq first), return best chord name. */
+function chordFromNotes(notes: string[]): string | null {
+  if (notes.length < 2) return null;
   const suspectedRoot = notes[0];
   const chords = TonalChord.detect(notes);
   if (chords.length === 0) return null;
-
-  // Prefer a chord whose root matches the lowest detected note
   const rootMatch = chords.find(c => {
     const m = c.match(/^([A-G][b#]?)/);
     return m && m[1] === suspectedRoot;
@@ -105,8 +104,8 @@ function detectFrame(
 
 // ── Stability ─────────────────────────────────────────────────────────────
 
-const HISTORY    = 8;   // rolling window length
-const LOCK_AT    = 5;   // chord must appear ≥ 5 / 12 frames to lock
+const HISTORY      = 8;    // rolling window length (frames)
+const STABLE_RATIO = 0.45; // note must appear in ≥ 45 % of frames to be "stable"
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -127,7 +126,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
   const streamRef   = useRef<MediaStream | null>(null);
   const freqBufRef  = useRef<Float32Array<ArrayBuffer> | null>(null);
   const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const historyRef  = useRef<(string | null)[]>([]);
+  const historyRef  = useRef<string[][]>([]);       // per-frame note arrays
   // When a chord is locked, ignore new frames until the user adds / resets it
   const lockedRef   = useRef(false);
 
@@ -137,38 +136,44 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
     analyserRef.current.getFloatFrequencyData(freqBufRef.current);
 
     if (!lockedRef.current) {
-      const chord = detectFrame(freqBufRef.current, ctxRef.current.sampleRate, analyserRef.current.fftSize);
+      // ── Collect this frame's notes ──────────────────────────────────────
+      const frameNotes = detectNotes(
+        freqBufRef.current,
+        ctxRef.current.sampleRate,
+        analyserRef.current.fftSize,
+      );
+      historyRef.current = [...historyRef.current, frameNotes].slice(-HISTORY);
 
-      // Update rolling history
-      historyRef.current = [...historyRef.current, chord].slice(-HISTORY);
+      const filled = historyRef.current.length;
+      // Show progress as % of window filled
+      setLockProgress(Math.min(99, Math.round((filled / HISTORY) * 100)));
 
-      // Vote: find most frequent chord in history
-      const counts = new Map<string, number>();
-      for (const c of historyRef.current) {
-        if (c) counts.set(c, (counts.get(c) ?? 0) + 1);
+      // ── Vote on individual notes ─────────────────────────────────────────
+      // A note is "stable" if it appeared in ≥ STABLE_RATIO of frames.
+      // We vote on atomic pitch-classes, not derived chord names, so variation
+      // in which inversion/name Chord.detect() picks doesn't matter.
+      const noteCounts = new Map<string, number>();
+      for (const frame of historyRef.current) {
+        for (const n of frame) noteCounts.set(n, (noteCounts.get(n) ?? 0) + 1);
       }
-      let bestChord: string | null = null;
-      let bestCount = 0;
-      for (const [c, n] of counts) {
-        if (n > bestCount) { bestChord = c; bestCount = n; }
-      }
+      const stableNotes = [...noteCounts.entries()]
+        .filter(([, c]) => c / filled >= STABLE_RATIO)
+        .map(([note]) => note);
 
-      const progress = Math.min(100, Math.round((bestCount / LOCK_AT) * 100));
-      setLockProgress(progress);
+      // Show stable notes live while building up
+      setLiveNotes(stableNotes);
 
-      if (bestCount >= LOCK_AT && bestChord) {
-        // Lock — freeze the display until user acts
-        lockedRef.current = true;
-        setStableChord(bestChord);
-        setLockProgress(100);
-      } else {
-        // Show live notes while building up
-        const rawPeaks = findRawPeaks(freqBufRef.current, ctxRef.current.sampleRate, analyserRef.current.fftSize);
-        const top20 = [...rawPeaks].sort((a, b) => b.amp - a.amp).slice(0, 20);
-        const lnotes = selectFundamentals(top20);
-        lnotes.sort((a, b) => a.freq - b.freq);
-        const notes = [...new Set(lnotes.map(p => freqToPitchClass(p.freq)))];
-        setLiveNotes(notes);
+      // ── Try to lock once the window is full ──────────────────────────────
+      if (filled >= HISTORY) {
+        const chord = chordFromNotes(stableNotes);
+        if (chord) {
+          lockedRef.current = true;
+          setStableChord(chord);
+          setLockProgress(100);
+        } else {
+          // Not enough stable notes — reset and listen for a new chord
+          historyRef.current = [];
+        }
       }
     }
 
