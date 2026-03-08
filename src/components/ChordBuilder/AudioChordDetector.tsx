@@ -4,95 +4,67 @@ import type { ChordInProgression } from '../../types/music';
 import { formatChordName } from '../../utils/chordIdentifier';
 import { T, card } from '../../theme';
 
-// ── DSP ───────────────────────────────────────────────────────────────────
+// ── DSP — Chromagram ──────────────────────────────────────────────────────
+//
+// Previous approach (peak-picking + harmonic scoring) had two fatal flaws:
+//   1. Whether a harmonic was found depended on which peaks were in top-N,
+//      making the score unstable frame-to-frame.
+//   2. The 3rd harmonic of A2 (110 Hz) is at 330 Hz = E4, indistinguishable
+//      from a real E string — no scoring trick can resolve this.
+//
+// Chromagram collapses every FFT bin into its pitch class (mod 12), so
+// A2=110, A3=220, A4=440 Hz all accumulate into the same "A" bucket.
+// A played note dominates its bucket regardless of which octave rings loudest.
+// A false harmonic (e.g. A's 3rd harmonic → E bucket) contributes ≤15% of
+// the maximum bucket energy and is filtered by the threshold below.
 
 const PITCH_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-function freqToPitchClass(freq: number): string {
-  const midi = Math.round(12 * Math.log2(freq / 440) + 69);
-  return PITCH_CLASSES[((midi % 12) + 12) % 12];
-}
+function buildChroma(
+  data: Float32Array<ArrayBuffer>,
+  sampleRate: number,
+  fftSize: number,
+): Float64Array {
+  const binHz  = sampleRate / fftSize;
+  const minBin = Math.max(1, Math.floor(70  / binHz));   // just below E2 (82 Hz)
+  const maxBin = Math.min(data.length - 1, Math.ceil(2000 / binHz));
 
-interface Peak { freq: number; amp: number; }
+  let maxDb = -Infinity;
+  for (let i = minBin; i <= maxBin; i++) if (data[i] > maxDb) maxDb = data[i];
+  if (maxDb < -58) return new Float64Array(12);           // silence
 
-function findRawPeaks(data: Float32Array<ArrayBuffer>, sampleRate: number, fftSize: number): Peak[] {
-  const binHz = sampleRate / fftSize;
-  const minBin = Math.max(4, Math.floor(75  / binHz));
-  const maxBin = Math.min(data.length - 4, Math.ceil(1400 / binHz));
-
-  // Adaptive threshold: find the loudest bin in the guitar range first.
-  // Peaks must be within 26 dB of that maximum — this adapts to any mic level.
-  let maxAmp = -Infinity;
-  for (let i = minBin; i <= maxBin; i++) if (data[i] > maxAmp) maxAmp = data[i];
-  if (maxAmp < -62) return []; // absolute silence / no signal at all
-  const THRESHOLD = Math.max(-75, maxAmp - 26);
-
-  const peaks: Peak[] = [];
-  for (let i = minBin + 3; i <= maxBin - 3; i++) {
-    const v = data[i];
-    if (
-      v > THRESHOLD &&
-      v >= data[i-1] && v >= data[i+1] &&
-      v >= data[i-2] && v >= data[i+2] &&
-      v >= data[i-3] && v >= data[i+3]
-    ) {
-      peaks.push({ freq: i * binHz, amp: v });
-    }
+  const chroma = new Float64Array(12);
+  for (let i = minBin; i <= maxBin; i++) {
+    const db = data[i];
+    if (db < maxDb - 40) continue;                        // skip bins > 40 dB below peak
+    const freq = i * binHz;
+    const midi  = 12 * Math.log2(freq / 440) + 69;
+    const pc    = ((Math.round(midi) % 12) + 12) % 12;
+    chroma[pc] += Math.pow(10, db / 20);                  // accumulate linear amplitude
   }
-  return peaks;
+  return chroma;
 }
 
-/**
- * Score peaks by harmonic support: a peak that has other peaks at 2×, 3×, 4×, 5× above it
- * is likely a FUNDAMENTAL (not a harmonic itself). Peaks with NO harmonics above them
- * (likely sympathetic resonance or noise) are heavily penalised.
- */
-function selectFundamentals(peaks: Peak[]): Peak[] {
-  if (peaks.length === 0) return [];
-
-  const scored = peaks.map(p => {
-    const harmonicsAbove = peaks.filter(q =>
-      q.freq > p.freq &&
-      [2, 3, 4, 5].some(n => Math.abs(q.freq / p.freq - n) < 0.07)
-    ).length;
-    // Require harmonic support — lone peaks (resonance/noise) get a steep penalty
-    const score = harmonicsAbove > 0
-      ? harmonicsAbove * 30 + (p.amp + 100)
-      : (p.amp + 100) * 0.25;
-    return { ...p, score };
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-
-  // Greedily collect up to 6 fundamentals — skip harmonics of already-chosen peaks
-  const chosen: Peak[] = [];
-  for (const c of scored) {
-    if (chosen.length >= 6) break;
-    const isHarmonic = chosen.some(f =>
-      [2, 3, 4, 5].some(n => Math.abs(c.freq / f.freq - n) < 0.07)
-    );
-    if (!isHarmonic) chosen.push(c);
-  }
-  return chosen;
-}
-
-/** Returns detected pitch classes for this frame, sorted lowest → highest frequency. */
+/** Returns pitch classes present this frame, sorted by chroma energy (strongest = likely root). */
 function detectNotes(
   data: Float32Array<ArrayBuffer>,
   sampleRate: number,
   fftSize: number,
 ): string[] {
-  const rawPeaks = findRawPeaks(data, sampleRate, fftSize);
-  const top20 = [...rawPeaks].sort((a, b) => b.amp - a.amp).slice(0, 20);
-  const funds = selectFundamentals(top20);
-  funds.sort((a, b) => a.freq - b.freq); // ascending: lowest = likely root
-  return [...new Set(funds.map(p => freqToPitchClass(p.freq)))];
+  const chroma = buildChroma(data, sampleRate, fftSize);
+  const maxVal = Math.max(...chroma);
+  if (maxVal <= 0) return [];
+  // 15 % threshold: real note harmonics contribute ≤ 12 % to other pitch classes
+  return Array.from({ length: 12 }, (_, i) => i)
+    .filter(i => chroma[i] / maxVal >= 0.15)
+    .sort((a, b) => chroma[b] - chroma[a])               // strongest first = likely root
+    .map(i => PITCH_CLASSES[i]);
 }
 
-/** Given a stable set of notes (sorted lowest freq first), return best chord name. */
+/** Derive best chord name from a stable set of pitch classes. */
 function chordFromNotes(notes: string[]): string | null {
   if (notes.length < 2) return null;
-  const suspectedRoot = notes[0];
+  const suspectedRoot = notes[0];                         // highest chroma = likely root/bass
   const chords = TonalChord.detect(notes);
   if (chords.length === 0) return null;
   const rootMatch = chords.find(c => {
@@ -104,8 +76,8 @@ function chordFromNotes(notes: string[]): string | null {
 
 // ── Stability ─────────────────────────────────────────────────────────────
 
-const HISTORY      = 8;    // rolling window length (frames)
-const STABLE_RATIO = 0.45; // note must appear in ≥ 45 % of frames to be "stable"
+const HISTORY      = 6;    // rolling window (~0.9 s at 150 ms / frame)
+const STABLE_RATIO = 0.40; // note must appear in ≥ 40 % of frames to be "stable"
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -196,7 +168,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 8192;
-      analyser.smoothingTimeConstant = 0.8;
+      analyser.smoothingTimeConstant = 0.85; // chroma benefits from stable FFT
       analyserRef.current = analyser;
       freqBufRef.current = new Float32Array(analyser.frequencyBinCount) as Float32Array<ArrayBuffer>;
 
