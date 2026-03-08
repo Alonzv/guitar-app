@@ -34,6 +34,13 @@ export interface ProgressionSuggestion {
 
 export type Genre = 'blues' | 'jazz' | 'pop' | 'rock' | 'metal' | 'any';
 
+export interface Song {
+  id: string;
+  name: string;
+  progression: ChordInProgression[];
+  createdAt: number;
+}
+
 export interface ChordPlacement {
   id: string;
   chordName: string;

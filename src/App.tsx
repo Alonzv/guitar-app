@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import type { ChordInProgression, ScaleMatch } from './types/music';
+import type { ChordInProgression, ScaleMatch, Song } from './types/music';
 import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { LyricsTab } from './components/Lyrics/LyricsTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
 import { Onboarding } from './components/Onboarding';
+import { SongLibraryModal } from './components/SongLibrary/SongLibraryModal';
 import { T } from './theme';
 
 type Tab = 'chords' | 'scales' | 'lyrics' | 'tools';
@@ -16,11 +17,25 @@ function transposeChordName(name: string, semitones: number): string {
   const match = name.match(/^([A-G][b#]?)(.*)$/);
   if (!match) return name;
   const root = FLAT_TO_SHARP[match[1]] ?? match[1];
-  const suffix = match[2];
   const idx = CHROMATIC.indexOf(root);
   if (idx === -1) return name;
-  const newIdx = ((idx + semitones) % 12 + 12) % 12;
-  return CHROMATIC[newIdx] + suffix;
+  return CHROMATIC[((idx + semitones) % 12 + 12) % 12] + match[2];
+}
+
+// Decode a shared progression from the URL hash (#s=<base64>)
+function decodeSharedProgression(): ChordInProgression[] | null {
+  try {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#s=')) return null;
+    const raw: { n: string; f: ChordInProgression['fretPositions'] }[] =
+      JSON.parse(atob(hash.slice(3)));
+    if (!Array.isArray(raw)) return null;
+    return raw.map((r, i) => ({
+      id: `chord-shared-${i}`,
+      chord: { name: r.n, notes: [], aliases: [] },
+      fretPositions: r.f ?? [],
+    }));
+  } catch { return null; }
 }
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -31,22 +46,38 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab]   = useState<Tab>('chords');
+  const [activeTab, setActiveTab] = useState<Tab>('chords');
+
   const [progression, setProgression] = useState<ChordInProgression[]>(() => {
-    try {
-      const saved = localStorage.getItem('scaleup_progression');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('scaleup_progression') || '[]'); }
+    catch { return []; }
   });
+
+  const [songs, setSongs] = useState<Song[]>(() => {
+    try { return JSON.parse(localStorage.getItem('scaleup_songs') || '[]'); }
+    catch { return []; }
+  });
+
   const [selectedScale, setSelectedScale] = useState<ScaleMatch | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('scaleup_onboarded')
   );
+  const [showSongLibrary, setShowSongLibrary] = useState(false);
 
-  // Persist progression
+  // Banner for shared progressions loaded from URL
+  const [sharedProgression] = useState<ChordInProgression[] | null>(decodeSharedProgression);
+  const [showSharedBanner, setShowSharedBanner] = useState(() => !!decodeSharedProgression());
+
+  // Persist
   useEffect(() => {
     localStorage.setItem('scaleup_progression', JSON.stringify(progression));
   }, [progression]);
+
+  useEffect(() => {
+    localStorage.setItem('scaleup_songs', JSON.stringify(songs));
+  }, [songs]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleDoneOnboarding = () => {
     localStorage.setItem('scaleup_onboarded', '1');
@@ -72,10 +103,75 @@ export default function App() {
     })));
   };
 
+  const handleSaveSong = (name: string) => {
+    const song: Song = {
+      id: `song-${Date.now()}`,
+      name: name.trim() || `Song ${songs.length + 1}`,
+      progression: [...progression],
+      createdAt: Date.now(),
+    };
+    setSongs(prev => [song, ...prev]);
+  };
+
+  const handleLoadSong = (song: Song) => {
+    setProgression(song.progression);
+    setActiveTab('chords');
+  };
+
+  const handleDeleteSong = (id: string) => {
+    setSongs(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleLoadShared = () => {
+    if (sharedProgression) {
+      setProgression(sharedProgression);
+      setActiveTab('chords');
+    }
+    setShowSharedBanner(false);
+    history.replaceState(null, '', window.location.pathname);
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
+      {showSongLibrary && (
+        <SongLibraryModal
+          songs={songs}
+          onClose={() => setShowSongLibrary(false)}
+          onLoad={handleLoadSong}
+          onDelete={handleDeleteSong}
+        />
+      )}
+
+      {/* ── Shared progression banner ── */}
+      {showSharedBanner && sharedProgression && (
+        <div style={{
+          background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`,
+          padding: '10px 16px', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>
+            🎵 פרוגרסיה משותפת — {sharedProgression.length} אקורדים
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={handleLoadShared}
+              style={{
+                padding: '5px 14px', borderRadius: 8, border: 'none',
+                background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              }}
+            >טען</button>
+            <button
+              onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }}
+              style={{
+                padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.border}`,
+                background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer',
+              }}
+            >התעלם</button>
+          </div>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
@@ -84,18 +180,30 @@ export default function App() {
           <span style={{ fontSize: 'var(--gc-brand-text)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
             <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
           </span>
-          {/* ? button to reopen onboarding */}
-          <button
-            onClick={() => setShowOnboarding(true)}
-            style={{
-              position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
-              width: 26, height: 26, borderRadius: '50%',
-              border: `1px solid ${T.border}`, background: T.bgCard,
-              color: T.textMuted, fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', lineHeight: '24px', padding: 0,
-            }}
-          >?</button>
+          {/* Header action buttons */}
+          <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => setShowSongLibrary(true)}
+              style={{
+                width: 26, height: 26, borderRadius: '50%',
+                border: `1px solid ${T.border}`, background: T.bgCard,
+                color: T.textMuted, fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0,
+              }}
+              title="Song Library"
+            >📚</button>
+            <button
+              onClick={() => setShowOnboarding(true)}
+              style={{
+                width: 26, height: 26, borderRadius: '50%',
+                border: `1px solid ${T.border}`, background: T.bgCard,
+                color: T.textMuted, fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', lineHeight: '24px', padding: 0,
+              }}
+              title="Help"
+            >?</button>
+          </div>
         </div>
+
         {/* Active tab name */}
         <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-tab-title)', fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.2px' }}>
           {TABS.find(t => t.id === activeTab)?.label ?? ''}
@@ -138,6 +246,7 @@ export default function App() {
             onClearProgression={() => setProgression([])}
             onReorderProgression={handleReorderProgression}
             onTransposeProgression={handleTransposeProgression}
+            onSaveSong={handleSaveSong}
           />
         )}
         {activeTab === 'scales' && (

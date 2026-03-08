@@ -18,6 +18,7 @@ interface Props {
   onClearProgression: () => void;
   onReorderProgression: (id: string, dir: -1 | 1) => void;
   onTransposeProgression: (semitones: number) => void;
+  onSaveSong: (name: string) => void;
 }
 
 interface HoverPreview {
@@ -48,7 +49,7 @@ const LABEL_STYLE = {
 
 export function ChordBuilderTab({
   progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
-  onReorderProgression, onTransposeProgression,
+  onReorderProgression, onTransposeProgression, onSaveSong,
 }: Props) {
   const [activeDots, setActiveDots] = useState<FretPosition[]>([]);
   const [genre, setGenre] = useState<Genre>('any');
@@ -59,7 +60,10 @@ export function ChordBuilderTab({
   const [progressionName, setProgressionName] = useState('');
   const [exporting, setExporting] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [playingAll, setPlayingAll] = useState(false);
+  const [playingAll, setPlayingAll]   = useState(false);
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [songName, setSongName]         = useState('');
+  const [shared, setShared]             = useState(false);
   const playAllTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const handleToggle = (pos: FretPosition) => {
@@ -88,6 +92,24 @@ export function ChordBuilderTab({
   const handleClear = () => {
     onClearProgression();
     setProgressionName('');
+    setShowSaveForm(false);
+  };
+
+  const handleShare = () => {
+    const payload = progression.map(c => ({ n: c.chord.name, f: c.fretPositions }));
+    const encoded = btoa(JSON.stringify(payload));
+    const url = `${location.origin}${location.pathname}#s=${encoded}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    });
+  };
+
+  const handleConfirmSave = () => {
+    if (progression.length === 0) return;
+    onSaveSong(songName);
+    setSongName('');
+    setShowSaveForm(false);
   };
 
   const handleCopy = () => {
@@ -230,6 +252,57 @@ export function ChordBuilderTab({
               </button>
             </div>
           </div>
+
+          {/* Save & Share row */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <button
+              onClick={handleShare}
+              style={{
+                flex: 1, padding: '7px 0', borderRadius: 10, border: `1px solid ${T.border}`,
+                background: shared ? T.secondaryBg : T.bgInput,
+                color: shared ? T.secondary : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {shared ? '✓ Copied!' : '🔗 Share Link'}
+            </button>
+            <button
+              onClick={() => setShowSaveForm(v => !v)}
+              style={{
+                flex: 1, padding: '7px 0', borderRadius: 10, border: `1px solid ${T.border}`,
+                background: showSaveForm ? T.primaryBg : T.bgInput,
+                color: showSaveForm ? T.primary : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              💾 Save Song
+            </button>
+          </div>
+
+          {/* Inline save form */}
+          {showSaveForm && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <input
+                value={songName}
+                onChange={e => setSongName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleConfirmSave()}
+                placeholder="Song name…"
+                autoFocus
+                style={{
+                  flex: 1, padding: '7px 10px', borderRadius: 8,
+                  border: `1px solid ${T.border}`, background: T.bgInput,
+                  color: T.text, fontSize: 13, fontFamily: 'inherit',
+                }}
+              />
+              <button
+                onClick={handleConfirmSave}
+                style={{
+                  padding: '7px 16px', borderRadius: 8, border: 'none',
+                  background: T.primary, color: T.white, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}
+              >Save</button>
+            </div>
+          )}
 
           {/* Progression name input */}
           <input
