@@ -7,13 +7,17 @@ import { T, card } from '../../theme';
 // ── Pitch classes ─────────────────────────────────────────────────────────────
 const PC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const;
 
-// ── HPS settings ──────────────────────────────────────────────────────────────
-// Harmonic Product Spectrum: multiply the spectrum with downsampled copies of
-// itself. Each harmonic of a fundamental appears as a peak at every harmonic
-// order, so the product naturally emphasises fundamentals over harmonics.
-const HPS_H     = 5;    // number of harmonic layers to multiply
-const HPS_LO_HZ = 60;   // below open low-E (~82 Hz)
-const HPS_HI_HZ = 600;  // above highest open string (E4 = 330 Hz, with margin)
+// ── Chromagram settings ────────────────────────────────────────────────────────
+// We map each FFT bin's energy directly to its pitch class (0–11) and sum
+// across all octaves. This is the standard MIR approach used by professional
+// chord detectors (Adam Stark, Chordino, etc.). It is far more robust than HPS
+// for chord detection because:
+//  • Harmonics of chord notes naturally reinforce the CORRECT pitch classes.
+//  • Spectral leakage from adjacent semitones is diluted by multi-octave summing.
+//  • Missing harmonics don't break detection (unlike HPS which requires ALL harmonics).
+const CHROMA_LO_HZ = 60;    // below open low-E (~82 Hz)
+const CHROMA_HI_HZ = 2000;  // covers fundamentals + first few harmonics of all strings
+const MAG_GATE_DB  = -65;   // hard gate: zeros body resonances / room noise (~-70 to -90 dB)
 
 // ── Stability settings ────────────────────────────────────────────────────────
 const CALIB_FRAMES  = 10;   // frames to measure noise floor  (10 × 150 ms = 1.5 s)
@@ -82,48 +86,35 @@ const TEMPLATES = buildTemplates(); // built once at module load
 // ── DSP helpers ───────────────────────────────────────────────────────────────
 
 /**
- * Harmonic Product Spectrum chromagram.
- * For each candidate fundamental bin, multiply its magnitude with the
- * magnitudes at 2×, 3×, 4×, 5× that frequency. Real fundamentals
- * produce a strong product; harmonics of other notes do not.
- * Returns a raw (un-normalised) 12-bin pitch-class accumulation.
+ * Compute a 12-bin chromagram directly from the FFT magnitude spectrum.
+ *
+ * Each FFT bin whose frequency falls in CHROMA_LO_HZ…CHROMA_HI_HZ and whose
+ * level exceeds MAG_GATE_DB is converted to a linear magnitude and accumulated
+ * into the corresponding pitch class (0 = C, 1 = C#, …, 11 = B).
+ *
+ * Because we sum across ALL octaves, every string contributes its fundamental
+ * AND harmonics to the correct pitch classes. This is far more robust than HPS
+ * for chord detection: spectral leakage is diluted by multi-octave summation,
+ * and missing harmonics don't break detection.
  */
-function computeHPSChroma(
+function computeChroma(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any,
   sampleRate: number,
   fftSize: number,
 ): Float64Array {
   const binHz  = sampleRate / fftSize;
-  const n      = data.length;
-  const minBin = Math.max(1, Math.floor(HPS_LO_HZ / binHz));
-  // Cap so that bin*HPS_H never exceeds the array
-  const maxBin = Math.min(Math.floor(n / HPS_H) - 1, Math.ceil(HPS_HI_HZ / binHz));
-
-  // dB → linear magnitude
-  const mag = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    // Hard gate at -65 dB: zeroes guitar body resonances (~-70 to -90 dB) and
-    // room noise while keeping all meaningful chord harmonics (> -65 dB).
-    mag[i] = data[i] <= -65 ? 0 : Math.pow(10, data[i] / 20);
-  }
-
-  // Compute HPS product at each fundamental-range bin
-  const hps = new Float64Array(n);
-  for (let i = minBin; i <= maxBin; i++) {
-    let p = mag[i];
-    for (let h = 2; h <= HPS_H; h++) p *= mag[Math.round(i * h)];
-    hps[i] = p;
-  }
-
-  // Accumulate HPS value into pitch class bins
   const chroma = new Float64Array(12);
-  for (let i = minBin; i <= maxBin; i++) {
-    if (hps[i] <= 0) continue;
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i] <= MAG_GATE_DB) continue;
     const freq = i * binHz;
+    if (freq < CHROMA_LO_HZ || freq > CHROMA_HI_HZ) continue;
+
+    const mag  = Math.pow(10, data[i] / 20);
     const midi = 12 * Math.log2(freq / 440) + 69;
     const pc   = ((Math.round(midi) % 12) + 12) % 12;
-    chroma[pc] += hps[i];
+    chroma[pc] += mag;
   }
 
   return chroma;
@@ -219,7 +210,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
     analyserRef.current.getFloatFrequencyData(freqBufRef.current);
 
     if (!lockedRef.current) {
-      const rawChroma = computeHPSChroma(
+      const rawChroma = computeChroma(
         freqBufRef.current,
         ctxRef.current.sampleRate,
         analyserRef.current.fftSize,
