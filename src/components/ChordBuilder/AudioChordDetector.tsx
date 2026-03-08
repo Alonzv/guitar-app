@@ -76,7 +76,9 @@ function computeChroma(
     const mag  = Math.pow(10, data[i] / 20);
     const midi = 12 * Math.log2(freq / 440) + 69;
     const pc   = ((Math.round(midi) % 12) + 12) % 12;
-    chroma[pc] += mag;
+    // 1/f weighting: emphasises string fundamentals (low freq) over harmonics (high freq).
+    // e.g. B2 (123 Hz) × 0.49  vs  A4 (440 Hz) × 0.14 — kills false harmonic PCs.
+    chroma[pc] += mag * (CHROMA_LO_HZ / freq);
   }
   return chroma;
 }
