@@ -337,7 +337,11 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
               ? <span>אקורד זוהה 🔒 — לחץ <bdi>Add</bdi> להוספה, או נגן אקורד חדש</span>
               : listening
                 ? 'נגן אקורד על הגיטרה ולחץ חזק… 🎸'
-                : <span>לחץ <bdi>Start</bdi> ← שמור שקט ← נגן אקורד ← האפליקציה תנעל</span>}
+                : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                    <span>לחץ</span>
+                    <span style={{ direction: 'ltr' }}>Start</span>
+                    <span>← נגן אקורד ← האפליקציה תתייצב ותנעל</span>
+                  </span>}
         </p>
 
         {/* Main chord display */}
@@ -453,7 +457,9 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       </div>
 
       <p style={{ fontSize: 11, color: T.textDim, textAlign: 'center', lineHeight: 1.6, margin: 0, direction: 'rtl' }}>
-        לחץ <bdi>Start</bdi> ← שמור שקט בזמן הכיול ← נגן אקורד · לחץ ↺ לאקורד חדש
+        לחץ{' '}
+        <span style={{ direction: 'ltr', display: 'inline-block' }}>Start</span>
+        {' '}← שמור שקט בזמן הכיול ← נגן אקורד · לחץ ↺ לאקורד חדש
       </p>
     </div>
   );
