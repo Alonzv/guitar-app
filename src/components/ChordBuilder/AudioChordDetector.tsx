@@ -8,66 +8,36 @@ import { T, card } from '../../theme';
 const PC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const;
 
 // ── Chromagram settings ────────────────────────────────────────────────────────
-// We map each FFT bin's energy directly to its pitch class (0–11) and sum
-// across all octaves. This is the standard MIR approach used by professional
-// chord detectors (Adam Stark, Chordino, etc.). It is far more robust than HPS
-// for chord detection because:
-//  • Harmonics of chord notes naturally reinforce the CORRECT pitch classes.
-//  • Spectral leakage from adjacent semitones is diluted by multi-octave summing.
-//  • Missing harmonics don't break detection (unlike HPS which requires ALL harmonics).
-const CHROMA_LO_HZ = 60;    // below open low-E (~82 Hz)
-const CHROMA_HI_HZ = 2000;  // covers fundamentals + first few harmonics of all strings
-const MAG_GATE_DB  = -65;   // hard gate: zeros body resonances / room noise (~-70 to -90 dB)
+const CHROMA_LO_HZ = 60;
+const CHROMA_HI_HZ = 2000;
+const MAG_GATE_DB  = -70;  // lenient gate — captures quieter guitar signals
 
 // ── Stability settings ────────────────────────────────────────────────────────
-const CALIB_FRAMES  = 10;   // frames to measure noise floor  (10 × 150 ms = 1.5 s)
-const IIR_ALPHA     = 0.22; // new-frame weight in decaying chroma average
-const CONF_HISTORY  = 6;    // rolling window of confidence scores
-const LOCK_CONF     = 0.52; // avg confidence threshold to lock
-const SILENT_RESET  = 15;   // consecutive silent frames before clearing (~2.3 s)
+const IIR_ALPHA    = 0.35;  // fast chroma convergence
+const CONF_HISTORY = 4;     // ~600 ms before locking
+const LOCK_CONF    = 0.45;  // confidence threshold to lock
+const SILENT_RESET = 20;    // silent frames before clearing state
 
-// ── Chord templates (12 roots × 19 types = 228 templates) ────────────────────
+// ── Chord templates (12 roots × 19 types = 228) ───────────────────────────────
 interface Template { name: string; pcs: number[]; w: number[] }
 
 function buildTemplates(): Template[] {
-  // How "defining" is each interval above the root?
-  // Root and 3rd matter most; 5th is nearly universal so less distinguishing.
   const IW: Record<number, number> = {
-    0: 1.0,   // root
-    2: 0.55,  // major 2nd / 9th
-    3: 0.85,  // minor 3rd
-    4: 0.85,  // major 3rd
-    5: 0.70,  // perfect 4th
-    6: 0.50,  // tritone / dim 5th
-    7: 0.45,  // perfect 5th (universal, low discrimination)
-    8: 0.60,  // augmented 5th
-    9: 0.60,  // major 6th / dim 7th
-    10: 0.75, // minor 7th
-    11: 0.75, // major 7th
+    0: 1.0, 2: 0.55, 3: 0.85, 4: 0.85, 5: 0.70,
+    6: 0.50, 7: 0.45, 8: 0.60, 9: 0.60, 10: 0.75, 11: 0.75,
   };
-
   const TYPES: { s: string; iv: number[] }[] = [
-    { s: '',      iv: [0,4,7]         }, // major
-    { s: 'm',     iv: [0,3,7]         }, // minor
-    { s: '7',     iv: [0,4,7,10]      }, // dominant 7
-    { s: 'maj7',  iv: [0,4,7,11]      }, // major 7
-    { s: 'm7',    iv: [0,3,7,10]      }, // minor 7
-    { s: 'mMaj7', iv: [0,3,7,11]      }, // minor major 7
-    { s: 'sus2',  iv: [0,2,7]         }, // sus 2
-    { s: 'sus4',  iv: [0,5,7]         }, // sus 4
-    { s: '7sus4', iv: [0,5,7,10]      }, // 7sus4
-    { s: 'dim',   iv: [0,3,6]         }, // diminished
-    { s: 'dim7',  iv: [0,3,6,9]       }, // diminished 7
-    { s: 'm7b5',  iv: [0,3,6,10]      }, // half-diminished
-    { s: 'aug',   iv: [0,4,8]         }, // augmented
-    { s: '6',     iv: [0,4,7,9]       }, // major 6
-    { s: 'm6',    iv: [0,3,7,9]       }, // minor 6
-    { s: 'add9',  iv: [0,2,4,7]       }, // add 9
-    { s: '9',     iv: [0,2,4,7,10]    }, // dominant 9
-    { s: 'maj9',  iv: [0,2,4,7,11]    }, // major 9
-    { s: 'm9',    iv: [0,2,3,7,10]    }, // minor 9
+    { s: '',      iv: [0,4,7]      }, { s: 'm',     iv: [0,3,7]      },
+    { s: '7',     iv: [0,4,7,10]   }, { s: 'maj7',  iv: [0,4,7,11]   },
+    { s: 'm7',    iv: [0,3,7,10]   }, { s: 'mMaj7', iv: [0,3,7,11]   },
+    { s: 'sus2',  iv: [0,2,7]      }, { s: 'sus4',  iv: [0,5,7]      },
+    { s: '7sus4', iv: [0,5,7,10]   }, { s: 'dim',   iv: [0,3,6]      },
+    { s: 'dim7',  iv: [0,3,6,9]    }, { s: 'm7b5',  iv: [0,3,6,10]   },
+    { s: 'aug',   iv: [0,4,8]      }, { s: '6',     iv: [0,4,7,9]    },
+    { s: 'm6',    iv: [0,3,7,9]    }, { s: 'add9',  iv: [0,2,4,7]    },
+    { s: '9',     iv: [0,2,4,7,10] }, { s: 'maj9',  iv: [0,2,4,7,11] },
+    { s: 'm9',    iv: [0,2,3,7,10] },
   ];
-
   const out: Template[] = [];
   for (let root = 0; root < 12; root++) {
     for (const t of TYPES) {
@@ -80,22 +50,16 @@ function buildTemplates(): Template[] {
   }
   return out;
 }
-
-const TEMPLATES = buildTemplates(); // built once at module load
+const TEMPLATES = buildTemplates();
 
 // ── DSP helpers ───────────────────────────────────────────────────────────────
 
 /**
- * Compute a 12-bin chromagram directly from the FFT magnitude spectrum.
- *
- * Each FFT bin whose frequency falls in CHROMA_LO_HZ…CHROMA_HI_HZ and whose
- * level exceeds MAG_GATE_DB is converted to a linear magnitude and accumulated
- * into the corresponding pitch class (0 = C, 1 = C#, …, 11 = B).
- *
- * Because we sum across ALL octaves, every string contributes its fundamental
- * AND harmonics to the correct pitch classes. This is far more robust than HPS
- * for chord detection: spectral leakage is diluted by multi-octave summation,
- * and missing harmonics don't break detection.
+ * Direct FFT → chromagram.
+ * Each bin whose frequency is in range and level is above the gate
+ * contributes its linear magnitude to the matching pitch class.
+ * Summing across all octaves dilutes spectral leakage and captures
+ * all harmonics of every string.
  */
 function computeChroma(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,69 +69,49 @@ function computeChroma(
 ): Float64Array {
   const binHz  = sampleRate / fftSize;
   const chroma = new Float64Array(12);
-
   for (let i = 1; i < data.length; i++) {
     if (data[i] <= MAG_GATE_DB) continue;
     const freq = i * binHz;
     if (freq < CHROMA_LO_HZ || freq > CHROMA_HI_HZ) continue;
-
     const mag  = Math.pow(10, data[i] / 20);
     const midi = 12 * Math.log2(freq / 440) + 69;
     const pc   = ((Math.round(midi) % 12) + 12) % 12;
     chroma[pc] += mag;
   }
-
   return chroma;
 }
 
 /**
- * Subtract noise floor (×1.5 safety margin), apply uniformity guard,
- * and normalise to [0, 1]. Returns null when the signal is too weak or
- * too uniform (background noise / silence).
+ * Normalise chroma to [0,1] and reject silent / uniform frames.
+ * No noise-floor subtraction — the hard gate + uniformity guard suffice.
  */
-function cleanChroma(
-  chroma: Float64Array,
-  noiseFloor: Float64Array,
-): Float64Array | null {
-  const adj = new Float64Array(12);
-  for (let i = 0; i < 12; i++) adj[i] = Math.max(0, chroma[i] - noiseFloor[i] * 1.5);
-
-  const maxVal = Math.max(...adj);
+function cleanChroma(chroma: Float64Array): Float64Array | null {
+  const maxVal = Math.max(...chroma);
   if (maxVal <= 0) return null;
 
-  // Uniformity guard: real audio has a dominant pitch class;
-  // noise/hum spreads energy evenly across all bins.
-  const sorted = [...adj].sort((a, b) => a - b);
+  // Uniformity guard: silence/noise spreads energy evenly; chords don't.
+  const sorted = [...chroma].sort((a, b) => a - b);
   const median = (sorted[5] + sorted[6]) / 2;
   if (median > 0 && maxVal / median < 2.5) return null;
 
-  // Normalise
   const norm = new Float64Array(12);
-  for (let i = 0; i < 12; i++) norm[i] = adj[i] / maxVal;
+  for (let i = 0; i < 12; i++) norm[i] = chroma[i] / maxVal;
   return norm;
 }
 
-/**
- * Score every chord template against the normalised chromagram.
- * Hit score = weighted average chroma at template positions.
- * Penalty  = average chroma at non-template positions (scaled by 0.25).
- * Returns the ranked list (highest score first).
- */
+/** Weighted hit average minus off-template penalty. */
 function scoreTemplates(chroma: Float64Array): { chord: string; score: number }[] {
   return TEMPLATES.map(t => {
     const inSet = new Set(t.pcs);
-
     let hitSum = 0, wSum = 0;
     for (let k = 0; k < t.pcs.length; k++) {
       hitSum += chroma[t.pcs[k]] * t.w[k];
       wSum   += t.w[k];
     }
-
     let penSum = 0, penCount = 0;
     for (let i = 0; i < 12; i++) {
       if (!inSet.has(i)) { penSum += chroma[i]; penCount++; }
     }
-
     const score = (hitSum / wSum) - 0.35 * (penSum / (penCount || 1));
     return { chord: t.name, score };
   }).sort((a, b) => b.score - a.score);
@@ -181,70 +125,41 @@ interface Props {
 
 export function AudioChordDetector({ onAddToProgression }: Props) {
   const [listening,    setListening]    = useState(false);
-  const [calibrating,  setCalibrating]  = useState(false);
   const [stableChord,  setStableChord]  = useState<string | null>(null);
   const [liveNotes,    setLiveNotes]    = useState<string[]>([]);
   const [lockProgress, setLockProgress] = useState(0);
   const [error,        setError]        = useState<string | null>(null);
   const [added,        setAdded]        = useState(false);
 
-  const ctxRef         = useRef<AudioContext | null>(null);
-  const analyserRef    = useRef<AnalyserNode | null>(null);
-  const streamRef      = useRef<MediaStream | null>(null);
-  const freqBufRef     = useRef<Float32Array<ArrayBuffer> | null>(null);
-  const timerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ctxRef      = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const streamRef   = useRef<MediaStream | null>(null);
+  const freqBufRef  = useRef<Float32Array<ArrayBuffer> | null>(null);
+  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Calibration
-  const calibBufRef   = useRef<Float64Array[]>([]);
-  const noiseFloorRef = useRef<Float64Array | null>(null);
-
-  // Detection state
-  const accumChromaRef = useRef<Float64Array>(new Float64Array(12)); // IIR-smoothed chroma
-  const confHistoryRef = useRef<number[]>([]);                       // last CONF_HISTORY confidence scores
+  const accumChromaRef = useRef<Float64Array>(new Float64Array(12));
+  const confHistoryRef = useRef<number[]>([]);
   const silentRef      = useRef(0);
   const lockedRef      = useRef(false);
-  const frameCountRef  = useRef(0); // for log throttling
+  const frameCountRef  = useRef(0);
 
   const analyze = useCallback(() => {
     if (!analyserRef.current || !freqBufRef.current || !ctxRef.current) return;
     analyserRef.current.getFloatFrequencyData(freqBufRef.current);
 
     if (!lockedRef.current) {
+      frameCountRef.current++;
       const rawChroma = computeChroma(
         freqBufRef.current,
         ctxRef.current.sampleRate,
         analyserRef.current.fftSize,
       );
-
-      // ── Phase 1: Calibration ─────────────────────────────────────────────
-      if (!noiseFloorRef.current) {
-        calibBufRef.current.push(rawChroma);
-        console.log(`[ACD] calibration frame ${calibBufRef.current.length}/${CALIB_FRAMES}`);
-
-        if (calibBufRef.current.length >= CALIB_FRAMES) {
-          const floor = new Float64Array(12);
-          for (const c of calibBufRef.current) {
-            for (let i = 0; i < 12; i++) floor[i] += c[i] / CALIB_FRAMES;
-          }
-          noiseFloorRef.current = floor;
-          const floorStr = PC.map((p, i) => `${p}:${floor[i].toExponential(2)}`).join(' ');
-          console.log(`[ACD] noise floor established → ${floorStr}`);
-          setCalibrating(false);
-        }
-
-        timerRef.current = setTimeout(analyze, 150);
-        return;
-      }
-
-      // ── Phase 2: Detection ───────────────────────────────────────────────
-      frameCountRef.current++;
-      const norm = cleanChroma(rawChroma, noiseFloorRef.current);
+      const norm = cleanChroma(rawChroma);
 
       if (!norm) {
-        // Silent / noise frame
         silentRef.current++;
         if (frameCountRef.current % 5 === 0) {
-          console.log(`[ACD] silent (${silentRef.current} consecutive frames)`);
+          console.log(`[ACD] silent (${silentRef.current} frames)`);
         }
         if (silentRef.current >= SILENT_RESET) {
           accumChromaRef.current = new Float64Array(12);
@@ -260,13 +175,13 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
 
       silentRef.current = 0;
 
-      // IIR smoothing: blend new frame into accumulated chroma
+      // IIR blend
       const accum = accumChromaRef.current;
       for (let i = 0; i < 12; i++) {
         accum[i] = accum[i] * (1 - IIR_ALPHA) + norm[i] * IIR_ALPHA;
       }
 
-      // Live notes: pitch classes with significant energy in accumulated chroma
+      // Live notes
       const accumMax = Math.max(...accum);
       const liveNotesList = Array.from({ length: 12 }, (_, i) => i)
         .filter(i => accumMax > 0 && accum[i] / accumMax >= 0.30)
@@ -274,34 +189,29 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
         .map(i => PC[i]);
       setLiveNotes(liveNotesList);
 
-      // Score templates against accumulated chroma
       const ranked = scoreTemplates(accum);
       const best   = ranked[0];
       const top3   = ranked.slice(0, 3);
 
-      // Track confidence history
       confHistoryRef.current = [...confHistoryRef.current, best.score].slice(-CONF_HISTORY);
       const avgConf = confHistoryRef.current.reduce((s, v) => s + v, 0) / confHistoryRef.current.length;
-
-      // Progress bar reflects current average confidence vs lock threshold
       const pct = Math.min(99, Math.round((avgConf / LOCK_CONF) * 100));
       setLockProgress(Math.max(0, pct));
 
-      // Log every 5 frames
       if (frameCountRef.current % 5 === 0) {
-        const chromaStr = liveNotesList.map(n => `${n}:${accum[PC.indexOf(n as typeof PC[number])].toFixed(2)}`).join(' ');
-        console.log(`[ACD] chroma → ${chromaStr || '(none above threshold)'}`);
-        console.log(`[ACD] top matches → ${top3.map(t => `${t.chord}(${t.score.toFixed(3)})`).join(' | ')}`);
-        console.log(`[ACD] avgConf=${avgConf.toFixed(3)} threshold=${LOCK_CONF} progress=${pct}%`);
+        const chromaStr = liveNotesList
+          .map(n => `${n}:${accum[PC.indexOf(n as typeof PC[number])].toFixed(2)}`)
+          .join(' ');
+        console.log(`[ACD] chroma → ${chromaStr || '(none)'}`);
+        console.log(`[ACD] top → ${top3.map(t => `${t.chord}(${t.score.toFixed(3)})`).join(' | ')}`);
+        console.log(`[ACD] avgConf=${avgConf.toFixed(3)} / ${LOCK_CONF} → ${pct}%`);
       }
 
-      // Lock when average confidence exceeds threshold
       if (confHistoryRef.current.length >= CONF_HISTORY && avgConf >= LOCK_CONF) {
-        const chord = best.chord;
         lockedRef.current = true;
-        setStableChord(chord);
+        setStableChord(best.chord);
         setLockProgress(100);
-        console.log(`[ACD] ✅ LOCKED → ${chord}  (confidence: ${avgConf.toFixed(3)}, top3: ${top3.map(t => t.chord).join(' / ')})`);
+        console.log(`[ACD] ✅ LOCKED → ${best.chord} (conf=${avgConf.toFixed(3)}, top3: ${top3.map(t => t.chord).join(' / ')})`);
       }
     }
 
@@ -323,15 +233,12 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       ctxRef.current = ctx;
 
       const analyser = ctx.createAnalyser();
-      analyser.fftSize              = 16384;
+      analyser.fftSize               = 16384;
       analyser.smoothingTimeConstant = 0.5;
       analyserRef.current = analyser;
       freqBufRef.current  = new Float32Array(analyser.frequencyBinCount) as Float32Array<ArrayBuffer>;
       ctx.createMediaStreamSource(stream).connect(analyser);
 
-      // Reset all state
-      calibBufRef.current    = [];
-      noiseFloorRef.current  = null;
       accumChromaRef.current = new Float64Array(12);
       confHistoryRef.current = [];
       silentRef.current      = 0;
@@ -341,10 +248,9 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       setStableChord(null);
       setLockProgress(0);
       setLiveNotes([]);
-      setCalibrating(true);
       setListening(true);
 
-      console.log(`[ACD] started — sampleRate=${ctx.sampleRate} fftSize=${analyser.fftSize} binHz=${(ctx.sampleRate / analyser.fftSize).toFixed(2)}`);
+      console.log(`[ACD] started — sampleRate=${ctx.sampleRate} fftSize=${analyser.fftSize} binHz=${(ctx.sampleRate / analyser.fftSize).toFixed(2)} gate=${MAG_GATE_DB}dB`);
       timerRef.current = setTimeout(analyze, 200);
     } catch {
       setError('Could not access microphone — allow permission and try again.');
@@ -361,7 +267,6 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
     silentRef.current = 0;
     console.log('[ACD] stopped');
     setListening(false);
-    setCalibrating(false);
     setLiveNotes([]);
     setLockProgress(0);
   }, []);
@@ -371,11 +276,10 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
     accumChromaRef.current = new Float64Array(12);
     confHistoryRef.current = [];
     silentRef.current      = 0;
-    // Keep noiseFloor — no need to re-calibrate
     setStableChord(null);
     setLockProgress(0);
     setLiveNotes([]);
-    console.log('[ACD] lock reset — ready for next chord');
+    console.log('[ACD] reset — ready for next chord');
   };
 
   useEffect(() => () => { stopListening(); }, [stopListening]);
@@ -404,13 +308,11 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
         </p>
 
         <p style={{ margin: '0 0 14px', fontSize: 13, color: T.textMuted, lineHeight: 1.5 }}>
-          {calibrating
-            ? 'Calibrating mic 🎙 — stay quiet…'
-            : isLocked
-              ? 'Chord detected 🔒 — press Add to save, or play a new chord'
-              : listening
-                ? 'Play a chord and strum hard… 🎸'
-                : 'Press Start → play a chord → the app will lock'}
+          {isLocked
+            ? 'Chord detected 🔒 — press Add to save, or play a new chord'
+            : listening
+              ? 'Play a chord and strum hard… 🎸'
+              : 'Press Start → play a chord → the app will lock'}
         </p>
 
         {/* Main chord display */}
@@ -423,9 +325,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
           marginBottom: 14, padding: '14px 0',
           transition: 'all 0.3s',
         }}>
-          {calibrating ? (
-            <span style={{ fontSize: 13, color: T.textDim }}>Calibrating…</span>
-          ) : isLocked ? (
+          {isLocked ? (
             <>
               <span style={{ fontSize: 50, fontWeight: 800, color: T.primary, direction: 'ltr' }}>
                 {formatChordName(stableChord!)}
@@ -452,18 +352,8 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
           )}
         </div>
 
-        {/* Calibration progress */}
-        {calibrating && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 5 }}>Calibrating background noise…</div>
-            <div style={{ height: 5, background: T.border, borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 3, background: T.textMuted, width: '100%', opacity: 0.4 }} />
-            </div>
-          </div>
-        )}
-
         {/* Lock progress bar */}
-        {listening && !isLocked && !calibrating && (
+        {listening && !isLocked && (
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 5 }}>
               {lockProgress > 0 ? `Stabilizing… ${lockProgress}%` : 'Waiting for chord'}
@@ -495,7 +385,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
           {listening ? '■  Stop' : '🎙  Start Listening'}
         </button>
 
-        {/* Add + Reset (only when locked) */}
+        {/* Add + Reset */}
         {isLocked && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -526,7 +416,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       </div>
 
       <p style={{ fontSize: 11, color: T.textDim, textAlign: 'center', lineHeight: 1.6, margin: 0 }}>
-        Press Start → stay quiet during calibration → play a chord · press ↺ for a new chord
+        Press Start → play a chord · press ↺ for a new chord
       </p>
     </div>
   );
