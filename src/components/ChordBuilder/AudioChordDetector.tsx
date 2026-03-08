@@ -8,7 +8,9 @@ import { T, card } from '../../theme';
 
 const PITCH_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-/** Build a raw 12-bin chroma vector from FFT data (no thresholds). */
+/** Build a raw 12-bin chroma vector from FFT data (no thresholds).
+ *  Higher frequencies are gently rolled off so harmonics (which land at
+ *  2×, 3×, 5× the fundamental) contribute less than the fundamentals. */
 function rawChroma(
   data: Float32Array<ArrayBuffer>,
   sampleRate: number,
@@ -21,9 +23,13 @@ function rawChroma(
   for (let i = minBin; i <= maxBin; i++) {
     const db = data[i];
     if (db <= -100) continue;
-    const midi = 12 * Math.log2((i * binHz) / 440) + 69;
+    const freq = i * binHz;
+    const midi = 12 * Math.log2(freq / 440) + 69;
     const pc   = ((Math.round(midi) % 12) + 12) % 12;
-    chroma[pc] += Math.pow(10, db / 20);
+    // Gentle rolloff above 300 Hz: fundamentals stay near 1.0,
+    // 5th harmonics (which cause major-vs-minor confusion) are ≈ 0.5
+    const weight = 1 / (1 + Math.max(0, freq - 300) / 500);
+    chroma[pc] += Math.pow(10, db / 20) * weight;
   }
   return chroma;
 }
@@ -62,22 +68,63 @@ function notesFromChroma(adj: Float64Array): string[] {
 }
 
 /**
- * Derive best chord name. Prefers root-position (no slash) chords, then simpler names.
- * Falls back through progressively smaller note subsets.
+ * Score each candidate note as a potential root based on how many of the
+ * other detected notes fall on musically expected chord intervals above it.
+ * Returns the note most likely to be the root/bass.
+ */
+function pickLikelyRoot(notes: string[]): string {
+  // Interval weights: how "root-defining" each interval is (semitones above root)
+  const W: Record<number, number> = {
+    0: 0,   // unison (skip self)
+    7: 8,   // perfect 5th — strongest root indicator
+    4: 6,   // major 3rd
+    3: 6,   // minor 3rd
+    11: 4,  // major 7th
+    10: 4,  // minor 7th
+    9: 2,   // major 6th
+    2: 2,   // major 9th
+    5: 1,   // perfect 4th (weaker)
+    8: -1,  // augmented 5th / minor 6th (unusual)
+    1: -2,  // minor 2nd (chromatic, very unusual)
+    6: -2,  // tritone (very unusual)
+  };
+  let bestRoot = notes[0];
+  let bestScore = -Infinity;
+  for (const root of notes) {
+    const rootIdx = PITCH_CLASSES.indexOf(root);
+    let score = 0;
+    for (const note of notes) {
+      const interval = ((PITCH_CLASSES.indexOf(note) - rootIdx) + 12) % 12;
+      score += W[interval] ?? 0;
+    }
+    if (score > bestScore) { bestScore = score; bestRoot = root; }
+  }
+  return bestRoot;
+}
+
+/**
+ * Derive best chord name. Uses musical root-scoring to pick the right root,
+ * then falls back through smaller note subsets if the full set has no match.
  */
 function chordFromNotes(notes: string[]): string | null {
+  if (notes.length < 2) return null;
+  const likelyRoot = pickLikelyRoot(notes);
+
   const subsets = [notes, notes.slice(0, 5), notes.slice(0, 4), notes.slice(0, 3)];
   for (const subset of subsets) {
     if (subset.length < 2) break;
     const chords = TonalChord.detect(subset);
     if (chords.length === 0) continue;
-    const best = [...chords].sort((a, b) => {
-      const aSlash = a.includes('/') ? 1 : 0;
-      const bSlash = b.includes('/') ? 1 : 0;
-      if (aSlash !== bSlash) return aSlash - bSlash;
+
+    // First: find a chord whose root matches our musical root estimate
+    const rootMatch = chords.find(c => c.match(/^([A-G][b#]?)/)?.[1] === likelyRoot);
+    if (rootMatch) return rootMatch;
+
+    // Fallback: prefer root-position (no slash), then shorter name
+    return [...chords].sort((a, b) => {
+      if (a.includes('/') !== b.includes('/')) return a.includes('/') ? 1 : -1;
       return a.length - b.length;
-    });
-    return best[0];
+    })[0];
   }
   return null;
 }
@@ -86,7 +133,7 @@ function chordFromNotes(notes: string[]): string | null {
 
 const CALIB_FRAMES = 10;   // 10 × 150 ms = 1.5 s calibration period
 const HISTORY      = 5;    // frames needed to attempt lock
-const STABLE_RATIO = 0.50; // note must appear in ≥ 50 % of sound frames
+const STABLE_RATIO = 0.60; // note must appear in ≥ 60 % of sound frames
 
 // ── Component ─────────────────────────────────────────────────────────────
 
