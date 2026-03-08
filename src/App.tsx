@@ -151,7 +151,7 @@ export default function App() {
           padding: '10px 16px', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
         }}>
-          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>
+          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600, direction: 'rtl' }}>
             🎵 פרוגרסיה משותפת — {sharedProgression.length} אקורדים
           </span>
           <div style={{ display: 'flex', gap: 8 }}>

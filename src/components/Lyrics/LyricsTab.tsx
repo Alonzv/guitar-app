@@ -234,7 +234,7 @@ export function LyricsTab({ progression }: Props) {
           </div>
         ) : (
           <p style={{ color: T.textDim, fontSize: 13, margin: 0, direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
-            עבור לטאב Chords כדי להוסיף אקורדים.
+            עבור לטאב <bdi>Chords</bdi> כדי להוסיף אקורדים.
           </p>
         )}
         {selectedChip && (

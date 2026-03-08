@@ -309,10 +309,11 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
 
   const handleAdd = () => {
     if (!stableChord) return;
-    const info = TonalChord.get(stableChord);
+    const cleanName = formatChordName(stableChord);
+    const info = TonalChord.get(cleanName);
     onAddToProgression({
       id: `chord-${Date.now()}`,
-      chord: { name: stableChord, notes: info.notes ?? [], aliases: info.aliases ?? [] },
+      chord: { name: cleanName, notes: info.notes ?? [], aliases: info.aliases ?? [] },
       fretPositions: [],
     });
     setAdded(true);
@@ -329,14 +330,14 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
           Audio Chord Detection
         </p>
 
-        <p style={{ margin: '0 0 14px', fontSize: 13, color: T.textMuted, lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 14px', fontSize: 13, color: T.textMuted, lineHeight: 1.5, direction: 'rtl' }}>
           {calibrating
-            ? '🎙 מכייל מיקרופון — שמור על שקט...'
+            ? 'מכייל מיקרופון 🎙 — שמור על שקט...'
             : isLocked
-              ? '🔒 אקורד זוהה — לחץ Add להוספה, או נגן אקורד חדש'
+              ? <span>אקורד זוהה 🔒 — לחץ <bdi>Add</bdi> להוספה, או נגן אקורד חדש</span>
               : listening
-                ? '🎸 נגן אקורד על הגיטרה ולחץ חזק…'
-                : 'לחץ Start → שמור שקט → נגן אקורד → האפליקציה תנעל'}
+                ? 'נגן אקורד על הגיטרה ולחץ חזק… 🎸'
+                : <span>לחץ <bdi>Start</bdi> ← שמור שקט ← נגן אקורד ← האפליקציה תנעל</span>}
         </p>
 
         {/* Main chord display */}
@@ -391,7 +392,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
         {/* Lock progress bar */}
         {listening && !isLocked && !calibrating && (
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 5 }}>
+            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 5, direction: 'rtl' }}>
               {lockProgress > 0 ? `מייצב… ${lockProgress}%` : 'ממתין לאקורד'}
             </div>
             <div style={{ height: 5, background: T.border, borderRadius: 3, overflow: 'hidden' }}>
@@ -405,7 +406,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
           </div>
         )}
 
-        {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: T.coral }}>{error}</p>}
+        {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: T.coral, direction: 'rtl' }}>{error}</p>}
 
         {/* Start / Stop */}
         <button
@@ -432,10 +433,10 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
                 background: added ? T.secondaryBg : T.secondary,
                 color: added ? T.secondary : T.white,
                 fontWeight: 800, fontSize: 15, cursor: 'pointer',
-                transition: 'all 0.15s', direction: 'ltr',
+                transition: 'all 0.15s', direction: added ? 'rtl' : 'ltr',
               }}
             >
-              {added ? `✓ נוסף!` : `+ Add ${formatChordName(stableChord!)}`}
+              {added ? `✓ נוסף` : `+ Add ${formatChordName(stableChord!)}`}
             </button>
             <button
               onClick={resetLock}
@@ -451,8 +452,8 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
         )}
       </div>
 
-      <p style={{ fontSize: 11, color: T.textDim, textAlign: 'center', lineHeight: 1.6, margin: 0 }}>
-        לחץ Start → שמור שקט בזמן הכיול → נגן אקורד · לחץ ↺ לאקורד חדש
+      <p style={{ fontSize: 11, color: T.textDim, textAlign: 'center', lineHeight: 1.6, margin: 0, direction: 'rtl' }}>
+        לחץ <bdi>Start</bdi> ← שמור שקט בזמן הכיול ← נגן אקורד · לחץ ↺ לאקורד חדש
       </p>
     </div>
   );

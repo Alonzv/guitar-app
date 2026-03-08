@@ -51,8 +51,8 @@ export function SongLibraryModal({ songs, onClose, onLoad, onDelete }: Props) {
         {/* Song list */}
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {songs.length === 0 ? (
-            <p style={{ textAlign: 'center', color: T.textDim, fontSize: 14, marginTop: 32 }}>
-              אין שירים שמורים עדיין.<br />בנה פרוגרסיה ולחץ 💾 Save Song.
+            <p style={{ textAlign: 'center', color: T.textDim, fontSize: 14, marginTop: 32, direction: 'rtl' }}>
+              אין שירים שמורים עדיין.<br />בנה פרוגרסיה ולחץ 💾 <bdi>Save Song</bdi>.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
