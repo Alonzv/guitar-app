@@ -31,16 +31,17 @@ function buildChroma(
 
   let maxDb = -Infinity;
   for (let i = minBin; i <= maxBin; i++) if (data[i] > maxDb) maxDb = data[i];
-  if (maxDb < -58) return new Float64Array(12);           // silence
+  // Only process if there is a real signal well above typical mic noise floor
+  if (maxDb < -48) return new Float64Array(12);
 
   const chroma = new Float64Array(12);
   for (let i = minBin; i <= maxBin; i++) {
     const db = data[i];
-    if (db < maxDb - 40) continue;                        // skip bins > 40 dB below peak
+    if (db < maxDb - 30) continue;                        // tight window: skip bins > 30 dB below peak
     const freq = i * binHz;
     const midi  = 12 * Math.log2(freq / 440) + 69;
     const pc    = ((Math.round(midi) % 12) + 12) % 12;
-    chroma[pc] += Math.pow(10, db / 20);                  // accumulate linear amplitude
+    chroma[pc] += Math.pow(10, db / 20);
   }
   return chroma;
 }
@@ -54,7 +55,13 @@ function detectNotes(
   const chroma = buildChroma(data, sampleRate, fftSize);
   const maxVal = Math.max(...chroma);
   if (maxVal <= 0) return [];
-  // 15 % threshold: real note harmonics contribute ≤ 12 % to other pitch classes
+
+  // Uniformity guard: in background noise all 12 buckets are similar.
+  // A real chord makes 3-5 buckets dominate. Require max ≥ 3 × median.
+  const sorted = Float64Array.from(chroma).sort();
+  const median = (sorted[5] + sorted[6]) / 2;
+  if (median <= 0 || maxVal / median < 3.0) return [];
+
   return Array.from({ length: 12 }, (_, i) => i)
     .filter(i => chroma[i] / maxVal >= 0.15)
     .sort((a, b) => chroma[b] - chroma[a])               // strongest first = likely root
@@ -98,7 +105,8 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
   const streamRef   = useRef<MediaStream | null>(null);
   const freqBufRef  = useRef<Float32Array<ArrayBuffer> | null>(null);
   const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const historyRef  = useRef<string[][]>([]);       // per-frame note arrays
+  const historyRef  = useRef<string[][]>([]);       // per-frame note arrays (sound-only)
+  const silentRef   = useRef(0);                    // consecutive silent frames
   // When a chord is locked, ignore new frames until the user adds / resets it
   const lockedRef   = useRef(false);
 
@@ -108,43 +116,48 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
     analyserRef.current.getFloatFrequencyData(freqBufRef.current);
 
     if (!lockedRef.current) {
-      // ── Collect this frame's notes ──────────────────────────────────────
       const frameNotes = detectNotes(
         freqBufRef.current,
         ctxRef.current.sampleRate,
         analyserRef.current.fftSize,
       );
-      historyRef.current = [...historyRef.current, frameNotes].slice(-HISTORY);
 
-      const filled = historyRef.current.length;
-      // Show progress as % of window filled
-      setLockProgress(Math.min(99, Math.round((filled / HISTORY) * 100)));
+      if (frameNotes.length >= 2) {
+        // ── Sound detected: accumulate history ─────────────────────────────
+        silentRef.current = 0;
+        historyRef.current = [...historyRef.current, frameNotes].slice(-HISTORY);
 
-      // ── Vote on individual notes ─────────────────────────────────────────
-      // A note is "stable" if it appeared in ≥ STABLE_RATIO of frames.
-      // We vote on atomic pitch-classes, not derived chord names, so variation
-      // in which inversion/name Chord.detect() picks doesn't matter.
-      const noteCounts = new Map<string, number>();
-      for (const frame of historyRef.current) {
-        for (const n of frame) noteCounts.set(n, (noteCounts.get(n) ?? 0) + 1);
-      }
-      const stableNotes = [...noteCounts.entries()]
-        .filter(([, c]) => c / filled >= STABLE_RATIO)
-        .map(([note]) => note);
+        const filled = historyRef.current.length;
+        setLockProgress(Math.min(99, Math.round((filled / HISTORY) * 100)));
 
-      // Show stable notes live while building up
-      setLiveNotes(stableNotes);
+        // Vote on individual pitch-classes across the window
+        const noteCounts = new Map<string, number>();
+        for (const frame of historyRef.current) {
+          for (const n of frame) noteCounts.set(n, (noteCounts.get(n) ?? 0) + 1);
+        }
+        const stableNotes = [...noteCounts.entries()]
+          .filter(([, c]) => c / filled >= STABLE_RATIO)
+          .sort((a, b) => b[1] - a[1])
+          .map(([note]) => note);
+        setLiveNotes(stableNotes);
 
-      // ── Try to lock once the window is full ──────────────────────────────
-      if (filled >= HISTORY) {
-        const chord = chordFromNotes(stableNotes);
-        if (chord) {
-          lockedRef.current = true;
-          setStableChord(chord);
-          setLockProgress(100);
-        } else {
-          // Not enough stable notes — reset and listen for a new chord
+        // Try to lock every frame once the window is full (sliding — no reset on failure)
+        if (filled >= HISTORY) {
+          const chord = chordFromNotes(stableNotes);
+          if (chord) {
+            lockedRef.current = true;
+            setStableChord(chord);
+            setLockProgress(100);
+          }
+        }
+      } else {
+        // ── Silence / noise: don't advance history ─────────────────────────
+        silentRef.current += 1;
+        if (silentRef.current >= 4) {   // ~0.6 s of silence → clear stale history
           historyRef.current = [];
+          silentRef.current  = 0;
+          setLockProgress(0);
+          setLiveNotes([]);
         }
       }
     }
@@ -176,6 +189,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       ctx.createMediaStreamSource(stream).connect(analyser);
 
       historyRef.current = [];
+      silentRef.current  = 0;
       lockedRef.current  = false;
       setStableChord(null);
       setLockProgress(0);
@@ -203,6 +217,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
   const resetLock = () => {
     lockedRef.current = false;
     historyRef.current = [];
+    silentRef.current  = 0;
     setStableChord(null);
     setLockProgress(0);
     setLiveNotes([]);
