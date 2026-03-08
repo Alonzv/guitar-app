@@ -4,45 +4,135 @@ import type { ChordInProgression } from '../../types/music';
 import { formatChordName } from '../../utils/chordIdentifier';
 import { T, card } from '../../theme';
 
-// ── DSP ───────────────────────────────────────────────────────────────────
+// ── Pitch classes ─────────────────────────────────────────────────────────────
+const PC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const;
 
-const PITCH_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+// ── HPS settings ──────────────────────────────────────────────────────────────
+// Harmonic Product Spectrum: multiply the spectrum with downsampled copies of
+// itself. Each harmonic of a fundamental appears as a peak at every harmonic
+// order, so the product naturally emphasises fundamentals over harmonics.
+const HPS_H     = 5;    // number of harmonic layers to multiply
+const HPS_LO_HZ = 60;   // below open low-E (~82 Hz)
+const HPS_HI_HZ = 600;  // above highest open string (E4 = 330 Hz, with margin)
 
-/** Build a raw 12-bin chroma vector from FFT data (no thresholds).
- *  Higher frequencies are gently rolled off so harmonics (which land at
- *  2×, 3×, 5× the fundamental) contribute less than the fundamentals. */
-function rawChroma(
-  data: Float32Array<ArrayBuffer>,
+// ── Stability settings ────────────────────────────────────────────────────────
+const CALIB_FRAMES  = 10;   // frames to measure noise floor  (10 × 150 ms = 1.5 s)
+const IIR_ALPHA     = 0.22; // new-frame weight in decaying chroma average
+const CONF_HISTORY  = 6;    // rolling window of confidence scores
+const LOCK_CONF     = 0.52; // avg confidence threshold to lock
+const SILENT_RESET  = 15;   // consecutive silent frames before clearing (~2.3 s)
+
+// ── Chord templates (12 roots × 19 types = 228 templates) ────────────────────
+interface Template { name: string; pcs: number[]; w: number[] }
+
+function buildTemplates(): Template[] {
+  // How "defining" is each interval above the root?
+  // Root and 3rd matter most; 5th is nearly universal so less distinguishing.
+  const IW: Record<number, number> = {
+    0: 1.0,   // root
+    2: 0.55,  // major 2nd / 9th
+    3: 0.85,  // minor 3rd
+    4: 0.85,  // major 3rd
+    5: 0.70,  // perfect 4th
+    6: 0.50,  // tritone / dim 5th
+    7: 0.45,  // perfect 5th (universal, low discrimination)
+    8: 0.60,  // augmented 5th
+    9: 0.60,  // major 6th / dim 7th
+    10: 0.75, // minor 7th
+    11: 0.75, // major 7th
+  };
+
+  const TYPES: { s: string; iv: number[] }[] = [
+    { s: '',      iv: [0,4,7]         }, // major
+    { s: 'm',     iv: [0,3,7]         }, // minor
+    { s: '7',     iv: [0,4,7,10]      }, // dominant 7
+    { s: 'maj7',  iv: [0,4,7,11]      }, // major 7
+    { s: 'm7',    iv: [0,3,7,10]      }, // minor 7
+    { s: 'mMaj7', iv: [0,3,7,11]      }, // minor major 7
+    { s: 'sus2',  iv: [0,2,7]         }, // sus 2
+    { s: 'sus4',  iv: [0,5,7]         }, // sus 4
+    { s: '7sus4', iv: [0,5,7,10]      }, // 7sus4
+    { s: 'dim',   iv: [0,3,6]         }, // diminished
+    { s: 'dim7',  iv: [0,3,6,9]       }, // diminished 7
+    { s: 'm7b5',  iv: [0,3,6,10]      }, // half-diminished
+    { s: 'aug',   iv: [0,4,8]         }, // augmented
+    { s: '6',     iv: [0,4,7,9]       }, // major 6
+    { s: 'm6',    iv: [0,3,7,9]       }, // minor 6
+    { s: 'add9',  iv: [0,2,4,7]       }, // add 9
+    { s: '9',     iv: [0,2,4,7,10]    }, // dominant 9
+    { s: 'maj9',  iv: [0,2,4,7,11]    }, // major 9
+    { s: 'm9',    iv: [0,2,3,7,10]    }, // minor 9
+  ];
+
+  const out: Template[] = [];
+  for (let root = 0; root < 12; root++) {
+    for (const t of TYPES) {
+      out.push({
+        name: `${PC[root]}${t.s}`,
+        pcs:  t.iv.map(iv => (root + iv) % 12),
+        w:    t.iv.map(iv => IW[iv] ?? 0.5),
+      });
+    }
+  }
+  return out;
+}
+
+const TEMPLATES = buildTemplates(); // built once at module load
+
+// ── DSP helpers ───────────────────────────────────────────────────────────────
+
+/**
+ * Harmonic Product Spectrum chromagram.
+ * For each candidate fundamental bin, multiply its magnitude with the
+ * magnitudes at 2×, 3×, 4×, 5× that frequency. Real fundamentals
+ * produce a strong product; harmonics of other notes do not.
+ * Returns a raw (un-normalised) 12-bin pitch-class accumulation.
+ */
+function computeHPSChroma(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any,
   sampleRate: number,
   fftSize: number,
 ): Float64Array {
   const binHz  = sampleRate / fftSize;
-  const minBin = Math.max(1, Math.floor(70  / binHz));
-  const maxBin = Math.min(data.length - 1, Math.ceil(2000 / binHz));
+  const n      = data.length;
+  const minBin = Math.max(1, Math.floor(HPS_LO_HZ / binHz));
+  // Cap so that bin*HPS_H never exceeds the array
+  const maxBin = Math.min(Math.floor(n / HPS_H) - 1, Math.ceil(HPS_HI_HZ / binHz));
+
+  // dB → linear magnitude
+  const mag = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    mag[i] = data[i] <= -90 ? 0 : Math.pow(10, data[i] / 20);
+  }
+
+  // Compute HPS product at each fundamental-range bin
+  const hps = new Float64Array(n);
+  for (let i = minBin; i <= maxBin; i++) {
+    let p = mag[i];
+    for (let h = 2; h <= HPS_H; h++) p *= mag[Math.round(i * h)];
+    hps[i] = p;
+  }
+
+  // Accumulate HPS value into pitch class bins
   const chroma = new Float64Array(12);
   for (let i = minBin; i <= maxBin; i++) {
-    const db = data[i];
-    if (db <= -100) continue;
+    if (hps[i] <= 0) continue;
     const freq = i * binHz;
     const midi = 12 * Math.log2(freq / 440) + 69;
     const pc   = ((Math.round(midi) % 12) + 12) % 12;
-    // Steep rolloff above 350 Hz so harmonics are strongly suppressed:
-    //   350 Hz → 1.0,  450 Hz → 0.5,  550 Hz → 0.25,  650 Hz → 0.17
-    // Guitar fundamentals for open/1st-pos chords are all ≤ 330 Hz (E4),
-    // while their 5th harmonics (which cause major-vs-minor confusion) are
-    // at 5× = 660 Hz+ and end up at ≤ 0.17 weight — easily beaten by the
-    // real chord tone played on a neighbouring string.
-    const weight = 1 / (1 + Math.max(0, freq - 350) / 100);
-    chroma[pc] += Math.pow(10, db / 20) * weight;
+    chroma[pc] += hps[i];
   }
+
   return chroma;
 }
 
 /**
- * Subtract the measured noise floor (with 1.5× safety margin) from a chroma vector.
- * Returns null when no pitch class rises meaningfully above the noise.
+ * Subtract noise floor (×1.5 safety margin), apply uniformity guard,
+ * and normalise to [0, 1]. Returns null when the signal is too weak or
+ * too uniform (background noise / silence).
  */
-function adjustedChroma(
+function cleanChroma(
   chroma: Float64Array,
   noiseFloor: Float64Array,
 ): Float64Array | null {
@@ -52,94 +142,45 @@ function adjustedChroma(
   const maxVal = Math.max(...adj);
   if (maxVal <= 0) return null;
 
-  // Uniformity guard: a real note makes some buckets dominate.
-  // Random noise leaves all buckets similar → reject.
-  const sorted = Float64Array.from(adj).sort();
+  // Uniformity guard: real audio has a dominant pitch class;
+  // noise/hum spreads energy evenly across all bins.
+  const sorted = [...adj].sort((a, b) => a - b);
   const median = (sorted[5] + sorted[6]) / 2;
-  if (median > 0 && maxVal / median < 3.0) return null;
+  if (median > 0 && maxVal / median < 2.5) return null;
 
-  return adj;
-}
-
-/** Extract pitch classes present above 18 % of max, sorted strongest-first. */
-function notesFromChroma(adj: Float64Array): string[] {
-  const maxVal = Math.max(...adj);
-  if (maxVal <= 0) return [];
-  return Array.from({ length: 12 }, (_, i) => i)
-    .filter(i => adj[i] / maxVal >= 0.18)
-    .sort((a, b) => adj[b] - adj[a])
-    .map(i => PITCH_CLASSES[i]);
+  // Normalise
+  const norm = new Float64Array(12);
+  for (let i = 0; i < 12; i++) norm[i] = adj[i] / maxVal;
+  return norm;
 }
 
 /**
- * Score each candidate note as a potential root based on how many of the
- * other detected notes fall on musically expected chord intervals above it.
- * Returns the note most likely to be the root/bass.
+ * Score every chord template against the normalised chromagram.
+ * Hit score = weighted average chroma at template positions.
+ * Penalty  = average chroma at non-template positions (scaled by 0.25).
+ * Returns the ranked list (highest score first).
  */
-function pickLikelyRoot(notes: string[]): string {
-  // Interval weights: how "root-defining" each interval is (semitones above root)
-  const W: Record<number, number> = {
-    0: 0,   // unison (skip self)
-    7: 8,   // perfect 5th — strongest root indicator
-    4: 6,   // major 3rd
-    3: 6,   // minor 3rd
-    11: 4,  // major 7th
-    10: 4,  // minor 7th
-    9: 2,   // major 6th
-    2: 2,   // major 9th
-    5: 1,   // perfect 4th (weaker)
-    8: -1,  // augmented 5th / minor 6th (unusual)
-    1: -2,  // minor 2nd (chromatic, very unusual)
-    6: -2,  // tritone (very unusual)
-  };
-  let bestRoot = notes[0];
-  let bestScore = -Infinity;
-  for (const root of notes) {
-    const rootIdx = PITCH_CLASSES.indexOf(root);
-    let score = 0;
-    for (const note of notes) {
-      const interval = ((PITCH_CLASSES.indexOf(note) - rootIdx) + 12) % 12;
-      score += W[interval] ?? 0;
+function scoreTemplates(chroma: Float64Array): { chord: string; score: number }[] {
+  return TEMPLATES.map(t => {
+    const inSet = new Set(t.pcs);
+
+    let hitSum = 0, wSum = 0;
+    for (let k = 0; k < t.pcs.length; k++) {
+      hitSum += chroma[t.pcs[k]] * t.w[k];
+      wSum   += t.w[k];
     }
-    if (score > bestScore) { bestScore = score; bestRoot = root; }
-  }
-  return bestRoot;
+
+    let penSum = 0, penCount = 0;
+    for (let i = 0; i < 12; i++) {
+      if (!inSet.has(i)) { penSum += chroma[i]; penCount++; }
+    }
+
+    const score = (hitSum / wSum) - 0.25 * (penSum / (penCount || 1));
+    return { chord: t.name, score };
+  }).sort((a, b) => b.score - a.score);
 }
 
-/**
- * Derive best chord name. Uses musical root-scoring to pick the right root,
- * then falls back through smaller note subsets if the full set has no match.
- */
-function chordFromNotes(notes: string[]): string | null {
-  if (notes.length < 2) return null;
-  const likelyRoot = pickLikelyRoot(notes);
-
-  const subsets = [notes, notes.slice(0, 5), notes.slice(0, 4), notes.slice(0, 3)];
-  for (const subset of subsets) {
-    if (subset.length < 2) break;
-    const chords = TonalChord.detect(subset);
-    if (chords.length === 0) continue;
-
-    // First: find a chord whose root matches our musical root estimate
-    const rootMatch = chords.find(c => c.match(/^([A-G][b#]?)/)?.[1] === likelyRoot);
-    if (rootMatch) return rootMatch;
-
-    // Fallback: prefer root-position (no slash), then shorter name
-    return [...chords].sort((a, b) => {
-      if (a.includes('/') !== b.includes('/')) return a.includes('/') ? 1 : -1;
-      return a.length - b.length;
-    })[0];
-  }
-  return null;
-}
-
-// ── Stability ─────────────────────────────────────────────────────────────
-
-const CALIB_FRAMES = 10;   // 10 × 150 ms = 1.5 s calibration period
-const HISTORY      = 5;    // frames needed to attempt lock
-const STABLE_RATIO = 0.60; // note must appear in ≥ 60 % of sound frames
-
-// ── Component ─────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props {
   onAddToProgression: (item: ChordInProgression) => void;
@@ -159,86 +200,115 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
   const streamRef      = useRef<MediaStream | null>(null);
   const freqBufRef     = useRef<Float32Array<ArrayBuffer> | null>(null);
   const timerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const calibBufRef    = useRef<Float64Array[]>([]);       // chroma frames during calibration
-  const noiseFloorRef  = useRef<Float64Array | null>(null);// averaged calibration result
-  const historyRef     = useRef<string[][]>([]);           // per-frame note arrays
-  const silentRef      = useRef(0);                        // consecutive silent frames
+
+  // Calibration
+  const calibBufRef   = useRef<Float64Array[]>([]);
+  const noiseFloorRef = useRef<Float64Array | null>(null);
+
+  // Detection state
+  const accumChromaRef = useRef<Float64Array>(new Float64Array(12)); // IIR-smoothed chroma
+  const confHistoryRef = useRef<number[]>([]);                       // last CONF_HISTORY confidence scores
+  const silentRef      = useRef(0);
   const lockedRef      = useRef(false);
+  const frameCountRef  = useRef(0); // for log throttling
 
   const analyze = useCallback(() => {
     if (!analyserRef.current || !freqBufRef.current || !ctxRef.current) return;
     analyserRef.current.getFloatFrequencyData(freqBufRef.current);
 
     if (!lockedRef.current) {
-      const chroma = rawChroma(freqBufRef.current, ctxRef.current.sampleRate, analyserRef.current.fftSize);
+      const rawChroma = computeHPSChroma(
+        freqBufRef.current,
+        ctxRef.current.sampleRate,
+        analyserRef.current.fftSize,
+      );
 
-      // ── Phase 1: Calibration — measure noise floor ──────────────────────
+      // ── Phase 1: Calibration ─────────────────────────────────────────────
       if (!noiseFloorRef.current) {
-        calibBufRef.current.push(chroma);
+        calibBufRef.current.push(rawChroma);
+        console.log(`[ACD] calibration frame ${calibBufRef.current.length}/${CALIB_FRAMES}`);
+
         if (calibBufRef.current.length >= CALIB_FRAMES) {
-          const avg = new Float64Array(12);
+          const floor = new Float64Array(12);
           for (const c of calibBufRef.current) {
-            for (let i = 0; i < 12; i++) avg[i] += c[i] / CALIB_FRAMES;
+            for (let i = 0; i < 12; i++) floor[i] += c[i] / CALIB_FRAMES;
           }
-          noiseFloorRef.current = avg;
+          noiseFloorRef.current = floor;
+          const floorStr = PC.map((p, i) => `${p}:${floor[i].toExponential(2)}`).join(' ');
+          console.log(`[ACD] noise floor established → ${floorStr}`);
           setCalibrating(false);
+        }
+
+        timerRef.current = setTimeout(analyze, 150);
+        return;
+      }
+
+      // ── Phase 2: Detection ───────────────────────────────────────────────
+      frameCountRef.current++;
+      const norm = cleanChroma(rawChroma, noiseFloorRef.current);
+
+      if (!norm) {
+        // Silent / noise frame
+        silentRef.current++;
+        if (frameCountRef.current % 5 === 0) {
+          console.log(`[ACD] silent (${silentRef.current} consecutive frames)`);
+        }
+        if (silentRef.current >= SILENT_RESET) {
+          accumChromaRef.current = new Float64Array(12);
+          confHistoryRef.current = [];
+          silentRef.current = 0;
+          setLockProgress(0);
+          setLiveNotes([]);
+          console.log('[ACD] reset — silence timeout');
         }
         timerRef.current = setTimeout(analyze, 150);
         return;
       }
 
-      // ── Phase 2: Detection — subtract noise floor ───────────────────────
-      const adj        = adjustedChroma(chroma, noiseFloorRef.current);
-      const frameNotes = adj ? notesFromChroma(adj) : [];
+      silentRef.current = 0;
 
-      if (frameNotes.length >= 2) {
-        silentRef.current = 0;
-        historyRef.current = [...historyRef.current, frameNotes].slice(-HISTORY);
-        const filled = historyRef.current.length;
-        setLockProgress(Math.min(99, Math.round((filled / HISTORY) * 100)));
+      // IIR smoothing: blend new frame into accumulated chroma
+      const accum = accumChromaRef.current;
+      for (let i = 0; i < 12; i++) {
+        accum[i] = accum[i] * (1 - IIR_ALPHA) + norm[i] * IIR_ALPHA;
+      }
 
-        // Vote on individual pitch-classes
-        const noteCounts = new Map<string, number>();
-        for (const frame of historyRef.current) {
-          for (const n of frame) noteCounts.set(n, (noteCounts.get(n) ?? 0) + 1);
-        }
-        const stableNotes = [...noteCounts.entries()]
-          .filter(([, c]) => c / filled >= STABLE_RATIO)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 6)
-          .map(([note]) => note);
+      // Live notes: pitch classes with significant energy in accumulated chroma
+      const accumMax = Math.max(...accum);
+      const liveNotesList = Array.from({ length: 12 }, (_, i) => i)
+        .filter(i => accumMax > 0 && accum[i] / accumMax >= 0.30)
+        .sort((a, b) => accum[b] - accum[a])
+        .map(i => PC[i]);
+      setLiveNotes(liveNotesList);
 
-        // Semitone conflict resolution: when two notes are 1 semitone apart,
-        // the weaker one is almost certainly a phantom harmonic — drop it.
-        const resolvedNotes = stableNotes.filter(note => {
-          const idx   = PITCH_CLASSES.indexOf(note);
-          const count = noteCounts.get(note) ?? 0;
-          const lo    = PITCH_CLASSES[(idx + 11) % 12];
-          const hi    = PITCH_CLASSES[(idx +  1) % 12];
-          if (stableNotes.includes(lo) && (noteCounts.get(lo) ?? 0) > count * 1.3) return false;
-          if (stableNotes.includes(hi) && (noteCounts.get(hi) ?? 0) > count * 1.3) return false;
-          return true;
-        });
+      // Score templates against accumulated chroma
+      const ranked = scoreTemplates(accum);
+      const best   = ranked[0];
+      const top3   = ranked.slice(0, 3);
 
-        setLiveNotes(resolvedNotes);
+      // Track confidence history
+      confHistoryRef.current = [...confHistoryRef.current, best.score].slice(-CONF_HISTORY);
+      const avgConf = confHistoryRef.current.reduce((s, v) => s + v, 0) / confHistoryRef.current.length;
 
-        if (filled >= HISTORY) {
-          const chord = chordFromNotes(resolvedNotes);
-          if (chord) {
-            lockedRef.current = true;
-            setStableChord(chord);
-            setLockProgress(100);
-          }
-          // No reset on failure — sliding window keeps trying
-        }
-      } else {
-        silentRef.current += 1;
-        if (silentRef.current >= 12) { // ~1.8 s of silence → clear stale history
-          historyRef.current = [];
-          silentRef.current  = 0;
-          setLockProgress(0);
-          setLiveNotes([]);
-        }
+      // Progress bar reflects current average confidence vs lock threshold
+      const pct = Math.min(99, Math.round((avgConf / LOCK_CONF) * 100));
+      setLockProgress(Math.max(0, pct));
+
+      // Log every 5 frames
+      if (frameCountRef.current % 5 === 0) {
+        const chromaStr = liveNotesList.map(n => `${n}:${accum[PC.indexOf(n as typeof PC[number])].toFixed(2)}`).join(' ');
+        console.log(`[ACD] chroma → ${chromaStr || '(none above threshold)'}`);
+        console.log(`[ACD] top matches → ${top3.map(t => `${t.chord}(${t.score.toFixed(3)})`).join(' | ')}`);
+        console.log(`[ACD] avgConf=${avgConf.toFixed(3)} threshold=${LOCK_CONF} progress=${pct}%`);
+      }
+
+      // Lock when average confidence exceeds threshold
+      if (confHistoryRef.current.length >= CONF_HISTORY && avgConf >= LOCK_CONF) {
+        const chord = best.chord;
+        lockedRef.current = true;
+        setStableChord(chord);
+        setLockProgress(100);
+        console.log(`[ACD] ✅ LOCKED → ${chord}  (confidence: ${avgConf.toFixed(3)}, top3: ${top3.map(t => t.chord).join(' / ')})`);
       }
     }
 
@@ -260,22 +330,28 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       ctxRef.current = ctx;
 
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 8192;
-      analyser.smoothingTimeConstant = 0.85;
+      analyser.fftSize              = 8192;
+      analyser.smoothingTimeConstant = 0.8;
       analyserRef.current = analyser;
       freqBufRef.current  = new Float32Array(analyser.frequencyBinCount) as Float32Array<ArrayBuffer>;
       ctx.createMediaStreamSource(stream).connect(analyser);
 
-      calibBufRef.current   = [];
-      noiseFloorRef.current = null;
-      historyRef.current    = [];
-      silentRef.current     = 0;
-      lockedRef.current     = false;
+      // Reset all state
+      calibBufRef.current    = [];
+      noiseFloorRef.current  = null;
+      accumChromaRef.current = new Float64Array(12);
+      confHistoryRef.current = [];
+      silentRef.current      = 0;
+      lockedRef.current      = false;
+      frameCountRef.current  = 0;
+
       setStableChord(null);
       setLockProgress(0);
       setLiveNotes([]);
       setCalibrating(true);
       setListening(true);
+
+      console.log(`[ACD] started — sampleRate=${ctx.sampleRate} fftSize=${analyser.fftSize} binHz=${(ctx.sampleRate / analyser.fftSize).toFixed(2)}`);
       timerRef.current = setTimeout(analyze, 200);
     } catch {
       setError('Could not access microphone — allow permission and try again.');
@@ -287,8 +363,10 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
     streamRef.current?.getTracks().forEach(t => t.stop());
     ctxRef.current?.close().catch(() => {});
     ctxRef.current = analyserRef.current = freqBufRef.current = null;
-    historyRef.current = [];
-    silentRef.current  = 0;
+    accumChromaRef.current = new Float64Array(12);
+    confHistoryRef.current = [];
+    silentRef.current = 0;
+    console.log('[ACD] stopped');
     setListening(false);
     setCalibrating(false);
     setLiveNotes([]);
@@ -296,13 +374,15 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
   }, []);
 
   const resetLock = () => {
-    lockedRef.current  = false;
-    historyRef.current = [];
-    silentRef.current  = 0;
-    // Keep noiseFloor — no need to re-calibrate for next chord
+    lockedRef.current      = false;
+    accumChromaRef.current = new Float64Array(12);
+    confHistoryRef.current = [];
+    silentRef.current      = 0;
+    // Keep noiseFloor — no need to re-calibrate
     setStableChord(null);
     setLockProgress(0);
     setLiveNotes([]);
+    console.log('[ACD] lock reset — ready for next chord');
   };
 
   useEffect(() => () => { stopListening(); }, [stopListening]);
