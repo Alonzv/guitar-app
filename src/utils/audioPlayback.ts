@@ -4,87 +4,65 @@ const OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AudioCtxClass: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
 
-// ── Single shared AudioContext ────────────────────────────────────────────
+// ── Audio graph ───────────────────────────────────────────────────────────
+// All synthesis connects to _masterGain → MediaStreamDestinationNode → <audio>.
+// The <audio> element runs in iOS "playback" AVAudioSession category,
+// which ignores the mute/silent switch — unlike AudioContext alone.
 let _ctx: AudioContext | null = null;
+let _masterGain: GainNode | null = null;
+let _mediaEl: HTMLAudioElement | null = null;
+
+function initAudioGraph(): void {
+  if (_ctx && _ctx.state !== 'closed') return;
+
+  _ctx = new AudioCtxClass();
+  _masterGain = _ctx.createGain();
+
+  try {
+    const dest = _ctx.createMediaStreamDestination();
+    _masterGain.connect(dest);
+
+    if (!_mediaEl) {
+      _mediaEl = document.createElement('audio');
+      _mediaEl.setAttribute('playsinline', '');
+      _mediaEl.setAttribute('webkit-playsinline', '');
+      document.body.appendChild(_mediaEl);
+    }
+    _mediaEl.srcObject = dest.stream;
+  } catch {
+    // Fallback for browsers without createMediaStreamDestination
+    _masterGain.connect(_ctx.destination);
+  }
+}
 
 export function getSharedContext(): AudioContext {
-  if (!_ctx || _ctx.state === 'closed') {
-    _ctx = new AudioCtxClass();
-  }
-  return _ctx;
+  initAudioGraph();
+  return _ctx!;
 }
 
-// ── Generate a valid silent WAV programmatically ──────────────────────────
-// (avoids any base64 encoding errors)
-function makeSilentWAVUrl(): string {
-  const sampleRate = 22050;
-  const numSamples = Math.floor(sampleRate * 0.1); // 100 ms
-  const buf = new ArrayBuffer(44 + numSamples * 2);
-  const v = new DataView(buf);
-  const str = (o: number, s: string) =>
-    s.split('').forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
-  str(0, 'RIFF'); v.setUint32(4, 36 + numSamples * 2, true); str(8, 'WAVE');
-  str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
-  v.setUint16(22, 1, true);                         // channels
-  v.setUint32(24, sampleRate, true);                // sample rate
-  v.setUint32(28, sampleRate * 2, true);            // byte rate
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true); // block align, bits
-  str(36, 'data'); v.setUint32(40, numSamples * 2, true);
-  // audio data stays all zeros = silence
-  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+/** Use this as the final connect() target instead of ctx.destination. */
+export function getOutputNode(): AudioNode {
+  initAudioGraph();
+  return _masterGain!;
 }
 
-let _silentURL: string | null = null;
-function getSilentURL() {
-  if (!_silentURL) _silentURL = makeSilentWAVUrl();
-  return _silentURL;
-}
-
-// ── iOS unlock ────────────────────────────────────────────────────────────
-// Call from every user-gesture handler before scheduling audio.
-let _silentUnlocked = false;
-
+// ── Unlock ────────────────────────────────────────────────────────────────
+// Call from every user-gesture handler. Resumes AudioContext AND starts
+// the <audio> element (which switches iOS AVAudioSession → "playback").
 export function unlockAudio(): void {
-  const ctx = getSharedContext();
+  initAudioGraph();
+  _ctx!.resume().catch(() => {});
 
-  // 1. Resume Web Audio context within the user gesture.
-  ctx.resume().catch(() => {});
+  if (_mediaEl) {
+    _mediaEl.play().catch(() => {});
+  }
 
-  // 2. Warm-up: play a 1-sample silent buffer through the context.
-  try {
-    const b = ctx.createBuffer(1, 1, ctx.sampleRate);
-    const s = ctx.createBufferSource();
-    s.buffer = b; s.connect(ctx.destination); s.start(0);
-  } catch { /* ignore */ }
-
-  // 3. Tell iOS this is a media-playback app via MediaSession — this switches
-  //    AVAudioSession to "playback" category, which ignores the mute switch.
+  // Tell iOS this is a media-playback app (reinforces AVAudioSession category).
   try {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({ title: 'ScaleUp' });
     }
   } catch { /* ignore */ }
-
-  // 4. Also play through HTMLAudioElement (belt-and-suspenders for older iOS).
-  if (_silentUnlocked) return;
-  _silentUnlocked = true;
-  try {
-    const audio = document.createElement('audio');
-    audio.setAttribute('playsinline', '');
-    audio.setAttribute('webkit-playsinline', '');
-    audio.volume = 0.001;
-    audio.src = getSilentURL();
-    document.body.appendChild(audio);
-    const p = audio.play();
-    if (p) {
-      p.catch(() => { _silentUnlocked = false; })
-       .finally(() => { try { audio.remove(); } catch { /* */ } });
-    } else {
-      try { audio.remove(); } catch { /* */ }
-    }
-  } catch {
-    _silentUnlocked = false;
-  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -107,12 +85,10 @@ function synthesizeNote(ctx: AudioContext, freq: number, startTime: number): voi
 
   osc.connect(filter);
   filter.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(getOutputNode());
   osc.start(startTime);
   osc.stop(startTime + 1.6);
 }
-
-export interface FretPos { string: number; fret: number; }
 
 function synthesizeScaleNote(ctx: AudioContext, freq: number, startTime: number): void {
   const osc  = ctx.createOscillator();
@@ -123,12 +99,14 @@ function synthesizeScaleNote(ctx: AudioContext, freq: number, startTime: number)
   gain.gain.linearRampToValueAtTime(0.18, startTime + 0.02);
   gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(getOutputNode());
   osc.start(startTime);
   osc.stop(startTime + 0.38);
 }
 
-/** Play a sequence of MIDI note numbers ascending. Call from a user-gesture handler. */
+export interface FretPos { string: number; fret: number; }
+
+/** Play scale notes sequentially. Call from a user-gesture handler. */
 export function playScale(midiNotes: number[]): void {
   if (midiNotes.length === 0) return;
   unlockAudio();
@@ -151,17 +129,12 @@ export function playChord(fretPositions: FretPos[]): void {
 
   const schedule = () => {
     const sorted = [...fretPositions].sort((a, b) => a.string - b.string);
-    // +0.1s offset so the context has time to reach "running" state
     sorted.forEach((pos, i) => {
       const freq = OPEN_FREQS[pos.string] * Math.pow(2, pos.fret / 12);
       synthesizeNote(ctx, freq, ctx.currentTime + 0.1 + i * 0.065);
     });
   };
 
-  // Wait for the context to be running before scheduling notes.
-  if (ctx.state === 'running') {
-    schedule();
-  } else {
-    ctx.resume().then(schedule).catch(() => {});
-  }
+  if (ctx.state === 'running') schedule();
+  else ctx.resume().then(schedule).catch(() => {});
 }

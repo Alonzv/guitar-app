@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { T, card } from '../../theme';
-import { unlockAudio, getSharedContext } from '../../utils/audioPlayback';
+import { unlockAudio, getSharedContext, getOutputNode } from '../../utils/audioPlayback';
 
 // ── Inline SVG note icons (currentColor) ──────────────────────────────────
 const NoteIcons = {
@@ -65,7 +65,7 @@ function beep(ctx: AudioContext, time: number, accent: boolean): void {
   gain.gain.setValueAtTime(accent ? 0.35 : 0.22, time);
   gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(getOutputNode());
   osc.start(time);
   osc.stop(time + 0.08);
 }
