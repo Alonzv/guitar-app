@@ -103,7 +103,9 @@ function computeHPSChroma(
   // dB → linear magnitude
   const mag = new Float64Array(n);
   for (let i = 0; i < n; i++) {
-    mag[i] = data[i] <= -90 ? 0 : Math.pow(10, data[i] / 20);
+    // Hard gate at -65 dB: zeroes guitar body resonances (~-70 to -90 dB) and
+    // room noise while keeping all meaningful chord harmonics (> -65 dB).
+    mag[i] = data[i] <= -65 ? 0 : Math.pow(10, data[i] / 20);
   }
 
   // Compute HPS product at each fundamental-range bin
@@ -175,7 +177,7 @@ function scoreTemplates(chroma: Float64Array): { chord: string; score: number }[
       if (!inSet.has(i)) { penSum += chroma[i]; penCount++; }
     }
 
-    const score = (hitSum / wSum) - 0.25 * (penSum / (penCount || 1));
+    const score = (hitSum / wSum) - 0.35 * (penSum / (penCount || 1));
     return { chord: t.name, score };
   }).sort((a, b) => b.score - a.score);
 }
@@ -330,8 +332,8 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       ctxRef.current = ctx;
 
       const analyser = ctx.createAnalyser();
-      analyser.fftSize              = 8192;
-      analyser.smoothingTimeConstant = 0.8;
+      analyser.fftSize              = 16384;
+      analyser.smoothingTimeConstant = 0.5;
       analyserRef.current = analyser;
       freqBufRef.current  = new Float32Array(analyser.frequencyBinCount) as Float32Array<ArrayBuffer>;
       ctx.createMediaStreamSource(stream).connect(analyser);
