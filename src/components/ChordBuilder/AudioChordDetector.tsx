@@ -26,9 +26,13 @@ function rawChroma(
     const freq = i * binHz;
     const midi = 12 * Math.log2(freq / 440) + 69;
     const pc   = ((Math.round(midi) % 12) + 12) % 12;
-    // Gentle rolloff above 300 Hz: fundamentals stay near 1.0,
-    // 5th harmonics (which cause major-vs-minor confusion) are ≈ 0.5
-    const weight = 1 / (1 + Math.max(0, freq - 300) / 500);
+    // Steep rolloff above 350 Hz so harmonics are strongly suppressed:
+    //   350 Hz → 1.0,  450 Hz → 0.5,  550 Hz → 0.25,  650 Hz → 0.17
+    // Guitar fundamentals for open/1st-pos chords are all ≤ 330 Hz (E4),
+    // while their 5th harmonics (which cause major-vs-minor confusion) are
+    // at 5× = 660 Hz+ and end up at ≤ 0.17 weight — easily beaten by the
+    // real chord tone played on a neighbouring string.
+    const weight = 1 / (1 + Math.max(0, freq - 350) / 100);
     chroma[pc] += Math.pow(10, db / 20) * weight;
   }
   return chroma;
@@ -203,10 +207,23 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
           .sort((a, b) => b[1] - a[1])
           .slice(0, 6)
           .map(([note]) => note);
-        setLiveNotes(stableNotes);
+
+        // Semitone conflict resolution: when two notes are 1 semitone apart,
+        // the weaker one is almost certainly a phantom harmonic — drop it.
+        const resolvedNotes = stableNotes.filter(note => {
+          const idx   = PITCH_CLASSES.indexOf(note);
+          const count = noteCounts.get(note) ?? 0;
+          const lo    = PITCH_CLASSES[(idx + 11) % 12];
+          const hi    = PITCH_CLASSES[(idx +  1) % 12];
+          if (stableNotes.includes(lo) && (noteCounts.get(lo) ?? 0) > count * 1.3) return false;
+          if (stableNotes.includes(hi) && (noteCounts.get(hi) ?? 0) > count * 1.3) return false;
+          return true;
+        });
+
+        setLiveNotes(resolvedNotes);
 
         if (filled >= HISTORY) {
-          const chord = chordFromNotes(stableNotes);
+          const chord = chordFromNotes(resolvedNotes);
           if (chord) {
             lockedRef.current = true;
             setStableChord(chord);
