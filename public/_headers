@@ -1,0 +1,18 @@
+/*
+  # Prevent the site from being embedded in iframes (clickjacking protection)
+  X-Frame-Options: DENY
+
+  # Prevent browsers from guessing content types (MIME sniffing protection)
+  X-Content-Type-Options: nosniff
+
+  # Control how much referrer info is sent with requests
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # Force HTTPS for 1 year (HSTS)
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+  # Restrict which browser features this site can use
+  Permissions-Policy: geolocation=(), camera=(), payment=(), microphone=(self)
+
+  # Content Security Policy — only allow resources from our own origin
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
