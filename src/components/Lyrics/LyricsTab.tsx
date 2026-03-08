@@ -147,14 +147,14 @@ export function LyricsTab({ progression }: Props) {
             transition: 'filter 0.15s',
           }}
         >
-          {isRtl ? 'כיוון: ימין ← שמאל' : 'Direction: Left → Right'}
+          {isRtl ? 'Direction: Right → Left' : 'Direction: Left → Right'}
         </button>
       </div>
 
       {/* ── Song info ── */}
       <div style={card()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <p style={{ ...LABEL_STYLE, margin: 0 }}>פרטי השיר</p>
+          <p style={{ ...LABEL_STYLE, margin: 0 }}>Song Details</p>
           {lyricsText.trim() && (
             <button
               onClick={handleExportPDF}
@@ -175,20 +175,20 @@ export function LyricsTab({ progression }: Props) {
           <input
             value={songTitle}
             onChange={e => setSongTitle(e.target.value)}
-            placeholder={isRtl ? 'שם השיר…' : 'Song title…'}
+            placeholder="Song title…"
             style={inputStyle(isRtl)}
           />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <input
               value={songWriter}
               onChange={e => setSongWriter(e.target.value)}
-              placeholder={isRtl ? 'כותב…' : 'Lyricist…'}
+              placeholder="Lyricist…"
               style={inputStyle(isRtl)}
             />
             <input
               value={songComposer}
               onChange={e => setSongComposer(e.target.value)}
-              placeholder={isRtl ? 'מלחין…' : 'Composer…'}
+              placeholder="Composer…"
               style={inputStyle(isRtl)}
             />
           </div>
@@ -198,7 +198,7 @@ export function LyricsTab({ progression }: Props) {
       {/* ── Chord strip ── */}
       <div style={card()}>
         <p style={LABEL_STYLE}>
-          {progression.length > 0 ? 'לחץ על מילה כדי לבחור אקורד · לחץ על אקורד כדי לבחור ואז על מילה' : 'הוסף אקורדים לפרוגרסיה תחילה'}
+          {progression.length > 0 ? 'Click a word to assign a chord · click a chip to select it then click a word' : 'Add chords to the progression first'}
         </p>
         {progression.length > 0 ? (
           <div className="gc-chip-strip">
@@ -234,19 +234,19 @@ export function LyricsTab({ progression }: Props) {
           </div>
         ) : (
           <p style={{ color: T.textDim, fontSize: 13, margin: 0, direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
-            עבור לטאב <bdi>Chords</bdi> כדי להוסיף אקורדים.
+            Go to the Chords tab to add chords.
           </p>
         )}
         {selectedChip && (
           <p style={{ marginTop: 8, marginBottom: 0, fontSize: 12, color: T.primary, direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
-            <strong style={{ direction: 'ltr', display: 'inline-block' }}>{selectedChip}</strong> — לחץ על מילה למטה כדי למקם
+            <strong style={{ direction: 'ltr', display: 'inline-block' }}>{selectedChip}</strong> — click a word below to place it
           </p>
         )}
       </div>
 
       {/* ── Lyrics textarea ── */}
       <div style={card()}>
-        <p style={LABEL_STYLE}>מילים</p>
+        <p style={LABEL_STYLE}>Lyrics</p>
         <textarea
           value={lyricsText}
           dir={isRtl ? 'rtl' : 'ltr'}
@@ -256,7 +256,7 @@ export function LyricsTab({ progression }: Props) {
             const newTotal = newLines.reduce((s, l) => s + l.length, 0);
             setLyricsChords(prev => prev.filter(c => c.wordIndex < newTotal));
           }}
-          placeholder={isRtl ? 'כתוב את המילים כאן…' : 'Type your lyrics here…'}
+          placeholder="Type your lyrics here…"
           rows={5}
           style={{
             width: '100%',
@@ -280,7 +280,7 @@ export function LyricsTab({ progression }: Props) {
       {totalWords > 0 && (
         <div style={card()} onClick={() => setChordPicker(null)}>
           <p style={LABEL_STYLE}>
-            {lyricsChords.length > 0 ? 'לחץ על מילה לבחירת אקורד · לחץ על אקורד מעל מילה כדי למחוק' : 'לחץ על מילה כדי לשייך אקורד'}
+            {lyricsChords.length > 0 ? 'Click a word to assign a chord · click a chord above a word to delete it' : 'Click a word to assign a chord'}
           </p>
           <div style={{
             lineHeight: 2.8,
@@ -334,7 +334,7 @@ export function LyricsTab({ progression }: Props) {
                               lineHeight: 1,
                               direction: 'ltr',
                             }}
-                            title="לחץ להסרה · גרור להזזה"
+                            title="Click to remove · drag to move"
                           >
                             {placement.chordName}
                           </span>
@@ -399,7 +399,7 @@ export function LyricsTab({ progression }: Props) {
               border: `1px solid ${T.border}`, background: T.bgInput,
               color: T.textMuted, fontSize: 11, cursor: 'pointer', marginTop: 2,
             }}
-          >ביטול</button>
+          >Cancel</button>
         </div>
       )}
     </div>

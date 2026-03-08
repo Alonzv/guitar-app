@@ -50,8 +50,8 @@ function buildLeadSheetHTML(
   }
 
   const metaHTML = [
-    composer ? `<div style="font-size:11px;color:#555;">מלחין: ${escapeHtml(composer)}</div>` : '',
-    writer   ? `<div style="font-size:11px;color:#555;">כותב: ${escapeHtml(writer)}</div>` : '',
+    composer ? `<div style="font-size:11px;color:#555;">Composer: ${escapeHtml(composer)}</div>` : '',
+    writer   ? `<div style="font-size:11px;color:#555;">Lyricist: ${escapeHtml(writer)}</div>` : '',
   ].filter(Boolean).join('');
 
   return `
@@ -65,7 +65,7 @@ function buildLeadSheetHTML(
       box-sizing: border-box;
     ">
       <h1 style="font-size:20px;font-weight:800;margin:0 0 4px;color:#111;">
-        ${escapeHtml(title || 'שיר')}
+        ${escapeHtml(title || 'Song')}
       </h1>
       ${metaHTML}
       <div style="height:2px;background:#C44900;margin:12px 0 18px;"></div>
@@ -128,7 +128,7 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
     fontSize: '15px',
     fontFamily: 'sans-serif',
   });
-  overlay.textContent = 'יוצר PDF…';
+  overlay.textContent = 'Creating PDF…';
   document.body.appendChild(overlay);
 
   // 2. Render container — positioned in viewport (z-index below overlay)

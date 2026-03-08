@@ -151,8 +151,8 @@ export default function App() {
           padding: '10px 16px', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
         }}>
-          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600, direction: 'rtl' }}>
-            🎵 פרוגרסיה משותפת — {sharedProgression.length} אקורדים
+          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>
+            🎵 Shared progression — {sharedProgression.length} chords
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -161,14 +161,14 @@ export default function App() {
                 padding: '5px 14px', borderRadius: 8, border: 'none',
                 background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer',
               }}
-            >טען</button>
+            >Load</button>
             <button
               onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }}
               style={{
                 padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.border}`,
                 background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer',
               }}
-            >התעלם</button>
+            >Dismiss</button>
           </div>
         </div>
       )}

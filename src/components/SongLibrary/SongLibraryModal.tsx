@@ -51,8 +51,8 @@ export function SongLibraryModal({ songs, onClose, onLoad, onDelete }: Props) {
         {/* Song list */}
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {songs.length === 0 ? (
-            <p style={{ textAlign: 'center', color: T.textDim, fontSize: 14, marginTop: 32, direction: 'rtl' }}>
-              אין שירים שמורים עדיין.<br />בנה פרוגרסיה ולחץ 💾 <bdi>Save Song</bdi>.
+            <p style={{ textAlign: 'center', color: T.textDim, fontSize: 14, marginTop: 32 }}>
+              No saved songs yet.<br />Build a progression and press 💾 Save Song.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -84,14 +84,14 @@ export function SongLibraryModal({ songs, onClose, onLoad, onDelete }: Props) {
                           padding: '5px 10px', borderRadius: 8, border: 'none',
                           background: T.coral, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer',
                         }}
-                      >מחק</button>
+                      >Delete</button>
                       <button
                         onClick={() => setConfirmDelete(null)}
                         style={{
                           padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.border}`,
                           background: T.bgCard, color: T.textMuted, fontSize: 12, cursor: 'pointer',
                         }}
-                      >ביטול</button>
+                      >Cancel</button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -101,7 +101,7 @@ export function SongLibraryModal({ songs, onClose, onLoad, onDelete }: Props) {
                           padding: '6px 14px', borderRadius: 8, border: 'none',
                           background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer',
                         }}
-                      >טען</button>
+                      >Load</button>
                       <button
                         onClick={() => setConfirmDelete(song.id)}
                         style={{
