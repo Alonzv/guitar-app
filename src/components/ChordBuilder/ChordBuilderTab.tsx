@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { ChordInProgression, FretPosition, Genre, ProgressionSuggestion } from '../../types/music';
 import { InteractiveFretboard } from '../Fretboard/InteractiveFretboard';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
@@ -16,6 +16,8 @@ interface Props {
   onAddToProgression: (item: ChordInProgression) => void;
   onRemoveFromProgression: (id: string) => void;
   onClearProgression: () => void;
+  onReorderProgression: (id: string, dir: -1 | 1) => void;
+  onTransposeProgression: (semitones: number) => void;
 }
 
 interface HoverPreview {
@@ -44,7 +46,10 @@ const LABEL_STYLE = {
   letterSpacing: '0.06em',
 };
 
-export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromProgression, onClearProgression }: Props) {
+export function ChordBuilderTab({
+  progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
+  onReorderProgression, onTransposeProgression,
+}: Props) {
   const [activeDots, setActiveDots] = useState<FretPosition[]>([]);
   const [genre, setGenre] = useState<Genre>('any');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -54,6 +59,8 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
   const [progressionName, setProgressionName] = useState('');
   const [exporting, setExporting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [playingAll, setPlayingAll] = useState(false);
+  const playAllTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const handleToggle = (pos: FretPosition) => {
     setActiveDots(prev => {
@@ -98,6 +105,25 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
     } finally {
       setExporting(false);
     }
+  };
+
+  const handlePlayAll = () => {
+    if (playingAll) {
+      playAllTimersRef.current.forEach(clearTimeout);
+      playAllTimersRef.current = [];
+      setPlayingAll(false);
+      return;
+    }
+    const chordsWithFrets = progression.filter(c => c.fretPositions.length > 0);
+    if (chordsWithFrets.length === 0) return;
+    setPlayingAll(true);
+    chordsWithFrets.forEach((item, i) => {
+      const t = setTimeout(() => {
+        playChord(item.fretPositions);
+        if (i === chordsWithFrets.length - 1) setPlayingAll(false);
+      }, i * 2000);
+      playAllTimersRef.current.push(t);
+    });
   };
 
   const chords = identifyChord(activeDots);
@@ -218,6 +244,30 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
             }}
           />
 
+          {/* Transpose controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Transpose:
+            </span>
+            <button
+              onClick={() => onTransposeProgression(-1)}
+              style={{
+                width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
+                background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 700,
+                cursor: 'pointer', lineHeight: 1,
+              }}
+            >−</button>
+            <span style={{ fontSize: 11, color: T.textMuted }}>semitone</span>
+            <button
+              onClick={() => onTransposeProgression(1)}
+              style={{
+                width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
+                background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 700,
+                cursor: 'pointer', lineHeight: 1,
+              }}
+            >+</button>
+          </div>
+
           {/* Chord cards — extra padding-top so the × badge isn't clipped */}
           <div className="gc-chip-strip" style={{ paddingTop: 10 }}>
             {progression.map((item, i) => {
@@ -232,6 +282,27 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
                 }}>
                   <span style={{ display: 'block', fontSize: 10, color: accent, marginBottom: 2, fontWeight: 600 }}>{i + 1}</span>
                   <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: T.text }}>{formatChordName(item.chord.name)}</span>
+                  {/* Reorder buttons */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 6 }}>
+                    <button
+                      onClick={() => onReorderProgression(item.id, -1)}
+                      disabled={i === 0}
+                      style={{
+                        width: 24, height: 22, borderRadius: 5, border: `1px solid ${T.border}`,
+                        background: T.bgCard, color: i === 0 ? T.textDim : T.textMuted,
+                        fontSize: 12, cursor: i === 0 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
+                      }}
+                    >←</button>
+                    <button
+                      onClick={() => onReorderProgression(item.id, 1)}
+                      disabled={i === progression.length - 1}
+                      style={{
+                        width: 24, height: 22, borderRadius: 5, border: `1px solid ${T.border}`,
+                        background: T.bgCard, color: i === progression.length - 1 ? T.textDim : T.textMuted,
+                        fontSize: 12, cursor: i === progression.length - 1 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
+                      }}
+                    >→</button>
+                  </div>
                   {item.fretPositions.length > 0 && (
                     <button
                       onClick={() => playChord(item.fretPositions)}
@@ -255,6 +326,22 @@ export function ChordBuilderTab({ progression, onAddToProgression, onRemoveFromP
               );
             })}
           </div>
+
+          {/* Play All button */}
+          {progression.filter(c => c.fretPositions.length > 0).length >= 2 && (
+            <button
+              onClick={handlePlayAll}
+              style={{
+                width: '100%', marginTop: 12, padding: '10px 0', borderRadius: 10,
+                border: `1px solid ${playingAll ? T.coral : T.secondary}`,
+                background: playingAll ? T.coral + '22' : T.secondaryBg,
+                color: playingAll ? T.coral : T.secondary,
+                fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              {playingAll ? '■  Stop' : '▶▶  Play All'}
+            </button>
+          )}
 
           {/* Suggest section */}
           {progression.length >= 2 && (

@@ -30,11 +30,18 @@ function getGlobalIndex(lines: string[][], lineIdx: number, wordIdx: number): nu
   return idx + wordIdx;
 }
 
+interface ChordPicker {
+  wordIndex: number;
+  x: number;
+  y: number;
+}
+
 export function LyricsTab({ progression }: Props) {
   const [lyricsText, setLyricsText] = useState('');
   const [lyricsChords, setLyricsChords] = useState<ChordPlacement[]>([]);
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
   const [isRtl, setIsRtl] = useState(true);
+  const [chordPicker, setChordPicker] = useState<ChordPicker | null>(null);
 
   // Song info
   const [songTitle,    setSongTitle]    = useState('');
@@ -68,10 +75,16 @@ export function LyricsTab({ progression }: Props) {
     setLyricsChords(prev => prev.filter(c => c.id !== placementId));
   };
 
-  const handleWordClick = (wordIndex: number) => {
+  const handleWordClick = (wordIndex: number, e: React.MouseEvent) => {
     if (selectedChip) {
       placeChord(wordIndex, selectedChip);
       setSelectedChip(null);
+      return;
+    }
+    // Show chord picker popup if progression has chords
+    if (progression.length > 0) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setChordPicker({ wordIndex, x: rect.left, y: rect.bottom + 4 });
     }
   };
 
@@ -185,7 +198,7 @@ export function LyricsTab({ progression }: Props) {
       {/* ── Chord strip ── */}
       <div style={card()}>
         <p style={LABEL_STYLE}>
-          {progression.length > 0 ? 'גרור אקורד או לחץ עליו, ואז לחץ על מילה למטה' : 'הוסף אקורדים לפרוגרסיה תחילה'}
+          {progression.length > 0 ? 'לחץ על מילה כדי לבחור אקורד · לחץ על אקורד כדי לבחור ואז על מילה' : 'הוסף אקורדים לפרוגרסיה תחילה'}
         </p>
         {progression.length > 0 ? (
           <div className="gc-chip-strip">
@@ -208,7 +221,7 @@ export function LyricsTab({ progression }: Props) {
                     color: accent,
                     fontSize: 16,
                     fontWeight: 800,
-                    cursor: 'grab',
+                    cursor: 'pointer',
                     userSelect: 'none',
                     transition: 'border-color 0.15s, background 0.15s',
                     direction: 'ltr',
@@ -221,7 +234,7 @@ export function LyricsTab({ progression }: Props) {
           </div>
         ) : (
           <p style={{ color: T.textDim, fontSize: 13, margin: 0, direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
-            עבור לטאב Chord Builder או Chord Finder כדי להוסיף אקורדים.
+            עבור לטאב Chords כדי להוסיף אקורדים.
           </p>
         )}
         {selectedChip && (
@@ -265,9 +278,9 @@ export function LyricsTab({ progression }: Props) {
 
       {/* ── Lead sheet ── */}
       {totalWords > 0 && (
-        <div style={card()}>
+        <div style={card()} onClick={() => setChordPicker(null)}>
           <p style={LABEL_STYLE}>
-            {lyricsChords.length > 0 ? 'לחץ על אקורד מעל מילה כדי למחוק · גרור להזזה' : 'שחרר אקורד מעל מילה'}
+            {lyricsChords.length > 0 ? 'לחץ על מילה לבחירת אקורד · לחץ על אקורד מעל מילה כדי למחוק' : 'לחץ על מילה כדי לשייך אקורד'}
           </p>
           <div style={{
             lineHeight: 2.8,
@@ -295,12 +308,12 @@ export function LyricsTab({ progression }: Props) {
                           marginLeft: isRtl ? 8 : 0,
                           marginRight: isRtl ? 0 : 8,
                           paddingTop: 22,
-                          cursor: isDropTarget ? 'pointer' : 'default',
+                          cursor: 'pointer',
                           borderBottom: isDropTarget ? `1px dashed ${T.border}` : 'none',
                         }}
                         onDragOver={e => e.preventDefault()}
                         onDrop={e => handleWordDrop(e, globalIdx)}
-                        onClick={() => handleWordClick(globalIdx)}
+                        onClick={e => { e.stopPropagation(); handleWordClick(globalIdx, e); }}
                       >
                         {placement && (
                           <span
@@ -334,6 +347,59 @@ export function LyricsTab({ progression }: Props) {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* ── Chord picker popup ── */}
+      {chordPicker && progression.length > 0 && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: Math.min(chordPicker.y, window.innerHeight - 160),
+            left: Math.min(Math.max(chordPicker.x, 8), window.innerWidth - 220),
+            zIndex: 2000,
+            background: T.bgCard,
+            border: `1px solid ${T.border}`,
+            borderRadius: 12,
+            padding: 10,
+            boxShadow: '0 8px 28px rgba(0,0,0,0.55)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 6,
+            maxWidth: 210,
+          }}
+        >
+          {progression.map((item, i) => {
+            const accent = CHORD_ACCENTS[i % CHORD_ACCENTS.length];
+            const name = formatChordName(item.chord.name);
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  placeChord(chordPicker.wordIndex, name);
+                  setChordPicker(null);
+                }}
+                style={{
+                  padding: '6px 12px', borderRadius: 8,
+                  border: `1.5px solid ${accent}`,
+                  background: accent + '22', color: accent,
+                  fontSize: 14, fontWeight: 800, cursor: 'pointer',
+                  direction: 'ltr',
+                }}
+              >
+                {name}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setChordPicker(null)}
+            style={{
+              width: '100%', padding: '4px 0', borderRadius: 6,
+              border: `1px solid ${T.border}`, background: T.bgInput,
+              color: T.textMuted, fontSize: 11, cursor: 'pointer', marginTop: 2,
+            }}
+          >ביטול</button>
         </div>
       )}
     </div>

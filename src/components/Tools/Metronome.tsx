@@ -77,12 +77,13 @@ export const Metronome: React.FC = () => {
   const [playing, setPlaying]           = useState(false);
   const [beat, setBeat]                 = useState(-1);
 
-  const nextBeatTimeRef = useRef(0);
-  const beatNumRef      = useRef(0);
-  const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const nextBeatTimeRef  = useRef(0);
+  const beatNumRef       = useRef(0);
+  const intervalRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const bpmRef           = useRef(bpm);
   const beatsRef         = useRef(subdivision.beats);
   const clicksPerBeatRef = useRef(subdivision.clicksPerBeat);
+  const tapTimesRef      = useRef<number[]>([]);
   bpmRef.current          = bpm;
   beatsRef.current        = subdivision.beats;
   clicksPerBeatRef.current = subdivision.clicksPerBeat;
@@ -137,6 +138,21 @@ export const Metronome: React.FC = () => {
     intervalRef.current = setInterval(schedule, 25);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [playing, schedule]);
+
+  const handleTap = useCallback(() => {
+    const now = performance.now();
+    const recent = tapTimesRef.current.filter(t => now - t < 5000);
+    recent.push(now);
+    tapTimesRef.current = recent;
+    if (recent.length >= 2) {
+      const intervals = recent.slice(1).map((t, i) => t - recent[i]);
+      const avgMs = intervals.reduce((a, b) => a + b) / intervals.length;
+      const newBpm = Math.round(60000 / avgMs);
+      const clamped = Math.min(240, Math.max(40, newBpm));
+      setBpm(clamped);
+      setBpmInput(String(clamped));
+    }
+  }, []);
 
   const applyBpm = (val: string) => {
     const n = parseInt(val, 10);
@@ -206,8 +222,21 @@ export const Metronome: React.FC = () => {
         <input
           type="range" min={40} max={240} value={bpm}
           onChange={e => { const v = Number(e.target.value); setBpm(v); setBpmInput(String(v)); }}
-          style={{ width: '100%', marginBottom: 20, accentColor: T.primary, cursor: 'pointer' }}
+          style={{ width: '100%', marginBottom: 12, accentColor: T.primary, cursor: 'pointer' }}
         />
+
+        {/* Tap Tempo */}
+        <button
+          onClick={handleTap}
+          style={{
+            width: '100%', padding: '10px 0', marginBottom: 20, borderRadius: 10,
+            border: `1px solid ${T.border}`, background: T.bgInput,
+            color: T.textMuted, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            transition: 'background 0.1s',
+          }}
+        >
+          🥁 Tap Tempo
+        </button>
 
         {/* Subdivision buttons */}
         <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>

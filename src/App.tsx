@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ChordInProgression, ScaleMatch } from './types/music';
 import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
@@ -9,6 +9,20 @@ import { T } from './theme';
 
 type Tab = 'chords' | 'scales' | 'lyrics' | 'tools';
 
+const CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const FLAT_TO_SHARP: Record<string, string> = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
+
+function transposeChordName(name: string, semitones: number): string {
+  const match = name.match(/^([A-G][b#]?)(.*)$/);
+  if (!match) return name;
+  const root = FLAT_TO_SHARP[match[1]] ?? match[1];
+  const suffix = match[2];
+  const idx = CHROMATIC.indexOf(root);
+  if (idx === -1) return name;
+  const newIdx = ((idx + semitones) % 12 + 12) % 12;
+  return CHROMATIC[newIdx] + suffix;
+}
+
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'chords', label: 'Chords', icon: '🎸' },
   { id: 'scales', label: 'Scales', icon: '🎼' },
@@ -18,15 +32,44 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 export default function App() {
   const [activeTab, setActiveTab]   = useState<Tab>('chords');
-  const [progression, setProgression] = useState<ChordInProgression[]>([]);
+  const [progression, setProgression] = useState<ChordInProgression[]>(() => {
+    try {
+      const saved = localStorage.getItem('scaleup_progression');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [selectedScale, setSelectedScale] = useState<ScaleMatch | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('scaleup_onboarded')
   );
 
+  // Persist progression
+  useEffect(() => {
+    localStorage.setItem('scaleup_progression', JSON.stringify(progression));
+  }, [progression]);
+
   const handleDoneOnboarding = () => {
     localStorage.setItem('scaleup_onboarded', '1');
     setShowOnboarding(false);
+  };
+
+  const handleReorderProgression = (id: string, dir: -1 | 1) => {
+    setProgression(prev => {
+      const idx = prev.findIndex(c => c.id === id);
+      if (idx === -1) return prev;
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      return next;
+    });
+  };
+
+  const handleTransposeProgression = (semitones: number) => {
+    setProgression(prev => prev.map(item => ({
+      ...item,
+      chord: { ...item.chord, name: transposeChordName(item.chord.name, semitones) },
+    })));
   };
 
   return (
@@ -37,10 +80,21 @@ export default function App() {
       {/* ── Header ── */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
         {/* Brand row */}
-        <div style={{ textAlign: 'center', marginBottom: 4 }}>
+        <div style={{ textAlign: 'center', marginBottom: 4, position: 'relative' }}>
           <span style={{ fontSize: 'var(--gc-brand-text)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
             <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
           </span>
+          {/* ? button to reopen onboarding */}
+          <button
+            onClick={() => setShowOnboarding(true)}
+            style={{
+              position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+              width: 26, height: 26, borderRadius: '50%',
+              border: `1px solid ${T.border}`, background: T.bgCard,
+              color: T.textMuted, fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', lineHeight: '24px', padding: 0,
+            }}
+          >?</button>
         </div>
         {/* Active tab name */}
         <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-tab-title)', fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.2px' }}>
@@ -82,6 +136,8 @@ export default function App() {
             onAddToProgression={(item) => setProgression(prev => [...prev, item])}
             onRemoveFromProgression={(id) => setProgression(prev => prev.filter(c => c.id !== id))}
             onClearProgression={() => setProgression([])}
+            onReorderProgression={handleReorderProgression}
+            onTransposeProgression={handleTransposeProgression}
           />
         )}
         {activeTab === 'scales' && (

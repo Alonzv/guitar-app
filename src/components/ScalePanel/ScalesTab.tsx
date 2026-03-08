@@ -26,7 +26,7 @@ export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelec
             color: sub === id ? T.white : T.textMuted,
             transition: 'background 0.15s',
           }}>
-            {id === 'detect' ? '🔍  Detect' : '🎼  Explore'}
+            {id === 'detect' ? '🔍  Detect' : '🎼  Browse'}
           </button>
         ))}
       </div>

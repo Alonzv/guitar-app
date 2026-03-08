@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Scale } from '@tonaljs/tonal';
+import { Scale, Note as TonalNote } from '@tonaljs/tonal';
 import type { Note } from '../../types/music';
 import { DisplayFretboard, type DisplayDot } from '../Fretboard/DisplayFretboard';
 import { getScalePositions } from '../../utils/scaleUtils';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
+import { playScale } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
 const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -150,7 +151,23 @@ export function ScaleExplorer() {
           <div style={card({ padding: '12px 16px' })}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <span style={{ fontSize: 17, fontWeight: 800, color: T.text }}>{root} {scaleType}</span>
-              <span style={{ fontSize: 11, color: T.textMuted }}>{scale.notes.length} notes</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: T.textMuted }}>{scale.notes.length} notes</span>
+                <button
+                  onClick={() => {
+                    const midiNotes = [
+                      ...scale.notes.map(n => TonalNote.midi(`${n}4`) ?? 60),
+                      TonalNote.midi(`${root}5`) ?? 72,
+                    ];
+                    playScale(midiNotes);
+                  }}
+                  style={{
+                    padding: '4px 12px', borderRadius: 8, border: `1px solid ${T.secondary}`,
+                    background: T.secondaryBg, color: T.secondary, fontSize: 12,
+                    fontWeight: 700, cursor: 'pointer',
+                  }}
+                >▶ Play</button>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {scale.notes.map((note, i) => {

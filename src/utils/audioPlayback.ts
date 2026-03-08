@@ -114,6 +114,35 @@ function synthesizeNote(ctx: AudioContext, freq: number, startTime: number): voi
 
 export interface FretPos { string: number; fret: number; }
 
+function synthesizeScaleNote(ctx: AudioContext, freq: number, startTime: number): void {
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.001, startTime);
+  gain.gain.linearRampToValueAtTime(0.18, startTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + 0.38);
+}
+
+/** Play a sequence of MIDI note numbers ascending. Call from a user-gesture handler. */
+export function playScale(midiNotes: number[]): void {
+  if (midiNotes.length === 0) return;
+  unlockAudio();
+  const ctx = getSharedContext();
+  const schedule = () => {
+    midiNotes.forEach((midi, i) => {
+      const freq = 440 * Math.pow(2, (midi - 69) / 12);
+      synthesizeScaleNote(ctx, freq, ctx.currentTime + 0.1 + i * 0.35);
+    });
+  };
+  if (ctx.state === 'running') schedule();
+  else ctx.resume().then(schedule).catch(() => {});
+}
+
 /** Arpeggiate a chord low → high. Call only from a user-gesture handler. */
 export function playChord(fretPositions: FretPos[]): void {
   if (fretPositions.length === 0) return;
