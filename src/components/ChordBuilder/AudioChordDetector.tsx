@@ -57,34 +57,44 @@ function detectNotes(
   if (maxVal <= 0) return [];
 
   // Uniformity guard: in background noise all 12 buckets are similar.
-  // A real chord makes 3-5 buckets dominate. Require max ≥ 3 × median.
+  // A real chord makes 3-5 buckets dominate. Require max ≥ 4.5 × median.
   const sorted = Float64Array.from(chroma).sort();
   const median = (sorted[5] + sorted[6]) / 2;
-  if (median <= 0 || maxVal / median < 3.0) return [];
+  if (median <= 0 || maxVal / median < 4.5) return [];
 
   return Array.from({ length: 12 }, (_, i) => i)
-    .filter(i => chroma[i] / maxVal >= 0.15)
-    .sort((a, b) => chroma[b] - chroma[a])               // strongest first = likely root
+    .filter(i => chroma[i] / maxVal >= 0.20)             // 20 %: stricter to cut harmonics
+    .sort((a, b) => chroma[b] - chroma[a])               // strongest first
     .map(i => PITCH_CLASSES[i]);
 }
 
 /** Derive best chord name from a stable set of pitch classes. */
 function chordFromNotes(notes: string[]): string | null {
   if (notes.length < 2) return null;
-  const suspectedRoot = notes[0];                         // highest chroma = likely root/bass
-  const chords = TonalChord.detect(notes);
-  if (chords.length === 0) return null;
-  const rootMatch = chords.find(c => {
-    const m = c.match(/^([A-G][b#]?)/);
-    return m && m[1] === suspectedRoot;
-  });
-  return rootMatch ?? chords[0];
+
+  // Try the full set, then progressively drop the weakest notes.
+  // This helps when one phantom note prevents a valid match.
+  const subsets = [notes, notes.slice(0, 5), notes.slice(0, 4), notes.slice(0, 3)];
+  for (const subset of subsets) {
+    if (subset.length < 2) break;
+    const chords = TonalChord.detect(subset);
+    if (chords.length === 0) continue;
+    // Prefer root-position chords (no slash), then shorter quality names.
+    const best = [...chords].sort((a, b) => {
+      const aSlash = a.includes('/') ? 1 : 0;
+      const bSlash = b.includes('/') ? 1 : 0;
+      if (aSlash !== bSlash) return aSlash - bSlash;
+      return a.length - b.length;
+    });
+    return best[0];
+  }
+  return null;
 }
 
 // ── Stability ─────────────────────────────────────────────────────────────
 
 const HISTORY      = 6;    // rolling window (~0.9 s at 150 ms / frame)
-const STABLE_RATIO = 0.40; // note must appear in ≥ 40 % of frames to be "stable"
+const STABLE_RATIO = 0.30; // note must appear in ≥ 30 % of frames to be "stable"
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -138,6 +148,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
         const stableNotes = [...noteCounts.entries()]
           .filter(([, c]) => c / filled >= STABLE_RATIO)
           .sort((a, b) => b[1] - a[1])
+          .slice(0, 6)                               // cap at 6: too many confuses detect()
           .map(([note]) => note);
         setLiveNotes(stableNotes);
 
@@ -153,7 +164,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
       } else {
         // ── Silence / noise: don't advance history ─────────────────────────
         silentRef.current += 1;
-        if (silentRef.current >= 4) {   // ~0.6 s of silence → clear stale history
+        if (silentRef.current >= 12) {  // ~1.8 s of sustained silence → clear stale history
           historyRef.current = [];
           silentRef.current  = 0;
           setLockProgress(0);
