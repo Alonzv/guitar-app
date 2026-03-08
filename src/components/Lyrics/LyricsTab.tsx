@@ -283,17 +283,16 @@ export function LyricsTab({ progression }: Props) {
             {lyricsChords.length > 0 ? 'Click a word to assign a chord · click a chord above a word to delete it' : 'Click a word to assign a chord'}
           </p>
           <div style={{
-            lineHeight: 2.8,
             fontFamily: 'system-ui, -apple-system, sans-serif',
             direction: isRtl ? 'rtl' : 'ltr',
             textAlign: isRtl ? 'right' : 'left',
           }}>
             {lines.map((lineWords, lineIdx) => {
               if (lineWords.length === 0) {
-                return <br key={`line-${lineIdx}-empty`} />;
+                return <div key={`line-${lineIdx}-empty`} style={{ height: 10 }} />;
               }
               return (
-                <span key={`line-${lineIdx}`} style={{ display: 'block', marginBottom: 4 }}>
+                <span key={`line-${lineIdx}`} style={{ display: 'block', marginBottom: 14 }}>
                   {lineWords.map((word, wordIdx) => {
                     const globalIdx = getGlobalIndex(lines, lineIdx, wordIdx);
                     const placement = chordAtWord(globalIdx);
