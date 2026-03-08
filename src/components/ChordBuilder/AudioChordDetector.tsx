@@ -17,13 +17,25 @@ interface Peak { freq: number; amp: number; }
 
 function findRawPeaks(data: Float32Array<ArrayBuffer>, sampleRate: number, fftSize: number): Peak[] {
   const binHz = sampleRate / fftSize;
-  const minBin = Math.max(3, Math.floor(75  / binHz));
-  const maxBin = Math.min(data.length - 3, Math.ceil(1400 / binHz));
-  const THRESHOLD = -45; // dB — tighter than before, rejects weak harmonics
+  const minBin = Math.max(4, Math.floor(75  / binHz));
+  const maxBin = Math.min(data.length - 4, Math.ceil(1400 / binHz));
+
+  // Adaptive threshold: find the loudest bin in the guitar range first.
+  // Peaks must be within 26 dB of that maximum — this adapts to any mic level.
+  let maxAmp = -Infinity;
+  for (let i = minBin; i <= maxBin; i++) if (data[i] > maxAmp) maxAmp = data[i];
+  if (maxAmp < -62) return []; // absolute silence / no signal at all
+  const THRESHOLD = Math.max(-75, maxAmp - 26);
+
   const peaks: Peak[] = [];
-  for (let i = minBin; i <= maxBin; i++) {
+  for (let i = minBin + 3; i <= maxBin - 3; i++) {
     const v = data[i];
-    if (v > THRESHOLD && v >= data[i-1] && v >= data[i+1] && v >= data[i-2] && v >= data[i+2]) {
+    if (
+      v > THRESHOLD &&
+      v >= data[i-1] && v >= data[i+1] &&
+      v >= data[i-2] && v >= data[i+2] &&
+      v >= data[i-3] && v >= data[i+3]
+    ) {
       peaks.push({ freq: i * binHz, amp: v });
     }
   }
@@ -78,7 +90,7 @@ function detectFrame(
 // ── Stability ─────────────────────────────────────────────────────────────
 
 const HISTORY    = 12;  // rolling window length
-const LOCK_AT    = 7;   // chord must appear ≥ 7 / 12 frames to lock
+const LOCK_AT    = 5;   // chord must appear ≥ 5 / 12 frames to lock
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -148,7 +160,10 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
   const startListening = useCallback(async () => {
     try {
       setError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        video: false,
+      });
       streamRef.current = stream;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -158,7 +173,7 @@ export function AudioChordDetector({ onAddToProgression }: Props) {
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 8192;
-      analyser.smoothingTimeConstant = 0.85; // more stable FFT data
+      analyser.smoothingTimeConstant = 0.8;
       analyserRef.current = analyser;
       freqBufRef.current = new Float32Array(analyser.frequencyBinCount) as Float32Array<ArrayBuffer>;
 
