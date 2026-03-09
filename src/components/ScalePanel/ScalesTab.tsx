@@ -11,9 +11,10 @@ interface Props {
   progression: ChordInProgression[];
   selectedScale: ScaleMatch | null;
   onSelectScale: (scale: ScaleMatch) => void;
+  preferredKey?: string;
 }
 
-export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelectScale }) => {
+export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelectScale, preferredKey }) => {
   const [sub, setSub] = useState<Sub>('detect');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -32,7 +33,7 @@ export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelec
       </div>
       {sub === 'detect' ? (
         <>
-          <ScaleDetector progression={progression} onSelectScale={onSelectScale} />
+          <ScaleDetector progression={progression} onSelectScale={onSelectScale} preferredKey={preferredKey} />
           {selectedScale && <ScaleVisualizer scale={selectedScale} />}
         </>
       ) : (

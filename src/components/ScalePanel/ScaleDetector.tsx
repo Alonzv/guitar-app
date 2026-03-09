@@ -6,10 +6,11 @@ import { T, card } from '../../theme';
 interface Props {
   progression: ChordInProgression[];
   onSelectScale: (scale: ScaleMatch) => void;
+  preferredKey?: string;
 }
 
-export const ScaleDetector: React.FC<Props> = ({ progression, onSelectScale }) => {
-  const scales = detectScales(progression);
+export const ScaleDetector: React.FC<Props> = ({ progression, onSelectScale, preferredKey }) => {
+  const scales = detectScales(progression, preferredKey);
 
   if (progression.length === 0) return (
     <div style={{ textAlign: 'center', padding: '48px 16px', color: T.textDim, fontSize: 14, border: `1px dashed ${T.border}`, borderRadius: 14 }}>

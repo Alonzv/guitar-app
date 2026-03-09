@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ChordInProgression, ScaleMatch, Song, Tuning } from './types/music';
 import { TUNINGS } from './utils/musicTheory';
+import { detectKey } from './utils/progressionHelper';
 import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { LyricsTab } from './components/Lyrics/LyricsTab';
@@ -318,6 +319,7 @@ export default function App() {
               progression={progression}
               selectedScale={selectedScale}
               onSelectScale={setSelectedScale}
+              preferredKey={detectKey(progression.map(c => c.chord)) || undefined}
             />
           </ErrorBoundary>
         )}

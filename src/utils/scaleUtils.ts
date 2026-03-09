@@ -3,7 +3,7 @@ import type { ChordInProgression, FretPosition, Note, ScaleMatch } from '../type
 import { fretPositionsToNotes, notesToPitchClasses, FRET_COUNT, STRING_COUNT, fretToNote } from './musicTheory';
 
 // Detect best-fitting scales from a set of chords
-export function detectScales(chords: ChordInProgression[]): ScaleMatch[] {
+export function detectScales(chords: ChordInProgression[], preferredKey?: string): ScaleMatch[] {
   if (chords.length === 0) return [];
 
   const allNotes = chords.flatMap(c => fretPositionsToNotes(c.fretPositions));
@@ -44,14 +44,25 @@ export function detectScales(chords: ChordInProgression[]): ScaleMatch[] {
     return 0;
   });
 
-  // Deduplicate scales with same notes
-  const seen = new Set<string>();
+  // Deduplicate scales with same notes, preferring preferredKey when available
+  const prefParts  = preferredKey?.split(' ') ?? [];
+  const prefRoot   = prefParts[0] ?? '';
+  const prefType   = prefParts.slice(1).join(' '); // e.g. "minor", "major"
+
+  const seen = new Map<string, number>(); // noteKey → index in unique
   const unique: ScaleMatch[] = [];
   for (const s of results) {
-    const key = Scale.get(s.name).notes.sort().join(',');
-    if (!seen.has(key)) {
-      seen.add(key);
+    const noteKey = Scale.get(s.name).notes.sort().join(',');
+    if (!seen.has(noteKey)) {
+      seen.set(noteKey, unique.length);
       unique.push(s);
+    } else if (prefRoot) {
+      // Replace the existing entry if this one better matches the preferred key
+      const existingIdx = seen.get(noteKey)!;
+      const existing    = unique[existingIdx];
+      const thisMatches = s.root === prefRoot && s.type === prefType;
+      const prevMatches = existing.root === prefRoot && existing.type === prefType;
+      if (thisMatches && !prevMatches) unique[existingIdx] = s;
     }
   }
 
