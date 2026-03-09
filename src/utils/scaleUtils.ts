@@ -2,6 +2,9 @@ import { Chord as TonalChord, Scale, Note as TonalNote } from '@tonaljs/tonal';
 import type { ChordInProgression, FretPosition, Note, ScaleMatch } from '../types/music';
 import { fretPositionsToNotes, notesToPitchClasses, FRET_COUNT, STRING_COUNT, fretToNote } from './musicTheory';
 
+// Conventional flat notation for display (A# → Bb, D# → Eb, G# → Ab)
+const SHARP_TO_FLAT: Record<string, string> = { 'A#': 'Bb', 'D#': 'Eb', 'G#': 'Ab' };
+
 const MINOR_FAMILY = new Set([
   'minor', 'harmonic minor', 'melodic minor',
   'dorian', 'phrygian', 'locrian', 'minor pentatonic', 'blues',
@@ -54,7 +57,8 @@ export function detectScales(chords: ChordInProgression[], preferredKey?: string
       );
       const fitPercent = Math.round((covered.length / pitchClasses.length) * 100);
       if (fitPercent > 0) {
-        results.push({ name: `${root} ${type}`, root, type, fitPercent, positions: getScalePositions(root, type) });
+        const displayRoot = SHARP_TO_FLAT[root] ?? root;
+        results.push({ name: `${displayRoot} ${type}`, root: displayRoot, type, fitPercent, positions: getScalePositions(root, type) });
       }
     }
   }
@@ -74,7 +78,9 @@ export function detectScales(chords: ChordInProgression[], preferredKey?: string
   const seen = new Map<string, number>();
   const unique: ScaleMatch[] = [];
   for (const s of results) {
-    const noteKey = Scale.get(s.name).notes.sort().join(',');
+    const noteKey = Scale.get(s.name).notes
+      .map(n => TonalNote.chroma(n) ?? -1).filter(c => c >= 0)
+      .sort((a, b) => a - b).join(',');
     if (!seen.has(noteKey)) {
       seen.set(noteKey, unique.length);
       unique.push(s);

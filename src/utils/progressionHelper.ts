@@ -51,7 +51,10 @@ export function detectKey(chords: Chord[]): string {
     }
   }
 
-  return bestKey;
+  // Normalize to conventional flat notation (A# → Bb, D# → Eb, G# → Ab)
+  const SHARP_TO_FLAT: Record<string, string> = { 'A#': 'Bb', 'D#': 'Eb', 'G#': 'Ab' };
+  const [kr, ...modeParts] = bestKey.split(' ');
+  return `${SHARP_TO_FLAT[kr] ?? kr} ${modeParts.join(' ')}`;
 }
 
 // Convert a Roman-numeral pattern token (e.g. "IIm7", "bVII7", "Imaj7") to a
