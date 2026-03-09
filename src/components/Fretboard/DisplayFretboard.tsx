@@ -6,6 +6,7 @@ import { T } from '../../theme';
 export interface DisplayDot extends FretPosition {
   color: string;
   label?: string;
+  opacity?: number;
 }
 
 interface Props { dots: DisplayDot[]; compact?: boolean }
@@ -72,7 +73,7 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
         const label = dot.label ?? fretToNote(dot.string, dot.fret);
         return (
           <g key={i}>
-            <circle cx={cx} cy={cy} r={DOT_R} fill={dot.color} stroke={T.bgDeep} strokeWidth={1.5} opacity={0.92} />
+            <circle cx={cx} cy={cy} r={DOT_R} fill={dot.color} stroke={T.bgDeep} strokeWidth={1.5} opacity={dot.opacity ?? 0.92} />
             <text x={cx} y={cy + 4} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">{label}</text>
           </g>
         );

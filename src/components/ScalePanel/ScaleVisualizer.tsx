@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ScaleMatch } from '../../types/music';
 import { DisplayFretboard, type DisplayDot } from '../Fretboard/DisplayFretboard';
 import { getScalePositions } from '../../utils/scaleUtils';
-import { STRING_COUNT } from '../../utils/musicTheory';
-import { Scale } from '@tonaljs/tonal';
+import { STRING_COUNT, fretToNote } from '../../utils/musicTheory';
+import { Scale, Note } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
 
 interface Props { scale: ScaleMatch | null }
@@ -32,6 +32,9 @@ const INTERVAL_DEGREE: Record<string, { num: string; name: string }> = {
 export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
   const [viewMode, setViewMode] = useState<'fretboard' | 'tab'>('fretboard');
   const [selectedPos, setSelectedPos] = useState<number | null>(null);
+  const [selectedNote, setSelectedNote] = useState<string | null>(null);
+
+  useEffect(() => { setSelectedNote(null); }, [scale]);
 
   if (!scale) return (
     <div style={{ textAlign: 'center', padding: '48px 16px', color: T.textDim, fontSize: 14, border: `1px dashed ${T.border}`, borderRadius: 14 }}>
@@ -50,9 +53,17 @@ export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
   const scaleInfo     = Scale.get(`${scale.root} ${scale.type}`);
   const scaleNotes    = scaleInfo.notes;
 
+  const selectedChroma = selectedNote !== null ? Note.chroma(selectedNote) : null;
+
   const dots: DisplayDot[] = displayPos.map(p => {
     const posIdx = selectedPos !== null ? selectedPos : Math.min(Math.floor(p.fret / boxSize), 4);
-    return { ...p, color: POS_COLORS[posIdx % POS_COLORS.length] };
+    const noteAtFret = fretToNote(p.string, p.fret);
+    const isHighlighted = selectedChroma === null || Note.chroma(noteAtFret) === selectedChroma;
+    return {
+      ...p,
+      color: POS_COLORS[posIdx % POS_COLORS.length],
+      opacity: isHighlighted ? 0.92 : 0.13,
+    };
   });
 
   const generateTab = () => {
@@ -84,16 +95,24 @@ export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
             const interval = scaleInfo.intervals[i] ?? '';
             const deg = INTERVAL_DEGREE[interval] ?? { num: String(i + 1), name: '' };
             const isTonic = i === 0;
+            const isActive = selectedNote === n;
             return (
-              <div key={i} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: '5px 8px', borderRadius: 10, gap: 2, minWidth: 44,
-                background: isTonic ? `${T.primary}20` : T.bgInput,
-                border: `1px solid ${isTonic ? T.primary : T.border}`,
-              }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: T.text, lineHeight: 1.2 }}>{n}</span>
-                <span style={{ fontSize: 8, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
+              <div
+                key={i}
+                onClick={() => setSelectedNote(isActive ? null : n)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '5px 8px', borderRadius: 10, gap: 2, minWidth: 44,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  background: isActive ? T.primary : isTonic ? `${T.primary}20` : T.bgInput,
+                  border: `1px solid ${isActive ? T.primary : isTonic ? T.primary : T.border}`,
+                  boxShadow: isActive ? `0 2px 8px ${T.primary}55` : 'none',
+                  transform: isActive ? 'translateY(-2px)' : 'none',
+                }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: isActive ? T.white : T.primary, lineHeight: 1 }}>{deg.num}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: isActive ? T.white : T.text, lineHeight: 1.2 }}>{n}</span>
+                <span style={{ fontSize: 8, color: isActive ? `${T.white}bb` : T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
               </div>
             );
           })}
