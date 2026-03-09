@@ -11,6 +11,24 @@ interface Props { scale: ScaleMatch | null }
 const FRET_COUNT = 12;
 const POS_COLORS = [T.primary, T.secondary, '#c4a000', '#8a4aa0', '#2a7aa0'];
 
+const INTERVAL_DEGREE: Record<string, { num: string; name: string }> = {
+  '1P':  { num: '1',  name: 'Tonic'        },
+  '2m':  { num: '♭2', name: 'Supertonic'   },
+  '2M':  { num: '2',  name: 'Supertonic'   },
+  '2A':  { num: '♯2', name: 'Supertonic'   },
+  '3m':  { num: '♭3', name: 'Mediant'      },
+  '3M':  { num: '3',  name: 'Mediant'      },
+  '4P':  { num: '4',  name: 'Subdominant'  },
+  '4A':  { num: '♯4', name: 'Tritone'      },
+  '5d':  { num: '♭5', name: 'Tritone'      },
+  '5P':  { num: '5',  name: 'Dominant'     },
+  '5A':  { num: '♯5', name: 'Dominant'     },
+  '6m':  { num: '♭6', name: 'Submediant'   },
+  '6M':  { num: '6',  name: 'Submediant'   },
+  '7m':  { num: '♭7', name: 'Subtonic'     },
+  '7M':  { num: '7',  name: 'Leading Tone' },
+};
+
 export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
   const [viewMode, setViewMode] = useState<'fretboard' | 'tab'>('fretboard');
   const [selectedPos, setSelectedPos] = useState<number | null>(null);
@@ -61,12 +79,24 @@ export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
           <span style={{ fontSize: 17, fontWeight: 800, color: T.text }}>{scale.name}</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: T.primary }}>{scale.fitPercent}% match</span>
         </div>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {scaleNotes.map((n, i) => (
-            <span key={i} style={{ padding: '2px 9px', borderRadius: 6, fontSize: 12, background: T.bgInput, color: T.text, border: `1px solid ${T.border}` }}>
-              {n}
-            </span>
-          ))}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+          {scaleNotes.map((n, i) => {
+            const interval = scaleInfo.intervals[i] ?? '';
+            const deg = INTERVAL_DEGREE[interval] ?? { num: String(i + 1), name: '' };
+            const isTonic = i === 0;
+            return (
+              <div key={i} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                padding: '5px 8px', borderRadius: 10, gap: 2, minWidth: 44,
+                background: isTonic ? `${T.primary}20` : T.bgInput,
+                border: `1px solid ${isTonic ? T.primary : T.border}`,
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: T.text, lineHeight: 1.2 }}>{n}</span>
+                <span style={{ fontSize: 8, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
