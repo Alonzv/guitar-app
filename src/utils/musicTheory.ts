@@ -2,10 +2,20 @@ import { Note as TonalNote, Interval } from '@tonaljs/tonal';
 import type { FretPosition, Note, Tuning } from '../types/music';
 
 export const TUNINGS: Tuning[] = [
-  { name: 'standard', label: 'E Standard', notes: ['E2','A2','D3','G3','B3','E4'], openFreqs: [82.41, 110.0, 146.83, 196.0, 246.94, 329.63] },
-  { name: 'dropD',    label: 'Drop D',     notes: ['D2','A2','D3','G3','B3','E4'], openFreqs: [73.42, 110.0, 146.83, 196.0, 246.94, 329.63] },
-  { name: 'dadgad',   label: 'DADGAD',     notes: ['D2','A2','D3','G3','A3','D4'], openFreqs: [73.42, 110.0, 146.83, 196.0, 220.0, 293.66] },
-  { name: 'openG',    label: 'Open G',     notes: ['D2','G2','D3','G3','B3','D4'], openFreqs: [73.42, 98.0, 146.83, 196.0, 246.94, 293.66] },
+  // ── Standard & drop ───────────────────────────────────────────────────────
+  { name: 'standard', label: 'E Standard',     notes: ['E2','A2','D3','G3','B3','E4'],  openFreqs: [82.41, 110.0,  146.83, 196.0,  246.94, 329.63] },
+  { name: 'dropD',    label: 'Drop D',          notes: ['D2','A2','D3','G3','B3','E4'],  openFreqs: [73.42, 110.0,  146.83, 196.0,  246.94, 329.63] },
+  { name: 'halfDown', label: 'Eb Standard (½↓)',notes: ['Eb2','Ab2','Db3','Gb3','Bb3','Eb4'], openFreqs: [77.78, 103.83, 138.59, 185.0,  233.08, 311.13] },
+  { name: 'dStd',     label: 'D Standard (1↓)', notes: ['D2','G2','C3','F3','A3','D4'],  openFreqs: [73.42, 98.0,  130.81, 174.61, 220.0,  293.66] },
+  { name: 'dropC',    label: 'Drop C',          notes: ['C2','G2','C3','F3','A3','D4'],  openFreqs: [65.41, 98.0,  130.81, 174.61, 220.0,  293.66] },
+  // ── Open tunings ──────────────────────────────────────────────────────────
+  { name: 'openE',    label: 'Open E',          notes: ['E2','B2','E3','G#3','B3','E4'], openFreqs: [82.41, 123.47, 164.81, 207.65, 246.94, 329.63] },
+  { name: 'openD',    label: 'Open D',          notes: ['D2','A2','D3','F#3','A3','D4'], openFreqs: [73.42, 110.0,  146.83, 185.0,  220.0,  293.66] },
+  { name: 'openG',    label: 'Open G',          notes: ['D2','G2','D3','G3','B3','D4'],  openFreqs: [73.42, 98.0,  146.83, 196.0,  246.94, 293.66] },
+  { name: 'openA',    label: 'Open A',          notes: ['E2','A2','E3','A3','C#4','E4'], openFreqs: [82.41, 110.0,  164.81, 220.0,  277.18, 329.63] },
+  { name: 'openC',    label: 'Open C',          notes: ['C2','G2','C3','G3','C4','E4'],  openFreqs: [65.41, 98.0,  130.81, 196.0,  261.63, 329.63] },
+  // ── Other ─────────────────────────────────────────────────────────────────
+  { name: 'dadgad',   label: 'DADGAD',          notes: ['D2','A2','D3','G3','A3','D4'],  openFreqs: [73.42, 110.0,  146.83, 196.0,  220.0,  293.66] },
 ];
 
 export const STANDARD_TUNING: Note[] = TUNINGS[0].notes;

@@ -10,6 +10,7 @@ import { findChordVoicings } from '../../utils/chordVoicings';
 import { exportProgressionPDF } from '../../utils/pdfExport';
 import { playChord } from '../../utils/audioPlayback';
 import { T, card, btn } from '../../theme';
+import { TUNINGS } from '../../utils/musicTheory';
 
 interface Props {
   progression: ChordInProgression[];
@@ -20,6 +21,7 @@ interface Props {
   onTransposeProgression: (semitones: number) => void;
   onSaveSong: (name: string) => void;
   tuning: Tuning;
+  onTuningChange: (tuning: Tuning) => void;
   capo: number;
   onCapoChange: (capo: number) => void;
   canUndo: boolean;
@@ -55,10 +57,25 @@ const LABEL_STYLE = {
   letterSpacing: '0.06em',
 };
 
+const SELECT_STYLE: React.CSSProperties = {
+  appearance: 'none',
+  WebkitAppearance: 'none',
+  background: T.bgInput,
+  border: `1px solid ${T.border}`,
+  borderRadius: 8,
+  color: T.text,
+  fontFamily: 'inherit',
+  fontSize: 12,
+  fontWeight: 600,
+  padding: '5px 26px 5px 10px',
+  cursor: 'pointer',
+  outline: 'none',
+};
+
 export function ChordBuilderTab({
   progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
   onReorderProgression, onTransposeProgression, onSaveSong,
-  tuning, capo, onCapoChange,
+  tuning, onTuningChange, capo, onCapoChange,
   canUndo, canRedo, onUndo, onRedo,
 }: Props) {
   const [activeDots, setActiveDots] = useState<FretPosition[]>([]);
@@ -185,35 +202,41 @@ export function ChordBuilderTab({
       <div style={card()}>
         <p style={LABEL_STYLE}>Click a fret to place a note · click again to remove</p>
 
-        {/* Tuning selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tuning:</span>
-          {(['E Standard', 'Drop D', 'DADGAD', 'Open G'] as const).map((label, i) => {
-            const names = ['standard', 'dropD', 'dadgad', 'openG'];
-            const active = tuning.name === names[i];
-            return (
-              <button key={label} disabled style={{
-                padding: '3px 9px', borderRadius: 12, border: `1px solid ${active ? T.primary : T.border}`,
-                background: active ? T.primaryBg : T.bgInput,
-                color: active ? T.primary : T.textMuted,
-                fontSize: 10, fontWeight: active ? 700 : 400, cursor: 'default',
-              }}>{label}</button>
-            );
-          })}
-        </div>
-
-        {/* Capo selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Capo:</span>
-          {[0,1,2,3,4,5,6,7].map(n => (
-            <button key={n} onClick={() => onCapoChange(n)} style={{
-              width: 28, height: 24, borderRadius: 6,
-              border: `1px solid ${capo === n ? T.primary : T.border}`,
-              background: capo === n ? T.primaryBg : T.bgInput,
-              color: capo === n ? T.primary : T.textMuted,
-              fontSize: 11, fontWeight: capo === n ? 700 : 400, cursor: 'pointer',
-            }}>{n}</button>
-          ))}
+        {/* Tuning + Capo selectors */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+          {/* Tuning */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <select
+                value={tuning.name}
+                onChange={e => {
+                  const t = TUNINGS.find(t => t.name === e.target.value);
+                  if (t) onTuningChange(t);
+                }}
+                style={SELECT_STYLE}
+              >
+                {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
+              </select>
+              <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
+            </div>
+          </div>
+          {/* Capo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Capo</span>
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <select
+                value={capo}
+                onChange={e => onCapoChange(Number(e.target.value))}
+                style={SELECT_STYLE}
+              >
+                {[0,1,2,3,4,5,6,7].map(n => (
+                  <option key={n} value={n}>{n === 0 ? 'None' : `Fret ${n}`}</option>
+                ))}
+              </select>
+              <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
+            </div>
+          </div>
         </div>
 
         <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} tuning={tuning.notes} capo={capo} />

@@ -304,6 +304,7 @@ export default function App() {
               onTransposeProgression={handleTransposeProgression}
               onSaveSong={handleSaveSong}
               tuning={tuning}
+              onTuningChange={setTuning}
               capo={capo}
               onCapoChange={setCapo}
               canUndo={undoStack.length > 0}
