@@ -30,18 +30,35 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange }) => {
         ))}
       </div>
 
-      {/* Tuning selector (shown on both tabs — affects Tuner target notes) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tuning:</span>
-        {TUNINGS.map(t => (
-          <button key={t.name} onClick={() => onTuningChange(t)} style={{
-            padding: '4px 10px', borderRadius: 12,
-            border: `1px solid ${tuning.name === t.name ? T.primary : T.border}`,
-            background: tuning.name === t.name ? T.primaryBg : T.bgInput,
-            color: tuning.name === t.name ? T.primary : T.textMuted,
-            fontSize: 11, fontWeight: tuning.name === t.name ? 700 : 400, cursor: 'pointer',
-          }}>{t.label}</button>
-        ))}
+      {/* Tuning selector */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <select
+            value={tuning.name}
+            onChange={e => {
+              const t = TUNINGS.find(t => t.name === e.target.value);
+              if (t) onTuningChange(t);
+            }}
+            style={{
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              background: T.bgInput,
+              border: `1px solid ${T.border}`,
+              borderRadius: 8,
+              color: T.text,
+              fontFamily: 'inherit',
+              fontSize: 12,
+              fontWeight: 600,
+              padding: '5px 26px 5px 10px',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
+          </select>
+          <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
+        </div>
       </div>
 
       {sub === 'tuner' ? <Tuner tuning={tuning} /> : <Metronome />}
