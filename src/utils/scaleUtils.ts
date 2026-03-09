@@ -44,10 +44,12 @@ export function detectScales(chords: ChordInProgression[], preferredKey?: string
     return 0;
   });
 
-  // Deduplicate scales with same notes, preferring preferredKey when available
+  // Deduplicate scales with same notes, preferring preferredKey when available.
+  // Use Note.chroma() for enharmonic-safe root matching (Bb === A#, Eb === D#, etc.)
   const prefParts  = preferredKey?.split(' ') ?? [];
   const prefRoot   = prefParts[0] ?? '';
   const prefType   = prefParts.slice(1).join(' '); // e.g. "minor", "major"
+  const prefChroma = prefRoot !== '' ? TonalNote.chroma(prefRoot) : null;
 
   const seen = new Map<string, number>(); // noteKey → index in unique
   const unique: ScaleMatch[] = [];
@@ -56,12 +58,12 @@ export function detectScales(chords: ChordInProgression[], preferredKey?: string
     if (!seen.has(noteKey)) {
       seen.set(noteKey, unique.length);
       unique.push(s);
-    } else if (prefRoot) {
+    } else if (prefChroma !== null) {
       // Replace the existing entry if this one better matches the preferred key
       const existingIdx = seen.get(noteKey)!;
       const existing    = unique[existingIdx];
-      const thisMatches = s.root === prefRoot && s.type === prefType;
-      const prevMatches = existing.root === prefRoot && existing.type === prefType;
+      const thisMatches = TonalNote.chroma(s.root) === prefChroma && s.type === prefType;
+      const prevMatches = TonalNote.chroma(existing.root) === prefChroma && existing.type === prefType;
       if (thisMatches && !prevMatches) unique[existingIdx] = s;
     }
   }
