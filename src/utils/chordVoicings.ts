@@ -23,9 +23,35 @@ function getRequiredNotes(chordNotes: string[]): string[] {
 
 // Given a Tonal.js chord name (e.g. "CM", "Am7", "Dm11"),
 // returns up to `count` distinct voicings as arrays of FretPosition.
+// Returns true if a voicing is physically playable on a guitar:
+// – at least 4 strings used
+// – non-open frets span at most 3 frets (comfortable 4-fret window)
+// – no large internal string gap (≥3 consecutive unused strings between played ones)
+function isPlayable(voicing: FretPosition[]): boolean {
+  if (voicing.length < 4) return false;
+
+  const nonOpen = voicing.filter(p => p.fret > 0);
+  if (nonOpen.length > 1) {
+    const frets = nonOpen.map(p => p.fret);
+    if (Math.max(...frets) - Math.min(...frets) > 3) return false;
+  }
+
+  // Check for ≥3 consecutive muted strings between played strings
+  const usedStrings = new Set(voicing.map(p => p.string));
+  const minS = Math.min(...usedStrings);
+  const maxS = Math.max(...usedStrings);
+  let gap = 0;
+  for (let s = minS; s <= maxS; s++) {
+    if (!usedStrings.has(s)) { gap++; if (gap >= 3) return false; }
+    else gap = 0;
+  }
+
+  return true;
+}
+
 export function findChordVoicings(
   chordName: string,
-  count = 8,
+  count = 4,
   tuning: string[] = TUNINGS[0].notes,
 ): FretPosition[][] {
   const info = TonalChord.get(chordName);
@@ -52,11 +78,11 @@ export function findChordVoicings(
       }
     }
 
-    // Required notes (shell voicing) must all appear, and ≥3 strings must be used
+    // Required notes must all appear, and voicing must be physically playable
     const requiredCovered = required.every(rn =>
       voicing.some(p => samePitch(fretToNote(p.string, p.fret, tuning), rn))
     );
-    if (!requiredCovered || voicing.length < 3) continue;
+    if (!requiredCovered || !isPlayable(voicing)) continue;
 
     const hash = voicing.map(p => `${p.string}:${p.fret}`).join(',');
     if (!seen.has(hash)) {

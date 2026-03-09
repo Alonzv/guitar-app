@@ -1,4 +1,4 @@
-import { Key, Chord as TonalChord } from '@tonaljs/tonal';
+import { Key, Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import type { Chord, ChordInProgression, Genre, ProgressionSuggestion } from '../types/music';
 import { GENRE_PATTERNS, DIATONIC_SUGGESTIONS } from '../data/genreProgressions';
 
@@ -6,15 +6,52 @@ const CHROMATIC    = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const FLAT_CHROMA  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const FLAT_KEYS    = new Set(['F','Bb','Eb','Ab','Db','Gb']);
 
-// Detect the most likely key from a list of chords
+// Detect the most likely key from a list of chords.
+// Compares chord roots (as chromas) against all 24 keys using semitone offsets,
+// with tiebreaker bonuses so relative keys (e.g. C major vs A minor) resolve correctly.
 export function detectKey(chords: Chord[]): string {
   if (chords.length === 0) return '';
-  const firstRoot = TonalChord.get(chords[0].name).tonic ?? chords[0].name[0];
-  const major     = Key.majorKey(firstRoot);
-  const minor     = Key.minorKey(firstRoot);
-  const majorFit  = chords.filter(c => major.chords.includes(c.name)).length;
-  const minorFit  = chords.filter(c => minor.natural.chords.includes(c.name)).length;
-  return majorFit >= minorFit ? `${firstRoot} major` : `${firstRoot} minor`;
+
+  // Semitone offsets of diatonic chord roots relative to key tonic
+  const MAJOR_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
+  const MINOR_OFFSETS = [0, 2, 3, 5, 7, 8, 10]; // natural minor
+
+  const progressionRoots = chords.map(c => {
+    const tonic = TonalChord.get(c.name).tonic ?? c.name[0];
+    return TonalNote.chroma(tonic) ?? -1;
+  }).filter(r => r >= 0);
+
+  if (progressionRoots.length === 0) return '';
+
+  const firstChordQuality = TonalChord.get(chords[0].name).quality ?? '';
+
+  let bestKey = '';
+  let bestScore = -1;
+
+  for (const keyRoot of CHROMATIC) {
+    const keyChroma = TonalNote.chroma(keyRoot)!;
+
+    for (const [mode, offsets] of [
+      ['major', MAJOR_OFFSETS] as const,
+      ['minor', MINOR_OFFSETS] as const,
+    ]) {
+      const diatonic = new Set(offsets.map(o => (keyChroma + o) % 12));
+      const fit = progressionRoots.filter(r => diatonic.has(r)).length;
+
+      // Tiebreaker bonuses (fractional so they never override a real fit difference)
+      const tonicInProg  = progressionRoots.includes(keyChroma) ? 0.4 : 0;
+      const firstIsTonic = progressionRoots[0] === keyChroma    ? 0.3 : 0;
+      const qualityMatch = (
+        (mode === 'minor' && firstChordQuality === 'Minor') ||
+        (mode === 'major' && firstChordQuality === 'Major')
+      ) ? 0.2 : 0;
+
+      const score = fit + tonicInProg + firstIsTonic + qualityMatch;
+      if (score > bestScore) { bestScore = score; bestKey = `${keyRoot} ${mode}`; }
+    }
+  }
+
+  return bestKey;
 }
 
 // Convert a Roman-numeral pattern token (e.g. "IIm7", "bVII7", "Imaj7") to a

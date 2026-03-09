@@ -188,7 +188,7 @@ export function ChordBuilderTab({
     [progression]
   );
   const voicings = showVariations && chords.length > 0
-    ? findChordVoicings(chords[0].name, 8, tuning.notes)
+    ? findChordVoicings(chords[0].name, 4, tuning.notes)
     : [];
 
   const previewVoicings = hoverPreview
