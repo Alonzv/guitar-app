@@ -125,8 +125,8 @@ export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
           <button key={v} onClick={() => setViewMode(v)} style={{
             flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer',
             fontSize: 13, fontWeight: viewMode === v ? 700 : 400, border: 'none',
-            background: viewMode === v ? T.primary : T.bgCard,
-            color: viewMode === v ? T.text : T.textMuted,
+            background: viewMode === v ? T.secondary : T.bgCard,
+            color: viewMode === v ? T.white : T.textMuted,
           }}>
             {v === 'fretboard' ? '🎸 Fretboard' : '📋 Tab'}
           </button>
