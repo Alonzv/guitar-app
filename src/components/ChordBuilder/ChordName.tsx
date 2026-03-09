@@ -3,10 +3,14 @@ import type { FretPosition } from '../../types/music';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { T } from '../../theme';
 
-interface Props { positions: FretPosition[] }
+interface Props {
+  positions: FretPosition[];
+  tuning?: string[];
+  capo?: number;
+}
 
-export const ChordName: React.FC<Props> = ({ positions }) => {
-  const chords = identifyChord(positions);
+export const ChordName: React.FC<Props> = ({ positions, tuning, capo = 0 }) => {
+  const chords = identifyChord(positions, tuning, capo);
 
   if (positions.length < 2) return (
     <p style={{ color: T.textDim, fontSize: 13, fontWeight: 700, margin: 0 }}>Place 2+ notes on the fretboard</p>
@@ -23,6 +27,11 @@ export const ChordName: React.FC<Props> = ({ positions }) => {
       <div style={{ fontSize: 'var(--gc-chord-big)', fontWeight: 800, color: T.text, letterSpacing: '-0.5px', lineHeight: 1 }}>
         {formatChordName(primary.name)}
       </div>
+      {capo > 0 && (
+        <div style={{ fontSize: 11, color: T.secondary, marginTop: 4, fontWeight: 600 }}>
+          Capo {capo} — sounds like {formatChordName(primary.name)}
+        </div>
+      )}
       {primary.notes.length > 0 && (
         <div style={{ fontSize: 11, color: T.textMuted, marginTop: 5 }}>
           {primary.notes.join(' · ')}

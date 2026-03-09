@@ -1,29 +1,26 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { T, card } from '../../theme';
-
-const STRINGS = [
-  { name: 'E2', freq: 82.41  },
-  { name: 'A2', freq: 110.0  },
-  { name: 'D3', freq: 146.83 },
-  { name: 'G3', freq: 196.0  },
-  { name: 'B3', freq: 246.94 },
-  { name: 'E4', freq: 329.63 },
-];
+import type { Tuning } from '../../types/music';
+import { TUNINGS } from '../../utils/musicTheory';
 
 const noteName = (s: string) => s.replace(/\d/g, '');
+
+interface Props { tuning?: Tuning }
+
+interface PitchResult { freq: number; confidence: number }
 
 /**
  * Normalized autocorrelation — guitar range only.
  * Finds the FIRST strong peak (avoids octave errors where harmonics
  * score higher than the fundamental).
  */
-function detectPitch(buf: Float32Array, sampleRate: number): number {
+function detectPitch(buf: Float32Array, sampleRate: number): PitchResult {
   const SIZE = buf.length;
 
   // RMS gate — silence rejection
   let rmsSum = 0;
   for (let i = 0; i < SIZE; i++) rmsSum += buf[i] * buf[i];
-  if (Math.sqrt(rmsSum / SIZE) < 0.015) return -1;
+  if (Math.sqrt(rmsSum / SIZE) < 0.015) return { freq: -1, confidence: 0 };
 
   // Guitar range: 70 Hz (below low E) → 380 Hz (above high E)
   const lagMin = Math.floor(sampleRate / 380); // ≈ 116
@@ -35,7 +32,7 @@ function detectPitch(buf: Float32Array, sampleRate: number): number {
   // Normalisation constant (c[0])
   let c0 = 0;
   for (let i = 0; i < N; i++) c0 += buf[i] * buf[i];
-  if (c0 === 0) return -1;
+  if (c0 === 0) return { freq: -1, confidence: 0 };
 
   // Compute normalised autocorrelation for relevant lags
   const numLags = lagMax - lagMin + 1;
@@ -48,9 +45,13 @@ function detectPitch(buf: Float32Array, sampleRate: number): number {
     c[k] = sum / c0;
   }
 
-  // Find the FIRST local peak above confidence threshold 0.5
+  // Track best confidence even if below threshold (for "play louder" hint)
+  let bestC = 0;
+  for (let k = 0; k < numLags; k++) if (c[k] > bestC) bestC = c[k];
+
+  // Find the FIRST local peak above confidence threshold (lowered to 0.3)
   // "First peak" avoids octave errors — harmonics appear at later lags
-  const CONFIDENCE = 0.5;
+  const CONFIDENCE = 0.3;
   let peakK = -1;
   for (let k = 1; k < numLags - 1; k++) {
     if (c[k] > c[k - 1] && c[k] >= c[k + 1] && c[k] > CONFIDENCE) {
@@ -58,7 +59,7 @@ function detectPitch(buf: Float32Array, sampleRate: number): number {
       break;
     }
   }
-  if (peakK < 0) return -1;
+  if (peakK < 0) return { freq: -1, confidence: bestC };
 
   // Parabolic interpolation for sub-sample precision
   const y0 = c[peakK - 1], y1 = c[peakK], y2 = c[peakK + 1];
@@ -66,13 +67,13 @@ function detectPitch(buf: Float32Array, sampleRate: number): number {
   const frac = denom !== 0 ? (y0 - y2) / denom : 0;
   const T0 = lagMin + peakK + Math.max(-0.5, Math.min(0.5, frac));
 
-  return sampleRate / T0;
+  return { freq: sampleRate / T0, confidence: c[peakK] };
 }
 
-function findClosest(freq: number) {
-  let best = STRINGS[0];
+function findClosest(freq: number, strings: { name: string; freq: number }[]) {
+  let best = strings[0];
   let bestCents = Infinity;
-  for (const s of STRINGS) {
+  for (const s of strings) {
     const cents = 1200 * Math.log2(freq / s.freq);
     if (Math.abs(cents) < Math.abs(bestCents)) { bestCents = cents; best = s; }
   }
@@ -82,10 +83,12 @@ function findClosest(freq: number) {
 const MEDIAN_BUF = 24;   // rolling window size
 const OUTLIER_CENTS = 80; // reject readings more than this far from median
 
-export const Tuner: React.FC = () => {
-  const [listening, setListening] = useState(false);
-  const [display, setDisplay]     = useState<{ note: string; hz: number; cents: number } | null>(null);
-  const [error, setError]         = useState('');
+export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
+  const strings = tuning.notes.map((note, i) => ({ name: note, freq: tuning.openFreqs[i] }));
+  const [listening, setListening]       = useState(false);
+  const [display, setDisplay]           = useState<{ note: string; hz: number; cents: number } | null>(null);
+  const [error, setError]               = useState('');
+  const [loudnessHint, setLoudnessHint] = useState(false);
 
   const ctxRef        = useRef<AudioContext | null>(null);
   const analyserRef   = useRef<AnalyserNode | null>(null);
@@ -107,11 +110,12 @@ export const Tuner: React.FC = () => {
 
     const buf = new Float32Array(analyserRef.current.fftSize);
     analyserRef.current.getFloatTimeDomainData(buf);
-    const detected = detectPitch(buf, ctxRef.current.sampleRate);
+    const result = detectPitch(buf, ctxRef.current.sampleRate);
 
-    if (detected > 0) {
+    if (result.freq > 0) {
+      setLoudnessHint(false);
       const ring = freqBufRef.current;
-      ring.push(detected);
+      ring.push(result.freq);
       if (ring.length > MEDIAN_BUF) ring.shift();
 
       if (ring.length >= 6) {
@@ -128,7 +132,7 @@ export const Tuner: React.FC = () => {
           // Mean of valid readings
           const mean = valid.reduce((a, b) => a + b, 0) / valid.length;
           lastValidRef.current = Date.now();
-          const { string, cents } = findClosest(mean);
+          const { string, cents } = findClosest(mean, strings);
           setDisplay({
             note:  noteName(string.name),
             hz:    Math.round(mean * 10) / 10,
@@ -137,10 +141,15 @@ export const Tuner: React.FC = () => {
         }
       }
     } else {
+      // Show "play louder" hint when there's some signal but below threshold
+      if (result.confidence > 0.15) {
+        setLoudnessHint(true);
+      }
       // Persist display for 2 s after signal drops, then clear
       if (Date.now() - lastValidRef.current > 2000) {
         freqBufRef.current = [];
         setDisplay(null);
+        setLoudnessHint(false);
       }
     }
 
@@ -202,8 +211,11 @@ export const Tuner: React.FC = () => {
         }}>
           {display ? display.note : '—'}
         </div>
-        <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 24, minHeight: 18 }}>
+        <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 8, minHeight: 18 }}>
           {display ? `${display.hz} Hz` : 'Play a string…'}
+        </div>
+        <div style={{ fontSize: 12, color: T.secondary, marginBottom: 16, minHeight: 16 }}>
+          {loudnessHint && !display ? 'Play louder for better detection' : ''}
         </div>
 
         {/* Needle bar */}

@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react';
-import type { ChordInProgression, FretPosition, Genre, ProgressionSuggestion } from '../../types/music';
+import { useState, useRef, useMemo } from 'react';
+import type { ChordInProgression, FretPosition, Genre, ProgressionSuggestion, Tuning } from '../../types/music';
 import { InteractiveFretboard } from '../Fretboard/InteractiveFretboard';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { ChordName } from './ChordName';
 import { VoicingVariations } from './VoicingVariations';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
-import { suggestNextChords } from '../../utils/progressionHelper';
+import { suggestNextChords, suggestCustomChords, detectKey } from '../../utils/progressionHelper';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { exportProgressionPDF } from '../../utils/pdfExport';
 import { playChord } from '../../utils/audioPlayback';
@@ -19,6 +19,13 @@ interface Props {
   onReorderProgression: (id: string, dir: -1 | 1) => void;
   onTransposeProgression: (semitones: number) => void;
   onSaveSong: (name: string) => void;
+  tuning: Tuning;
+  capo: number;
+  onCapoChange: (capo: number) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 interface HoverPreview {
@@ -28,12 +35,13 @@ interface HoverPreview {
 }
 
 const GENRES: { id: Genre; label: string }[] = [
-  { id: 'any', label: 'Any' },
-  { id: 'blues', label: 'Blues' },
-  { id: 'jazz', label: 'Jazz' },
-  { id: 'pop', label: 'Pop' },
-  { id: 'rock', label: 'Rock' },
-  { id: 'metal', label: 'Metal' },
+  { id: 'any',    label: 'Any'    },
+  { id: 'blues',  label: 'Blues'  },
+  { id: 'jazz',   label: 'Jazz'   },
+  { id: 'pop',    label: 'Pop'    },
+  { id: 'rock',   label: 'Rock'   },
+  { id: 'metal',  label: 'Metal'  },
+  { id: 'custom', label: 'Custom' },
 ];
 
 const CHORD_ACCENTS = [T.primary, T.secondary, '#8b6914', '#7a3a6a', '#2a6a8a', '#4a7a3a'];
@@ -50,9 +58,12 @@ const LABEL_STYLE = {
 export function ChordBuilderTab({
   progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
   onReorderProgression, onTransposeProgression, onSaveSong,
+  tuning, capo, onCapoChange,
+  canUndo, canRedo, onUndo, onRedo,
 }: Props) {
   const [activeDots, setActiveDots] = useState<FretPosition[]>([]);
   const [genre, setGenre] = useState<Genre>('any');
+  const [customNumerals, setCustomNumerals] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showVariations, setShowVariations] = useState(false);
   const [selectedVariationIndex, setSelectedVariationIndex] = useState<number | undefined>(undefined);
@@ -77,7 +88,7 @@ export function ChordBuilderTab({
   };
 
   const handleAdd = () => {
-    const chords = identifyChord(activeDots);
+    const chords = identifyChord(activeDots, tuning.notes, capo);
     if (chords.length === 0) return;
     onAddToProgression({ id: `chord-${Date.now()}`, chord: chords[0], fretPositions: [...activeDots] });
     setActiveDots([]);
@@ -141,21 +152,30 @@ export function ChordBuilderTab({
     setPlayingAll(true);
     chordsWithFrets.forEach((item, i) => {
       const t = setTimeout(() => {
-        playChord(item.fretPositions);
+        playChord(item.fretPositions, tuning.openFreqs, capo);
         if (i === chordsWithFrets.length - 1) setPlayingAll(false);
       }, i * 2000);
       playAllTimersRef.current.push(t);
     });
   };
 
-  const chords = identifyChord(activeDots);
-  const suggestions = suggestNextChords(progression, genre);
+  const chords = useMemo(() => identifyChord(activeDots, tuning.notes, capo), [activeDots, tuning, capo]);
+  const suggestions = useMemo(
+    () => genre === 'custom'
+      ? suggestCustomChords(progression, customNumerals)
+      : suggestNextChords(progression, genre),
+    [progression, genre, customNumerals]
+  );
+  const detectedKey = useMemo(
+    () => progression.length >= 2 ? detectKey(progression.map(c => c.chord)) : '',
+    [progression]
+  );
   const voicings = showVariations && chords.length > 0
-    ? findChordVoicings(chords[0].name)
+    ? findChordVoicings(chords[0].name, 8, tuning.notes)
     : [];
 
   const previewVoicings = hoverPreview
-    ? findChordVoicings(hoverPreview.suggestion.chord.name, 1)
+    ? findChordVoicings(hoverPreview.suggestion.chord.name, 1, tuning.notes)
     : [];
 
   return (
@@ -164,12 +184,44 @@ export function ChordBuilderTab({
       {/* ── Fretboard ── */}
       <div style={card()}>
         <p style={LABEL_STYLE}>Click a fret to place a note · click again to remove</p>
-        <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} />
+
+        {/* Tuning selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tuning:</span>
+          {(['E Standard', 'Drop D', 'DADGAD', 'Open G'] as const).map((label, i) => {
+            const names = ['standard', 'dropD', 'dadgad', 'openG'];
+            const active = tuning.name === names[i];
+            return (
+              <button key={label} disabled style={{
+                padding: '3px 9px', borderRadius: 12, border: `1px solid ${active ? T.primary : T.border}`,
+                background: active ? T.primaryBg : T.bgInput,
+                color: active ? T.primary : T.textMuted,
+                fontSize: 10, fontWeight: active ? 700 : 400, cursor: 'default',
+              }}>{label}</button>
+            );
+          })}
+        </div>
+
+        {/* Capo selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Capo:</span>
+          {[0,1,2,3,4,5,6,7].map(n => (
+            <button key={n} onClick={() => onCapoChange(n)} style={{
+              width: 28, height: 24, borderRadius: 6,
+              border: `1px solid ${capo === n ? T.primary : T.border}`,
+              background: capo === n ? T.primaryBg : T.bgInput,
+              color: capo === n ? T.primary : T.textMuted,
+              fontSize: 11, fontWeight: capo === n ? 700 : 400, cursor: 'pointer',
+            }}>{n}</button>
+          ))}
+        </div>
+
+        <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} tuning={tuning.notes} capo={capo} />
       </div>
 
       {/* ── Chord name ── */}
       <div style={card({ minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 })}>
-        <ChordName positions={activeDots} />
+        <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} />
         {chords.length > 0 && (
           <button
             onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}
@@ -213,10 +265,40 @@ export function ChordBuilderTab({
         <div style={card()}>
           {/* Header row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
-            <p style={{ ...LABEL_STYLE, margin: 0 }}>
-              Your Progression · {progression.length} chord{progression.length > 1 ? 's' : ''}
-            </p>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <p style={{ ...LABEL_STYLE, margin: 0 }}>
+                Your Progression · {progression.length} chord{progression.length > 1 ? 's' : ''}
+              </p>
+              {detectedKey && (
+                <span style={{
+                  padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
+                  background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondary}44`,
+                }}>
+                  Key: {detectedKey}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button
+                onClick={onUndo}
+                disabled={!canUndo}
+                title="Undo (Ctrl+Z)"
+                style={{
+                  padding: '4px 8px', borderRadius: 16, border: `1px solid ${T.border}`,
+                  background: T.bgInput, color: canUndo ? T.textMuted : T.textDim,
+                  fontSize: 11, cursor: canUndo ? 'pointer' : 'not-allowed', fontWeight: 600,
+                }}
+              >↩</button>
+              <button
+                onClick={onRedo}
+                disabled={!canRedo}
+                title="Redo (Ctrl+Shift+Z)"
+                style={{
+                  padding: '4px 8px', borderRadius: 16, border: `1px solid ${T.border}`,
+                  background: T.bgInput, color: canRedo ? T.textMuted : T.textDim,
+                  fontSize: 11, cursor: canRedo ? 'pointer' : 'not-allowed', fontWeight: 600,
+                }}
+              >↪</button>
               <button
                 onClick={handleClear}
                 style={{
@@ -341,7 +423,7 @@ export function ChordBuilderTab({
             >+</button>
           </div>
 
-          {/* Chord cards — extra padding-top so the × badge isn't clipped */}
+          {/* Chord cards */}
           <div className="gc-chip-strip" style={{ paddingTop: 10 }}>
             {progression.map((item, i) => {
               const accent = CHORD_ACCENTS[i % CHORD_ACCENTS.length];
@@ -378,7 +460,7 @@ export function ChordBuilderTab({
                   </div>
                   {item.fretPositions.length > 0 && (
                     <button
-                      onClick={() => playChord(item.fretPositions)}
+                      onClick={() => playChord(item.fretPositions, tuning.openFreqs, capo)}
                       style={{
                         display: 'block', width: '100%', marginTop: 6, padding: '7px 0',
                         borderRadius: 8, border: 'none', background: T.primaryBg,
@@ -435,6 +517,26 @@ export function ChordBuilderTab({
                   </button>
                 ))}
               </div>
+
+              {/* Custom Roman numeral input */}
+              {genre === 'custom' && (
+                <div style={{ marginBottom: 10 }}>
+                  <input
+                    value={customNumerals}
+                    onChange={e => setCustomNumerals(e.target.value)}
+                    placeholder="e.g. I IV V vi IIm V7…"
+                    style={{
+                      width: '100%', padding: '7px 10px', borderRadius: 8,
+                      border: `1px solid ${T.border}`, background: T.bgInput,
+                      color: T.text, fontSize: 13, fontFamily: 'inherit',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <div style={{ fontSize: 10, color: T.textDim, marginTop: 4 }}>
+                    Roman numerals · detected key: {detectedKey || '—'}
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={() => setShowSuggestions(v => !v)}
@@ -512,7 +614,7 @@ export function ChordBuilderTab({
           <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 800, color: T.text, textAlign: 'center' }}>
             {formatChordName(hoverPreview.suggestion.chord.name)}
           </p>
-          <MiniFretboard voicing={previewVoicings[0]} />
+          <MiniFretboard voicing={previewVoicings[0]} tuning={tuning.notes} />
         </div>
       )}
     </div>

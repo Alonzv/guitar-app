@@ -7,6 +7,8 @@ interface Props {
   activeDots: FretPosition[];
   onToggle: (pos: FretPosition) => void;
   readonly?: boolean;
+  tuning?: string[];
+  capo?: number;
 }
 
 const SVG_W  = 680;
@@ -20,7 +22,7 @@ const DOT_R   = 11;
 const fretX = (f: number) => f === 0 ? NUT_X - FRET_SP * 0.5 : NUT_X + (f - 0.5) * FRET_SP;
 const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 
-export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, readonly }) => {
+export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, readonly, tuning, capo = 0 }) => {
   const isActive  = (s: number, f: number) => activeDots.some(d => d.string === s && d.fret === f);
   const hasAnyDot = activeDots.length > 0;
 
@@ -73,7 +75,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
               <text x={NUT_X - 42} y={strY(s) + 4}
                 textAnchor="middle" fontSize={10}
                 fill={muted ? T.textDim : T.textMuted}>
-                {fretToNote(s, 0)}
+                {fretToNote(s, 0, tuning, capo)}
               </text>
               {/* Mute × symbol */}
               {muted && (
@@ -104,7 +106,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
                   <>
                     <circle cx={cx} cy={cy} r={DOT_R} fill={T.primary} stroke={T.text} strokeWidth={1.5} />
                     <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9}
-                      fill={T.text} fontWeight="700">{fretToNote(s, f)}</text>
+                      fill={T.text} fontWeight="700">{fretToNote(s, f, tuning, capo)}</text>
                   </>
                 ) : !readonly && (
                   <circle cx={cx} cy={cy} r={DOT_R - 5}

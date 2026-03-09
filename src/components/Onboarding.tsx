@@ -1,28 +1,95 @@
 import React, { useState } from 'react';
 import { T } from '../theme';
+import { InteractiveFretboard } from './Fretboard/InteractiveFretboard';
+import { MiniFretboard } from './Fretboard/MiniFretboard';
+import { identifyChord, formatChordName } from '../utils/chordIdentifier';
+import type { FretPosition } from '../types/music';
 
-const SLIDES = [
-  {
-    icon: null,
-    title: 'Welcome to ScaleUp',
-    body: 'Your complete guitar toolkit — build chords, explore scales, write lyrics, and tune up with the built-in Tuner & Metronome.',
-  },
-  {
-    icon: '🎵',
-    title: 'Build Your Progression',
-    body: 'Tap the fretboard to place notes and identify any chord. Or use Chord Finder to look up chords by name. Hear each chord play back as you build.',
-  },
-  {
-    icon: '🎼',
-    title: 'Scales & Tools',
-    body: 'Detect the scales that fit your progression, explore fretboard patterns, write a full lead sheet with lyrics, and use the built-in Tuner & Metronome.',
-  },
+// Preset Am voicing for slide 1
+const AM_VOICING: FretPosition[] = [
+  { string: 1, fret: 2 },
+  { string: 2, fret: 2 },
+  { string: 3, fret: 2 },
+  { string: 4, fret: 0 },
+  { string: 5, fret: 0 },
 ];
 
 export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   const [slide, setSlide] = useState(0);
-  const isLast = slide === SLIDES.length - 1;
-  const { icon, title, body } = SLIDES[slide];
+  const [localDots, setLocalDots] = useState<FretPosition[]>([]);
+  const [slide1Added, setSlide1Added] = useState(false);
+
+  const handleToggle = (pos: FretPosition) => {
+    setLocalDots(prev => {
+      const exists = prev.findIndex(d => d.string === pos.string && d.fret === pos.fret);
+      if (exists !== -1) return prev.filter((_, i) => i !== exists);
+      return [...prev.filter(d => d.string !== pos.string), pos];
+    });
+  };
+
+  const detectedChords = localDots.length >= 2 ? identifyChord(localDots) : [];
+  const chordLabel = detectedChords.length > 0 ? formatChordName(detectedChords[0].name) : '';
+
+  const slides = [
+    {
+      title: 'Welcome to ScaleUp',
+      content: (
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 14, color: T.textMuted, textAlign: 'center', lineHeight: 1.5 }}>
+            {localDots.length === 0
+              ? 'Tap the fretboard below to place notes'
+              : chordLabel
+                ? `✓ ${chordLabel} — nice chord!`
+                : 'Keep adding notes…'}
+          </p>
+          <InteractiveFretboard activeDots={localDots} onToggle={handleToggle} />
+        </div>
+      ),
+    },
+    {
+      title: 'Build Your Progression',
+      content: (
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <MiniFretboard voicing={AM_VOICING} />
+          <p style={{ margin: 0, fontSize: 13, color: T.textMuted, textAlign: 'center', lineHeight: 1.5 }}>
+            Every chord you identify can be added to your progression. Build a sequence and hear it play!
+          </p>
+          <button
+            onClick={() => setSlide1Added(true)}
+            style={{
+              width: '100%', padding: '10px 0', borderRadius: 10, border: 'none',
+              background: slide1Added ? T.secondary : T.primary,
+              color: T.white, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              transition: 'background 0.3s',
+            }}
+          >
+            {slide1Added ? '✓ Added to Progression!' : '+ Add to Progression'}
+          </button>
+        </div>
+      ),
+    },
+    {
+      title: 'Scales, Lyrics & Tools',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            { icon: '🎼', text: 'Scales tab auto-detects scales from your progression' },
+            { icon: '📝', text: 'Lyrics tab lets you write lead sheets with chords above words' },
+            { icon: '🎤', text: 'Tuner listens to your guitar in real time' },
+            { icon: '🥁', text: 'Metronome keeps your practice in time' },
+          ].map(({ icon, text }) => (
+            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{icon}</span>
+              <span style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.4 }}>{text}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+  ];
+
+  const isLast = slide === slides.length - 1;
+  const { title, content } = slides[slide];
 
   return (
     <div style={{
@@ -32,21 +99,23 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       padding: 20,
     }}>
       <div style={{
-        background: T.bgCard, borderRadius: 22, maxWidth: 380, width: '100%',
-        padding: '36px 28px 28px', border: `1px solid ${T.border}`,
+        background: T.bgCard, borderRadius: 22, maxWidth: 390, width: '100%',
+        padding: '28px 24px 24px', border: `1px solid ${T.border}`,
         boxShadow: '0 24px 64px rgba(46,74,90,0.25)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
       }}>
-        {icon
-          ? <div style={{ fontSize: 56, lineHeight: 1 }}>{icon}</div>
-          : <img src="/favicon.png" alt="ScaleUp" style={{ width: 80, height: 80, borderRadius: 18 }} />
-        }
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: T.text, textAlign: 'center', letterSpacing: '-0.3px' }}>{title}</h2>
-        <p style={{ margin: 0, fontSize: 15, color: T.textMuted, textAlign: 'center', lineHeight: 1.6 }}>{body}</p>
+        {slide === 0 && (
+          <img src="/favicon.png" alt="ScaleUp" style={{ width: 56, height: 56, borderRadius: 14 }} />
+        )}
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: T.text, textAlign: 'center', letterSpacing: '-0.3px' }}>
+          {title}
+        </h2>
+
+        {content}
 
         {/* Progress dots */}
         <div style={{ display: 'flex', gap: 6 }}>
-          {SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <div key={i} onClick={() => setSlide(i)} style={{
               height: 8, borderRadius: 4, cursor: 'pointer', transition: 'all 0.2s',
               width: i === slide ? 22 : 8,
@@ -55,7 +124,7 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 4 }}>
+        <div style={{ display: 'flex', gap: 8, width: '100%' }}>
           {!isLast && (
             <button onClick={onDone} style={{
               flex: 1, padding: '12px 0', borderRadius: 10, border: `1px solid ${T.border}`,

@@ -1,7 +1,6 @@
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
-import type { ChordInProgression, ChordPlacement } from '../types/music';
+import type { ChordInProgression, ChordPlacement, FretPosition } from '../types/music';
 import { formatChordName } from './chordIdentifier';
+import { fretToNote } from './musicTheory';
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -77,16 +76,22 @@ function buildProgressionHTML(
   name: string,
   progression: ChordInProgression[],
 ): string {
-  const cards = progression.map((item, i) => `
+  const cards = progression.map((item, i) => {
+    const diagram = item.fretPositions.length > 0
+      ? fretboardSVGHtml(item.fretPositions)
+      : '<div style="height:70px;"></div>';
+    return `
     <div style="
-      display:inline-block;width:100px;vertical-align:top;
+      display:inline-block;width:130px;vertical-align:top;
       background:#354a51;border-radius:8px;padding:10px 12px;
       margin:4px;text-align:center;
     ">
       <div style="font-size:11px;color:rgba(249,236,195,0.5);margin-bottom:3px;">${i + 1}</div>
       <div style="font-size:18px;font-weight:800;color:#F9ECC3;">${escapeHtml(formatChordName(item.chord.name))}</div>
       <div style="font-size:9px;color:rgba(249,236,195,0.55);margin-top:3px;">${escapeHtml(item.chord.notes.join(' · '))}</div>
-    </div>`).join('');
+      ${diagram}
+    </div>`;
+  }).join('');
 
   return `
     <div style="
@@ -101,6 +106,54 @@ function buildProgressionHTML(
       <div style="height:2px;background:#C44900;margin-bottom:20px;"></div>
       <div>${cards}</div>
     </div>`;
+}
+
+// ── Fretboard SVG for PDF ─────────────────────────────────
+
+function fretboardSVGHtml(voicing: FretPosition[]): string {
+  const STRING_COUNT = 6;
+  const W = 200, H = 90;
+  const hasOpen = voicing.some(p => p.fret === 0);
+  const nonZeroFrets = voicing.map(p => p.fret).filter(f => f > 0);
+  const minFret = nonZeroFrets.length > 0 ? Math.min(...nonZeroFrets) : 0;
+  const maxFret = voicing.length > 0 ? Math.max(...voicing.map(p => p.fret)) : 0;
+  const displayMin = hasOpen ? 0 : Math.max(0, minFret - 1);
+  const displayMax = Math.max(maxFret, displayMin + 4);
+  const fretCount = displayMax - displayMin;
+  const LEFT = displayMin === 0 ? 12 : 24;
+  const fretSp = (W - LEFT - 8) / fretCount;
+  const strSp = (H - 20) / (STRING_COUNT - 1);
+  const topY = 8;
+
+  const fx = (f: number) =>
+    f === 0 ? LEFT - fretSp * 0.5 : LEFT + (f - displayMin - 0.5) * fretSp;
+  const sy = (s: number) => topY + (STRING_COUNT - 1 - s) * strSp;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
+
+  // Fret lines
+  for (let i = 0; i <= fretCount; i++) {
+    const isNut = i === 0 && displayMin === 0;
+    svg += `<line x1="${LEFT + i * fretSp}" y1="${topY}" x2="${LEFT + i * fretSp}" y2="${topY + (STRING_COUNT - 1) * strSp}" stroke="${isNut ? '#2E4A5A' : '#CDBF96'}" stroke-width="${isNut ? 3 : 1}" opacity="${isNut ? 0.7 : 1}"/>`;
+  }
+  // String lines
+  for (let s = 0; s < STRING_COUNT; s++) {
+    svg += `<line x1="${LEFT}" y1="${sy(s)}" x2="${LEFT + fretCount * fretSp}" y2="${sy(s)}" stroke="#629677" stroke-width="${0.7 + s * 0.18}" opacity="0.5"/>`;
+  }
+  // Position label
+  if (displayMin > 0) {
+    svg += `<text x="${LEFT - 4}" y="${topY + (STRING_COUNT - 1) * strSp / 2 + 4}" text-anchor="end" font-size="7" fill="rgba(46,74,90,0.58)">${displayMin + 1}fr</text>`;
+  }
+  // Dots
+  for (const p of voicing) {
+    const cx = fx(p.fret), cy = sy(p.string);
+    const note = fretToNote(p.string, p.fret);
+    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#C44900" stroke="#F7F0DC" stroke-width="1" opacity="0.92"/>`;
+    svg += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">${note}</text>`;
+  }
+
+  svg += `</svg>`;
+  return svg;
 }
 
 // ── Shared renderer ───────────────────────────────────────
@@ -149,6 +202,11 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
     await document.fonts.ready;
 
     const target = (container.firstElementChild as HTMLElement) ?? container;
+
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ]);
 
     const canvas = await html2canvas(target, {
       scale: SCALE,

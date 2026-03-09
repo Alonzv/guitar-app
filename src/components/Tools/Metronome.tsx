@@ -80,6 +80,8 @@ export const Metronome: React.FC = () => {
   const nextBeatTimeRef  = useRef(0);
   const beatNumRef       = useRef(0);
   const intervalRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const visualRafRef     = useRef<number | null>(null);
+  const noteQueueRef     = useRef<{ beatNum: number; time: number }[]>([]);
   const bpmRef           = useRef(bpm);
   const beatsRef         = useRef(subdivision.beats);
   const clicksPerBeatRef = useRef(subdivision.clicksPerBeat);
@@ -98,11 +100,20 @@ export const Metronome: React.FC = () => {
     while (nextBeatTimeRef.current < ctx.currentTime + 0.1) {
       const b = beatNumRef.current;
       beep(ctx, nextBeatTimeRef.current, b === 0);
-      const delay = Math.max(0, (nextBeatTimeRef.current - ctx.currentTime) * 1000);
-      setTimeout(() => setBeat(b), delay);
+      noteQueueRef.current.push({ beatNum: b, time: nextBeatTimeRef.current });
       nextBeatTimeRef.current += 60 / (bpmRef.current * clicksPerBeatRef.current);
       beatNumRef.current = (beatNumRef.current + 1) % beatsRef.current;
     }
+  }, []);
+
+  const visualTick = useCallback(() => {
+    const ctx = getSharedContext();
+    const now = ctx.currentTime;
+    const q = noteQueueRef.current;
+    while (q.length > 0 && q[0].time <= now + 0.01) {
+      setBeat(q.shift()!.beatNum);
+    }
+    visualRafRef.current = requestAnimationFrame(visualTick);
   }, []);
 
   // handleStartStop MUST be the direct onClick so unlockAudio() runs
@@ -132,12 +143,23 @@ export const Metronome: React.FC = () => {
     }
   }, [playing]);
 
-  // Manage the scheduling interval in response to playing state.
+  // Manage the audio scheduling interval
   useEffect(() => {
     if (!playing) return;
     intervalRef.current = setInterval(schedule, 25);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [playing, schedule]);
+
+  // Manage the visual RAF loop (reads noteQueue, updates beat dot)
+  useEffect(() => {
+    if (!playing) {
+      if (visualRafRef.current) cancelAnimationFrame(visualRafRef.current);
+      return;
+    }
+    noteQueueRef.current = [];
+    visualRafRef.current = requestAnimationFrame(visualTick);
+    return () => { if (visualRafRef.current) cancelAnimationFrame(visualRafRef.current); };
+  }, [playing, visualTick]);
 
   const handleTap = useCallback(() => {
     const now = performance.now();

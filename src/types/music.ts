@@ -1,5 +1,12 @@
 export type Note = string; // "C", "F#", "Bb"
 
+export interface Tuning {
+  name: string;
+  label: string;
+  notes: string[];
+  openFreqs: number[];
+}
+
 export interface FretPosition {
   string: number; // 0=low E, 5=high E
   fret: number;   // 0=open, 1-12
@@ -32,7 +39,7 @@ export interface ProgressionSuggestion {
   genre?: string;
 }
 
-export type Genre = 'blues' | 'jazz' | 'pop' | 'rock' | 'metal' | 'any';
+export type Genre = 'blues' | 'jazz' | 'pop' | 'rock' | 'metal' | 'any' | 'custom';
 
 export interface Song {
   id: string;

@@ -1,6 +1,6 @@
 import { Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import type { FretPosition } from '../types/music';
-import { fretToNote, STRING_COUNT, FRET_COUNT } from './musicTheory';
+import { fretToNote, STRING_COUNT, FRET_COUNT, TUNINGS } from './musicTheory';
 
 // Compare pitches by chroma (0-11) — handles all enharmonics (C#=Db, E#=F, Cb=B, etc.)
 function samePitch(a: string, b: string): boolean {
@@ -23,7 +23,11 @@ function getRequiredNotes(chordNotes: string[]): string[] {
 
 // Given a Tonal.js chord name (e.g. "CM", "Am7", "Dm11"),
 // returns up to `count` distinct voicings as arrays of FretPosition.
-export function findChordVoicings(chordName: string, count = 8): FretPosition[][] {
+export function findChordVoicings(
+  chordName: string,
+  count = 8,
+  tuning: string[] = TUNINGS[0].notes,
+): FretPosition[][] {
   const info = TonalChord.get(chordName);
   const chordNotes = info.notes;
   if (chordNotes.length < 2) return [];
@@ -40,7 +44,7 @@ export function findChordVoicings(chordName: string, count = 8): FretPosition[][
     for (let s = 0; s < STRING_COUNT; s++) {
       // Try each fret in the window (lowest first)
       for (let f = startFret; f <= windowMax; f++) {
-        const note = fretToNote(s, f);
+        const note = fretToNote(s, f, tuning);
         if (noteInChord(note, chordNotes)) {
           voicing.push({ string: s, fret: f });
           break;
@@ -50,7 +54,7 @@ export function findChordVoicings(chordName: string, count = 8): FretPosition[][
 
     // Required notes (shell voicing) must all appear, and ≥3 strings must be used
     const requiredCovered = required.every(rn =>
-      voicing.some(p => samePitch(fretToNote(p.string, p.fret), rn))
+      voicing.some(p => samePitch(fretToNote(p.string, p.fret, tuning), rn))
     );
     if (!requiredCovered || voicing.length < 3) continue;
 

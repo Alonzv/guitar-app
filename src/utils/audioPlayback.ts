@@ -1,5 +1,5 @@
 // Guitar open-string frequencies — standard tuning E-A-D-G-B-E
-const OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
+const STANDARD_OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AudioCtxClass: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -122,7 +122,11 @@ export function playScale(midiNotes: number[]): void {
 }
 
 /** Arpeggiate a chord low → high. Call only from a user-gesture handler. */
-export function playChord(fretPositions: FretPos[]): void {
+export function playChord(
+  fretPositions: FretPos[],
+  openFreqs = STANDARD_OPEN_FREQS,
+  capo = 0,
+): void {
   if (fretPositions.length === 0) return;
   unlockAudio();
   const ctx = getSharedContext();
@@ -130,7 +134,7 @@ export function playChord(fretPositions: FretPos[]): void {
   const schedule = () => {
     const sorted = [...fretPositions].sort((a, b) => a.string - b.string);
     sorted.forEach((pos, i) => {
-      const freq = OPEN_FREQS[pos.string] * Math.pow(2, pos.fret / 12);
+      const freq = openFreqs[pos.string] * Math.pow(2, (pos.fret + capo) / 12);
       synthesizeNote(ctx, freq, ctx.currentTime + 0.1 + i * 0.065);
     });
   };

@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
-import type { ChordInProgression, ScaleMatch, Song } from './types/music';
+import { useState, useEffect, useRef } from 'react';
+import type { ChordInProgression, ScaleMatch, Song, Tuning } from './types/music';
+import { TUNINGS } from './utils/musicTheory';
 import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { LyricsTab } from './components/Lyrics/LyricsTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
 import { Onboarding } from './components/Onboarding';
 import { SongLibraryModal } from './components/SongLibrary/SongLibraryModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { T } from './theme';
 
 type Tab = 'chords' | 'scales' | 'lyrics' | 'tools';
@@ -48,11 +50,65 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chords');
 
+  // ── Progression with undo/redo ─────────────────────────────────────────────
   const [progression, setProgression] = useState<ChordInProgression[]>(() => {
     try { return JSON.parse(localStorage.getItem('scaleup_progression') || '[]'); }
     catch { return []; }
   });
+  const [undoStack, setUndoStack] = useState<ChordInProgression[][]>([]);
+  const [redoStack, setRedoStack] = useState<ChordInProgression[][]>([]);
 
+  // Refs so keyboard handler always sees current values without re-registering
+  const progressionRef = useRef(progression);
+  progressionRef.current = progression;
+  const undoRef = useRef(undoStack);
+  undoRef.current = undoStack;
+  const redoRef = useRef(redoStack);
+  redoRef.current = redoStack;
+
+  const pushHistory = (next: ChordInProgression[]) => {
+    setUndoStack(prev => [...prev.slice(-49), progressionRef.current]);
+    setRedoStack([]);
+    setProgression(next);
+  };
+
+  const handleUndo = () => {
+    const stack = undoRef.current;
+    if (stack.length === 0) return;
+    setRedoStack(prev => [progressionRef.current, ...prev]);
+    setProgression(stack[stack.length - 1]);
+    setUndoStack(prev => prev.slice(0, -1));
+  };
+
+  const handleRedo = () => {
+    const stack = redoRef.current;
+    if (stack.length === 0) return;
+    setUndoStack(prev => [...prev, progressionRef.current]);
+    setProgression(stack[0]);
+    setRedoStack(prev => prev.slice(1));
+  };
+
+  // Keyboard shortcuts: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key === 'z') || e.key === 'y')) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []); // uses refs internally — no deps needed
+
+  // ── Tuning & Capo ──────────────────────────────────────────────────────────
+  const [tuning, setTuning] = useState<Tuning>(TUNINGS[0]);
+  const [capo, setCapo] = useState(0);
+
+  // ── Other state ────────────────────────────────────────────────────────────
   const [songs, setSongs] = useState<Song[]>(() => {
     try { return JSON.parse(localStorage.getItem('scaleup_songs') || '[]'); }
     catch { return []; }
@@ -85,19 +141,17 @@ export default function App() {
   };
 
   const handleReorderProgression = (id: string, dir: -1 | 1) => {
-    setProgression(prev => {
-      const idx = prev.findIndex(c => c.id === id);
-      if (idx === -1) return prev;
-      const swapIdx = idx + dir;
-      if (swapIdx < 0 || swapIdx >= prev.length) return prev;
-      const next = [...prev];
-      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
-      return next;
-    });
+    const idx = progression.findIndex(c => c.id === id);
+    if (idx === -1) return;
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= progression.length) return;
+    const next = [...progression];
+    [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+    pushHistory(next);
   };
 
   const handleTransposeProgression = (semitones: number) => {
-    setProgression(prev => prev.map(item => ({
+    pushHistory(progression.map(item => ({
       ...item,
       chord: { ...item.chord, name: transposeChordName(item.chord.name, semitones) },
     })));
@@ -114,7 +168,7 @@ export default function App() {
   };
 
   const handleLoadSong = (song: Song) => {
-    setProgression(song.progression);
+    pushHistory(song.progression);
     setActiveTab('chords');
   };
 
@@ -124,7 +178,7 @@ export default function App() {
 
   const handleLoadShared = () => {
     if (sharedProgression) {
-      setProgression(sharedProgression);
+      pushHistory(sharedProgression);
       setActiveTab('chords');
     }
     setShowSharedBanner(false);
@@ -239,25 +293,44 @@ export default function App() {
       {/* ── Content ── */}
       <main style={{ flex: 1, overflowY: 'auto', padding: 'var(--gc-content-pad)', maxWidth: 700, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         {activeTab === 'chords' && (
-          <ChordsTab
-            progression={progression}
-            onAddToProgression={(item) => setProgression(prev => [...prev, item])}
-            onRemoveFromProgression={(id) => setProgression(prev => prev.filter(c => c.id !== id))}
-            onClearProgression={() => setProgression([])}
-            onReorderProgression={handleReorderProgression}
-            onTransposeProgression={handleTransposeProgression}
-            onSaveSong={handleSaveSong}
-          />
+          <ErrorBoundary label="Chords">
+            <ChordsTab
+              progression={progression}
+              onAddToProgression={(item) => pushHistory([...progression, item])}
+              onRemoveFromProgression={(id) => pushHistory(progression.filter(c => c.id !== id))}
+              onClearProgression={() => pushHistory([])}
+              onReorderProgression={handleReorderProgression}
+              onTransposeProgression={handleTransposeProgression}
+              onSaveSong={handleSaveSong}
+              tuning={tuning}
+              capo={capo}
+              onCapoChange={setCapo}
+              canUndo={undoStack.length > 0}
+              canRedo={redoStack.length > 0}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+            />
+          </ErrorBoundary>
         )}
         {activeTab === 'scales' && (
-          <ScalesTab
-            progression={progression}
-            selectedScale={selectedScale}
-            onSelectScale={setSelectedScale}
-          />
+          <ErrorBoundary label="Scales">
+            <ScalesTab
+              progression={progression}
+              selectedScale={selectedScale}
+              onSelectScale={setSelectedScale}
+            />
+          </ErrorBoundary>
         )}
-        {activeTab === 'lyrics' && <LyricsTab progression={progression} />}
-        {activeTab === 'tools'  && <ToolsTab />}
+        {activeTab === 'lyrics' && (
+          <ErrorBoundary label="Lyrics">
+            <LyricsTab progression={progression} />
+          </ErrorBoundary>
+        )}
+        {activeTab === 'tools' && (
+          <ErrorBoundary label="Tools">
+            <ToolsTab tuning={tuning} onTuningChange={setTuning} />
+          </ErrorBoundary>
+        )}
       </main>
     </div>
   );

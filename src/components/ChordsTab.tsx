@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChordBuilderTab } from './ChordBuilder/ChordBuilderTab';
 import { ChordPickerTab } from './ChordPicker/ChordPickerTab';
-import type { ChordInProgression } from '../types/music';
+import type { ChordInProgression, Tuning } from '../types/music';
 import { T } from '../theme';
 
 type Sub = 'builder' | 'finder';
@@ -14,6 +14,13 @@ interface Props {
   onReorderProgression: (id: string, dir: -1 | 1) => void;
   onTransposeProgression: (semitones: number) => void;
   onSaveSong: (name: string) => void;
+  tuning: Tuning;
+  capo: number;
+  onCapoChange: (capo: number) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 const SUB_LABELS: Record<Sub, string> = {
@@ -24,6 +31,8 @@ const SUB_LABELS: Record<Sub, string> = {
 export const ChordsTab: React.FC<Props> = ({
   progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
   onReorderProgression, onTransposeProgression, onSaveSong,
+  tuning, capo, onCapoChange,
+  canUndo, canRedo, onUndo, onRedo,
 }) => {
   const [sub, setSub] = useState<Sub>('builder');
 
@@ -53,6 +62,13 @@ export const ChordsTab: React.FC<Props> = ({
           onReorderProgression={onReorderProgression}
           onTransposeProgression={onTransposeProgression}
           onSaveSong={onSaveSong}
+          tuning={tuning}
+          capo={capo}
+          onCapoChange={onCapoChange}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={onUndo}
+          onRedo={onRedo}
         />
       )}
       {sub === 'finder' && (

@@ -143,14 +143,18 @@ export function formatChordName(name: string): string {
 }
 
 // ── Public API ─────────────────────────────────────────────
-export function identifyChord(positions: FretPosition[]): Chord[] {
+export function identifyChord(
+  positions: FretPosition[],
+  tuning?: string[],
+  capo = 0,
+): Chord[] {
   if (positions.length < 2) return [];
 
   // Determine bass note = lowest string with an active dot
   const lowest   = [...positions].sort((a, b) => a.string - b.string)[0];
-  const bassNote = fretToNote(lowest.string, lowest.fret);
+  const bassNote = fretToNote(lowest.string, lowest.fret, tuning, capo);
 
-  const allNotes    = fretPositionsToNotes(positions);
+  const allNotes    = fretPositionsToNotes(positions, tuning, capo);
   const pitchClasses = notesToPitchClasses(allNotes);
   if (pitchClasses.length < 2) return [];
 

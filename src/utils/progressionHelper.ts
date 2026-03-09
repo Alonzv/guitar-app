@@ -151,3 +151,32 @@ export function suggestNextChords(
   return results.slice(0, 6);
 }
 
+// Suggest chords from a user-entered Roman numeral string (e.g. "I IV V vi")
+export function suggestCustomChords(
+  progression: ChordInProgression[],
+  numeralString: string,
+): ProgressionSuggestion[] {
+  if (progression.length === 0 || !numeralString.trim()) return [];
+
+  const detectedKey = detectKey(progression.map(c => c.chord));
+  const keyRoot = detectedKey.split(' ')[0] || 'C';
+  const isMajor = detectedKey.includes('major');
+
+  const tokens = numeralString.trim().split(/\s+/);
+  const results: ProgressionSuggestion[] = [];
+  const seen = new Set<string>();
+
+  for (const token of tokens) {
+    const chordName = buildChordFromNumeral(token, keyRoot, isMajor);
+    if (!chordName || seen.has(chordName)) continue;
+    seen.add(chordName);
+    const info = TonalChord.get(chordName);
+    if (info.empty) continue;
+    results.push({
+      chord: { name: chordName, notes: info.notes, aliases: info.aliases },
+      reason: `custom: ${token}`,
+      romanNumeral: token,
+    });
+  }
+  return results.slice(0, 6);
+}
