@@ -3,7 +3,7 @@ import { ScaleDetector } from './ScaleDetector';
 import { ScaleVisualizer } from './ScaleVisualizer';
 import { ScaleExplorer } from './ScaleExplorer';
 import { HarmonyBuilder } from './HarmonyBuilder';
-import type { ChordInProgression, ScaleMatch } from '../../types/music';
+import type { ChordInProgression, ScaleMatch, Tuning } from '../../types/music';
 import { T } from '../../theme';
 
 type Sub = 'detect' | 'explore';
@@ -13,9 +13,10 @@ interface Props {
   selectedScale: ScaleMatch | null;
   onSelectScale: (scale: ScaleMatch) => void;
   preferredKey?: string;
+  tuning: Tuning;
 }
 
-export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelectScale, preferredKey }) => {
+export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelectScale, preferredKey, tuning }) => {
   const [sub, setSub] = useState<Sub>('detect');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -41,7 +42,7 @@ export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelec
         <ScaleExplorer />
       )}
 
-      <HarmonyBuilder selectedScale={selectedScale} />
+      <HarmonyBuilder selectedScale={selectedScale} tuning={tuning} />
     </div>
   );
 };

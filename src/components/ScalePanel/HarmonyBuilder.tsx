@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Note as TonalNote, Interval, Scale } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
-import type { ScaleMatch } from '../../types/music';
-import { TUNINGS } from '../../utils/musicTheory';
+import type { ScaleMatch, Tuning } from '../../types/music';
 import { exportHarmonyPDF } from '../../utils/pdfExport';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -28,21 +27,30 @@ const STRINGS: { label: string; tuningIdx: number }[] = [
   { label: 'E', tuningIdx: 0 },
 ];
 
-const TUNING_NOTES = TUNINGS[0].notes; // ['E2','A2','D3','G3','B3','E4']
-
 // ── Music helpers ──────────────────────────────────────────────────────────
 
-function getFretNote(tuningIdx: number, fret: number): string {
-  const openNote = TUNING_NOTES[tuningIdx];
+// Compare two pitch classes enharmonically (C# === Db)
+function sameChroma(a: string, b: string): boolean {
+  const ca = TonalNote.chroma(a);
+  const cb = TonalNote.chroma(b);
+  return ca !== undefined && cb !== undefined && ca === cb;
+}
+
+function getFretNote(tuningIdx: number, fret: number, tuningNotes: string[]): string {
+  const openNote = tuningNotes[tuningIdx];
   if (fret === 0) return TonalNote.pitchClass(openNote) ?? openNote;
   const transposed = TonalNote.transpose(openNote, Interval.fromSemitones(fret));
   return TonalNote.pitchClass(transposed) ?? transposed;
 }
 
-function findFretForPitchClass(pc: string, tuningIdx: number, minFret: number): number | null {
-  const normalized = TonalNote.pitchClass(pc);
+function findFretForChroma(
+  chroma: number,
+  tuningIdx: number,
+  minFret: number,
+  tuningNotes: string[],
+): number | null {
   for (let f = minFret; f <= 24; f++) {
-    if (getFretNote(tuningIdx, f) === normalized) return f;
+    if (TonalNote.chroma(getFretNote(tuningIdx, f, tuningNotes)) === chroma) return f;
   }
   return null;
 }
@@ -52,15 +60,16 @@ function harmonizeFret(
   fret: number,
   harmonyType: HarmonyType,
   scaleNotes: string[],
+  tuningNotes: string[],
 ): number | null {
   if (harmonyType === 'diatonic3rd') {
-    const note = getFretNote(tuningIdx, fret);
-    const scaleIdx = scaleNotes.findIndex(
-      n => TonalNote.pitchClass(n) === TonalNote.pitchClass(note),
-    );
+    const note = getFretNote(tuningIdx, fret, tuningNotes);
+    const scaleIdx = scaleNotes.findIndex(n => sameChroma(n, note));
     if (scaleIdx === -1) return null;
-    const targetPC = TonalNote.pitchClass(scaleNotes[(scaleIdx + 2) % scaleNotes.length]);
-    return findFretForPitchClass(targetPC, tuningIdx, fret + 1);
+    const targetPC = scaleNotes[(scaleIdx + 2) % scaleNotes.length];
+    const targetChroma = TonalNote.chroma(targetPC);
+    if (targetChroma === undefined) return null;
+    return findFretForChroma(targetChroma, tuningIdx, fret + 1, tuningNotes);
   }
 
   const semitoneMap: Record<Exclude<HarmonyType, 'diatonic3rd'>, number> = {
@@ -74,17 +83,20 @@ function harmonizeFret(
   return result <= 24 ? result : null;
 }
 
-// Replace every fret number in a tab line with its harmony fret
+// Replace every fret number in a tab line with its harmony fret.
+// Pads with '-' when replacement is shorter to preserve alignment.
 function processLine(
   line: string,
   tuningIdx: number,
   harmonyType: HarmonyType,
   scaleNotes: string[],
+  tuningNotes: string[],
 ): string {
   return line.replace(/\d+/g, match => {
     const fret = parseInt(match, 10);
-    const h = harmonizeFret(tuningIdx, fret, harmonyType, scaleNotes);
-    return h === null ? '?' : String(h);
+    const h = harmonizeFret(tuningIdx, fret, harmonyType, scaleNotes, tuningNotes);
+    if (h === null) return '?'.padStart(match.length, '-');
+    return String(h).padStart(match.length, '-');
   });
 }
 
@@ -92,17 +104,20 @@ function processLine(
 
 interface Props {
   selectedScale: ScaleMatch | null;
+  tuning: Tuning;
 }
 
 const EMPTY_STRINGS = Array(6).fill('');
 
-export const HarmonyBuilder: React.FC<Props> = ({ selectedScale }) => {
+export const HarmonyBuilder: React.FC<Props> = ({ selectedScale, tuning }) => {
   const [open, setOpen] = useState(false);
   const [harmonyType, setHarmonyType] = useState<HarmonyType>('diatonic3rd');
   const [lines, setLines] = useState<string[]>(EMPTY_STRINGS);
   const [result, setResult] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  const tuningNotes = tuning.notes; // e.g. ['E2','A2','D3','G3','B3','E4']
 
   const scaleNotes: string[] = selectedScale
     ? Scale.get(`${selectedScale.root} ${selectedScale.type}`).notes
@@ -124,7 +139,7 @@ export const HarmonyBuilder: React.FC<Props> = ({ selectedScale }) => {
     }
 
     const harmony = STRINGS.map(({ tuningIdx }, i) =>
-      processLine(lines[i] || '', tuningIdx, harmonyType, scaleNotes),
+      processLine(lines[i] || '', tuningIdx, harmonyType, scaleNotes, tuningNotes),
     );
     setResult(harmony);
   };
@@ -140,14 +155,16 @@ export const HarmonyBuilder: React.FC<Props> = ({ selectedScale }) => {
     setExporting(true);
     try {
       const label = HARMONY_OPTIONS.find(o => o.value === harmonyType)?.label
-        .replace(/^[^\w]+/, '') // strip leading emoji
+        .replace(/^[^\w]+/, '')
         ?? harmonyType;
-      await exportHarmonyPDF(
-        label,
-        STRINGS.map(s => s.label),
-        lines,
-        result,
-      );
+
+      // Only include strings that have actual content in the original riff
+      const activeIndices = STRINGS.map((_, i) => i).filter(i => /\d/.test(lines[i] || ''));
+      const activeLabels  = activeIndices.map(i => STRINGS[i].label);
+      const activeOriginal = activeIndices.map(i => lines[i] || '');
+      const activeHarmony  = activeIndices.map(i => result[i] || '');
+
+      await exportHarmonyPDF(label, activeLabels, activeOriginal, activeHarmony);
     } finally {
       setExporting(false);
     }
@@ -183,6 +200,11 @@ export const HarmonyBuilder: React.FC<Props> = ({ selectedScale }) => {
       {/* ── Expandable body ── */}
       {open && (
         <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* Tuning indicator */}
+          <div style={{ fontSize: 11, color: T.textMuted, background: T.bgDeep, borderRadius: 6, padding: '5px 10px' }}>
+            Tuning: <strong style={{ color: T.text }}>{tuning.label}</strong>
+          </div>
 
           {/* Harmony type selector */}
           <div>

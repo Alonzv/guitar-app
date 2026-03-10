@@ -321,6 +321,7 @@ export default function App() {
               selectedScale={selectedScale}
               onSelectScale={setSelectedScale}
               preferredKey={detectKey(progression.map(c => c.chord)) || undefined}
+              tuning={tuning}
             />
           </ErrorBoundary>
         )}
