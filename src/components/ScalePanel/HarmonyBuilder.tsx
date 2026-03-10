@@ -8,6 +8,9 @@ import { exportHarmonyPDF } from '../../utils/pdfExport';
 
 type HarmonyType = 'diatonic3rd' | 'minor3rd' | 'perfect5th';
 
+// A single note in the global sequence: which string + which fret
+interface TabNote { stringIdx: number; fret: number; }
+
 const HARMONY_OPTIONS: { value: HarmonyType; label: string }[] = [
   { value: 'diatonic3rd', label: 'Diatonic 3rd' },
   { value: 'minor3rd',    label: 'Minor 3rd (+3)' },
@@ -95,24 +98,54 @@ function harmonizeFret(
   return result <= 24 ? result : null;
 }
 
-// Render two aligned tab lines from parallel sequences.
-// Each note slot is padded to the same width so both lines align column-by-column.
-function renderAligned(
-  original: number[],
-  harmony: (number | null)[],
-): { origLine: string; harmLine: string } {
-  if (original.length === 0) return { origLine: '', harmLine: '' };
-  const slots = original.map((orig, i) => {
-    const h = harmony[i];
-    const os = String(orig);
-    const hs = h === null ? '?' : String(h);
-    const w = Math.max(os.length, hs.length);
-    return { orig: os.padStart(w, '-'), harm: hs.padStart(w, '-') };
-  });
-  return {
-    origLine: '--' + slots.map(s => s.orig).join('--') + '--',
-    harmLine: '--' + slots.map(s => s.harm).join('--') + '--',
-  };
+// ── Tab rendering ──────────────────────────────────────────────────────────
+
+// Render a global sequence as 6 tab lines.
+// Each note occupies one column; other strings get dashes of the same width.
+function renderTabLines(sequence: TabNote[]): string[] {
+  if (sequence.length === 0) return STRINGS.map(() => '');
+  const lines = STRINGS.map(() => '--');
+  for (const { stringIdx, fret } of sequence) {
+    const fs = String(fret);
+    for (let s = 0; s < STRINGS.length; s++) {
+      lines[s] += (s === stringIdx ? fs : '-'.repeat(fs.length)) + '--';
+    }
+  }
+  return lines;
+}
+
+// Render both original and harmony tabs together, with per-column alignment.
+function renderBothTabs(
+  sequence: TabNote[],
+  harmonyFrets: (number | null)[],
+): { origLines: string[]; harmLines: string[] } {
+  if (sequence.length === 0) {
+    return { origLines: STRINGS.map(() => ''), harmLines: STRINGS.map(() => '') };
+  }
+  const origLines = STRINGS.map(() => '--');
+  const harmLines = STRINGS.map(() => '--');
+
+  for (let i = 0; i < sequence.length; i++) {
+    const { stringIdx, fret } = sequence[i];
+    const hFret = harmonyFrets[i];
+    const origStr = String(fret);
+    const harmStr = hFret === null ? '?' : String(hFret);
+    const slotWidth = Math.max(origStr.length, harmStr.length);
+    const origPad = origStr.padStart(slotWidth, '-');
+    const harmPad = harmStr.padStart(slotWidth, '-');
+    const dashPad = '-'.repeat(slotWidth);
+
+    for (let s = 0; s < STRINGS.length; s++) {
+      if (s === stringIdx) {
+        origLines[s] += origPad + '--';
+        harmLines[s] += harmPad + '--';
+      } else {
+        origLines[s] += dashPad + '--';
+        harmLines[s] += dashPad + '--';
+      }
+    }
+  }
+  return { origLines, harmLines };
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -125,8 +158,9 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
   const [root, setRoot] = useState('A');
   const [scaleType, setScaleType] = useState('minor pentatonic');
   const [harmonyType, setHarmonyType] = useState<HarmonyType>('diatonic3rd');
-  const [sequences, setSequences] = useState<number[][]>(() => Array.from({ length: 6 }, () => []));
-  const [result, setResult] = useState<{ origLine: string; harmLine: string }[] | null>(null);
+  // Single ordered sequence across all strings
+  const [sequence, setSequence] = useState<TabNote[]>([]);
+  const [result, setResult] = useState<{ origLines: string[]; harmLines: string[] } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [showPassing, setShowPassing] = useState(false);
 
@@ -144,51 +178,42 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
   const passingFretsByString = useMemo(
     () => STRINGS.map(({ tuningIdx }) => {
       const inScale = new Set(getScaleFrets(tuningIdx, scaleNotes, tuningNotes));
-      const result: number[] = [];
+      const res: number[] = [];
       for (let f = 0; f <= MAX_FRET; f++) {
-        if (!inScale.has(f)) result.push(f);
+        if (!inScale.has(f)) res.push(f);
       }
-      return result;
+      return res;
     }),
     [scaleNotes, tuningNotes],
   );
 
-  const hasAnyNotes = sequences.some(seq => seq.length > 0);
+  const previewLines = useMemo(() => renderTabLines(sequence), [sequence]);
 
   const addNote = (strIdx: number, fret: number) => {
-    setSequences(prev => {
-      const next = prev.map(s => [...s]);
-      next[strIdx] = [...next[strIdx], fret];
-      return next;
+    setSequence(prev => [...prev, { stringIdx: strIdx, fret }]);
+    setResult(null);
+  };
+
+  // Remove the last note that belongs to this string, keeping others in order
+  const removeLastOfString = (strIdx: number) => {
+    setSequence(prev => {
+      const lastIdx = [...prev].map((n, i) => ({ n, i }))
+        .filter(({ n }) => n.stringIdx === strIdx)
+        .at(-1)?.i;
+      if (lastIdx === undefined) return prev;
+      return [...prev.slice(0, lastIdx), ...prev.slice(lastIdx + 1)];
     });
     setResult(null);
   };
 
-  const removeLast = (strIdx: number) => {
-    setSequences(prev => {
-      const next = prev.map(s => [...s]);
-      next[strIdx] = next[strIdx].slice(0, -1);
-      return next;
-    });
-    setResult(null);
-  };
-
-  const handleClear = () => {
-    setSequences(Array.from({ length: 6 }, () => []));
-    setResult(null);
-  };
+  const handleClear = () => { setSequence([]); setResult(null); };
 
   const handleGenerate = () => {
-    if (!hasAnyNotes) return;
-    const generated = STRINGS.map(({ tuningIdx }, i) => {
-      const seq = sequences[i];
-      if (seq.length === 0) return { origLine: '', harmLine: '' };
-      const harmSeq = seq.map(fret =>
-        harmonizeFret(tuningIdx, fret, harmonyType, scaleNotes, tuningNotes),
-      );
-      return renderAligned(seq, harmSeq);
-    });
-    setResult(generated);
+    if (sequence.length === 0) return;
+    const harmonyFrets = sequence.map(({ stringIdx, fret }) =>
+      harmonizeFret(stringIdx, fret, harmonyType, scaleNotes, tuningNotes),
+    );
+    setResult(renderBothTabs(sequence, harmonyFrets));
   };
 
   const handleExportPDF = async () => {
@@ -196,17 +221,25 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
     setExporting(true);
     try {
       const label = HARMONY_OPTIONS.find(o => o.value === harmonyType)?.label ?? harmonyType;
-      const activeIndices = sequences.map((_seq, i) => i).filter(i => sequences[i].length > 0);
+      const scaleName = `${root} ${SCALE_TYPES.find(s => s.value === scaleType)?.label ?? scaleType}`;
+      // Only export strings that have content
+      const activeIndices = STRINGS.map((_, i) => i).filter(i => result.origLines[i]);
       await exportHarmonyPDF(
-        `${root} ${SCALE_TYPES.find(s => s.value === scaleType)?.label ?? scaleType} — ${label}`,
+        `${scaleName} — ${label}`,
         activeIndices.map(i => STRINGS[i].label),
-        activeIndices.map(i => result[i].origLine),
-        activeIndices.map(i => result[i].harmLine),
+        activeIndices.map(i => result.origLines[i]),
+        activeIndices.map(i => result.harmLines[i]),
       );
     } finally {
       setExporting(false);
     }
   };
+
+  // Count notes per string (for disabling ⌫)
+  const noteCountByString = useMemo(
+    () => STRINGS.map((_, i) => sequence.filter(n => n.stringIdx === i).length),
+    [sequence],
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -247,7 +280,8 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
           <button
             onClick={() => setShowPassing(p => !p)}
             style={{
-              padding: '5px 12px', borderRadius: 20, border: `1px solid ${showPassing ? T.primary : T.border}`,
+              padding: '5px 12px', borderRadius: 20,
+              border: `1px solid ${showPassing ? T.primary : T.border}`,
               background: showPassing ? T.primaryBg : T.bgDeep,
               color: showPassing ? T.primary : T.textMuted,
               fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
@@ -263,57 +297,94 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
         </div>
       </div>
 
+      {/* ── Sequence chip bar ── */}
+      {sequence.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          overflowX: 'auto', padding: '6px 2px',
+        }}>
+          {sequence.map((note, i) => (
+            <span key={i} style={{
+              flexShrink: 0, padding: '3px 8px', borderRadius: 6,
+              background: T.bgCard, border: `1px solid ${T.border}`,
+              fontSize: 12, fontWeight: 700, fontFamily: 'monospace',
+              color: T.text, whiteSpace: 'nowrap',
+            }}>
+              {STRINGS[note.stringIdx].label}:{note.fret}
+            </span>
+          ))}
+          <button
+            onClick={handleClear}
+            style={{
+              flexShrink: 0, padding: '3px 10px', borderRadius: 6,
+              border: `1px solid ${T.border}`, background: T.bgInput,
+              color: T.textMuted, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {/* ── Live tab preview ── */}
+      {sequence.length > 0 && (
+        <div style={{
+          background: T.bgDeep, borderRadius: 10, border: `1px solid ${T.border}`,
+          padding: '10px 12px',
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, marginBottom: 6, letterSpacing: '0.5px' }}>
+            PREVIEW
+          </div>
+          <div style={{ fontFamily: 'monospace', fontSize: 13, color: T.text, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {STRINGS.map(({ label }, i) => (
+              <div key={label}>
+                <span style={{ fontWeight: 700, color: T.textMuted }}>{label}</span>
+                <span style={{ color: T.textDim }}>|</span>
+                {previewLines[i] || '--'}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Fretboard input ── */}
       <div style={{ ...card() }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, marginBottom: 12, letterSpacing: '0.5px' }}>
-          BUILD YOUR RIFF — click fret numbers to add notes
+          BUILD YOUR RIFF — click frets in the order you want to play them
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {STRINGS.map(({ label }, strIdx) => {
-            const seq = sequences[strIdx];
-            const frets = scaleFretsByString[strIdx];
-            const preview = seq.length > 0
-              ? '--' + seq.join('--') + '--'
-              : '';
-
+            const hasnotes = noteCountByString[strIdx] > 0;
             return (
               <div key={label}>
-                {/* String label + preview + backspace */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                   <span style={{
                     width: 18, fontWeight: 800, fontSize: 13, color: T.text,
                     flexShrink: 0, fontFamily: 'monospace',
                   }}>{label}</span>
-                  <span style={{ color: T.textDim, fontSize: 13, fontFamily: 'monospace' }}>|</span>
-                  <span style={{
-                    flex: 1, fontFamily: 'monospace', fontSize: 13,
-                    color: seq.length > 0 ? T.text : T.textDim,
-                    background: T.bgDeep, borderRadius: 6,
-                    padding: '4px 8px', minHeight: 26,
-                    border: `1px solid ${seq.length > 0 ? T.border : 'transparent'}`,
-                    letterSpacing: '0.5px',
-                  }}>
-                    {preview || <span style={{ opacity: 0.35 }}>——</span>}
+                  <span style={{ flex: 1, fontSize: 11, color: T.textMuted }}>
+                    {noteCountByString[strIdx] > 0
+                      ? `${noteCountByString[strIdx]} note${noteCountByString[strIdx] > 1 ? 's' : ''}`
+                      : ''}
                   </span>
                   <button
-                    onClick={() => removeLast(strIdx)}
-                    disabled={seq.length === 0}
-                    title="Remove last note"
+                    onClick={() => removeLastOfString(strIdx)}
+                    disabled={!hasnotes}
+                    title="Remove last note on this string"
                     style={{
                       width: 28, height: 28, borderRadius: 7,
                       border: `1px solid ${T.border}`,
-                      background: seq.length > 0 ? T.bgInput : T.bgDeep,
-                      color: seq.length > 0 ? T.text : T.textDim,
-                      fontSize: 14, cursor: seq.length > 0 ? 'pointer' : 'default',
+                      background: hasnotes ? T.bgInput : T.bgDeep,
+                      color: hasnotes ? T.text : T.textDim,
+                      fontSize: 14, cursor: hasnotes ? 'pointer' : 'default',
                       flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >⌫</button>
                 </div>
 
-                {/* Fret buttons */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingLeft: 24 }}>
-                  {frets.map(fret => (
+                  {scaleFretsByString[strIdx].map(fret => (
                     <button
                       key={fret}
                       onClick={() => addNote(strIdx, fret)}
@@ -372,25 +443,16 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
         </select>
         <button
           onClick={handleGenerate}
-          disabled={!hasAnyNotes}
+          disabled={sequence.length === 0}
           style={{
             flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-            background: hasAnyNotes ? T.secondary : T.border,
-            color: hasAnyNotes ? T.white : T.textDim,
-            fontWeight: 700, fontSize: 13, cursor: hasAnyNotes ? 'pointer' : 'default',
+            background: sequence.length > 0 ? T.secondary : T.border,
+            color: sequence.length > 0 ? T.white : T.textDim,
+            fontWeight: 700, fontSize: 13, cursor: sequence.length > 0 ? 'pointer' : 'default',
             transition: 'background 0.15s',
           }}
         >
           Generate Harmony
-        </button>
-        <button
-          onClick={handleClear}
-          style={{
-            padding: '10px 14px', borderRadius: 10, border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.textMuted, fontWeight: 600, fontSize: 13, cursor: 'pointer',
-          }}
-        >
-          Clear
         </button>
       </div>
 
@@ -398,37 +460,33 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
       {result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-          {/* Original tab */}
           <div style={{ ...card() }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, letterSpacing: '0.5px', marginBottom: 8 }}>
               YOUR RIFF
             </div>
-            <div style={{
-              fontFamily: 'monospace', fontSize: 13, color: T.text,
-              display: 'flex', flexDirection: 'column', gap: 3,
-            }}>
-              {STRINGS.map(({ label }, i) => (
-                result[i].origLine
-                  ? <div key={label}><span style={{ color: T.textMuted, fontWeight: 700 }}>{label}</span>|{result[i].origLine}</div>
-                  : null
-              ))}
+            <div style={{ fontFamily: 'monospace', fontSize: 13, color: T.text, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {STRINGS.map(({ label }, i) => result.origLines[i] ? (
+                <div key={label}>
+                  <span style={{ fontWeight: 700, color: T.textMuted }}>{label}</span>
+                  <span style={{ color: T.textDim }}>|</span>
+                  {result.origLines[i]}
+                </div>
+              ) : null)}
             </div>
           </div>
 
-          {/* Harmony tab */}
           <div style={{ ...card(), border: `1px solid ${T.secondary}` }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: T.secondary, letterSpacing: '0.5px', marginBottom: 8 }}>
               HARMONY — {HARMONY_OPTIONS.find(o => o.value === harmonyType)?.label}
             </div>
-            <div style={{
-              fontFamily: 'monospace', fontSize: 13, color: T.text,
-              display: 'flex', flexDirection: 'column', gap: 3,
-            }}>
-              {STRINGS.map(({ label }, i) => (
-                result[i].harmLine
-                  ? <div key={label}><span style={{ color: T.secondary, fontWeight: 700 }}>{label}</span>|{result[i].harmLine}</div>
-                  : null
-              ))}
+            <div style={{ fontFamily: 'monospace', fontSize: 13, color: T.text, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {STRINGS.map(({ label }, i) => result.harmLines[i] ? (
+                <div key={label}>
+                  <span style={{ fontWeight: 700, color: T.secondary }}>{label}</span>
+                  <span style={{ color: T.textDim }}>|</span>
+                  {result.harmLines[i]}
+                </div>
+              ) : null)}
             </div>
           </div>
 
