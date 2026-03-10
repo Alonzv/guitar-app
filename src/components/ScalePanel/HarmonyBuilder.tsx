@@ -3,6 +3,7 @@ import { Note as TonalNote, Interval, Scale } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
 import type { ScaleMatch } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
+import { exportHarmonyPDF } from '../../utils/pdfExport';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -101,6 +102,7 @@ export const HarmonyBuilder: React.FC<Props> = ({ selectedScale }) => {
   const [lines, setLines] = useState<string[]>(EMPTY_STRINGS);
   const [result, setResult] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const scaleNotes: string[] = selectedScale
     ? Scale.get(`${selectedScale.root} ${selectedScale.type}`).notes
@@ -131,6 +133,24 @@ export const HarmonyBuilder: React.FC<Props> = ({ selectedScale }) => {
     setLines(EMPTY_STRINGS);
     setResult(null);
     setError(null);
+  };
+
+  const handleExportPDF = async () => {
+    if (!result) return;
+    setExporting(true);
+    try {
+      const label = HARMONY_OPTIONS.find(o => o.value === harmonyType)?.label
+        .replace(/^[^\w]+/, '') // strip leading emoji
+        ?? harmonyType;
+      await exportHarmonyPDF(
+        label,
+        STRINGS.map(s => s.label),
+        lines,
+        result,
+      );
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -296,6 +316,18 @@ export const HarmonyBuilder: React.FC<Props> = ({ selectedScale }) => {
                   ? '💡 Diatonic: some intervals are major, some minor — follows the scale.'
                   : '💡 Play this tab as a separate voice alongside your original riff.'}
               </p>
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
+                style={{
+                  marginTop: 10, width: '100%', padding: '10px 0', borderRadius: 10,
+                  border: `1px solid ${T.border}`, background: exporting ? T.bgCard : T.bgInput,
+                  color: exporting ? T.textDim : T.text, fontWeight: 600, fontSize: 13,
+                  cursor: exporting ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
+                }}
+              >
+                {exporting ? 'Creating PDF…' : '📄 Export PDF'}
+              </button>
             </div>
           )}
         </div>
