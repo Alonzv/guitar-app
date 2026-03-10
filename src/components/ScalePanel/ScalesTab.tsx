@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScaleDetector } from './ScaleDetector';
 import { ScaleVisualizer } from './ScaleVisualizer';
 import { ScaleExplorer } from './ScaleExplorer';
+import { HarmonyBuilder } from './HarmonyBuilder';
 import type { ChordInProgression, ScaleMatch } from '../../types/music';
 import { T } from '../../theme';
 
@@ -39,6 +40,8 @@ export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelec
       ) : (
         <ScaleExplorer />
       )}
+
+      <HarmonyBuilder selectedScale={selectedScale} />
     </div>
   );
 };
