@@ -43,6 +43,24 @@ const SCALE_GROUPS = [
   ]},
 ];
 
+const INTERVAL_DEGREE: Record<string, { num: string; name: string }> = {
+  '1P':  { num: '1',  name: 'Tonic'        },
+  '2m':  { num: '♭2', name: 'Supertonic'   },
+  '2M':  { num: '2',  name: 'Supertonic'   },
+  '2A':  { num: '♯2', name: 'Supertonic'   },
+  '3m':  { num: '♭3', name: 'Mediant'      },
+  '3M':  { num: '3',  name: 'Mediant'      },
+  '4P':  { num: '4',  name: 'Subdominant'  },
+  '4A':  { num: '♯4', name: 'Tritone'      },
+  '5d':  { num: '♭5', name: 'Tritone'      },
+  '5P':  { num: '5',  name: 'Dominant'     },
+  '5A':  { num: '♯5', name: 'Dominant'     },
+  '6m':  { num: '♭6', name: 'Submediant'   },
+  '6M':  { num: '6',  name: 'Submediant'   },
+  '7m':  { num: '♭7', name: 'Subtonic'     },
+  '7M':  { num: '7',  name: 'Leading Tone' },
+};
+
 const POSITION_WINDOWS = [[0,3],[2,5],[4,8],[6,10],[9,12]] as const;
 const POS_COLORS = [T.primary, T.secondary, '#c4a000', '#8a4aa0', '#2a7aa0'];
 
@@ -172,15 +190,19 @@ export function ScaleExplorer() {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {scale.notes.map((note, i) => {
                 const isR = samePitch(note, root);
+                const interval = scale.intervals[i] ?? '';
+                const deg = INTERVAL_DEGREE[interval] ?? { num: String(i + 1), name: '' };
                 return (
-                  <span key={i} style={{
-                    padding: '4px 11px', borderRadius: 7, fontSize: 13, fontWeight: isR ? 800 : 400,
+                  <div key={i} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    padding: '5px 8px', borderRadius: 10, gap: 2, minWidth: 44,
                     background: isR ? T.primaryBg : T.bgInput,
-                    color: isR ? T.primary : T.text,
-                    border: isR ? `1px solid ${T.primary}` : `1px solid ${T.border}`,
+                    border: `1px solid ${isR ? T.primary : T.border}`,
                   }}>
-                    {note}
-                  </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
+                    <span style={{ fontSize: 14, fontWeight: isR ? 800 : 400, color: isR ? T.primary : T.text, lineHeight: 1.2 }}>{note}</span>
+                    <span style={{ fontSize: 8, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
+                  </div>
                 );
               })}
             </div>

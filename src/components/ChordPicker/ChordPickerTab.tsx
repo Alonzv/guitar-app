@@ -215,15 +215,6 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
         </div>
       )}
 
-      {/* ── Voicings grid ── */}
-      {chordName && voicings.length > 0 && (
-        <VoicingVariations
-          voicings={voicings}
-          selectedIndex={selectedVoicingIndex}
-          onSelect={handleVoicingSelect}
-        />
-      )}
-
       {/* ── Add to Progression ── */}
       {chordName && (
         <button
@@ -231,8 +222,17 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
           disabled={!canAdd}
           style={{ ...btn.primary(!canAdd), width: '100%' }}
         >
-          {canAdd ? `+ Add ${displayName} to Progression` : 'Select a voicing above'}
+          {canAdd ? `+ Add ${displayName} to Progression` : 'Select a voicing below'}
         </button>
+      )}
+
+      {/* ── Voicings grid ── */}
+      {chordName && voicings.length > 0 && (
+        <VoicingVariations
+          voicings={voicings}
+          selectedIndex={selectedVoicingIndex}
+          onSelect={handleVoicingSelect}
+        />
       )}
     </div>
   );
