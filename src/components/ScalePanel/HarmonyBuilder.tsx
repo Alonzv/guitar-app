@@ -41,6 +41,14 @@ const STRINGS: { label: string; tuningIdx: number }[] = [
 
 const MAX_FRET = 17;
 
+// Pentatonic/blues scales skip notes, so diatonic-3rd computation must use
+// the full parent 7-note scale to get true intervallic 3rds.
+const PARENT_SCALE_TYPE: Record<string, string> = {
+  'minor pentatonic': 'natural minor',
+  'major pentatonic': 'major',
+  'blues':            'natural minor',
+};
+
 // ── Music helpers ──────────────────────────────────────────────────────────
 
 function sameChroma(a: string, b: string): boolean {
@@ -164,6 +172,13 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
   const tuningNotes = tuning.notes;
   const scaleNotes  = useMemo(() => Scale.get(`${root} ${scaleType}`).notes, [root, scaleType]);
 
+  // For diatonic-3rd calculation, use the full 7-note parent scale so that
+  // interval counting is correct even when the user selected a pentatonic/blues scale.
+  const harmonicScaleNotes = useMemo(() => {
+    const parentType = PARENT_SCALE_TYPE[scaleType] ?? scaleType;
+    return Scale.get(`${root} ${parentType}`).notes;
+  }, [root, scaleType]);
+
   const scaleFretsByString = useMemo(
     () => STRINGS.map(({ tuningIdx }) => getScaleFrets(tuningIdx, scaleNotes, tuningNotes)),
     [scaleNotes, tuningNotes],
@@ -233,7 +248,7 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
     if (slots.length === 0) return;
     const harmonyFrets = slots.map(slot =>
       slot.map(({ stringIdx, fret }) =>
-        harmonizeFret(stringIdx, fret, harmonyType, scaleNotes, tuningNotes),
+        harmonizeFret(stringIdx, fret, harmonyType, harmonicScaleNotes, tuningNotes),
       ),
     );
     setResult(renderBothTabs(slots, harmonyFrets));
