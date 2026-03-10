@@ -395,22 +395,8 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
 
       {/* ── Fretboard input ── */}
       <div style={{ ...card() }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: T.textMuted, letterSpacing: '0.5px' }}>
-            BUILD YOUR RIFF
-          </div>
-          <button
-            onClick={() => { setChordMode(c => !c); setStaged([]); }}
-            style={{
-              padding: '5px 12px', borderRadius: 8,
-              border: `1px solid ${chordMode ? T.primary : T.border}`,
-              background: chordMode ? T.primaryBg : T.bgDeep,
-              color: chordMode ? T.primary : T.textMuted,
-              fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
-            }}
-          >
-            ♩♩ Chord
-          </button>
+        <div style={{ marginBottom: 12, fontSize: 12, fontWeight: 700, color: T.textMuted, letterSpacing: '0.5px' }}>
+          BUILD YOUR RIFF — click frets in the order you want to play them
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -438,11 +424,11 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
                       disabled={!hasnotes}
                       title="Remove last note on this string"
                       style={{
-                        width: 28, height: 28, borderRadius: 7,
+                        width: 36, height: 36, borderRadius: 8,
                         border: `1px solid ${T.border}`,
                         background: hasnotes ? T.bgInput : T.bgDeep,
                         color: hasnotes ? T.text : T.textDim,
-                        fontSize: 14, cursor: hasnotes ? 'pointer' : 'default',
+                        fontSize: 16, cursor: hasnotes ? 'pointer' : 'default',
                         flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >⌫</button>
@@ -454,11 +440,11 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
                     const isThisStaged = staged.some(n => n.stringIdx === strIdx && n.fret === fret);
                     return (
                       <button key={fret} onClick={() => handleFretClick(strIdx, fret)} style={{
-                        padding: '4px 10px', borderRadius: 7,
+                        padding: '8px 12px', borderRadius: 7, minHeight: 38,
                         border: `1px solid ${isThisStaged ? T.primary : T.secondary}`,
                         background: isThisStaged ? T.primary : T.secondaryBg,
                         color: isThisStaged ? T.white : T.secondary,
-                        fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'monospace',
+                        fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'monospace',
                         transition: 'background 0.1s',
                       }}
                         onMouseOver={e => { if (!isThisStaged) { e.currentTarget.style.background = T.secondary; e.currentTarget.style.color = T.white; } }}
@@ -468,9 +454,9 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
                   })}
                   {showPassing && passingFretsByString[strIdx].map(fret => (
                     <button key={`p-${fret}`} onClick={() => handleFretClick(strIdx, fret)} title="Passing / chromatic note" style={{
-                      padding: '4px 10px', borderRadius: 7,
+                      padding: '8px 12px', borderRadius: 7, minHeight: 38,
                       border: `1px solid ${T.primary}`, background: T.primaryBg,
-                      color: T.primary, fontWeight: 700, fontSize: 12,
+                      color: T.primary, fontWeight: 700, fontSize: 13,
                       cursor: 'pointer', fontFamily: 'monospace', transition: 'background 0.1s',
                     }}
                       onMouseOver={e => (e.currentTarget.style.background = T.primary, e.currentTarget.style.color = T.white)}
@@ -484,23 +470,54 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
         </div>
       </div>
 
-      {/* ── Harmony type + actions ── */}
+      {/* ── Harmony type ── */}
+      <select value={harmonyType} onChange={e => { setHarmonyType(e.target.value as HarmonyType); setResult(null); }} style={{
+        width: '100%', padding: '12px 10px', borderRadius: 10,
+        border: `1px solid ${T.border}`, background: T.bgInput,
+        color: T.text, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+      }}>
+        {HARMONY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+
+      {/* ── Action buttons ── */}
       <div style={{ display: 'flex', gap: 8 }}>
-        <select value={harmonyType} onChange={e => { setHarmonyType(e.target.value as HarmonyType); setResult(null); }} style={{
-          flex: 1, padding: '10px 10px', borderRadius: 10,
-          border: `1px solid ${T.border}`, background: T.bgInput,
-          color: T.text, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-        }}>
-          {HARMONY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        <button
+          onClick={() => { setChordMode(c => !c); setStaged([]); }}
+          style={{
+            padding: '0 14px', minHeight: 48, borderRadius: 10,
+            border: `1px solid ${chordMode ? T.primary : T.border}`,
+            background: chordMode ? T.primaryBg : T.bgDeep,
+            color: chordMode ? T.primary : T.textMuted,
+            fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          ♩♩ Chord
+        </button>
         <button onClick={handleGenerate} disabled={slots.length === 0} style={{
-          flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+          flex: 1, minHeight: 48, borderRadius: 10, border: 'none',
           background: slots.length > 0 ? T.secondary : T.border,
           color: slots.length > 0 ? T.white : T.textDim,
-          fontWeight: 700, fontSize: 13, cursor: slots.length > 0 ? 'pointer' : 'default',
+          fontWeight: 700, fontSize: 14, cursor: slots.length > 0 ? 'pointer' : 'default',
           transition: 'background 0.15s',
         }}>
-          Generate Harmony
+          Generate
+        </button>
+        <button
+          onClick={handleExportPDF}
+          disabled={!result || exporting}
+          title="Export PDF"
+          style={{
+            padding: '0 14px', minHeight: 48, borderRadius: 10,
+            border: `1px solid ${T.border}`,
+            background: result && !exporting ? T.bgInput : T.bgDeep,
+            color: result && !exporting ? T.text : T.textDim,
+            fontWeight: 600, fontSize: 13,
+            cursor: result && !exporting ? 'pointer' : 'default',
+            transition: 'background 0.15s', whiteSpace: 'nowrap',
+          }}
+        >
+          {exporting ? '…' : '📄 PDF'}
         </button>
       </div>
 
@@ -535,16 +552,6 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
             </div>
           </div>
 
-          <button onClick={handleExportPDF} disabled={exporting} style={{
-            width: '100%', padding: '10px 0', borderRadius: 10,
-            border: `1px solid ${T.border}`,
-            background: exporting ? T.bgCard : T.bgInput,
-            color: exporting ? T.textDim : T.text,
-            fontWeight: 600, fontSize: 13,
-            cursor: exporting ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
-          }}>
-            {exporting ? 'Creating PDF…' : '📄 Export PDF'}
-          </button>
         </div>
       )}
     </div>

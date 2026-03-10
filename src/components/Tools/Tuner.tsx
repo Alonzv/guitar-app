@@ -204,8 +204,8 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
       {/* Main display */}
       <div style={card({ textAlign: 'center', padding: '28px 20px' })}>
-        <div style={{
-          fontSize: 80, fontWeight: 800, color: tuneColor,
+        <div className="gc-tuner-note" style={{
+          fontWeight: 800, color: tuneColor,
           lineHeight: 1, marginBottom: 4,
           transition: 'color 0.3s', minHeight: 88,
         }}>

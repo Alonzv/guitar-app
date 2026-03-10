@@ -242,3 +242,61 @@ button:not(.gc-tab):not(:disabled):hover {
   /* Give the app a comfortable max-width on large screens */
   .gc-app { max-width: 780px; margin: 0 auto; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Sub-tab bars — consistent 44px touch target across all tabs
+───────────────────────────────────────────────────────────── */
+.gc-sub-tab {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Harmony Builder fret button row — wraps cleanly on mobile
+───────────────────────────────────────────────────────────── */
+.gc-fret-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Chord chip / sequence bar — horizontal scroll, no visible bar
+───────────────────────────────────────────────────────────── */
+.gc-seq-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 4px 2px 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.gc-seq-bar::-webkit-scrollbar { display: none; }
+
+/* ─────────────────────────────────────────────────────────────
+   Select elements — ensure legible tap target on mobile
+───────────────────────────────────────────────────────────── */
+select {
+  min-height: 44px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tuner note display — scale down on narrow screens
+───────────────────────────────────────────────────────────── */
+.gc-tuner-note {
+  font-size: clamp(48px, 18vw, 80px);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Mobile: more breathing room inside cards
+───────────────────────────────────────────────────────────── */
+@media (max-width: 390px) {
+  :root {
+    --gc-card-pad: 10px;
+    --gc-content-pad: 10px;
+  }
+}
