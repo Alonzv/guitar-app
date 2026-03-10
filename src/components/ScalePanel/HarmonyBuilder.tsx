@@ -393,6 +393,57 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
         </div>
       )}
 
+      {/* ── Harmony type ── */}
+      <select value={harmonyType} onChange={e => { setHarmonyType(e.target.value as HarmonyType); setResult(null); }} style={{
+        width: '100%', padding: '12px 10px', borderRadius: 10,
+        border: `1px solid ${T.border}`, background: T.bgInput,
+        color: T.text, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+      }}>
+        {HARMONY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+
+      {/* ── Action buttons ── */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => { setChordMode(c => !c); setStaged([]); }}
+          style={{
+            padding: '0 14px', minHeight: 48, borderRadius: 10,
+            border: `1px solid ${chordMode ? T.primary : T.border}`,
+            background: chordMode ? T.primaryBg : T.bgDeep,
+            color: chordMode ? T.primary : T.textMuted,
+            fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          ♩♩ Chord
+        </button>
+        <button onClick={handleGenerate} disabled={slots.length === 0} style={{
+          flex: 1, minHeight: 48, borderRadius: 10, border: 'none',
+          background: slots.length > 0 ? T.secondary : T.border,
+          color: slots.length > 0 ? T.white : T.textDim,
+          fontWeight: 700, fontSize: 14, cursor: slots.length > 0 ? 'pointer' : 'default',
+          transition: 'background 0.15s',
+        }}>
+          Generate
+        </button>
+        <button
+          onClick={handleExportPDF}
+          disabled={!result || exporting}
+          title="Export PDF"
+          style={{
+            padding: '0 14px', minHeight: 48, borderRadius: 10,
+            border: `1px solid ${T.border}`,
+            background: result && !exporting ? T.bgInput : T.bgDeep,
+            color: result && !exporting ? T.text : T.textDim,
+            fontWeight: 600, fontSize: 13,
+            cursor: result && !exporting ? 'pointer' : 'default',
+            transition: 'background 0.15s', whiteSpace: 'nowrap',
+          }}
+        >
+          {exporting ? '…' : '📄 PDF'}
+        </button>
+      </div>
+
       {/* ── Fretboard input ── */}
       <div style={{ ...card() }}>
         <div style={{ marginBottom: 12, fontSize: 12, fontWeight: 700, color: T.textMuted, letterSpacing: '0.5px' }}>
@@ -468,57 +519,6 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
             );
           })}
         </div>
-      </div>
-
-      {/* ── Harmony type ── */}
-      <select value={harmonyType} onChange={e => { setHarmonyType(e.target.value as HarmonyType); setResult(null); }} style={{
-        width: '100%', padding: '12px 10px', borderRadius: 10,
-        border: `1px solid ${T.border}`, background: T.bgInput,
-        color: T.text, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-      }}>
-        {HARMONY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-
-      {/* ── Action buttons ── */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button
-          onClick={() => { setChordMode(c => !c); setStaged([]); }}
-          style={{
-            padding: '0 14px', minHeight: 48, borderRadius: 10,
-            border: `1px solid ${chordMode ? T.primary : T.border}`,
-            background: chordMode ? T.primaryBg : T.bgDeep,
-            color: chordMode ? T.primary : T.textMuted,
-            fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          ♩♩ Chord
-        </button>
-        <button onClick={handleGenerate} disabled={slots.length === 0} style={{
-          flex: 1, minHeight: 48, borderRadius: 10, border: 'none',
-          background: slots.length > 0 ? T.secondary : T.border,
-          color: slots.length > 0 ? T.white : T.textDim,
-          fontWeight: 700, fontSize: 14, cursor: slots.length > 0 ? 'pointer' : 'default',
-          transition: 'background 0.15s',
-        }}>
-          Generate
-        </button>
-        <button
-          onClick={handleExportPDF}
-          disabled={!result || exporting}
-          title="Export PDF"
-          style={{
-            padding: '0 14px', minHeight: 48, borderRadius: 10,
-            border: `1px solid ${T.border}`,
-            background: result && !exporting ? T.bgInput : T.bgDeep,
-            color: result && !exporting ? T.text : T.textDim,
-            fontWeight: 600, fontSize: 13,
-            cursor: result && !exporting ? 'pointer' : 'default',
-            transition: 'background 0.15s', whiteSpace: 'nowrap',
-          }}
-        >
-          {exporting ? '…' : '📄 PDF'}
-        </button>
       </div>
 
       {/* ── Result ── */}
