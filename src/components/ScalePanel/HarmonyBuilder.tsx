@@ -1,20 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Note as TonalNote, Interval, Scale } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
-import type { ScaleMatch, Tuning } from '../../types/music';
+import type { Tuning } from '../../types/music';
 import { exportHarmonyPDF } from '../../utils/pdfExport';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type HarmonyType = 'diatonic3rd' | 'minor3rd' | 'major3rd' | 'perfect4th' | 'perfect5th' | 'octave';
+type HarmonyType = 'diatonic3rd' | 'minor3rd' | 'perfect5th';
 
 const HARMONY_OPTIONS: { value: HarmonyType; label: string }[] = [
-  { value: 'diatonic3rd', label: '🎼 Diatonic 3rd (follows scale)' },
-  { value: 'minor3rd',    label: '🎵 Minor 3rd (+3 semitones)' },
-  { value: 'major3rd',    label: '🎵 Major 3rd (+4 semitones)' },
-  { value: 'perfect4th',  label: '🎵 Perfect 4th (+5 semitones)' },
-  { value: 'perfect5th',  label: '🎵 Perfect 5th (+7 semitones)' },
-  { value: 'octave',      label: '🎵 Octave (+12 semitones)' },
+  { value: 'diatonic3rd', label: 'Diatonic 3rd' },
+  { value: 'minor3rd',    label: 'Minor 3rd (+3)' },
+  { value: 'perfect5th',  label: 'Perfect 5th (+7)' },
+];
+
+const ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+const SCALE_TYPES: { value: string; label: string }[] = [
+  { value: 'minor pentatonic', label: 'Minor Pentatonic' },
+  { value: 'major pentatonic', label: 'Major Pentatonic' },
+  { value: 'blues',            label: 'Blues' },
+  { value: 'natural minor',    label: 'Natural Minor' },
+  { value: 'major',            label: 'Major' },
+  { value: 'dorian',           label: 'Dorian' },
+  { value: 'mixolydian',       label: 'Mixolydian' },
 ];
 
 // String labels and corresponding tuning indices (high e to low E)
@@ -27,9 +36,10 @@ const STRINGS: { label: string; tuningIdx: number }[] = [
   { label: 'E', tuningIdx: 0 },
 ];
 
+const MAX_FRET = 17;
+
 // ── Music helpers ──────────────────────────────────────────────────────────
 
-// Compare two pitch classes enharmonically (C# === Db)
 function sameChroma(a: string, b: string): boolean {
   const ca = TonalNote.chroma(a);
   const cb = TonalNote.chroma(b);
@@ -41,6 +51,15 @@ function getFretNote(tuningIdx: number, fret: number, tuningNotes: string[]): st
   if (fret === 0) return TonalNote.pitchClass(openNote) ?? openNote;
   const transposed = TonalNote.transpose(openNote, Interval.fromSemitones(fret));
   return TonalNote.pitchClass(transposed) ?? transposed;
+}
+
+function getScaleFrets(tuningIdx: number, scaleNotes: string[], tuningNotes: string[]): number[] {
+  const result: number[] = [];
+  for (let f = 0; f <= MAX_FRET; f++) {
+    const note = getFretNote(tuningIdx, f, tuningNotes);
+    if (scaleNotes.some(n => sameChroma(n, note))) result.push(f);
+  }
+  return result;
 }
 
 function findFretForChroma(
@@ -67,291 +86,317 @@ function harmonizeFret(
     const scaleIdx = scaleNotes.findIndex(n => sameChroma(n, note));
     if (scaleIdx === -1) return null;
     const targetPC = scaleNotes[(scaleIdx + 2) % scaleNotes.length];
-    const targetChroma = TonalNote.chroma(targetPC);
-    if (targetChroma === undefined) return null;
-    return findFretForChroma(targetChroma, tuningIdx, fret + 1, tuningNotes);
+    const chroma = TonalNote.chroma(targetPC);
+    if (chroma === undefined) return null;
+    return findFretForChroma(chroma, tuningIdx, fret + 1, tuningNotes);
   }
-
-  const semitoneMap: Record<Exclude<HarmonyType, 'diatonic3rd'>, number> = {
-    minor3rd:   3,
-    major3rd:   4,
-    perfect4th: 5,
-    perfect5th: 7,
-    octave:     12,
-  };
-  const result = fret + semitoneMap[harmonyType as Exclude<HarmonyType, 'diatonic3rd'>];
+  const semitones = harmonyType === 'minor3rd' ? 3 : 7;
+  const result = fret + semitones;
   return result <= 24 ? result : null;
 }
 
-// Replace every fret number in a tab line with its harmony fret.
-// Pads with '-' when replacement is shorter to preserve alignment.
-function processLine(
-  line: string,
-  tuningIdx: number,
-  harmonyType: HarmonyType,
-  scaleNotes: string[],
-  tuningNotes: string[],
-): string {
-  return line.replace(/\d+/g, match => {
-    const fret = parseInt(match, 10);
-    const h = harmonizeFret(tuningIdx, fret, harmonyType, scaleNotes, tuningNotes);
-    if (h === null) return '?'.padStart(match.length, '-');
-    return String(h).padStart(match.length, '-');
+// Render two aligned tab lines from parallel sequences.
+// Each note slot is padded to the same width so both lines align column-by-column.
+function renderAligned(
+  original: number[],
+  harmony: (number | null)[],
+): { origLine: string; harmLine: string } {
+  if (original.length === 0) return { origLine: '', harmLine: '' };
+  const slots = original.map((orig, i) => {
+    const h = harmony[i];
+    const os = String(orig);
+    const hs = h === null ? '?' : String(h);
+    const w = Math.max(os.length, hs.length);
+    return { orig: os.padStart(w, '-'), harm: hs.padStart(w, '-') };
   });
+  return {
+    origLine: '--' + slots.map(s => s.orig).join('--') + '--',
+    harmLine: '--' + slots.map(s => s.harm).join('--') + '--',
+  };
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
 
 interface Props {
-  selectedScale: ScaleMatch | null;
   tuning: Tuning;
 }
 
-const EMPTY_STRINGS = Array(6).fill('');
-
-export const HarmonyBuilder: React.FC<Props> = ({ selectedScale, tuning }) => {
-  const [open, setOpen] = useState(false);
+export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
+  const [root, setRoot] = useState('A');
+  const [scaleType, setScaleType] = useState('minor pentatonic');
   const [harmonyType, setHarmonyType] = useState<HarmonyType>('diatonic3rd');
-  const [lines, setLines] = useState<string[]>(EMPTY_STRINGS);
-  const [result, setResult] = useState<string[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [sequences, setSequences] = useState<number[][]>(() => Array.from({ length: 6 }, () => []));
+  const [result, setResult] = useState<{ origLine: string; harmLine: string }[] | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const tuningNotes = tuning.notes; // e.g. ['E2','A2','D3','G3','B3','E4']
+  const tuningNotes = tuning.notes;
+  const scaleNotes = useMemo(
+    () => Scale.get(`${root} ${scaleType}`).notes,
+    [root, scaleType],
+  );
 
-  const scaleNotes: string[] = selectedScale
-    ? Scale.get(`${selectedScale.root} ${selectedScale.type}`).notes
-    : [];
+  const scaleFretsByString = useMemo(
+    () => STRINGS.map(({ tuningIdx }) => getScaleFrets(tuningIdx, scaleNotes, tuningNotes)),
+    [scaleNotes, tuningNotes],
+  );
 
-  const handleGenerate = () => {
-    setError(null);
+  const hasAnyNotes = sequences.some(seq => seq.length > 0);
+
+  const addNote = (strIdx: number, fret: number) => {
+    setSequences(prev => {
+      const next = prev.map(s => [...s]);
+      next[strIdx] = [...next[strIdx], fret];
+      return next;
+    });
     setResult(null);
+  };
 
-    if (harmonyType === 'diatonic3rd' && scaleNotes.length === 0) {
-      setError('Please detect or browse a scale first so Diatonic 3rd knows which notes to use.');
-      return;
-    }
-
-    const hasInput = lines.some(l => /\d/.test(l));
-    if (!hasInput) {
-      setError('Enter at least one fret number in the tab above.');
-      return;
-    }
-
-    const harmony = STRINGS.map(({ tuningIdx }, i) =>
-      processLine(lines[i] || '', tuningIdx, harmonyType, scaleNotes, tuningNotes),
-    );
-    setResult(harmony);
+  const removeLast = (strIdx: number) => {
+    setSequences(prev => {
+      const next = prev.map(s => [...s]);
+      next[strIdx] = next[strIdx].slice(0, -1);
+      return next;
+    });
+    setResult(null);
   };
 
   const handleClear = () => {
-    setLines(EMPTY_STRINGS);
+    setSequences(Array.from({ length: 6 }, () => []));
     setResult(null);
-    setError(null);
+  };
+
+  const handleGenerate = () => {
+    if (!hasAnyNotes) return;
+    const generated = STRINGS.map(({ tuningIdx }, i) => {
+      const seq = sequences[i];
+      if (seq.length === 0) return { origLine: '', harmLine: '' };
+      const harmSeq = seq.map(fret =>
+        harmonizeFret(tuningIdx, fret, harmonyType, scaleNotes, tuningNotes),
+      );
+      return renderAligned(seq, harmSeq);
+    });
+    setResult(generated);
   };
 
   const handleExportPDF = async () => {
     if (!result) return;
     setExporting(true);
     try {
-      const label = HARMONY_OPTIONS.find(o => o.value === harmonyType)?.label
-        .replace(/^[^\w]+/, '')
-        ?? harmonyType;
-
-      // Only include strings that have actual content in the original riff
-      const activeIndices = STRINGS.map((_, i) => i).filter(i => /\d/.test(lines[i] || ''));
-      const activeLabels  = activeIndices.map(i => STRINGS[i].label);
-      const activeOriginal = activeIndices.map(i => lines[i] || '');
-      const activeHarmony  = activeIndices.map(i => result[i] || '');
-
-      await exportHarmonyPDF(label, activeLabels, activeOriginal, activeHarmony);
+      const label = HARMONY_OPTIONS.find(o => o.value === harmonyType)?.label ?? harmonyType;
+      const activeIndices = sequences.map((_seq, i) => i).filter(i => sequences[i].length > 0);
+      await exportHarmonyPDF(
+        `${root} ${SCALE_TYPES.find(s => s.value === scaleType)?.label ?? scaleType} — ${label}`,
+        activeIndices.map(i => STRINGS[i].label),
+        activeIndices.map(i => result[i].origLine),
+        activeIndices.map(i => result[i].harmLine),
+      );
     } finally {
       setExporting(false);
     }
   };
 
   return (
-    <div style={{ ...card(), padding: 0, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* ── Collapsible header ── */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
-          textAlign: 'left',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16 }}>🎶</span>
-          <span style={{ fontWeight: 700, fontSize: 14, color: T.text }}>Harmony Builder</span>
-          <span style={{
-            fontSize: 11, fontWeight: 600, color: T.secondary,
-            background: T.secondaryBg, borderRadius: 6, padding: '2px 7px',
-          }}>
-            3rds
-          </span>
+      {/* ── Scale selection ── */}
+      <div style={{ ...card() }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, marginBottom: 10, letterSpacing: '0.5px' }}>
+          SCALE
         </div>
-        <span style={{ fontSize: 12, color: T.textMuted, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-          ▼
-        </span>
-      </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <select
+            value={root}
+            onChange={e => { setRoot(e.target.value); setResult(null); }}
+            style={{
+              flex: '0 0 72px', padding: '9px 8px', borderRadius: 8,
+              border: `1px solid ${T.border}`, background: T.bgInput,
+              color: T.text, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            {ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select
+            value={scaleType}
+            onChange={e => { setScaleType(e.target.value); setResult(null); }}
+            style={{
+              flex: 1, padding: '9px 10px', borderRadius: 8,
+              border: `1px solid ${T.border}`, background: T.bgInput,
+              color: T.text, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            }}
+          >
+            {SCALE_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+        <div style={{ marginTop: 8, fontSize: 11, color: T.secondary }}>
+          Notes: <strong>{scaleNotes.join('  ')}</strong>
+        </div>
+      </div>
 
-      {/* ── Expandable body ── */}
-      {open && (
-        <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* ── Fretboard input ── */}
+      <div style={{ ...card() }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, marginBottom: 12, letterSpacing: '0.5px' }}>
+          BUILD YOUR RIFF — click fret numbers to add notes
+        </div>
 
-          {/* Tuning indicator */}
-          <div style={{ fontSize: 11, color: T.textMuted, background: T.bgDeep, borderRadius: 6, padding: '5px 10px' }}>
-            Tuning: <strong style={{ color: T.text }}>{tuning.label}</strong>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {STRINGS.map(({ label }, strIdx) => {
+            const seq = sequences[strIdx];
+            const frets = scaleFretsByString[strIdx];
+            const preview = seq.length > 0
+              ? '--' + seq.join('--') + '--'
+              : '';
 
-          {/* Harmony type selector */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>
-              HARMONY TYPE
-            </label>
-            <select
-              value={harmonyType}
-              onChange={e => { setHarmonyType(e.target.value as HarmonyType); setResult(null); setError(null); }}
-              style={{
-                width: '100%', padding: '9px 12px', borderRadius: 8,
-                border: `1px solid ${T.border}`, background: T.bgInput,
-                color: T.text, fontSize: 13, fontWeight: 500, cursor: 'pointer',
-              }}
-            >
-              {HARMONY_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            {harmonyType === 'diatonic3rd' && scaleNotes.length === 0 && (
-              <p style={{ fontSize: 11, color: T.primary, margin: '5px 0 0', lineHeight: 1.4 }}>
-                ⚠ Detect or browse a scale above to use Diatonic 3rd.
-              </p>
-            )}
-            {harmonyType === 'diatonic3rd' && scaleNotes.length > 0 && (
-              <p style={{ fontSize: 11, color: T.secondary, margin: '5px 0 0' }}>
-                Using scale: <strong>{selectedScale?.name}</strong> ({scaleNotes.join(' – ')})
-              </p>
-            )}
-          </div>
+            return (
+              <div key={label}>
+                {/* String label + preview + backspace */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                  <span style={{
+                    width: 18, fontWeight: 800, fontSize: 13, color: T.text,
+                    flexShrink: 0, fontFamily: 'monospace',
+                  }}>{label}</span>
+                  <span style={{ color: T.textDim, fontSize: 13, fontFamily: 'monospace' }}>|</span>
+                  <span style={{
+                    flex: 1, fontFamily: 'monospace', fontSize: 13,
+                    color: seq.length > 0 ? T.text : T.textDim,
+                    background: T.bgDeep, borderRadius: 6,
+                    padding: '4px 8px', minHeight: 26,
+                    border: `1px solid ${seq.length > 0 ? T.border : 'transparent'}`,
+                    letterSpacing: '0.5px',
+                  }}>
+                    {preview || <span style={{ opacity: 0.35 }}>——</span>}
+                  </span>
+                  <button
+                    onClick={() => removeLast(strIdx)}
+                    disabled={seq.length === 0}
+                    title="Remove last note"
+                    style={{
+                      width: 28, height: 28, borderRadius: 7,
+                      border: `1px solid ${T.border}`,
+                      background: seq.length > 0 ? T.bgInput : T.bgDeep,
+                      color: seq.length > 0 ? T.text : T.textDim,
+                      fontSize: 14, cursor: seq.length > 0 ? 'pointer' : 'default',
+                      flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >⌫</button>
+                </div>
 
-          {/* Tab input */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>
-              YOUR RIFF (tab)
-            </label>
+                {/* Fret buttons */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingLeft: 24 }}>
+                  {frets.map(fret => (
+                    <button
+                      key={fret}
+                      onClick={() => addNote(strIdx, fret)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 7,
+                        border: `1px solid ${T.secondary}`,
+                        background: T.secondaryBg,
+                        color: T.secondary, fontWeight: 700, fontSize: 12,
+                        cursor: 'pointer', fontFamily: 'monospace',
+                        transition: 'background 0.1s',
+                      }}
+                      onMouseOver={e => (e.currentTarget.style.background = T.secondary, e.currentTarget.style.color = T.white)}
+                      onMouseOut={e => (e.currentTarget.style.background = T.secondaryBg, e.currentTarget.style.color = T.secondary)}
+                    >
+                      {fret}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Harmony type + actions ── */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+        <select
+          value={harmonyType}
+          onChange={e => { setHarmonyType(e.target.value as HarmonyType); setResult(null); }}
+          style={{
+            flex: 1, padding: '10px 10px', borderRadius: 10,
+            border: `1px solid ${T.border}`, background: T.bgInput,
+            color: T.text, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          {HARMONY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <button
+          onClick={handleGenerate}
+          disabled={!hasAnyNotes}
+          style={{
+            flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+            background: hasAnyNotes ? T.secondary : T.border,
+            color: hasAnyNotes ? T.white : T.textDim,
+            fontWeight: 700, fontSize: 13, cursor: hasAnyNotes ? 'pointer' : 'default',
+            transition: 'background 0.15s',
+          }}
+        >
+          Generate Harmony
+        </button>
+        <button
+          onClick={handleClear}
+          style={{
+            padding: '10px 14px', borderRadius: 10, border: `1px solid ${T.border}`,
+            background: T.bgInput, color: T.textMuted, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+          }}
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* ── Result ── */}
+      {result && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          {/* Original tab */}
+          <div style={{ ...card() }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, letterSpacing: '0.5px', marginBottom: 8 }}>
+              YOUR RIFF
+            </div>
             <div style={{
-              background: T.bgDeep, borderRadius: 10, border: `1px solid ${T.border}`,
-              padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4,
-              fontFamily: 'monospace',
+              fontFamily: 'monospace', fontSize: 13, color: T.text,
+              display: 'flex', flexDirection: 'column', gap: 3,
             }}>
               {STRINGS.map(({ label }, i) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 14, fontWeight: 700, fontSize: 13, color: T.textMuted, flexShrink: 0 }}>
-                    {label}
-                  </span>
-                  <span style={{ color: T.textDim, fontSize: 13 }}>|</span>
-                  <input
-                    type="text"
-                    value={lines[i]}
-                    onChange={e => {
-                      const next = [...lines];
-                      next[i] = e.target.value;
-                      setLines(next);
-                      setResult(null);
-                      setError(null);
-                    }}
-                    placeholder="--5--7--9--"
-                    style={{
-                      flex: 1, border: 'none', background: 'transparent',
-                      fontFamily: 'monospace', fontSize: 13, color: T.text,
-                      outline: 'none', padding: 0,
-                    }}
-                  />
-                </div>
+                result[i].origLine
+                  ? <div key={label}><span style={{ color: T.textMuted, fontWeight: 700 }}>{label}</span>|{result[i].origLine}</div>
+                  : null
               ))}
             </div>
-            <p style={{ fontSize: 11, color: T.textMuted, margin: '5px 0 0' }}>
-              Use dashes between fret numbers, e.g. <code style={{ background: T.bgCard, borderRadius: 3, padding: '1px 4px' }}>--5--7--9--</code>
-            </p>
           </div>
 
-          {/* Action buttons */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={handleGenerate}
-              style={{
-                flex: 1, padding: '11px 0', borderRadius: 10, border: 'none',
-                background: T.secondary, color: T.white, fontWeight: 700, fontSize: 14, cursor: 'pointer',
-              }}
-            >
-              Generate Harmony
-            </button>
-            <button
-              onClick={handleClear}
-              style={{
-                padding: '11px 16px', borderRadius: 10, border: `1px solid ${T.border}`,
-                background: T.bgInput, color: T.textMuted, fontWeight: 600, fontSize: 14, cursor: 'pointer',
-              }}
-            >
-              Clear
-            </button>
-          </div>
-
-          {/* Error */}
-          {error && (
+          {/* Harmony tab */}
+          <div style={{ ...card(), border: `1px solid ${T.secondary}` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.secondary, letterSpacing: '0.5px', marginBottom: 8 }}>
+              HARMONY — {HARMONY_OPTIONS.find(o => o.value === harmonyType)?.label}
+            </div>
             <div style={{
-              padding: '10px 12px', borderRadius: 8,
-              background: '#FEE8E6', border: '1px solid #F5A09A',
-              fontSize: 13, color: '#9B2018',
+              fontFamily: 'monospace', fontSize: 13, color: T.text,
+              display: 'flex', flexDirection: 'column', gap: 3,
             }}>
-              {error}
+              {STRINGS.map(({ label }, i) => (
+                result[i].harmLine
+                  ? <div key={label}><span style={{ color: T.secondary, fontWeight: 700 }}>{label}</span>|{result[i].harmLine}</div>
+                  : null
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* Result */}
-          {result && (
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>
-                HARMONY TAB
-              </label>
-              <div style={{
-                background: T.bgDeep, borderRadius: 10, border: `1px solid ${T.secondary}`,
-                padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4,
-                fontFamily: 'monospace',
-              }}>
-                {STRINGS.map(({ label }, i) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 14, fontWeight: 700, fontSize: 13, color: T.secondary, flexShrink: 0 }}>
-                      {label}
-                    </span>
-                    <span style={{ color: T.textDim, fontSize: 13 }}>|</span>
-                    <span style={{ fontFamily: 'monospace', fontSize: 13, color: result[i] ? T.text : T.textDim }}>
-                      {result[i] || '--'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p style={{ fontSize: 11, color: T.textMuted, margin: '5px 0 0', lineHeight: 1.4 }}>
-                {harmonyType === 'diatonic3rd'
-                  ? '💡 Diatonic: some intervals are major, some minor — follows the scale.'
-                  : '💡 Play this tab as a separate voice alongside your original riff.'}
-              </p>
-              <button
-                onClick={handleExportPDF}
-                disabled={exporting}
-                style={{
-                  marginTop: 10, width: '100%', padding: '10px 0', borderRadius: 10,
-                  border: `1px solid ${T.border}`, background: exporting ? T.bgCard : T.bgInput,
-                  color: exporting ? T.textDim : T.text, fontWeight: 600, fontSize: 13,
-                  cursor: exporting ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
-                }}
-              >
-                {exporting ? 'Creating PDF…' : '📄 Export PDF'}
-              </button>
-            </div>
-          )}
+          <button
+            onClick={handleExportPDF}
+            disabled={exporting}
+            style={{
+              width: '100%', padding: '10px 0', borderRadius: 10,
+              border: `1px solid ${T.border}`,
+              background: exporting ? T.bgCard : T.bgInput,
+              color: exporting ? T.textDim : T.text,
+              fontWeight: 600, fontSize: 13,
+              cursor: exporting ? 'not-allowed' : 'pointer',
+              transition: 'background 0.15s',
+            }}
+          >
+            {exporting ? 'Creating PDF…' : '📄 Export PDF'}
+          </button>
         </div>
       )}
     </div>
