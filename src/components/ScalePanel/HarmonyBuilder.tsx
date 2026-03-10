@@ -24,7 +24,7 @@ const SCALE_TYPES: { value: string; label: string }[] = [
   { value: 'minor pentatonic', label: 'Minor Pentatonic' },
   { value: 'major pentatonic', label: 'Major Pentatonic' },
   { value: 'blues',            label: 'Blues' },
-  { value: 'natural minor',    label: 'Natural Minor' },
+  { value: 'minor',            label: 'Natural Minor' },
   { value: 'major',            label: 'Major' },
   { value: 'dorian',           label: 'Dorian' },
   { value: 'mixolydian',       label: 'Mixolydian' },
@@ -44,9 +44,9 @@ const MAX_FRET = 17;
 // Pentatonic/blues scales skip notes, so diatonic-3rd computation must use
 // the full parent 7-note scale to get true intervallic 3rds.
 const PARENT_SCALE_TYPE: Record<string, string> = {
-  'minor pentatonic': 'natural minor',
+  'minor pentatonic': 'minor',
   'major pentatonic': 'major',
-  'blues':            'natural minor',
+  'blues':            'minor',
 };
 
 // ── Music helpers ──────────────────────────────────────────────────────────
@@ -248,7 +248,7 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
     if (slots.length === 0) return;
     const harmonyFrets = slots.map(slot =>
       slot.map(({ stringIdx, fret }) =>
-        harmonizeFret(stringIdx, fret, harmonyType, harmonicScaleNotes, tuningNotes),
+        harmonizeFret(STRINGS[stringIdx].tuningIdx, fret, harmonyType, harmonicScaleNotes, tuningNotes),
       ),
     );
     setResult(renderBothTabs(slots, harmonyFrets));
