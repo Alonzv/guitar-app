@@ -128,6 +128,7 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
   const [sequences, setSequences] = useState<number[][]>(() => Array.from({ length: 6 }, () => []));
   const [result, setResult] = useState<{ origLine: string; harmLine: string }[] | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [showPassing, setShowPassing] = useState(false);
 
   const tuningNotes = tuning.notes;
   const scaleNotes = useMemo(
@@ -137,6 +138,18 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
 
   const scaleFretsByString = useMemo(
     () => STRINGS.map(({ tuningIdx }) => getScaleFrets(tuningIdx, scaleNotes, tuningNotes)),
+    [scaleNotes, tuningNotes],
+  );
+
+  const passingFretsByString = useMemo(
+    () => STRINGS.map(({ tuningIdx }) => {
+      const inScale = new Set(getScaleFrets(tuningIdx, scaleNotes, tuningNotes));
+      const result: number[] = [];
+      for (let f = 0; f <= MAX_FRET; f++) {
+        if (!inScale.has(f)) result.push(f);
+      }
+      return result;
+    }),
     [scaleNotes, tuningNotes],
   );
 
@@ -230,6 +243,24 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
         <div style={{ marginTop: 8, fontSize: 11, color: T.secondary }}>
           Notes: <strong>{scaleNotes.join('  ')}</strong>
         </div>
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => setShowPassing(p => !p)}
+            style={{
+              padding: '5px 12px', borderRadius: 20, border: `1px solid ${showPassing ? T.primary : T.border}`,
+              background: showPassing ? T.primaryBg : T.bgDeep,
+              color: showPassing ? T.primary : T.textMuted,
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+            }}
+          >
+            {showPassing ? '✕ Hide passing notes' : '＋ Passing notes'}
+          </button>
+          {showPassing && (
+            <span style={{ fontSize: 11, color: T.textMuted }}>
+              Chromatic / blue notes outside the scale
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Fretboard input ── */}
@@ -296,6 +327,25 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
                       }}
                       onMouseOver={e => (e.currentTarget.style.background = T.secondary, e.currentTarget.style.color = T.white)}
                       onMouseOut={e => (e.currentTarget.style.background = T.secondaryBg, e.currentTarget.style.color = T.secondary)}
+                    >
+                      {fret}
+                    </button>
+                  ))}
+                  {showPassing && passingFretsByString[strIdx].map(fret => (
+                    <button
+                      key={`p-${fret}`}
+                      onClick={() => addNote(strIdx, fret)}
+                      title="Passing / chromatic note"
+                      style={{
+                        padding: '4px 10px', borderRadius: 7,
+                        border: `1px solid ${T.primary}`,
+                        background: T.primaryBg,
+                        color: T.primary, fontWeight: 700, fontSize: 12,
+                        cursor: 'pointer', fontFamily: 'monospace',
+                        transition: 'background 0.1s',
+                      }}
+                      onMouseOver={e => (e.currentTarget.style.background = T.primary, e.currentTarget.style.color = T.white)}
+                      onMouseOut={e => (e.currentTarget.style.background = T.primaryBg, e.currentTarget.style.color = T.primary)}
                     >
                       {fret}
                     </button>
