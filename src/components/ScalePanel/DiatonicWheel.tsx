@@ -46,11 +46,6 @@ const FUNC_COLORS: Record<HarmonicFunc, { fill: string; hover: string; text: str
   dominant:    { fill: '#C44900', hover: '#a33d00', text: '#F9ECC3', light: '#faddcc' },
 };
 
-const FUNC_LABELS: Record<HarmonicFunc, string> = {
-  tonic: 'Tonic — rest & stability',
-  subdominant: 'Subdominant — movement & color',
-  dominant: 'Dominant — tension & resolution',
-};
 
 // ── SVG Geometry ──────────────────────────────────────────────────────────────
 
@@ -174,6 +169,7 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression, tuning }) =
   const [hovered,     setHovered]     = useState<number | null>(null);
   const [flash,       setFlash]       = useState<number | null>(null);
   const [addedMsg,    setAddedMsg]    = useState<string | null>(null);
+  const [mousePos,    setMousePos]    = useState({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
 
   const chords = buildChords(root, mode, quality, mode === 'minor' && harmonicV, secondaryDom);
@@ -316,7 +312,7 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression, tuning }) =
       </div>
 
       {/* ── SVG Wheel ── */}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative' }} onMouseMove={e => setMousePos({ x: e.clientX, y: e.clientY })}>
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
@@ -389,24 +385,32 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression, tuning }) =
         )}
       </div>
 
-      {/* ── Hovered chord info + fingering ── */}
-      <div style={card({ padding: '10px 14px' })}>
-        {hoveredChord ? (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: voicings.length > 0 ? 10 : 0 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, flexShrink: 0, background: FUNC_COLORS[hoveredChord.func].fill }} />
-              <span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{hoveredChord.name}</span>
-              <span style={{ color: T.textMuted, fontSize: 12 }}>{FUNC_LABELS[hoveredChord.func]}</span>
-            </div>
-            {voicings.length > 0
-              ? <MiniFretboard voicing={voicings[0]} tuning={tuningNotes} dotColor={FUNC_COLORS[hoveredChord.func].fill} />
-              : <span style={{ color: T.textDim, fontSize: 11 }}>No standard voicing found</span>
-            }
-          </>
-        ) : (
-          <span style={{ color: T.textDim, fontSize: 12 }}>Hover over a chord to see fingering</span>
-        )}
-      </div>
+      {/* ── Cursor tooltip (position:fixed — no layout shift) ── */}
+      {hovered !== null && hoveredChord && (
+        <div style={{
+          position: 'fixed',
+          left: mousePos.x + 14,
+          top: mousePos.y - 110,
+          zIndex: 9999,
+          width: 200,
+          background: T.bgCard,
+          border: `1px solid ${T.border}`,
+          borderRadius: 10,
+          padding: '8px 10px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <div style={{ width: 9, height: 9, borderRadius: 2, background: FUNC_COLORS[hoveredChord.func].fill, flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, color: T.text, fontSize: 12 }}>{hoveredChord.name}</span>
+            <span style={{ color: T.textMuted, fontSize: 10, marginLeft: 'auto' }}>{hoveredChord.roman}</span>
+          </div>
+          {voicings.length > 0
+            ? <MiniFretboard voicing={voicings[0]} tuning={tuningNotes} dotColor={FUNC_COLORS[hoveredChord.func].fill} />
+            : <span style={{ color: T.textDim, fontSize: 10 }}>No voicing found</span>
+          }
+        </div>
+      )}
 
       {/* ── Legend ── */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
