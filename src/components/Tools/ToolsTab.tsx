@@ -73,7 +73,7 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
 
       {sub === 'tuner'     && <Tuner tuning={tuning} />}
       {sub === 'metronome' && <Metronome />}
-      {sub === 'wheel'     && <DiatonicWheel onAddToProgression={onAddToProgression} />}
+      {sub === 'wheel'     && <DiatonicWheel onAddToProgression={onAddToProgression} tuning={tuning} />}
     </div>
   );
 };

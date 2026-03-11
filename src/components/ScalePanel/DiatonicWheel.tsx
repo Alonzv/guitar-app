@@ -1,7 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Key, Chord, Note } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
-import type { ChordInProgression } from '../../types/music';
+import type { ChordInProgression, Tuning } from '../../types/music';
+import { MiniFretboard } from '../Fretboard/MiniFretboard';
+import { findChordVoicings } from '../../utils/chordVoicings';
+import { TUNINGS } from '../../utils/musicTheory';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +20,7 @@ interface WheelChord {
 
 interface Props {
   onAddToProgression?: (item: ChordInProgression) => void;
+  tuning?: Tuning;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -150,7 +154,18 @@ const SELECT_STYLE: React.CSSProperties = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
+// Relative key: major → show relative minor root, minor → show relative major root
+function getRelativeKey(root: string, mode: ScaleMode): string {
+  if (mode === 'major') {
+    const rel = Note.transpose(root, '-3m'); // minor 3rd down = relative minor
+    return `rel. ${rel}m`;
+  } else {
+    const rel = Note.transpose(root, '3m'); // minor 3rd up = relative major
+    return `rel. ${rel}`;
+  }
+}
+
+export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression, tuning }) => {
   const [root,        setRoot]        = useState('C');
   const [mode,        setMode]        = useState<ScaleMode>('major');
   const [quality,     setQuality]     = useState<ChordQuality>('triads');
@@ -204,6 +219,11 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
   };
 
   const hoveredChord = hovered !== null ? chords[hovered] : null;
+  const tuningNotes = tuning?.notes ?? TUNINGS[0].notes;
+  const voicings = useMemo(() => {
+    if (!hoveredChord) return [];
+    return findChordVoicings(hoveredChord.name, 1, tuningNotes);
+  }, [hoveredChord, tuningNotes]);
 
   const toggleStyle = (active: boolean): React.CSSProperties => ({
     flex: 1, padding: '8px 0', border: 'none', cursor: 'pointer',
@@ -306,12 +326,14 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
           <circle cx={CX} cy={CY} r={OUTER_R + 3} fill="none" stroke={T.border} strokeWidth="1" opacity="0.6" />
 
           {chords.map((chord, i) => {
-            const col     = FUNC_COLORS[chord.func];
-            const isHov   = hovered === i;
-            const isFlash = flash === i;
-            const fill    = isFlash ? '#629677' : isHov ? col.hover : col.fill;
-            const mpName  = midPt(i, MID_R + 8);
-            const mpRoman = midPt(i, MID_R - 12);
+            const col      = FUNC_COLORS[chord.func];
+            const isHov    = hovered === i;
+            const isFlash  = flash === i;
+            const fill     = isFlash ? '#629677' : isHov ? col.hover : col.fill;
+            const mp       = midPt(i, MID_R);
+            // Scale down font for longer chord names to prevent overflow
+            const nameFontSize = chord.name.length >= 7 ? 10
+              : chord.name.length >= 5 ? 11 : 13;
 
             return (
               <g
@@ -322,16 +344,17 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
                 style={{ cursor: onAddToProgression ? 'pointer' : 'default' }}
               >
                 <path d={arcPath(i)} fill={fill} style={{ transition: 'fill 0.15s' }} />
+                {/* Both texts share the same x (same midPt radius) — only y differs */}
                 <text
-                  x={mpName.x} y={mpName.y}
+                  x={mp.x} y={mp.y - 11}
                   textAnchor="middle" dominantBaseline="middle"
-                  fill={col.text} fontSize={13} fontWeight="700"
+                  fill={col.text} fontSize={nameFontSize} fontWeight="700"
                   fontFamily="system-ui, -apple-system, Arial, sans-serif"
                 >{chord.name}</text>
                 <text
-                  x={mpRoman.x} y={mpRoman.y}
+                  x={mp.x} y={mp.y + 11}
                   textAnchor="middle" dominantBaseline="middle"
-                  fill={col.text} fontSize={10} opacity={0.75}
+                  fill={col.text} fontSize={9} opacity={0.75}
                   fontFamily="system-ui, -apple-system, Arial, sans-serif"
                 >{chord.roman}</text>
               </g>
@@ -339,14 +362,18 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
           })}
 
           <circle cx={CX} cy={CY} r={INNER_R - 2} fill={T.bgCard} stroke={T.border} strokeWidth="1.5" />
-          <text x={CX} y={CY - 10} textAnchor="middle" dominantBaseline="middle"
+          <text x={CX} y={CY - 16} textAnchor="middle" dominantBaseline="middle"
             fill={T.text} fontSize={20} fontWeight="800"
             fontFamily="system-ui, -apple-system, Arial, sans-serif"
           >{root}</text>
-          <text x={CX} y={CY + 10} textAnchor="middle" dominantBaseline="middle"
+          <text x={CX} y={CY + 2} textAnchor="middle" dominantBaseline="middle"
             fill={T.textMuted} fontSize={11}
             fontFamily="system-ui, -apple-system, Arial, sans-serif"
           >{mode === 'major' ? 'Major' : 'Minor'}</text>
+          <text x={CX} y={CY + 18} textAnchor="middle" dominantBaseline="middle"
+            fill={T.textDim} fontSize={9}
+            fontFamily="system-ui, -apple-system, Arial, sans-serif"
+          >{getRelativeKey(root, mode)}</text>
         </svg>
 
         {addedMsg && (
@@ -362,18 +389,22 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
         )}
       </div>
 
-      {/* ── Hovered chord info ── */}
-      <div style={{ ...card({ padding: '10px 14px' }), minHeight: 44, display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* ── Hovered chord info + fingering ── */}
+      <div style={card({ padding: '10px 14px' })}>
         {hoveredChord ? (
           <>
-            <div style={{ width: 12, height: 12, borderRadius: 3, flexShrink: 0, background: FUNC_COLORS[hoveredChord.func].fill }} />
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: voicings.length > 0 ? 10 : 0 }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, flexShrink: 0, background: FUNC_COLORS[hoveredChord.func].fill }} />
               <span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{hoveredChord.name}</span>
-              <span style={{ color: T.textMuted, fontSize: 12 }}> — {FUNC_LABELS[hoveredChord.func]}</span>
+              <span style={{ color: T.textMuted, fontSize: 12 }}>{FUNC_LABELS[hoveredChord.func]}</span>
             </div>
+            {voicings.length > 0
+              ? <MiniFretboard voicing={voicings[0]} tuning={tuningNotes} dotColor={FUNC_COLORS[hoveredChord.func].fill} />
+              : <span style={{ color: T.textDim, fontSize: 11 }}>No standard voicing found</span>
+            }
           </>
         ) : (
-          <span style={{ color: T.textDim, fontSize: 12 }}>Hover over a chord to see its harmonic function</span>
+          <span style={{ color: T.textDim, fontSize: 12 }}>Hover over a chord to see fingering</span>
         )}
       </div>
 
