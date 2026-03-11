@@ -322,7 +322,6 @@ export default function App() {
               onSelectScale={setSelectedScale}
               preferredKey={detectKey(progression.map(c => c.chord)) || undefined}
               tuning={tuning}
-              onAddToProgression={(item) => pushHistory([...progression, item])}
             />
           </ErrorBoundary>
         )}
@@ -333,7 +332,11 @@ export default function App() {
         )}
         {activeTab === 'tools' && (
           <ErrorBoundary label="Tools">
-            <ToolsTab tuning={tuning} onTuningChange={setTuning} />
+            <ToolsTab
+              tuning={tuning}
+              onTuningChange={setTuning}
+              onAddToProgression={(item) => pushHistory([...progression, item])}
+            />
           </ErrorBoundary>
         )}
       </main>

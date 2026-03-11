@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Key, Chord } from '@tonaljs/tonal';
+import { Key, Chord, Note } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
 import type { ChordInProgression } from '../../types/music';
 
@@ -23,22 +23,19 @@ interface Props {
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
-// Diatonic degrees in 5ths order: I(0)→V(4)→ii(1)→vi(5)→iii(2)→vii°(6)→IV(3)
-// This makes ii-V-I appear as 3 consecutive counterclockwise steps
-const FIFTHS_ORDER = [0, 4, 1, 5, 2, 6, 3];
+// Clockwise = resolution direction: I→IV→vii°→iii→vi→ii→V (→back to I)
+// This makes ii(pos 5)→V(pos 6)→I(pos 0) always 3 clockwise steps
+const FIFTHS_ORDER = [0, 3, 6, 2, 5, 1, 4];
 
 const MAJOR_TRIAD_ROMAN  = ['I',     'ii',    'iii',    'IV',     'V',  'vi',    'vii°' ];
 const MAJOR_7TH_ROMAN    = ['Imaj7', 'ii7',   'iii7',   'IVmaj7', 'V7', 'vi7',   'viiø7'];
 const MINOR_TRIAD_ROMAN  = ['i',     'ii°',   'III',    'iv',     'v',  'VI',    'VII'  ];
 const MINOR_7TH_ROMAN    = ['im7',   'iiø7',  'IIImaj7','iv7',    'v7', 'VImaj7','VII7' ];
 
-// Harmonic function per scale degree (same pattern for major and natural minor)
-// I/i = tonic, ii = subdominant, iii/III = tonic, IV/iv = subdominant, V/v = dominant, vi/VI = tonic, vii°/VII = dominant
 const DEGREE_FUNC: HarmonicFunc[] = [
   'tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'tonic', 'dominant',
 ];
 
-// Colors tuned to the app's warm palette
 const FUNC_COLORS: Record<HarmonicFunc, { fill: string; hover: string; text: string; light: string }> = {
   tonic:       { fill: '#2E4A5A', hover: '#1e3547', text: '#F9ECC3', light: '#d4e4ed' },
   subdominant: { fill: '#3d6b53', hover: '#2d5040', text: '#F9ECC3', light: '#c9e4d6' },
@@ -58,17 +55,17 @@ const CX = SVG_SIZE / 2;
 const CY = SVG_SIZE / 2;
 const OUTER_R = 173;
 const INNER_R = 66;
-const MID_R   = (OUTER_R + INNER_R) / 2; // 119.5
+const MID_R   = (OUTER_R + INNER_R) / 2;
 const TOTAL   = 7;
 const SLICE_A = (2 * Math.PI) / TOTAL;
-const START   = -Math.PI / 2; // 12 o'clock
+const START   = -Math.PI / 2;
 
 function polar(angle: number, r: number) {
   return { x: CX + r * Math.cos(angle), y: CY + r * Math.sin(angle) };
 }
 
 function arcPath(i: number): string {
-  const gap = 0.018; // small gap between slices
+  const gap = 0.018;
   const a1 = START + i * SLICE_A + gap;
   const a2 = START + (i + 1) * SLICE_A - gap;
   const o1 = polar(a1, OUTER_R), o2 = polar(a2, OUTER_R);
@@ -83,7 +80,11 @@ function midPt(i: number, r: number) {
 // ── Music Logic ───────────────────────────────────────────────────────────────
 
 function buildChords(
-  root: string, mode: ScaleMode, quality: ChordQuality, harmonicV: boolean,
+  root: string,
+  mode: ScaleMode,
+  quality: ChordQuality,
+  harmonicV: boolean,
+  secondaryDom: boolean,
 ): WheelChord[] {
   let names: string[];
   let romans: string[];
@@ -91,39 +92,76 @@ function buildChords(
   if (mode === 'major') {
     const k = Key.majorKey(root);
     names  = [...(quality === 'triads' ? k.triads : k.chords)];
-    romans = quality === 'triads' ? MAJOR_TRIAD_ROMAN : MAJOR_7TH_ROMAN;
+    romans = [...(quality === 'triads' ? MAJOR_TRIAD_ROMAN : MAJOR_7TH_ROMAN)];
   } else {
     const nat = Key.minorKey(root).natural;
     const har = Key.minorKey(root).harmonic;
     names  = [...(quality === 'triads' ? nat.triads : nat.chords)];
     romans = [...(quality === 'triads' ? MINOR_TRIAD_ROMAN : MINOR_7TH_ROMAN)];
     if (harmonicV) {
-      // Replace degree 4 (v) with the harmonic minor V
       names[4]  = quality === 'triads' ? har.triads[4] : har.chords[4];
       romans[4] = quality === 'triads' ? 'V' : 'V7';
+    }
+  }
+
+  // Track which degrees become secondary dominants (to override their color)
+  const secDomDegrees = new Set<number>();
+
+  if (secondaryDom) {
+    for (let deg = 0; deg < 7; deg++) {
+      const data = Chord.get(names[deg]);
+      if ((data.quality === 'Minor' || data.quality === 'Diminished') && data.tonic) {
+        const secRoot = Note.transpose(data.tonic, '5P');
+        // Strip quality suffixes to get clean base roman (e.g. "ii7" → "ii", "vii°" → "vii")
+        const baseRoman = romans[deg]
+          .replace(/maj7|m7b5|ø7|m7|M7|7/g, '')
+          .replace('°', '');
+        names[deg]  = secRoot + '7';
+        romans[deg] = `V7/${baseRoman}`;
+        secDomDegrees.add(deg);
+      }
     }
   }
 
   return FIFTHS_ORDER.map(deg => ({
     name:  names[deg]  ?? '?',
     roman: romans[deg] ?? '?',
-    func:  DEGREE_FUNC[deg],
+    func:  secDomDegrees.has(deg) ? 'dominant' : DEGREE_FUNC[deg],
   }));
 }
+
+// ── Shared dropdown style ─────────────────────────────────────────────────────
+
+const SELECT_STYLE: React.CSSProperties = {
+  appearance: 'none',
+  WebkitAppearance: 'none',
+  background: T.bgInput,
+  border: `1px solid ${T.border}`,
+  borderRadius: 8,
+  color: T.text,
+  fontFamily: 'inherit',
+  fontSize: 13,
+  fontWeight: 700,
+  padding: '8px 28px 8px 12px',
+  cursor: 'pointer',
+  outline: 'none',
+  flex: 1,
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
-  const [root,       setRoot]       = useState('C');
-  const [mode,       setMode]       = useState<ScaleMode>('major');
-  const [quality,    setQuality]    = useState<ChordQuality>('triads');
-  const [harmonicV,  setHarmonicV]  = useState(false);
-  const [hovered,    setHovered]    = useState<number | null>(null);
-  const [flash,      setFlash]      = useState<number | null>(null);
-  const [addedMsg,   setAddedMsg]   = useState<string | null>(null);
+  const [root,        setRoot]        = useState('C');
+  const [mode,        setMode]        = useState<ScaleMode>('major');
+  const [quality,     setQuality]     = useState<ChordQuality>('triads');
+  const [harmonicV,   setHarmonicV]   = useState(false);
+  const [secondaryDom, setSecondaryDom] = useState(false);
+  const [hovered,     setHovered]     = useState<number | null>(null);
+  const [flash,       setFlash]       = useState<number | null>(null);
+  const [addedMsg,    setAddedMsg]    = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const chords = buildChords(root, mode, quality, mode === 'minor' && harmonicV);
+  const chords = buildChords(root, mode, quality, mode === 'minor' && harmonicV, secondaryDom);
 
   const handleSliceClick = (i: number) => {
     if (!onAddToProgression) return;
@@ -153,7 +191,7 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
     const url  = URL.createObjectURL(blob);
     const img  = new Image();
     img.onload = () => {
-      ctx.fillStyle = '#F7F0DC'; // match T.bgDeep
+      ctx.fillStyle = '#F7F0DC';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
@@ -167,74 +205,95 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
 
   const hoveredChord = hovered !== null ? chords[hovered] : null;
 
+  const toggleStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1, padding: '8px 0', border: 'none', cursor: 'pointer',
+    fontWeight: 700, fontSize: 12,
+    background: active ? T.secondary : T.bgInput,
+    color: active ? T.white : T.textMuted,
+    transition: 'background 0.12s',
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* ── Root selector ── */}
-      <div style={card({ padding: '12px 14px' })}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Root Note</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5 }}>
-          {NOTES.map(n => (
-            <button
-              key={n}
-              onClick={() => setRoot(n)}
-              style={{
-                padding: '7px 0', border: 'none', borderRadius: 8, cursor: 'pointer',
-                fontSize: 12, fontWeight: 700,
-                background: root === n ? T.primary : T.bgInput,
-                color: root === n ? T.white : T.textMuted,
-                transition: 'all 0.12s',
-              }}
-            >{n}</button>
-          ))}
-        </div>
-      </div>
+      {/* ── Export button — TOP ── */}
+      <button
+        onClick={exportPNG}
+        style={{
+          padding: '10px 16px', borderRadius: 10,
+          border: `1px solid ${T.border}`,
+          background: T.bgCard, color: T.text,
+          fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}
+      >
+        📷 Save as PNG
+      </button>
 
-      {/* ── Mode + Quality toggles ── */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {/* Major / Minor */}
-        <div style={{ display: 'flex', borderRadius: 9, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
-          {(['major', 'minor'] as ScaleMode[]).map(m => (
-            <button key={m} onClick={() => setMode(m)} style={{
-              flex: 1, padding: '9px 0', border: 'none', cursor: 'pointer',
-              fontWeight: 700, fontSize: 12,
-              background: mode === m ? T.secondary : T.bgInput,
-              color: mode === m ? T.white : T.textMuted,
-              textTransform: 'capitalize', transition: 'background 0.12s',
-            }}>{m}</button>
-          ))}
+      {/* ── Controls ── */}
+      <div style={card({ padding: '12px 14px', gap: 10, display: 'flex', flexDirection: 'column' })}>
+
+        {/* Row 1: Root dropdown + Mode toggle */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Root</span>
+          <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+            <select
+              value={root}
+              onChange={e => setRoot(e.target.value)}
+              style={SELECT_STYLE}
+            >
+              {NOTES.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <span style={{ position: 'absolute', right: 10, pointerEvents: 'none', fontSize: 10, color: T.textMuted }}>▾</span>
+          </div>
+
+          <div style={{ display: 'flex', borderRadius: 9, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
+            {(['major', 'minor'] as ScaleMode[]).map(m => (
+              <button key={m} onClick={() => setMode(m)} style={{ ...toggleStyle(mode === m), textTransform: 'capitalize' }}>{m}</button>
+            ))}
+          </div>
         </div>
-        {/* Triads / 7ths */}
-        <div style={{ display: 'flex', borderRadius: 9, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
+
+        {/* Row 2: Quality toggle */}
+        <div style={{ display: 'flex', borderRadius: 9, overflow: 'hidden', border: `1px solid ${T.border}` }}>
           {([['triads', 'Triads'], ['sevenths', '7th Chords']] as [ChordQuality, string][]).map(([q, lbl]) => (
-            <button key={q} onClick={() => setQuality(q)} style={{
-              flex: 1, padding: '9px 0', border: 'none', cursor: 'pointer',
-              fontWeight: 700, fontSize: 12,
-              background: quality === q ? T.secondary : T.bgInput,
-              color: quality === q ? T.white : T.textMuted,
-              transition: 'background 0.12s',
-            }}>{lbl}</button>
+            <button key={q} onClick={() => setQuality(q)} style={toggleStyle(quality === q)}>{lbl}</button>
           ))}
         </div>
-      </div>
 
-      {/* ── Harmonic minor toggle (minor only) ── */}
-      {mode === 'minor' && (
-        <button
-          onClick={() => setHarmonicV(v => !v)}
-          style={{
-            padding: '8px 14px', borderRadius: 9,
-            border: `1px solid ${harmonicV ? T.primary : T.border}`,
-            background: harmonicV ? T.primaryBg : T.bgInput,
-            color: harmonicV ? T.primary : T.textMuted,
-            fontSize: 12, fontWeight: 700, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}
-        >
-          <span>{harmonicV ? '✓' : '○'}</span>
-          Harmonic V (raise chord v → V for stronger dominant pull)
-        </button>
-      )}
+        {/* Row 3: Secondary Dominants + Harmonic V */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setSecondaryDom(v => !v)}
+            style={{
+              flex: 1, padding: '8px 10px', borderRadius: 9,
+              border: `1px solid ${secondaryDom ? T.primary : T.border}`,
+              background: secondaryDom ? T.primaryBg : T.bgInput,
+              color: secondaryDom ? T.primary : T.textMuted,
+              fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            }}
+          >
+            <span>{secondaryDom ? '✓' : '○'}</span> Secondary Dom
+          </button>
+
+          {mode === 'minor' && (
+            <button
+              onClick={() => setHarmonicV(v => !v)}
+              style={{
+                flex: 1, padding: '8px 10px', borderRadius: 9,
+                border: `1px solid ${harmonicV ? T.secondary : T.border}`,
+                background: harmonicV ? T.secondaryBg : T.bgInput,
+                color: harmonicV ? T.secondary : T.textMuted,
+                fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              }}
+            >
+              <span>{harmonicV ? '✓' : '○'}</span> Harmonic V
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* ── SVG Wheel ── */}
       <div style={{ position: 'relative' }}>
@@ -244,10 +303,8 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
           width="100%"
           style={{ display: 'block' }}
         >
-          {/* Subtle outer ring shadow */}
           <circle cx={CX} cy={CY} r={OUTER_R + 3} fill="none" stroke={T.border} strokeWidth="1" opacity="0.6" />
 
-          {/* Slices */}
           {chords.map((chord, i) => {
             const col     = FUNC_COLORS[chord.func];
             const isHov   = hovered === i;
@@ -265,16 +322,12 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
                 style={{ cursor: onAddToProgression ? 'pointer' : 'default' }}
               >
                 <path d={arcPath(i)} fill={fill} style={{ transition: 'fill 0.15s' }} />
-
-                {/* Chord name */}
                 <text
                   x={mpName.x} y={mpName.y}
                   textAnchor="middle" dominantBaseline="middle"
                   fill={col.text} fontSize={13} fontWeight="700"
                   fontFamily="system-ui, -apple-system, Arial, sans-serif"
                 >{chord.name}</text>
-
-                {/* Roman numeral */}
                 <text
                   x={mpRoman.x} y={mpRoman.y}
                   textAnchor="middle" dominantBaseline="middle"
@@ -285,32 +338,24 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
             );
           })}
 
-          {/* Center circle */}
           <circle cx={CX} cy={CY} r={INNER_R - 2} fill={T.bgCard} stroke={T.border} strokeWidth="1.5" />
-          <text
-            x={CX} y={CY - 10}
-            textAnchor="middle" dominantBaseline="middle"
+          <text x={CX} y={CY - 10} textAnchor="middle" dominantBaseline="middle"
             fill={T.text} fontSize={20} fontWeight="800"
             fontFamily="system-ui, -apple-system, Arial, sans-serif"
           >{root}</text>
-          <text
-            x={CX} y={CY + 10}
-            textAnchor="middle" dominantBaseline="middle"
+          <text x={CX} y={CY + 10} textAnchor="middle" dominantBaseline="middle"
             fill={T.textMuted} fontSize={11}
             fontFamily="system-ui, -apple-system, Arial, sans-serif"
           >{mode === 'major' ? 'Major' : 'Minor'}</text>
         </svg>
 
-        {/* Added chord toast */}
         {addedMsg && (
           <div style={{
             position: 'absolute', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
             background: T.secondary, color: T.white,
             borderRadius: 10, padding: '6px 16px',
-            fontSize: 13, fontWeight: 700,
-            pointerEvents: 'none',
-            animation: 'fadeOut 0.7s ease forwards',
+            fontSize: 13, fontWeight: 700, pointerEvents: 'none',
           }}>
             + {addedMsg}
           </div>
@@ -321,10 +366,7 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
       <div style={{ ...card({ padding: '10px 14px' }), minHeight: 44, display: 'flex', alignItems: 'center', gap: 10 }}>
         {hoveredChord ? (
           <>
-            <div style={{
-              width: 12, height: 12, borderRadius: 3, flexShrink: 0,
-              background: FUNC_COLORS[hoveredChord.func].fill,
-            }} />
+            <div style={{ width: 12, height: 12, borderRadius: 3, flexShrink: 0, background: FUNC_COLORS[hoveredChord.func].fill }} />
             <div>
               <span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{hoveredChord.name}</span>
               <span style={{ color: T.textMuted, fontSize: 12 }}> — {FUNC_LABELS[hoveredChord.func]}</span>
@@ -350,41 +392,29 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression }) => {
       </div>
 
       {/* ── Theory tip ── */}
-      <div style={{ ...card({ padding: '10px 14px' }) }}>
+      <div style={card({ padding: '10px 14px' })}>
         <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
-          <span style={{ color: T.text, fontWeight: 700 }}>How to read this wheel: </span>
-          Chords are arranged in 5ths. Moving{' '}
-          <span style={{ color: '#2E4A5A', fontWeight: 700 }}>counterclockwise</span>
-          {' '}= resolution toward the tonic.{' '}
+          <span style={{ color: T.text, fontWeight: 700 }}>How to read: </span>
+          Moving <span style={{ color: '#2E4A5A', fontWeight: 700 }}>clockwise</span> = resolution toward tonic.{' '}
           <span style={{ color: FUNC_COLORS.subdominant.fill, fontWeight: 700 }}>ii</span>
           <span style={{ color: T.textMuted }}> → </span>
           <span style={{ color: FUNC_COLORS.dominant.fill, fontWeight: 700 }}>V</span>
           <span style={{ color: T.textMuted }}> → </span>
           <span style={{ color: FUNC_COLORS.tonic.fill, fontWeight: 700 }}>I</span>
           {' '}are always 3 consecutive counterclockwise steps.
+          {secondaryDom && (
+            <span style={{ display: 'block', marginTop: 4, color: T.primary }}>
+              Secondary Dominants: minor chords replaced by their V7 — enables jazz-style dominant chains.
+            </span>
+          )}
         </p>
       </div>
 
-      {/* ── Add hint + Export ── */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        {onAddToProgression && (
-          <p style={{ margin: 0, flex: 1, fontSize: 11, color: T.textDim }}>
-            Tap any chord to add it to your progression
-          </p>
-        )}
-        <button
-          onClick={exportPNG}
-          style={{
-            padding: '9px 16px', borderRadius: 9,
-            border: `1px solid ${T.border}`,
-            background: T.bgCard, color: T.text,
-            fontSize: 12, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-          }}
-        >
-          📷 Save as PNG
-        </button>
-      </div>
+      {onAddToProgression && (
+        <p style={{ margin: 0, textAlign: 'center', fontSize: 11, color: T.textDim }}>
+          Tap any chord to add it to your progression
+        </p>
+      )}
 
     </div>
   );

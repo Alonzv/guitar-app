@@ -323,16 +323,6 @@ export function ChordBuilderTab({
                 }}
               >↪</button>
               <button
-                onClick={handleClear}
-                style={{
-                  padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.border}`,
-                  background: T.bgInput, color: T.textMuted, fontSize: 11, cursor: 'pointer', fontWeight: 600,
-                  transition: 'filter 0.15s',
-                }}
-              >
-                Clear
-              </button>
-              <button
                 onClick={handleCopy}
                 style={{
                   padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.border}`,
@@ -445,6 +435,20 @@ export function ChordBuilderTab({
               }}
             >+</button>
           </div>
+
+          {/* Clear All — prominent */}
+          <button
+            onClick={handleClear}
+            style={{
+              width: '100%', marginBottom: 10, padding: '10px 0', borderRadius: 10,
+              border: `1px solid ${T.coral}`,
+              background: T.coral + '18',
+              color: T.coral, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            🗑 Clear All Chords
+          </button>
 
           {/* Chord cards */}
           <div className="gc-chip-strip" style={{ paddingTop: 10 }}>
