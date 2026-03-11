@@ -3,15 +3,17 @@ import { ScaleDetector } from './ScaleDetector';
 import { ScaleVisualizer } from './ScaleVisualizer';
 import { ScaleExplorer } from './ScaleExplorer';
 import { HarmonyBuilder } from './HarmonyBuilder';
+import { DiatonicWheel } from './DiatonicWheel';
 import type { ChordInProgression, ScaleMatch, Tuning } from '../../types/music';
 import { T } from '../../theme';
 
-type Sub = 'detect' | 'explore' | 'harmony';
+type Sub = 'detect' | 'explore' | 'harmony' | 'wheel';
 
 const SUB_TABS: { id: Sub; label: string }[] = [
   { id: 'detect',  label: '🔍 Detect'  },
   { id: 'explore', label: '🎼 Browse'  },
   { id: 'harmony', label: '🎶 Harmony' },
+  { id: 'wheel',   label: '⭕ Wheel'   },
 ];
 
 interface Props {
@@ -20,9 +22,10 @@ interface Props {
   onSelectScale: (scale: ScaleMatch) => void;
   preferredKey?: string;
   tuning: Tuning;
+  onAddToProgression?: (item: ChordInProgression) => void;
 }
 
-export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelectScale, preferredKey, tuning }) => {
+export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelectScale, preferredKey, tuning, onAddToProgression }) => {
   const [sub, setSub] = useState<Sub>('detect');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -30,7 +33,7 @@ export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelec
         {SUB_TABS.map(({ id, label }) => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 0', border: 'none', cursor: 'pointer',
-            fontWeight: 700, fontSize: 12,
+            fontWeight: 700, fontSize: 11,
             background: sub === id ? T.secondary : T.bgInput,
             color: sub === id ? T.white : T.textMuted,
             transition: 'background 0.15s',
@@ -48,6 +51,7 @@ export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelec
       )}
       {sub === 'explore' && <ScaleExplorer />}
       {sub === 'harmony' && <HarmonyBuilder tuning={tuning} />}
+      {sub === 'wheel'   && <DiatonicWheel onAddToProgression={onAddToProgression} />}
     </div>
   );
 };

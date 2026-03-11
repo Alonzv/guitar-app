@@ -322,6 +322,7 @@ export default function App() {
               onSelectScale={setSelectedScale}
               preferredKey={detectKey(progression.map(c => c.chord)) || undefined}
               tuning={tuning}
+              onAddToProgression={(item) => pushHistory([...progression, item])}
             />
           </ErrorBoundary>
         )}
