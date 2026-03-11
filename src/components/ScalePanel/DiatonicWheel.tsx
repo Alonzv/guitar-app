@@ -157,11 +157,11 @@ const SELECT_STYLE: React.CSSProperties = {
 // Relative key: major → show relative minor root, minor → show relative major root
 function getRelativeKey(root: string, mode: ScaleMode): string {
   if (mode === 'major') {
-    const rel = Note.transpose(root, '-3m'); // minor 3rd down = relative minor
-    return `rel. ${rel}m`;
+    const rel = Note.transpose(root, '-3m');
+    return `${rel} Minor`;
   } else {
-    const rel = Note.transpose(root, '3m'); // minor 3rd up = relative major
-    return `rel. ${rel}`;
+    const rel = Note.transpose(root, '3m');
+    return `${rel} Major`;
   }
 }
 
