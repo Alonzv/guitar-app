@@ -145,8 +145,8 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
     const target  = newRoot ? -(COF_IDX[newRoot] * 30) : 0;
     const next    = shortestRotation(rotRef.current, target);
     const slices  = Math.round(Math.abs(next - rotRef.current) / 30);
-    // ≤ 3 slices → 0.6 s  |  4+ slices → 1.2 s
-    setTransDur(slices <= 3 ? 0.6 : 1.2);
+    // 1-2 slices → 0.3s  |  3-4 slices → 0.6s  |  5+ slices → 1.2s
+    setTransDur(slices <= 2 ? 0.3 : slices <= 4 ? 0.6 : 1.2);
     rotRef.current = next;
     setRotation(next);
   };
