@@ -1,8 +1,7 @@
 import { Key, Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import type { Chord, ChordInProgression, Genre, ProgressionSuggestion } from '../types/music';
 import { GENRE_PATTERNS, DIATONIC_SUGGESTIONS } from '../data/genreProgressions';
-
-const CHROMATIC    = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+import { CHROMATIC } from './musicTheory';
 const FLAT_CHROMA  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const FLAT_KEYS    = new Set(['F','Bb','Eb','Ab','Db','Gb']);
 

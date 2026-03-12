@@ -51,10 +51,21 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chords');
 
+  // ── Dark mode ──────────────────────────────────────────────────────────────
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('scaleup_dark') === '1'; }
+    catch { return false; }
+  });
+  useEffect(() => {
+    document.body.classList.toggle('dark', darkMode);
+    try { localStorage.setItem('scaleup_dark', darkMode ? '1' : '0'); }
+    catch (e) { console.warn('localStorage unavailable', e); }
+  }, [darkMode]);
+
   // ── Progression with undo/redo ─────────────────────────────────────────────
   const [progression, setProgression] = useState<ChordInProgression[]>(() => {
     try { return JSON.parse(localStorage.getItem('scaleup_progression') || '[]'); }
-    catch { return []; }
+    catch (e) { console.warn('Could not load progression', e); return []; }
   });
   const [undoStack, setUndoStack] = useState<ChordInProgression[][]>([]);
   const [redoStack, setRedoStack] = useState<ChordInProgression[][]>([]);
@@ -112,7 +123,7 @@ export default function App() {
   // ── Other state ────────────────────────────────────────────────────────────
   const [songs, setSongs] = useState<Song[]>(() => {
     try { return JSON.parse(localStorage.getItem('scaleup_songs') || '[]'); }
-    catch { return []; }
+    catch (e) { console.warn('Could not load songs', e); return []; }
   });
 
   const [selectedScale, setSelectedScale] = useState<ScaleMatch | null>(null);
@@ -127,11 +138,13 @@ export default function App() {
 
   // Persist
   useEffect(() => {
-    localStorage.setItem('scaleup_progression', JSON.stringify(progression));
+    try { localStorage.setItem('scaleup_progression', JSON.stringify(progression)); }
+    catch (e) { console.warn('Could not save progression', e); }
   }, [progression]);
 
   useEffect(() => {
-    localStorage.setItem('scaleup_songs', JSON.stringify(songs));
+    try { localStorage.setItem('scaleup_songs', JSON.stringify(songs)); }
+    catch (e) { console.warn('Could not save songs', e); }
   }, [songs]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -237,6 +250,15 @@ export default function App() {
           </span>
           {/* Header action buttons */}
           <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => setDarkMode(d => !d)}
+              style={{
+                width: 26, height: 26, borderRadius: '50%',
+                border: `1px solid ${T.border}`, background: T.bgCard,
+                color: T.textMuted, fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0,
+              }}
+              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >{darkMode ? '☀️' : '🌙'}</button>
             <button
               onClick={() => setShowSongLibrary(true)}
               style={{

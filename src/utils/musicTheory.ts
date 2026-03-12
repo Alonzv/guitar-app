@@ -1,6 +1,13 @@
 import { Note as TonalNote, Interval } from '@tonaljs/tonal';
 import type { FretPosition, Note, Tuning } from '../types/music';
 
+// ── Shared music constants ─────────────────────────────────────────────────
+export const CHROMATIC: string[] = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+export const ENHARMONICS: Record<string, string> = {
+  'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb',
+  'Db':'C#','Eb':'D#','Gb':'F#','Ab':'G#','Bb':'A#',
+};
+
 export const TUNINGS: Tuning[] = [
   // ── Standard & drop ───────────────────────────────────────────────────────
   { name: 'standard', label: 'E Standard',     notes: ['E2','A2','D3','G3','B3','E4'],  openFreqs: [82.41, 110.0,  146.83, 196.0,  246.94, 329.63] },

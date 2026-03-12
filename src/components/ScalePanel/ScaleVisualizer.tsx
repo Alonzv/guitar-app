@@ -105,14 +105,14 @@ export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
                   padding: '5px 8px', borderRadius: 10, gap: 2, minWidth: 44,
                   cursor: 'pointer',
                   transition: 'all 0.15s',
-                  background: isActive ? T.primary : isTonic ? `${T.primary}20` : T.bgInput,
+                  background: isActive ? T.primary : isTonic ? T.primarySoft : T.bgInput,
                   border: `1px solid ${isActive ? T.primary : isTonic ? T.primary : T.border}`,
-                  boxShadow: isActive ? `0 2px 8px ${T.primary}55` : 'none',
+                  boxShadow: isActive ? `0 2px 8px ${T.primaryGlow}` : 'none',
                   transform: isActive ? 'translateY(-2px)' : 'none',
                 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: isActive ? T.white : T.primary, lineHeight: 1 }}>{deg.num}</span>
                 <span style={{ fontSize: 14, fontWeight: 800, color: isActive ? T.white : T.text, lineHeight: 1.2 }}>{n}</span>
-                <span style={{ fontSize: 8, color: isActive ? `${T.white}bb` : T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
+                <span style={{ fontSize: 8, color: isActive ? T.whiteSoft : T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
               </div>
             );
           })}

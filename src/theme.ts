@@ -1,19 +1,28 @@
 // ── Guitar Composer Design Tokens ──────────────────────────
+// Values are CSS custom-property references so light/dark themes
+// can be toggled by adding/removing the 'dark' class on <body>.
 export const T = {
-  bgDeep:     '#F7F0DC',           // warm cream — main background
-  bgCard:     '#EDE6C8',           // slightly darker cream — cards / panels
-  bgInput:    '#E8DDBA',           // input areas, secondary surfaces
-  border:     '#CDBF96',           // tan / golden borders
-  primary:    '#C44900',           // burnt orange — CTAs, active, root notes (pick color)
-  primaryHov: '#d95200',           // hover state of primary
-  primaryBg:  '#FAEBD4',           // very light warm surface for primary accent
-  secondary:  '#629677',           // sage green — secondary actions, scale tones
-  secondaryBg:'#DDF0EB',           // light surface for secondary accent
-  coral:      '#E8736A',           // coral / salmon — "Up" accent color
-  text:       '#2E4A5A',           // dark slate blue — primary text
-  textMuted:  'rgba(46,74,90,0.58)',
-  textDim:    'rgba(46,74,90,0.33)',
-  white:      '#F9ECC3',           // warm cream — for text on colored backgrounds
+  bgDeep:          'var(--gc-bg-deep)',
+  bgCard:          'var(--gc-bg-card)',
+  bgInput:         'var(--gc-bg-input)',
+  border:          'var(--gc-border)',
+  primary:         'var(--gc-primary)',
+  primaryHov:      'var(--gc-primary-hov)',
+  primaryBg:       'var(--gc-primary-bg)',
+  secondary:       'var(--gc-secondary)',
+  secondaryBg:     'var(--gc-secondary-bg)',
+  coral:           'var(--gc-coral)',
+  text:            'var(--gc-text)',
+  textMuted:       'var(--gc-text-muted)',
+  textDim:         'var(--gc-text-dim)',
+  white:           'var(--gc-white)',
+  // Alpha / translucent variants (previously written as ${T.x}HH hex suffix)
+  primarySoft:     'var(--gc-primary-soft)',    // ≈ primary @ 12 %
+  primaryGlow:     'var(--gc-primary-glow)',    // ≈ primary @ 33 % (box-shadow)
+  whiteSoft:       'var(--gc-white-soft)',      // ≈ white   @ 73 %
+  secondaryFaint:  'var(--gc-secondary-faint)', // ≈ secondary @ 27 %
+  coralFaint:      'var(--gc-coral-faint)',     // ≈ coral   @ 9 %
+  coralFaint2:     'var(--gc-coral-faint2)',    // ≈ coral   @ 13 %
 } as const;
 
 export type Theme = typeof T;

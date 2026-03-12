@@ -1,6 +1,6 @@
 import { Chord as TonalChord, Scale, Note as TonalNote } from '@tonaljs/tonal';
 import type { ChordInProgression, FretPosition, Note, ScaleMatch } from '../types/music';
-import { fretPositionsToNotes, notesToPitchClasses, FRET_COUNT, STRING_COUNT, fretToNote } from './musicTheory';
+import { fretPositionsToNotes, notesToPitchClasses, FRET_COUNT, STRING_COUNT, fretToNote, CHROMATIC } from './musicTheory';
 
 // Conventional flat notation for display (A# → Bb, D# → Eb, G# → Ab)
 const SHARP_TO_FLAT: Record<string, string> = { 'A#': 'Bb', 'D#': 'Eb', 'G#': 'Ab' };
@@ -34,7 +34,6 @@ export function detectScales(chords: ChordInProgression[], preferredKey?: string
   const pitchClasses = notesToPitchClasses(allNotes);
   if (pitchClasses.length === 0) return [];
 
-  const chromatic = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
   const results: ScaleMatch[] = [];
 
   const COMMON_TYPES = [
@@ -47,7 +46,7 @@ export function detectScales(chords: ChordInProgression[], preferredKey?: string
   const prefType   = prefParts.slice(1).join(' ');
   const prefChroma = prefRoot !== '' ? TonalNote.chroma(prefRoot) : null;
 
-  for (const root of chromatic) {
+  for (const root of CHROMATIC) {
     for (const type of COMMON_TYPES) {
       const scale = Scale.get(`${root} ${type}`);
       if (!scale || scale.empty) continue;

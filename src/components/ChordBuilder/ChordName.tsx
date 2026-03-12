@@ -43,7 +43,7 @@ export const ChordName: React.FC<Props> = ({ positions, tuning, capo = 0 }) => {
             <span key={c.name} style={{
               padding: '3px 10px', borderRadius: 6, fontSize: 12,
               background: T.bgInput, color: T.secondary,
-              border: `1px solid ${T.secondary}44`,
+              border: `1px solid ${T.secondaryFaint}`,
             }}>
               {formatChordName(c.name)}
             </span>

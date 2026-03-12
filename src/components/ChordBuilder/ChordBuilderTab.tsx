@@ -230,7 +230,7 @@ export function ChordBuilderTab({
                 onChange={e => onCapoChange(Number(e.target.value))}
                 style={SELECT_STYLE}
               >
-                {[0,1,2,3,4,5,6,7].map(n => (
+                {Array.from({ length: 12 }, (_, n) => (
                   <option key={n} value={n}>{n === 0 ? 'None' : `Fret ${n}`}</option>
                 ))}
               </select>
@@ -295,7 +295,7 @@ export function ChordBuilderTab({
               {detectedKey && (
                 <span style={{
                   padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
-                  background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondary}44`,
+                  background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondaryFaint}`,
                 }}>
                   Key: {detectedKey}
                 </span>
@@ -442,7 +442,7 @@ export function ChordBuilderTab({
             style={{
               width: '100%', marginBottom: 10, padding: '10px 0', borderRadius: 10,
               border: `1px solid ${T.coral}`,
-              background: T.coral + '18',
+              background: T.coralFaint,
               color: T.coral, fontWeight: 700, fontSize: 13, cursor: 'pointer',
               transition: 'all 0.15s',
             }}
@@ -516,7 +516,7 @@ export function ChordBuilderTab({
               style={{
                 width: '100%', marginTop: 12, padding: '10px 0', borderRadius: 10,
                 border: `1px solid ${playingAll ? T.coral : T.secondary}`,
-                background: playingAll ? T.coral + '22' : T.secondaryBg,
+                background: playingAll ? T.coralFaint2 : T.secondaryBg,
                 color: playingAll ? T.coral : T.secondary,
                 fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
               }}

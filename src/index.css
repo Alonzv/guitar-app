@@ -6,8 +6,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #F7F0DC;
-  color: #2E4A5A;
+  background-color: var(--gc-bg-deep);
+  color: var(--gc-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -18,6 +18,58 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
    Responsive design tokens — referenced via var() in inline styles
    so CSS media queries can override values that React controls.
 ───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   Design-token colour variables — overridden in .dark for dark mode
+───────────────────────────────────────────────────────────── */
+:root {
+  /* Light mode colours */
+  --gc-bg-deep:          #F7F0DC;
+  --gc-bg-card:          #EDE6C8;
+  --gc-bg-input:         #E8DDBA;
+  --gc-border:           #CDBF96;
+  --gc-primary:          #C44900;
+  --gc-primary-hov:      #d95200;
+  --gc-primary-bg:       #FAEBD4;
+  --gc-secondary:        #629677;
+  --gc-secondary-bg:     #DDF0EB;
+  --gc-coral:            #E8736A;
+  --gc-text:             #2E4A5A;
+  --gc-text-muted:       rgba(46,74,90,0.58);
+  --gc-text-dim:         rgba(46,74,90,0.33);
+  --gc-white:            #F9ECC3;
+  /* Alpha variants (used where hex-suffix was previously appended) */
+  --gc-primary-soft:     rgba(196,73,0,0.12);
+  --gc-primary-glow:     rgba(196,73,0,0.33);
+  --gc-white-soft:       rgba(249,236,195,0.73);
+  --gc-secondary-faint:  rgba(98,150,119,0.27);
+  --gc-coral-faint:      rgba(232,115,106,0.09);
+  --gc-coral-faint2:     rgba(232,115,106,0.13);
+}
+
+body.dark {
+  --gc-bg-deep:          #1A2832;
+  --gc-bg-card:          #243238;
+  --gc-bg-input:         #2D404F;
+  --gc-border:           #3E5E74;
+  --gc-primary:          #E05200;
+  --gc-primary-hov:      #FF6010;
+  --gc-primary-bg:       rgba(196,73,0,0.18);
+  --gc-secondary:        #70A888;
+  --gc-secondary-bg:     rgba(98,150,119,0.18);
+  --gc-coral:            #E8736A;
+  --gc-text:             #F0E8CC;
+  --gc-text-muted:       rgba(240,232,204,0.58);
+  --gc-text-dim:         rgba(240,232,204,0.33);
+  --gc-white:            #F9ECC3;
+  /* Alpha variants */
+  --gc-primary-soft:     rgba(224,82,0,0.18);
+  --gc-primary-glow:     rgba(224,82,0,0.40);
+  --gc-white-soft:       rgba(249,236,195,0.73);
+  --gc-secondary-faint:  rgba(112,168,136,0.30);
+  --gc-coral-faint:      rgba(232,115,106,0.12);
+  --gc-coral-faint2:     rgba(232,115,106,0.16);
+}
+
 :root {
   /* Layout spacing */
   --gc-header-pad:  12px 12px 8px;
