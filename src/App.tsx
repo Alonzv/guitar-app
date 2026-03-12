@@ -254,8 +254,9 @@ export default function App() {
               onClick={() => setDarkMode(d => !d)}
               style={{
                 width: 26, height: 26, borderRadius: '50%',
-                border: `1px solid ${T.border}`, background: T.bgCard,
-                color: T.textMuted, fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0,
+                border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`,
+                background: darkMode ? '#2D404F' : '#4A6A80',
+                fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0,
               }}
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >{darkMode ? '☀️' : '🌙'}</button>
