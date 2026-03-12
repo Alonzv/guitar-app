@@ -160,12 +160,13 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
             <CircleOfFifths onAddToProgression={onAddToProgression} />
           )}
 
-          {/* ── Diatonic Wheel controls (faded when COF is active) ── */}
-          <DiatonicWheel
-            onAddToProgression={onAddToProgression}
-            tuning={tuning}
-            faded={wheelView === 'cof'}
-          />
+          {/* ── Diatonic Wheel (second view) ── */}
+          {wheelView === 'diatonic' && (
+            <DiatonicWheel
+              onAddToProgression={onAddToProgression}
+              tuning={tuning}
+            />
+          )}
 
         </div>
       )}
