@@ -8,7 +8,7 @@ import { TUNINGS } from '../../utils/musicTheory';
 import { T } from '../../theme';
 
 type Sub       = 'tuner' | 'metronome' | 'wheel';
-type WheelView = 'diatonic' | 'cof';
+type WheelView = 'cof' | 'diatonic';   // cof = first/left, diatonic = second/right
 
 const SUB_LABELS: Record<Sub, string> = {
   tuner:     '🎤 Tuner',
@@ -24,7 +24,21 @@ interface Props {
 
 export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgression }) => {
   const [sub,       setSub]       = useState<Sub>('tuner');
-  const [wheelView, setWheelView] = useState<WheelView>('diatonic');
+  const [wheelView, setWheelView] = useState<WheelView>('cof');   // COF is the default first view
+
+  // Ref to the top of the wheel section — used to prevent page jump on view switch
+  const wheelTopRef = useRef<HTMLDivElement>(null);
+
+  // ── View switch (shared logic) ───────────────────────────────────────────────
+  const switchView = (next: WheelView) => {
+    if (next === wheelView) return;
+    setWheelView(next);
+    // After the DOM updates, scroll the wheel section's top back into view so the
+    // page doesn't visually jump when content height changes.
+    requestAnimationFrame(() => {
+      wheelTopRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  };
 
   // ── Swipe detection ──────────────────────────────────────────────────────────
   const touchStartX = useRef(0);
@@ -34,13 +48,7 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
   const handleTouchEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     if (Math.abs(dx) < 50) return;
-    if (dx > 0) setWheelView('cof');       // swipe right → Circle of Fifths
-    else        setWheelView('diatonic');  // swipe left  → Diatonic Wheel
-  };
-
-  // ── Arrow key handler (desktop) ──────────────────────────────────────────────
-  const handleArrow = (dir: 'left' | 'right') => {
-    setWheelView(dir === 'right' ? 'cof' : 'diatonic');
+    switchView(dx > 0 ? 'cof' : 'diatonic');
   };
 
   return (
@@ -91,6 +99,7 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
 
       {sub === 'wheel' && (
         <div
+          ref={wheelTopRef}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
@@ -102,24 +111,26 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
             background: T.bgCard, borderRadius: 12, padding: '8px 12px',
             border: `1px solid ${T.border}`,
           }}>
+            {/* ◀ — go to COF (first/left) */}
             <button
-              onClick={() => handleArrow('left')}
-              disabled={wheelView === 'diatonic'}
+              onClick={() => switchView('cof')}
+              disabled={wheelView === 'cof'}
               style={{
                 width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
-                background: wheelView === 'cof' ? T.bgInput : T.bgDeep,
-                color: wheelView === 'cof' ? T.text : T.textDim,
-                fontSize: 16, cursor: wheelView === 'cof' ? 'pointer' : 'default',
+                background: wheelView !== 'cof' ? T.bgInput : T.bgDeep,
+                color:      wheelView !== 'cof' ? T.text   : T.textDim,
+                fontSize: 16,
+                cursor: wheelView !== 'cof' ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >◀</button>
 
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
-                {wheelView === 'diatonic' ? '⭕ Diatonic Wheel' : '🎡 Circle of Fifths'}
+                {wheelView === 'cof' ? '🎡 Circle of Fifths' : '⭕ Diatonic Wheel'}
               </div>
               <div style={{ display: 'flex', gap: 5, justifyContent: 'center', marginTop: 4 }}>
-                {(['diatonic', 'cof'] as WheelView[]).map(v => (
+                {(['cof', 'diatonic'] as WheelView[]).map(v => (
                   <div key={v} style={{
                     width: 6, height: 6, borderRadius: '50%',
                     background: wheelView === v ? T.secondary : T.border,
@@ -129,30 +140,32 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
               </div>
             </div>
 
+            {/* ▶ — go to Diatonic Wheel (second/right) */}
             <button
-              onClick={() => handleArrow('right')}
-              disabled={wheelView === 'cof'}
+              onClick={() => switchView('diatonic')}
+              disabled={wheelView === 'diatonic'}
               style={{
                 width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
-                background: wheelView === 'diatonic' ? T.bgInput : T.bgDeep,
-                color: wheelView === 'diatonic' ? T.text : T.textDim,
-                fontSize: 16, cursor: wheelView === 'diatonic' ? 'pointer' : 'default',
+                background: wheelView !== 'diatonic' ? T.bgInput : T.bgDeep,
+                color:      wheelView !== 'diatonic' ? T.text   : T.textDim,
+                fontSize: 16,
+                cursor: wheelView !== 'diatonic' ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >▶</button>
           </div>
 
-          {/* ── Diatonic Wheel (faded when COF is active) ── */}
+          {/* ── Circle of Fifths (first / default view) ── */}
+          {wheelView === 'cof' && (
+            <CircleOfFifths onAddToProgression={onAddToProgression} />
+          )}
+
+          {/* ── Diatonic Wheel controls (faded when COF is active) ── */}
           <DiatonicWheel
             onAddToProgression={onAddToProgression}
             tuning={tuning}
             faded={wheelView === 'cof'}
           />
-
-          {/* ── Circle of Fifths (shown below faded wheel when active) ── */}
-          {wheelView === 'cof' && (
-            <CircleOfFifths onAddToProgression={onAddToProgression} />
-          )}
 
         </div>
       )}

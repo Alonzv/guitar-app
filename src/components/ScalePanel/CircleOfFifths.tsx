@@ -19,7 +19,7 @@ const SLICE_A = (2 * Math.PI) / TOTAL;   // 30°
 // START shifted so that slice 0 (C) is centred at exact 12 o'clock
 const START   = -Math.PI / 2 - SLICE_A / 2;
 
-const TRANSITION = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)';
+const TRANSITION = 'transform 0.85s cubic-bezier(0.16, 1, 0.3, 1)';
 
 // ── Music data ─────────────────────────────────────────────────────────────────
 
