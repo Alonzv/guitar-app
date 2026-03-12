@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Metronome } from './Metronome';
 import { Tuner } from './Tuner';
 import { DiatonicWheel } from '../ScalePanel/DiatonicWheel';
+import { CircleOfFifths } from '../ScalePanel/CircleOfFifths';
 import type { ChordInProgression, Tuning } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
 import { T } from '../../theme';
 
-type Sub = 'tuner' | 'metronome' | 'wheel';
+type Sub       = 'tuner' | 'metronome' | 'wheel';
+type WheelView = 'diatonic' | 'cof';
 
 const SUB_LABELS: Record<Sub, string> = {
-  tuner:      '🎤 Tuner',
-  metronome:  '🥁 Metronome',
-  wheel:      '⭕ Wheel',
+  tuner:     '🎤 Tuner',
+  metronome: '🥁 Metronome',
+  wheel:     '⭕ Wheel',
 };
 
 interface Props {
@@ -21,9 +23,30 @@ interface Props {
 }
 
 export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgression }) => {
-  const [sub, setSub] = useState<Sub>('tuner');
+  const [sub,       setSub]       = useState<Sub>('tuner');
+  const [wheelView, setWheelView] = useState<WheelView>('diatonic');
+
+  // ── Swipe detection ──────────────────────────────────────────────────────────
+  const touchStartX = useRef(0);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) < 50) return;
+    if (dx > 0) setWheelView('cof');       // swipe right → Circle of Fifths
+    else        setWheelView('diatonic');  // swipe left  → Diatonic Wheel
+  };
+
+  // ── Arrow key handler (desktop) ──────────────────────────────────────────────
+  const handleArrow = (dir: 'left' | 'right') => {
+    setWheelView(dir === 'right' ? 'cof' : 'diatonic');
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+      {/* Sub-tab buttons */}
       <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.border}` }}>
         {(['tuner', 'metronome', 'wheel'] as Sub[]).map(id => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
@@ -38,7 +61,7 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
         ))}
       </div>
 
-      {/* Tuning selector — shown only for tuner/metronome */}
+      {/* Tuning selector */}
       {sub !== 'wheel' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
@@ -50,18 +73,10 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
                 if (t) onTuningChange(t);
               }}
               style={{
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                background: T.bgInput,
-                border: `1px solid ${T.border}`,
-                borderRadius: 8,
-                color: T.text,
-                fontFamily: 'inherit',
-                fontSize: 12,
-                fontWeight: 600,
-                padding: '5px 26px 5px 10px',
-                cursor: 'pointer',
-                outline: 'none',
+                appearance: 'none', WebkitAppearance: 'none',
+                background: T.bgInput, border: `1px solid ${T.border}`, borderRadius: 8,
+                color: T.text, fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
+                padding: '5px 26px 5px 10px', cursor: 'pointer', outline: 'none',
               }}
             >
               {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
@@ -73,7 +88,75 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
 
       {sub === 'tuner'     && <Tuner tuning={tuning} />}
       {sub === 'metronome' && <Metronome />}
-      {sub === 'wheel'     && <DiatonicWheel onAddToProgression={onAddToProgression} tuning={tuning} />}
+
+      {sub === 'wheel' && (
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+        >
+
+          {/* ── Navigation bar ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: T.bgCard, borderRadius: 12, padding: '8px 12px',
+            border: `1px solid ${T.border}`,
+          }}>
+            <button
+              onClick={() => handleArrow('left')}
+              disabled={wheelView === 'diatonic'}
+              style={{
+                width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
+                background: wheelView === 'cof' ? T.bgInput : T.bgDeep,
+                color: wheelView === 'cof' ? T.text : T.textDim,
+                fontSize: 16, cursor: wheelView === 'cof' ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >◀</button>
+
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>
+                {wheelView === 'diatonic' ? '⭕ Diatonic Wheel' : '🎡 Circle of Fifths'}
+              </div>
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'center', marginTop: 4 }}>
+                {(['diatonic', 'cof'] as WheelView[]).map(v => (
+                  <div key={v} style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: wheelView === v ? T.secondary : T.border,
+                    transition: 'background 0.2s',
+                  }} />
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleArrow('right')}
+              disabled={wheelView === 'cof'}
+              style={{
+                width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
+                background: wheelView === 'diatonic' ? T.bgInput : T.bgDeep,
+                color: wheelView === 'diatonic' ? T.text : T.textDim,
+                fontSize: 16, cursor: wheelView === 'diatonic' ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >▶</button>
+          </div>
+
+          {/* ── Diatonic Wheel (faded when COF is active) ── */}
+          <DiatonicWheel
+            onAddToProgression={onAddToProgression}
+            tuning={tuning}
+            faded={wheelView === 'cof'}
+          />
+
+          {/* ── Circle of Fifths (shown below faded wheel when active) ── */}
+          {wheelView === 'cof' && (
+            <CircleOfFifths onAddToProgression={onAddToProgression} />
+          )}
+
+        </div>
+      )}
+
     </div>
   );
 };

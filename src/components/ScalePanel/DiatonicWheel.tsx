@@ -21,6 +21,7 @@ interface WheelChord {
 interface Props {
   onAddToProgression?: (item: ChordInProgression) => void;
   tuning?: Tuning;
+  faded?: boolean;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -160,7 +161,7 @@ function getRelativeKey(root: string, mode: ScaleMode): string {
   }
 }
 
-export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression, tuning }) => {
+export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression, tuning, faded }) => {
   const [root,        setRoot]        = useState('C');
   const [mode,        setMode]        = useState<ScaleMode>('major');
   const [quality,     setQuality]     = useState<ChordQuality>('triads');
@@ -229,8 +230,12 @@ export const DiatonicWheel: React.FC<Props> = ({ onAddToProgression, tuning }) =
     transition: 'background 0.12s',
   });
 
+  const fadedStyle: React.CSSProperties = faded
+    ? { opacity: 0.28, pointerEvents: 'none', maxHeight: 190, overflow: 'hidden' }
+    : {};
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, ...fadedStyle }}>
 
       {/* ── Export button — TOP ── */}
       <button
