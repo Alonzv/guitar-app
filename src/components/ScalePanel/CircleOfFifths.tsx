@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Key, Chord } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
 import type { ChordInProgression } from '../../types/music';
@@ -19,7 +19,10 @@ const SLICE_A = (2 * Math.PI) / TOTAL;   // 30°
 // START shifted so that slice 0 (C) is centred at exact 12 o'clock
 const START   = -Math.PI / 2 - SLICE_A / 2;
 
-const TRANSITION = 'transform 1.5s cubic-bezier(0.37, 0, 0.63, 1)';
+const EASING = 'cubic-bezier(0.37, 0, 0.63, 1)';
+function transitionFor(durationS: number) {
+  return `transform ${durationS}s ${EASING}`;
+}
 
 // ── Music data ─────────────────────────────────────────────────────────────────
 
@@ -75,11 +78,11 @@ function rotPt(x: number, y: number, deg: number) {
 
 // Returns inline style that CSS-translates a text element from its static SVG
 // position to the position it occupies after the ring is rotated by `deg`.
-function tStyle(x: number, y: number, deg: number): React.CSSProperties {
+function tStyle(x: number, y: number, deg: number, dur: number): React.CSSProperties {
   const rp = rotPt(x, y, deg);
   return {
     transform: `translate(${rp.x - x}px,${rp.y - y}px)`,
-    transition: TRANSITION,
+    transition: transitionFor(dur),
   };
 }
 
@@ -123,9 +126,13 @@ interface Props {
 export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
   const [selectedRoot, setSelectedRoot] = useState<string | null>(null);
   const [rotation,     setRotation]     = useState(0);   // accumulated deg
+  const [transDur,     setTransDur]     = useState(1.5); // current transition seconds
   const [hovOuter,     setHovOuter]     = useState<number | null>(null);
   const [hovInner,     setHovInner]     = useState<number | null>(null);
   const [flash,        setFlash]        = useState<string | null>(null);
+
+  // Mirror of rotation kept in a ref so handlers can read current value synchronously
+  const rotRef = useRef(0);
 
   const { outer: outerHL, inner: innerHL, relMinor } = computeHighlights(selectedRoot);
 
@@ -136,7 +143,12 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
     const newRoot = selectedRoot === note ? null : note;
     setSelectedRoot(newRoot);
     const target  = newRoot ? -(COF_IDX[newRoot] * 30) : 0;
-    setRotation(prev => shortestRotation(prev, target));
+    const next    = shortestRotation(rotRef.current, target);
+    const slices  = Math.round(Math.abs(next - rotRef.current) / 30);
+    // ≤ 3 slices → 0.6 s  |  4+ slices → 1.2 s
+    setTransDur(slices <= 3 ? 0.6 : 1.2);
+    rotRef.current = next;
+    setRotation(next);
   };
 
   const handleInnerClick = (i: number) => {
@@ -170,7 +182,7 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
         <g style={{
           transform:       `rotate(${rotation}deg)`,
           transformOrigin: `${CX}px ${CY}px`,
-          transition:      TRANSITION,
+          transition:      transitionFor(transDur),
         }}>
           {/* Outer ring paths */}
           {COF_MAJOR.map((_, i) => {
@@ -244,7 +256,7 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
                 textAnchor="middle" dominantBaseline="middle"
                 fill={textColor} fontSize={fontSize} fontWeight={hl ? 800 : 600}
                 fontFamily="system-ui, -apple-system, Arial, sans-serif"
-                style={tStyle(mp.x, mp.y + noteY, rotation)}
+                style={tStyle(mp.x, mp.y + noteY, rotation, transDur)}
               >{note}</text>
               {showRoman && (
                 <text
@@ -252,7 +264,7 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
                   textAnchor="middle" dominantBaseline="middle"
                   fill={textColor} fontSize={8} opacity={0.85}
                   fontFamily="system-ui, -apple-system, Arial, sans-serif"
-                  style={tStyle(mp.x, mp.y + 8, rotation)}
+                  style={tStyle(mp.x, mp.y + 8, rotation, transDur)}
                 >{hl!.roman}</text>
               )}
             </g>
@@ -274,7 +286,7 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
                 textAnchor="middle" dominantBaseline="middle"
                 fill={textColor} fontSize={nameFontSz} fontWeight={hl ? 700 : 400}
                 fontFamily="system-ui, -apple-system, Arial, sans-serif"
-                style={tStyle(mp.x, mp.y - (hl ? 7 : 0), rotation)}
+                style={tStyle(mp.x, mp.y - (hl ? 7 : 0), rotation, transDur)}
               >{displayName}</text>
               {hl && (
                 <text
@@ -282,7 +294,7 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
                   textAnchor="middle" dominantBaseline="middle"
                   fill={textColor} fontSize={7} opacity={0.85}
                   fontFamily="system-ui, -apple-system, Arial, sans-serif"
-                  style={tStyle(mp.x, mp.y + 7, rotation)}
+                  style={tStyle(mp.x, mp.y + 7, rotation, transDur)}
                 >{hl.roman}</text>
               )}
             </g>
