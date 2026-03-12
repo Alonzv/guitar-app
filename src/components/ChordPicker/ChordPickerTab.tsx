@@ -4,6 +4,7 @@ import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { T, card, btn } from '../../theme';
+import { TUNINGS } from '../../utils/musicTheory';
 
 interface Props {
   onAddToProgression: (item: ChordInProgression) => void;
@@ -60,12 +61,29 @@ const LABEL_STYLE = {
   letterSpacing: '0.06em',
 };
 
+const SELECT_STYLE: React.CSSProperties = {
+  appearance: 'none',
+  WebkitAppearance: 'none',
+  background: T.bgInput,
+  border: `1px solid ${T.border}`,
+  borderRadius: 8,
+  color: T.text,
+  fontFamily: 'inherit',
+  fontSize: 12,
+  fontWeight: 600,
+  padding: '5px 26px 5px 10px',
+  cursor: 'pointer',
+  outline: 'none',
+};
+
 export function ChordPickerTab({ onAddToProgression }: Props) {
   const [selectedRoot,      setSelectedRoot]      = useState<string | null>(null);
   const [selectedTriad,     setSelectedTriad]     = useState<string | null>(null);
   const [selectedExtension, setSelectedExtension] = useState<string>('');
   const [pickerDots,        setPickerDots]        = useState<FretPosition[]>([]);
   const [selectedVoicingIndex, setSelectedVoicingIndex] = useState<number | undefined>(undefined);
+  const [tuningName, setTuningName] = useState<string>(TUNINGS[0].name);
+  const tuning = TUNINGS.find(t => t.name === tuningName)?.notes ?? TUNINGS[0].notes;
 
   const suffix = selectedTriad
     ? (SUFFIX_MAP[selectedTriad]?.[selectedExtension] ?? SUFFIX_MAP[selectedTriad]?.[''] ?? '')
@@ -77,8 +95,14 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
 
   const voicings = useMemo(() => {
     if (!chordName) return [];
-    return findChordVoicings(chordName);
-  }, [chordName]);
+    return findChordVoicings(chordName, 4, tuning);
+  }, [chordName, tuning]);
+
+  const handleTuningChange = (name: string) => {
+    setTuningName(name);
+    setPickerDots([]);
+    setSelectedVoicingIndex(undefined);
+  };
 
   const handleRootSelect = (root: string) => {
     setSelectedRoot(root);
@@ -105,7 +129,7 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
   };
 
   const handleAdd = () => {
-    const chords = identifyChord(pickerDots);
+    const chords = identifyChord(pickerDots, tuning);
     const chord = chords.length > 0 ? chords[0] : {
       name: chordName ?? 'Unknown',
       notes: [],
@@ -204,6 +228,21 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
           </div>
         </div>
       )}
+
+      {/* ── Tuning selector ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <select
+            value={tuningName}
+            onChange={e => handleTuningChange(e.target.value)}
+            style={SELECT_STYLE}
+          >
+            {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
+          </select>
+          <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
+        </div>
+      </div>
 
       {/* ── Result name ── */}
       {chordName && (
