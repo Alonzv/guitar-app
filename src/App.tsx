@@ -411,15 +411,12 @@ export default function App() {
           }}
         >
           {/* Brand */}
-          <div style={{ padding: '16px 20px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <div style={{ padding: '16px 20px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <img
               src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
               alt="ScaleUp"
-              style={{ width: 44, height: 44, borderRadius: 11, display: 'block', objectFit: 'cover' }}
+              style={{ width: 55, height: 55, borderRadius: 14, display: 'block', objectFit: 'cover' }}
             />
-            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
-              <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
-            </span>
           </div>
 
           {/* Nav items */}
