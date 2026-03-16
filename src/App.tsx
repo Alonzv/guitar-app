@@ -413,7 +413,7 @@ export default function App() {
           {/* Brand */}
           <div style={{ padding: '16px 20px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <img
-              src="/icons/icon-192.png"
+              src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
               alt="ScaleUp"
               style={{ width: 44, height: 44, borderRadius: 11, display: 'block', objectFit: 'cover' }}
             />
@@ -528,7 +528,7 @@ export default function App() {
           )}
 
           {/* Content */}
-          <main style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: 800, width: '100%', boxSizing: 'border-box' }}>
+          <main style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: 800, width: '100%', boxSizing: 'border-box', margin: '0 auto' }}>
             {tabContent}
           </main>
         </div>
