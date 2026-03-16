@@ -273,6 +273,18 @@ export default function App() {
 
   const isElectron = navigator.userAgent.includes('Electron');
 
+  // ── Sidebar collapse (desktop only) ────────────────────────────────────────
+  const [sidebarPinned, setSidebarPinned] = useState(() => {
+    try { return localStorage.getItem('scaleup_sidebar_pinned') !== '0'; }
+    catch { return true; }
+  });
+  const [sidebarHovered, setSidebarHovered] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('scaleup_sidebar_pinned', sidebarPinned ? '1' : '0'); }
+    catch {}
+  }, [sidebarPinned]);
+
   const DESKTOP_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'library', label: 'Library',  icon: '🗂️' },
     { id: 'chords',  label: 'Chords',   icon: '🎸' },
@@ -359,23 +371,53 @@ export default function App() {
 
   // ── Desktop layout (Electron sidebar) ─────────────────────────────────────
   if (isElectron) {
+    const sidebarVisible = sidebarPinned || sidebarHovered;
+
     return (
-      <div style={{ display: 'flex', height: '100vh', backgroundColor: T.bgDeep, color: T.text, fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', height: '100vh', position: 'relative', backgroundColor: T.bgDeep, color: T.text, fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'hidden' }}>
         {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 
+        {/* ── Hover zone strip (only when sidebar is unpinned) ── */}
+        {!sidebarPinned && (
+          <div
+            style={{ position: 'absolute', left: 0, top: 28, bottom: 0, width: 12, zIndex: 30 }}
+            onMouseEnter={() => setSidebarHovered(true)}
+          />
+        )}
+
         {/* ── Sidebar ── */}
-        <aside style={{
-          width: 190,
-          flexShrink: 0,
-          backgroundColor: T.bgInput,
-          borderRight: `1px solid ${T.border}`,
-          display: 'flex',
-          flexDirection: 'column',
-          paddingTop: 28, // space for macOS traffic lights
-        }}>
+        <aside
+          onMouseEnter={() => { if (!sidebarPinned) setSidebarHovered(true); }}
+          onMouseLeave={() => { if (!sidebarPinned) setSidebarHovered(false); }}
+          style={{
+            width: 190,
+            flexShrink: 0,
+            backgroundColor: T.bgInput,
+            borderRight: `1px solid ${T.border}`,
+            display: 'flex',
+            flexDirection: 'column',
+            paddingTop: 28, // space for macOS traffic lights
+            // Overlay mode when unpinned
+            ...(sidebarPinned ? {} : {
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              zIndex: 40,
+              transform: sidebarVisible ? 'translateX(0)' : 'translateX(-190px)',
+              transition: 'transform 0.22s ease, box-shadow 0.22s ease',
+              boxShadow: sidebarVisible ? '4px 0 24px rgba(0,0,0,0.28)' : 'none',
+            }),
+          }}
+        >
           {/* Brand */}
-          <div style={{ padding: '12px 20px 20px', textAlign: 'center' }}>
-            <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
+          <div style={{ padding: '16px 20px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <img
+              src="/icons/icon-192.png"
+              alt="ScaleUp"
+              style={{ width: 44, height: 44, borderRadius: 11, display: 'block', objectFit: 'cover' }}
+            />
+            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
               <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
             </span>
           </div>
@@ -409,7 +451,7 @@ export default function App() {
           </nav>
 
           {/* Bottom actions */}
-          <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
             <button
               onClick={() => setDarkMode(d => !d)}
               style={{
@@ -430,6 +472,29 @@ export default function App() {
               }}
               title="Help"
             >?</button>
+            {sidebarPinned ? (
+              <button
+                onClick={() => setSidebarPinned(false)}
+                title="Hide sidebar"
+                style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  border: `1px solid ${T.border}`, background: T.bgCard,
+                  color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0,
+                  lineHeight: '30px',
+                }}
+              >‹</button>
+            ) : (
+              <button
+                onClick={() => { setSidebarPinned(true); setSidebarHovered(false); }}
+                title="Pin sidebar"
+                style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  border: `1px solid ${T.border}`, background: T.bgCard,
+                  color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0,
+                  lineHeight: '30px',
+                }}
+              >›</button>
+            )}
           </div>
         </aside>
 
