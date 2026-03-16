@@ -271,12 +271,213 @@ export default function App() {
     history.replaceState(null, '', window.location.pathname);
   };
 
+  const isElectron = navigator.userAgent.includes('Electron');
+
+  const DESKTOP_TABS: { id: Tab; label: string; icon: string }[] = [
+    { id: 'library', label: 'Library',  icon: '🗂️' },
+    { id: 'chords',  label: 'Chords',   icon: '🎸' },
+    { id: 'scales',  label: 'Scales',   icon: '🎼' },
+    { id: 'lyrics',  label: 'Lyrics',   icon: '📝' },
+    { id: 'tools',   label: 'Tools',    icon: '🔧' },
+  ];
+
+  // ── Shared tab content (used in both layouts) ──────────────────────────────
+  const tabContent = (
+    <>
+      {activeTab === 'chords' && (
+        <ErrorBoundary label="Chords">
+          <ChordsTab
+            progression={progression}
+            onAddToProgression={(item) => pushHistory([...progression, item])}
+            onRemoveFromProgression={(id) => pushHistory(progression.filter(c => c.id !== id))}
+            onClearProgression={() => pushHistory([])}
+            onReorderProgression={handleReorderProgression}
+            onTransposeProgression={handleTransposeProgression}
+            onSaveSong={handleSaveSong}
+            tuning={tuning}
+            onTuningChange={setTuning}
+            capo={capo}
+            onCapoChange={setCapo}
+            canUndo={undoStack.length > 0}
+            canRedo={redoStack.length > 0}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+          />
+        </ErrorBoundary>
+      )}
+      {activeTab === 'scales' && (
+        <ErrorBoundary label="Scales">
+          <ScalesTab
+            progression={progression}
+            selectedScale={selectedScale}
+            onSelectScale={setSelectedScale}
+            preferredKey={detectKey(progression.map(c => c.chord)) || undefined}
+            tuning={tuning}
+            onSaveHarmony={handleSaveHarmony}
+          />
+        </ErrorBoundary>
+      )}
+      {activeTab === 'lyrics' && (
+        <ErrorBoundary label="Lyrics">
+          <LyricsTab
+            progression={progression}
+            onSaveLyrics={handleSaveLyrics}
+            lyricsToLoad={lyricsToLoad}
+            onLyricsLoaded={() => setLyricsToLoad(null)}
+          />
+        </ErrorBoundary>
+      )}
+      {activeTab === 'tools' && (
+        <ErrorBoundary label="Tools">
+          <ToolsTab
+            tuning={tuning}
+            onTuningChange={setTuning}
+            onAddToProgression={(item) => pushHistory([...progression, item])}
+          />
+        </ErrorBoundary>
+      )}
+      {activeTab === 'library' && (
+        <ErrorBoundary label="Library">
+          <LibraryTab
+            songs={songs}
+            savedLyrics={savedLyrics}
+            savedHarmonies={savedHarmonies}
+            onLoadProgression={(song) => { handleLoadSong(song); }}
+            onDeleteProgression={handleDeleteSong}
+            onRenameProgression={handleRenameSong}
+            onLoadLyrics={handleLoadLyrics}
+            onDeleteLyrics={handleDeleteLyrics}
+            onRenameLyrics={handleRenameLyrics}
+            onLoadHarmony={handleLoadHarmony}
+            onDeleteHarmony={handleDeleteHarmony}
+            onRenameHarmony={handleRenameHarmony}
+          />
+        </ErrorBoundary>
+      )}
+    </>
+  );
+
+  // ── Desktop layout (Electron sidebar) ─────────────────────────────────────
+  if (isElectron) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', backgroundColor: T.bgDeep, color: T.text, fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'hidden' }}>
+        {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
+
+        {/* ── Sidebar ── */}
+        <aside style={{
+          width: 190,
+          flexShrink: 0,
+          backgroundColor: T.bgInput,
+          borderRight: `1px solid ${T.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          paddingTop: 28, // space for macOS traffic lights
+        }}>
+          {/* Brand */}
+          <div style={{ padding: '12px 20px 20px', textAlign: 'center' }}>
+            <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
+              <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
+            </span>
+          </div>
+
+          {/* Nav items */}
+          <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
+            {DESKTOP_TABS.map(tab => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 14px', borderRadius: 10, border: 'none',
+                    background: active ? T.primary : 'transparent',
+                    color: active ? T.white : T.textMuted,
+                    fontWeight: active ? 700 : 500,
+                    fontSize: 14, cursor: 'pointer', textAlign: 'left',
+                    transition: 'background 0.15s, color 0.15s',
+                    boxShadow: active ? `0 2px 8px rgba(196,73,0,0.3)` : 'none',
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bgCard; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Bottom actions */}
+          <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <button
+              onClick={() => setDarkMode(d => !d)}
+              style={{
+                width: 32, height: 32, borderRadius: '50%',
+                border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`,
+                background: darkMode ? '#2D404F' : '#4A6A80',
+                fontSize: 15, cursor: 'pointer', lineHeight: '30px', padding: 0,
+              }}
+              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >{darkMode ? '☀️' : '🌙'}</button>
+            <button
+              onClick={() => setShowOnboarding(true)}
+              style={{
+                width: 32, height: 32, borderRadius: '50%',
+                border: `1px solid ${T.border}`, background: T.bgCard,
+                color: T.textMuted, fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', lineHeight: '30px', padding: 0,
+              }}
+              title="Help"
+            >?</button>
+          </div>
+        </aside>
+
+        {/* ── Main area ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Page title bar */}
+          <div style={{
+            backgroundColor: T.bgCard, borderBottom: `1px solid ${T.border}`,
+            padding: '14px 24px', flexShrink: 0,
+          }}>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: T.text, letterSpacing: '-0.3px' }}>
+              {DESKTOP_TABS.find(t => t.id === activeTab)?.label ?? ''}
+            </h1>
+          </div>
+
+          {/* Shared banner */}
+          {showSharedBanner && sharedProgression && (
+            <div style={{
+              background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`,
+              padding: '8px 24px', display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', gap: 10,
+            }}>
+              <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>
+                🎵 Shared progression — {sharedProgression.length} chords
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 8, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Load</button>
+                <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '4px 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
+              </div>
+            </div>
+          )}
+
+          {/* Content */}
+          <main style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: 800, width: '100%', boxSizing: 'border-box' }}>
+            {tabContent}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Mobile layout (unchanged) ──────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 
-      {/* ── Shared progression banner ── */}
+      {/* Shared progression banner */}
       {showSharedBanner && sharedProgression && (
         <div style={{
           background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`,
@@ -287,80 +488,31 @@ export default function App() {
             🎵 Shared progression — {sharedProgression.length} chords
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={handleLoadShared}
-              style={{
-                padding: '5px 14px', borderRadius: 8, border: 'none',
-                background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              }}
-            >Load</button>
-            <button
-              onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }}
-              style={{
-                padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.border}`,
-                background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer',
-              }}
-            >Dismiss</button>
+            <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Load</button>
+            <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
           </div>
         </div>
       )}
 
-      {/* ── Header ── */}
+      {/* Header */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
-        {/* Brand row */}
         <div style={{ textAlign: 'center', marginBottom: 4, position: 'relative' }}>
           <span style={{ fontSize: 'var(--gc-brand-text)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
             <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
           </span>
-          {/* Header action buttons */}
           <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
-            <button
-              onClick={() => setDarkMode(d => !d)}
-              style={{
-                width: 26, height: 26, borderRadius: '50%',
-                border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`,
-                background: darkMode ? '#2D404F' : '#4A6A80',
-                fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0,
-              }}
-              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            >{darkMode ? '☀️' : '🌙'}</button>
-            <button
-              onClick={() => setShowOnboarding(true)}
-              style={{
-                width: 26, height: 26, borderRadius: '50%',
-                border: `1px solid ${T.border}`, background: T.bgCard,
-                color: T.textMuted, fontSize: 13, fontWeight: 700,
-                cursor: 'pointer', lineHeight: '24px', padding: 0,
-              }}
-              title="Help"
-            >?</button>
+            <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`, background: darkMode ? '#2D404F' : '#4A6A80', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? '☀️' : '🌙'}</button>
+            <button onClick={() => setShowOnboarding(true)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title="Help">?</button>
           </div>
         </div>
-
-        {/* Active tab name */}
         <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-tab-title)', fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.2px' }}>
           {TABS.find(t => t.id === activeTab)?.label ?? ''}
         </h1>
-
-        {/* Tab buttons */}
         <div className="gc-tabs">
           {TABS.map(tab => {
             const active = activeTab === tab.id;
             return (
-              <button
-                key={tab.id}
-                className="gc-tab"
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  borderRadius: 10,
-                  border: active ? 'none' : `1px solid ${T.border}`,
-                  background: active ? T.primary : T.bgCard,
-                  color: active ? T.white : T.textMuted,
-                  fontWeight: 700,
-                  boxShadow: active ? `0 2px 8px rgba(196,73,0,0.4)` : 'none',
-                  transition: 'all 0.15s',
-                }}
-              >
+              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 10, border: active ? 'none' : `1px solid ${T.border}`, background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, boxShadow: active ? `0 2px 8px rgba(196,73,0,0.4)` : 'none', transition: 'all 0.15s' }}>
                 <span style={{ fontSize: 16 }}>{tab.icon}</span>
                 <span className="gc-tab-label">{tab.label}</span>
               </button>
@@ -369,78 +521,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Content ── */}
       <main style={{ flex: 1, overflowY: 'auto', padding: 'var(--gc-content-pad)', maxWidth: 700, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-        {activeTab === 'chords' && (
-          <ErrorBoundary label="Chords">
-            <ChordsTab
-              progression={progression}
-              onAddToProgression={(item) => pushHistory([...progression, item])}
-              onRemoveFromProgression={(id) => pushHistory(progression.filter(c => c.id !== id))}
-              onClearProgression={() => pushHistory([])}
-              onReorderProgression={handleReorderProgression}
-              onTransposeProgression={handleTransposeProgression}
-              onSaveSong={handleSaveSong}
-              tuning={tuning}
-              onTuningChange={setTuning}
-              capo={capo}
-              onCapoChange={setCapo}
-              canUndo={undoStack.length > 0}
-              canRedo={redoStack.length > 0}
-              onUndo={handleUndo}
-              onRedo={handleRedo}
-            />
-          </ErrorBoundary>
-        )}
-        {activeTab === 'scales' && (
-          <ErrorBoundary label="Scales">
-            <ScalesTab
-              progression={progression}
-              selectedScale={selectedScale}
-              onSelectScale={setSelectedScale}
-              preferredKey={detectKey(progression.map(c => c.chord)) || undefined}
-              tuning={tuning}
-              onSaveHarmony={handleSaveHarmony}
-            />
-          </ErrorBoundary>
-        )}
-        {activeTab === 'lyrics' && (
-          <ErrorBoundary label="Lyrics">
-            <LyricsTab
-              progression={progression}
-              onSaveLyrics={handleSaveLyrics}
-              lyricsToLoad={lyricsToLoad}
-              onLyricsLoaded={() => setLyricsToLoad(null)}
-            />
-          </ErrorBoundary>
-        )}
-        {activeTab === 'tools' && (
-          <ErrorBoundary label="Tools">
-            <ToolsTab
-              tuning={tuning}
-              onTuningChange={setTuning}
-              onAddToProgression={(item) => pushHistory([...progression, item])}
-            />
-          </ErrorBoundary>
-        )}
-        {activeTab === 'library' && (
-          <ErrorBoundary label="Library">
-            <LibraryTab
-              songs={songs}
-              savedLyrics={savedLyrics}
-              savedHarmonies={savedHarmonies}
-              onLoadProgression={(song) => { handleLoadSong(song); }}
-              onDeleteProgression={handleDeleteSong}
-              onRenameProgression={handleRenameSong}
-              onLoadLyrics={handleLoadLyrics}
-              onDeleteLyrics={handleDeleteLyrics}
-              onRenameLyrics={handleRenameLyrics}
-              onLoadHarmony={handleLoadHarmony}
-              onDeleteHarmony={handleDeleteHarmony}
-              onRenameHarmony={handleRenameHarmony}
-            />
-          </ErrorBoundary>
-        )}
+        {tabContent}
       </main>
     </div>
   );
