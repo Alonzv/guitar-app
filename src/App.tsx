@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import type { ChordInProgression, ScaleMatch, Song, Tuning } from './types/music';
+import type { ChordInProgression, ScaleMatch, Song, SavedLyrics, SavedHarmony, Tuning } from './types/music';
 import { TUNINGS } from './utils/musicTheory';
 import { detectKey } from './utils/progressionHelper';
 import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { LyricsTab } from './components/Lyrics/LyricsTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
+import { LibraryTab } from './components/Library/LibraryTab';
 import { Onboarding } from './components/Onboarding';
-import { SongLibraryModal } from './components/SongLibrary/SongLibraryModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { T } from './theme';
 
-type Tab = 'chords' | 'scales' | 'lyrics' | 'tools';
+type Tab = 'chords' | 'scales' | 'lyrics' | 'tools' | 'library';
 
 const CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const FLAT_TO_SHARP: Record<string, string> = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
@@ -42,10 +42,11 @@ function decodeSharedProgression(): ChordInProgression[] | null {
 }
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'chords', label: 'Chords', icon: '🎸' },
-  { id: 'scales', label: 'Scales', icon: '🎼' },
-  { id: 'lyrics', label: 'Lyrics', icon: '📝' },
-  { id: 'tools',  label: 'Tools',  icon: '🔧' },
+  { id: 'chords',  label: 'Chords',   icon: '🎸' },
+  { id: 'scales',  label: 'Scales',   icon: '🎼' },
+  { id: 'lyrics',  label: 'Lyrics',   icon: '📝' },
+  { id: 'tools',   label: 'Tools',    icon: '🔧' },
+  { id: 'library', label: 'Library',  icon: '🗂️' },
 ];
 
 export default function App() {
@@ -126,11 +127,22 @@ export default function App() {
     catch (e) { console.warn('Could not load songs', e); return []; }
   });
 
+  const [savedLyrics, setSavedLyrics] = useState<SavedLyrics[]>(() => {
+    try { return JSON.parse(localStorage.getItem('scaleup_lyrics') || '[]'); }
+    catch (e) { console.warn('Could not load lyrics', e); return []; }
+  });
+
+  const [savedHarmonies, setSavedHarmonies] = useState<SavedHarmony[]>(() => {
+    try { return JSON.parse(localStorage.getItem('scaleup_harmonies') || '[]'); }
+    catch (e) { console.warn('Could not load harmonies', e); return []; }
+  });
+
+  const [lyricsToLoad, setLyricsToLoad] = useState<SavedLyrics | null>(null);
+
   const [selectedScale, setSelectedScale] = useState<ScaleMatch | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('scaleup_onboarded')
   );
-  const [showSongLibrary, setShowSongLibrary] = useState(false);
 
   // Banner for shared progressions loaded from URL
   const [sharedProgression] = useState<ChordInProgression[] | null>(decodeSharedProgression);
@@ -146,6 +158,16 @@ export default function App() {
     try { localStorage.setItem('scaleup_songs', JSON.stringify(songs)); }
     catch (e) { console.warn('Could not save songs', e); }
   }, [songs]);
+
+  useEffect(() => {
+    try { localStorage.setItem('scaleup_lyrics', JSON.stringify(savedLyrics)); }
+    catch (e) { console.warn('Could not save lyrics', e); }
+  }, [savedLyrics]);
+
+  useEffect(() => {
+    try { localStorage.setItem('scaleup_harmonies', JSON.stringify(savedHarmonies)); }
+    catch (e) { console.warn('Could not save harmonies', e); }
+  }, [savedHarmonies]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -171,12 +193,14 @@ export default function App() {
     })));
   };
 
+  // ── Progressions ──────────────────────────────────────────────────────────
   const handleSaveSong = (name: string) => {
     const song: Song = {
       id: `song-${Date.now()}`,
       name: name.trim() || `Song ${songs.length + 1}`,
       progression: [...progression],
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     setSongs(prev => [song, ...prev]);
   };
@@ -188,6 +212,54 @@ export default function App() {
 
   const handleDeleteSong = (id: string) => {
     setSongs(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleRenameSong = (id: string, name: string) => {
+    setSongs(prev => prev.map(s => s.id === id ? { ...s, name, updatedAt: Date.now() } : s));
+  };
+
+  // ── Lyrics ────────────────────────────────────────────────────────────────
+  const handleSaveLyrics = (data: Omit<SavedLyrics, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const now = Date.now();
+    const item: SavedLyrics = { ...data, id: `lyrics-${now}`, createdAt: now, updatedAt: now };
+    setSavedLyrics(prev => [item, ...prev]);
+  };
+
+  const handleLoadLyrics = (lyrics: SavedLyrics) => {
+    setLyricsToLoad(lyrics);
+    setActiveTab('lyrics');
+  };
+
+  const handleDeleteLyrics = (id: string) => {
+    setSavedLyrics(prev => prev.filter(l => l.id !== id));
+  };
+
+  const handleRenameLyrics = (id: string, name: string) => {
+    setSavedLyrics(prev => prev.map(l => l.id === id ? { ...l, name, updatedAt: Date.now() } : l));
+  };
+
+  // ── Harmonies ─────────────────────────────────────────────────────────────
+  const handleSaveHarmony = (scale: ScaleMatch, key?: string) => {
+    const now = Date.now();
+    const item: SavedHarmony = {
+      id: `harmony-${now}`,
+      name: `${scale.root} ${scale.type}`,
+      scale, key, createdAt: now,
+    };
+    setSavedHarmonies(prev => [item, ...prev]);
+  };
+
+  const handleLoadHarmony = (harmony: SavedHarmony) => {
+    setSelectedScale(harmony.scale);
+    setActiveTab('scales');
+  };
+
+  const handleDeleteHarmony = (id: string) => {
+    setSavedHarmonies(prev => prev.filter(h => h.id !== id));
+  };
+
+  const handleRenameHarmony = (id: string, name: string) => {
+    setSavedHarmonies(prev => prev.map(h => h.id === id ? { ...h, name } : h));
   };
 
   const handleLoadShared = () => {
@@ -203,14 +275,6 @@ export default function App() {
     <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
-      {showSongLibrary && (
-        <SongLibraryModal
-          songs={songs}
-          onClose={() => setShowSongLibrary(false)}
-          onLoad={handleLoadSong}
-          onDelete={handleDeleteSong}
-        />
-      )}
 
       {/* ── Shared progression banner ── */}
       {showSharedBanner && sharedProgression && (
@@ -260,15 +324,6 @@ export default function App() {
               }}
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >{darkMode ? '☀️' : '🌙'}</button>
-            <button
-              onClick={() => setShowSongLibrary(true)}
-              style={{
-                width: 26, height: 26, borderRadius: '50%',
-                border: `1px solid ${T.border}`, background: T.bgCard,
-                color: T.textMuted, fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0,
-              }}
-              title="Song Library"
-            >📚</button>
             <button
               onClick={() => setShowOnboarding(true)}
               style={{
@@ -345,12 +400,18 @@ export default function App() {
               onSelectScale={setSelectedScale}
               preferredKey={detectKey(progression.map(c => c.chord)) || undefined}
               tuning={tuning}
+              onSaveHarmony={handleSaveHarmony}
             />
           </ErrorBoundary>
         )}
         {activeTab === 'lyrics' && (
           <ErrorBoundary label="Lyrics">
-            <LyricsTab progression={progression} />
+            <LyricsTab
+              progression={progression}
+              onSaveLyrics={handleSaveLyrics}
+              lyricsToLoad={lyricsToLoad}
+              onLyricsLoaded={() => setLyricsToLoad(null)}
+            />
           </ErrorBoundary>
         )}
         {activeTab === 'tools' && (
@@ -359,6 +420,24 @@ export default function App() {
               tuning={tuning}
               onTuningChange={setTuning}
               onAddToProgression={(item) => pushHistory([...progression, item])}
+            />
+          </ErrorBoundary>
+        )}
+        {activeTab === 'library' && (
+          <ErrorBoundary label="Library">
+            <LibraryTab
+              songs={songs}
+              savedLyrics={savedLyrics}
+              savedHarmonies={savedHarmonies}
+              onLoadProgression={(song) => { handleLoadSong(song); }}
+              onDeleteProgression={handleDeleteSong}
+              onRenameProgression={handleRenameSong}
+              onLoadLyrics={handleLoadLyrics}
+              onDeleteLyrics={handleDeleteLyrics}
+              onRenameLyrics={handleRenameLyrics}
+              onLoadHarmony={handleLoadHarmony}
+              onDeleteHarmony={handleDeleteHarmony}
+              onRenameHarmony={handleRenameHarmony}
             />
           </ErrorBoundary>
         )}

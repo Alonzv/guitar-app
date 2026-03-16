@@ -1,11 +1,14 @@
-import { useState, useRef } from 'react';
-import type { ChordInProgression, ChordPlacement } from '../../types/music';
+import { useState, useRef, useEffect } from 'react';
+import type { ChordInProgression, ChordPlacement, SavedLyrics } from '../../types/music';
 import { formatChordName } from '../../utils/chordIdentifier';
 import { exportLyricsPDF } from '../../utils/pdfExport';
 import { T, card } from '../../theme';
 
 interface Props {
   progression: ChordInProgression[];
+  onSaveLyrics?: (data: Omit<SavedLyrics, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  lyricsToLoad?: SavedLyrics | null;
+  onLyricsLoaded?: () => void;
 }
 
 const CHORD_ACCENTS = [T.primary, T.secondary, '#8b6914', '#7a3a6a', '#2a6a8a', '#4a7a3a'];
@@ -36,7 +39,7 @@ interface ChordPicker {
   y: number;
 }
 
-export function LyricsTab({ progression }: Props) {
+export function LyricsTab({ progression, onSaveLyrics, lyricsToLoad, onLyricsLoaded }: Props) {
   const [lyricsText, setLyricsText] = useState('');
   const [lyricsChords, setLyricsChords] = useState<ChordPlacement[]>([]);
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
@@ -51,6 +54,18 @@ export function LyricsTab({ progression }: Props) {
   const [exporting, setExporting] = useState(false);
 
   const dragData = useRef<{ type: 'new'; chordName: string } | { type: 'move'; placementId: string } | null>(null);
+
+  // Load from library
+  useEffect(() => {
+    if (!lyricsToLoad) return;
+    setSongTitle(lyricsToLoad.name);
+    setSongComposer(lyricsToLoad.composer);
+    setSongWriter(lyricsToLoad.writer);
+    setLyricsText(lyricsToLoad.lyricsText);
+    setLyricsChords(lyricsToLoad.lyricsChords);
+    setIsRtl(lyricsToLoad.isRtl);
+    onLyricsLoaded?.();
+  }, [lyricsToLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { lines } = tokenizeLyrics(lyricsText);
   const totalWords = lines.reduce((sum, l) => sum + l.length, 0);
@@ -155,20 +170,35 @@ export function LyricsTab({ progression }: Props) {
       <div style={card()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <p style={{ ...LABEL_STYLE, margin: 0 }}>Song Details</p>
-          {lyricsText.trim() && (
-            <button
-              onClick={handleExportPDF}
-              disabled={exporting}
-              style={{
-                padding: '4px 12px', borderRadius: 16, border: `1px solid ${T.border}`,
-                background: T.bgInput, color: T.textMuted, fontSize: 11,
-                cursor: exporting ? 'not-allowed' : 'pointer', fontWeight: 600,
-                transition: 'filter 0.15s',
-              }}
-            >
-              {exporting ? '…' : '📄 Export PDF'}
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {onSaveLyrics && (
+              <button
+                onClick={() => onSaveLyrics({
+                  name: songTitle.trim() || 'Untitled Song',
+                  lyricsText, lyricsChords, composer: songComposer, writer: songWriter, isRtl,
+                })}
+                style={{
+                  padding: '4px 12px', borderRadius: 16, border: 'none',
+                  background: T.secondary, color: T.white, fontSize: 11,
+                  cursor: 'pointer', fontWeight: 700,
+                }}
+              >💾 Save</button>
+            )}
+            {lyricsText.trim() && (
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
+                style={{
+                  padding: '4px 12px', borderRadius: 16, border: `1px solid ${T.border}`,
+                  background: T.bgInput, color: T.textMuted, fontSize: 11,
+                  cursor: exporting ? 'not-allowed' : 'pointer', fontWeight: 600,
+                  transition: 'filter 0.15s',
+                }}
+              >
+                {exporting ? '…' : '📄 Export PDF'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

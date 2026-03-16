@@ -46,6 +46,27 @@ export interface Song {
   name: string;
   progression: ChordInProgression[];
   createdAt: number;
+  updatedAt?: number;
+}
+
+export interface SavedLyrics {
+  id: string;
+  name: string;
+  lyricsText: string;
+  lyricsChords: ChordPlacement[];
+  composer: string;
+  writer: string;
+  isRtl: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface SavedHarmony {
+  id: string;
+  name: string;
+  scale: ScaleMatch;
+  key?: string;
+  createdAt: number;
 }
 
 export interface ChordPlacement {

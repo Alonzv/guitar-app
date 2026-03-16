@@ -20,9 +20,10 @@ interface Props {
   onSelectScale: (scale: ScaleMatch) => void;
   preferredKey?: string;
   tuning: Tuning;
+  onSaveHarmony?: (scale: ScaleMatch, key?: string) => void;
 }
 
-export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelectScale, preferredKey, tuning }) => {
+export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelectScale, preferredKey, tuning, onSaveHarmony }) => {
   const [sub, setSub] = useState<Sub>('detect');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -43,7 +44,23 @@ export const ScalesTab: React.FC<Props> = ({ progression, selectedScale, onSelec
       {sub === 'detect' && (
         <>
           <ScaleDetector progression={progression} onSelectScale={onSelectScale} preferredKey={preferredKey} />
-          {selectedScale && <ScaleVisualizer scale={selectedScale} />}
+          {selectedScale && (
+            <>
+              <ScaleVisualizer scale={selectedScale} />
+              {onSaveHarmony && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => onSaveHarmony(selectedScale, preferredKey)}
+                    style={{
+                      padding: '7px 18px', borderRadius: 10, border: 'none',
+                      background: T.secondary, color: T.white,
+                      fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >💾 Save Harmony</button>
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
       {sub === 'explore' && <ScaleExplorer />}
