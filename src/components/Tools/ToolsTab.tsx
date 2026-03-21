@@ -3,17 +3,19 @@ import { Metronome } from './Metronome';
 import { Tuner } from './Tuner';
 import { DiatonicWheel } from '../ScalePanel/DiatonicWheel';
 import { CircleOfFifths } from '../ScalePanel/CircleOfFifths';
+import { AIProgressionTab } from '../AI/AIProgressionTab';
 import type { ChordInProgression, Tuning } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
 import { T } from '../../theme';
 
-type Sub       = 'tuner' | 'metronome' | 'wheel';
-type WheelView = 'cof' | 'diatonic';   // cof = first/left, diatonic = second/right
+type Sub       = 'tuner' | 'metronome' | 'wheel' | 'muse';
+type WheelView = 'cof' | 'diatonic';
 
 const SUB_LABELS: Record<Sub, string> = {
   tuner:     '🎤 Tuner',
   metronome: '🥁 Metronome',
   wheel:     '⭕ Wheel',
+  muse:      '🔮 Muse',
 };
 
 interface Props {
@@ -56,7 +58,7 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
 
       {/* Sub-tab buttons */}
       <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.border}` }}>
-        {(['tuner', 'metronome', 'wheel'] as Sub[]).map(id => (
+        {(['tuner', 'metronome', 'wheel', 'muse'] as Sub[]).map(id => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 0', border: 'none', cursor: 'pointer',
             fontWeight: 700, fontSize: 12,
@@ -70,7 +72,7 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
       </div>
 
       {/* Tuning selector */}
-      {sub !== 'wheel' && (
+      {sub !== 'wheel' && sub !== 'muse' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
@@ -96,6 +98,12 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
 
       {sub === 'tuner'     && <Tuner tuning={tuning} />}
       {sub === 'metronome' && <Metronome />}
+      {sub === 'muse'      && (
+        <AIProgressionTab
+          tuning={tuning}
+          onLoadProgression={(chords) => chords.forEach(c => onAddToProgression(c))}
+        />
+      )}
 
       {sub === 'wheel' && (
         <div
