@@ -3,6 +3,7 @@ import type { ChordInProgression, FretPosition, Genre, ProgressionSuggestion, Tu
 import { InteractiveFretboard } from '../Fretboard/InteractiveFretboard';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { ChordName } from './ChordName';
+import { ChordStructure } from './ChordStructure';
 import { VoicingVariations } from './VoicingVariations';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { suggestNextChords, suggestCustomChords, detectKey } from '../../utils/progressionHelper';
@@ -245,6 +246,7 @@ export function ChordBuilderTab({
       {/* ── Chord name ── */}
       <div style={card({ minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 })}>
         <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} />
+        {chords.length > 0 && <ChordStructure chordName={chords[0].name} />}
         {chords.length > 0 && (
           <button
             onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}

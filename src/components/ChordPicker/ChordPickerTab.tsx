@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { ChordInProgression, FretPosition } from '../../types/music';
 import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
+import { ChordStructure } from '../ChordBuilder/ChordStructure';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { T, card, btn } from '../../theme';
@@ -272,6 +273,13 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
           selectedIndex={selectedVoicingIndex}
           onSelect={handleVoicingSelect}
         />
+      )}
+
+      {/* ── Chord structure ── */}
+      {chordName && (
+        <div style={{ background: 'var(--gc-bg-card)', borderRadius: 14, padding: 'var(--gc-card-pad)', border: '1px solid var(--gc-border)' }}>
+          <ChordStructure chordName={chordName} />
+        </div>
       )}
     </div>
   );
