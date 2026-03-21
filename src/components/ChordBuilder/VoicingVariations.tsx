@@ -1,15 +1,25 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { FretPosition } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
+import { buildChromaColorMap } from './ChordStructure';
+import { fretToNote } from '../../utils/musicTheory';
+import { Note } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
 
 interface Props {
   voicings: FretPosition[][];
   onSelect: (voicing: FretPosition[], index: number) => void;
   selectedIndex?: number;
+  chordName?: string;
+  tuning?: string[];
 }
 
-export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selectedIndex }) => {
+export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selectedIndex, chordName, tuning }) => {
+  const chromaColors = useMemo(
+    () => chordName ? buildChromaColorMap(chordName) : null,
+    [chordName]
+  );
+
   if (voicings.length === 0) return null;
 
   return (
@@ -20,6 +30,15 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
       <div className="gc-voicing-grid">
         {voicings.map((voicing, i) => {
           const isSelected = i === selectedIndex;
+
+          const dotColors = chromaColors
+            ? voicing.map(p => {
+                const note = fretToNote(p.string, p.fret, tuning);
+                const chroma = Note.chroma(note);
+                return chroma != null ? (chromaColors.get(chroma) ?? T.primary) : T.primary;
+              })
+            : undefined;
+
           return (
             <div
               key={i}
@@ -34,7 +53,12 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
                 transition: 'border-color 0.15s, background 0.15s',
               }}
             >
-              <MiniFretboard voicing={voicing} dotColor={isSelected ? T.secondary : T.primary} />
+              <MiniFretboard
+                voicing={voicing}
+                dotColors={dotColors}
+                dotColor={isSelected ? T.secondary : T.primary}
+                tuning={tuning}
+              />
             </div>
           );
         })}

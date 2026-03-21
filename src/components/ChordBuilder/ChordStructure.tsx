@@ -1,5 +1,5 @@
 import React from 'react';
-import { Chord } from '@tonaljs/tonal';
+import { Chord, Note } from '@tonaljs/tonal';
 import { T } from '../../theme';
 
 const INTERVAL_LABEL: Record<string, string> = {
@@ -20,7 +20,7 @@ const INTERVAL_NAME: Record<string, string> = {
   '9m': '♭9th', '11P': '11th', '13M': '13th',
 };
 
-const INTERVAL_COLOR: Record<string, string> = {
+export const INTERVAL_COLOR: Record<string, string> = {
   '1P': T.primary, '3m': T.secondary, '3M': T.secondary,
   '4P': '#c4a000', '4A': '#c4a000', '5d': '#8a4aa0',
   '5P': '#c4a000', '5A': '#8a4aa0', '2m': '#2a7aa0',
@@ -31,6 +31,18 @@ const INTERVAL_COLOR: Record<string, string> = {
   '13m': '#2a7aa0', '13M': '#2a7aa0',
 };
 
+/** Returns a chroma (0–11) → color map for the given chord */
+export function buildChromaColorMap(chordName: string): Map<number, string> {
+  const map = new Map<number, string>();
+  const data = Chord.get(chordName);
+  if (data.empty) return map;
+  data.notes.forEach((note, i) => {
+    const chroma = Note.chroma(note);
+    if (chroma != null) map.set(chroma, INTERVAL_COLOR[data.intervals[i]] ?? T.primary);
+  });
+  return map;
+}
+
 interface Props { chordName: string }
 
 export const ChordStructure: React.FC<Props> = ({ chordName }) => {
@@ -38,7 +50,7 @@ export const ChordStructure: React.FC<Props> = ({ chordName }) => {
   if (!data || data.empty || data.notes.length === 0) return null;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', justifyContent: 'center' }}>
       {data.notes.map((note, i) => {
         const interval = data.intervals[i] ?? '';
         const color = INTERVAL_COLOR[interval] ?? T.textMuted;
@@ -46,11 +58,11 @@ export const ChordStructure: React.FC<Props> = ({ chordName }) => {
         const name = INTERVAL_NAME[interval] ?? '';
         return (
           <React.Fragment key={i}>
-            {i > 0 && <span style={{ fontSize: 10, color: T.textDim }}>·</span>}
+            {i > 0 && <span style={{ fontSize: 11, color: T.textDim }}>·</span>}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color, lineHeight: 1 }}>{note}</span>
-              <span style={{ fontSize: 9, fontWeight: 700, color, opacity: 0.85, lineHeight: 1 }}>{deg}</span>
-              {name && <span style={{ fontSize: 8, color: T.textDim, lineHeight: 1, whiteSpace: 'nowrap' }}>{name}</span>}
+              <span style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1 }}>{note}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color, opacity: 0.85, lineHeight: 1 }}>{deg}</span>
+              {name && <span style={{ fontSize: 9, color: T.textDim, lineHeight: 1, whiteSpace: 'nowrap' }}>{name}</span>}
             </div>
           </React.Fragment>
         );

@@ -6,10 +6,11 @@ import { T } from '../../theme';
 interface Props {
   voicing: FretPosition[];
   dotColor?: string;
+  dotColors?: string[];
   tuning?: string[];
 }
 
-export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, tuning }) => {
+export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, dotColors, tuning }) => {
   const hasOpen = voicing.some(p => p.fret === 0);
   const nonZeroFrets = voicing.map(p => p.fret).filter(f => f > 0);
   const minFret = nonZeroFrets.length > 0 ? Math.min(...nonZeroFrets) : 0;
@@ -60,7 +61,7 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
         const note = fretToNote(p.string, p.fret, tuning);
         return (
           <g key={i}>
-            <circle cx={cx} cy={cy} r={7} fill={dotColor} stroke={T.bgDeep} strokeWidth={1} opacity={0.92} />
+            <circle cx={cx} cy={cy} r={7} fill={dotColors?.[i] ?? dotColor} stroke={T.bgDeep} strokeWidth={1} opacity={0.92} />
             <text x={cx} y={cy + 3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{note}</text>
           </g>
         );

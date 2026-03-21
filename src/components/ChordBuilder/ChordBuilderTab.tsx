@@ -274,6 +274,8 @@ export function ChordBuilderTab({
         <VoicingVariations
           voicings={voicings}
           selectedIndex={selectedVariationIndex}
+          chordName={chords[0]?.name}
+          tuning={tuning.notes}
           onSelect={(voicing, index) => {
             setActiveDots(voicing);
             setSelectedVariationIndex(index);

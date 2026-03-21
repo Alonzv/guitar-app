@@ -278,6 +278,8 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
         <VoicingVariations
           voicings={voicings}
           selectedIndex={selectedVoicingIndex}
+          chordName={chordName ?? undefined}
+          tuning={tuning}
           onSelect={handleVoicingSelect}
         />
       )}
