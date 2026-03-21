@@ -96,7 +96,7 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
 
   const voicings = useMemo(() => {
     if (!chordName) return [];
-    return findChordVoicings(chordName, 4, tuning);
+    return findChordVoicings(chordName, 6, tuning);
   }, [chordName, tuning]);
 
   const handleTuningChange = (name: string) => {
