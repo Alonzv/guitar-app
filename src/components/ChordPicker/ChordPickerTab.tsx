@@ -266,6 +266,13 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
         </button>
       )}
 
+      {/* ── Chord structure ── */}
+      {chordName && (
+        <div style={{ textAlign: 'center', padding: '4px 0' }}>
+          <ChordStructure chordName={chordName} />
+        </div>
+      )}
+
       {/* ── Voicings grid ── */}
       {chordName && voicings.length > 0 && (
         <VoicingVariations
@@ -273,13 +280,6 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
           selectedIndex={selectedVoicingIndex}
           onSelect={handleVoicingSelect}
         />
-      )}
-
-      {/* ── Chord structure ── */}
-      {chordName && (
-        <div style={{ background: 'var(--gc-bg-card)', borderRadius: 14, padding: 'var(--gc-card-pad)', border: '1px solid var(--gc-border)' }}>
-          <ChordStructure chordName={chordName} />
-        </div>
       )}
     </div>
   );

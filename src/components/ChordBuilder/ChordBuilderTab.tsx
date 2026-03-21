@@ -246,7 +246,6 @@ export function ChordBuilderTab({
       {/* ── Chord name ── */}
       <div style={card({ minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 })}>
         <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} />
-        {chords.length > 0 && <ChordStructure chordName={chords[0].name} />}
         {chords.length > 0 && (
           <button
             onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}
@@ -262,6 +261,13 @@ export function ChordBuilderTab({
           </button>
         )}
       </div>
+
+      {/* ── Chord structure ── */}
+      {chords.length > 0 && (
+        <div style={{ textAlign: 'center', padding: '6px 0' }}>
+          <ChordStructure chordName={chords[0].name} />
+        </div>
+      )}
 
       {/* ── Voicing variations ── */}
       {showVariations && (
