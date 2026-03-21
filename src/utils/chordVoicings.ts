@@ -92,7 +92,7 @@ export function findChordVoicings(
   allVoicings.sort((a, b) => avgFret(a) - avgFret(b));
 
   // Pick `count` evenly-distributed voicings across the sorted list
-  const step = (allVoicings.length - 1) / (count - 1);
+  const step = count <= 1 ? 0 : (allVoicings.length - 1) / (count - 1);
   const result: FretPosition[][] = [];
   for (let i = 0; i < count; i++) {
     result.push(allVoicings[Math.round(i * step)]);
