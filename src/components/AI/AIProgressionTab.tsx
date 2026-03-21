@@ -45,34 +45,53 @@ const electronAPI = (
   typeof window !== 'undefined' && (window as { electronAPI?: ElectronAPI }).electronAPI
 ) as ElectronAPI | undefined;
 
+// ── Persistence ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'scaleup_muse_history';
+
+function loadHistory(): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    return (JSON.parse(raw) as ChatMessage[]).filter(m => !m.loading);
+  } catch { return []; }
+}
+
+function saveHistory(msgs: ChatMessage[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(msgs.filter(m => !m.loading)));
+  } catch {}
+}
+
+// ── RTL detection ──────────────────────────────────────────────────────────────
+function isRTL(text: string): boolean {
+  return /[\u0590-\u05FF\u0600-\u06FF]/.test(text);
+}
+
 // ── System prompt ──────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are an expert music theorist, composer, and guitarist with encyclopedic knowledge of harmony, chord progressions, genre conventions, and cultural music references from around the world.
 
-Your knowledge includes:
-- All major Western genres: blues, rock, jazz, pop, country, metal, folk, classical, R&B, soul, funk, reggae, bossa nova, flamenco, and more
-- Film and TV scores: Hans Zimmer, Ennio Morricone, John Williams, etc.
-- Specific artists and their harmonic language across all eras and cultures
-- Israeli music: Shlomo Artzi (Dorian/Aeolian rock), Arik Einstein (diatonic folk-pop), Idan Raichel (Ethiopian-influenced Dorian), Aviv Geffen (dark alternative), Ehud Banai, Berry Sakharof, Ethnix (Mizrahi/Hijaz scale), Yehoram Gaon (Mediterranean Am–F–E), and the general character of Israeli songs (harmonic minor cadences, Hijaz mode, Mediterranean colour)
-- Middle Eastern, Balkan, and world music scales and modes
+Your knowledge spans all genres, eras, and cultures including Israeli music (Shlomo Artzi, Arik Einstein, Idan Raichel, Aviv Geffen, Ethnix, Yehoram Gaon, and the characteristic Mediterranean/Mizrahi harmonic language), Middle Eastern scales (Hijaz, harmonic minor), and world music.
 
-When the user describes a mood, vibe, artist, song, genre, movie, TV show, feeling, energy, decade, or any creative prompt — in any language — generate 3 distinct chord progression suggestions that authentically capture that vibe.
+When the user describes a mood, vibe, artist, song, genre, film, TV show, feeling, energy, decade, or any creative prompt, generate 3 distinct chord progression suggestions that authentically capture that vibe.
+
+LANGUAGE RULE: Detect the language of the user's message and respond in that same language for the "name" and "description" fields. If they write in Hebrew, respond in Hebrew. If Arabic, in Arabic. If English, in English. The "chords" array and "key" field must ALWAYS use standard English music notation regardless of response language (Am, Cmaj7, G major, E Dorian, etc.).
 
 Return ONLY a JSON object — no markdown, no explanation outside the JSON:
 
 {
   "progressions": [
     {
-      "name": "Short evocative name (3-5 words)",
-      "description": "2-3 sentences explaining the musical choices and why they capture the requested vibe.",
-      "key": "Key signature (e.g. 'A minor', 'G major', 'E Dorian')",
+      "name": "Short evocative name (3-5 words, in the user's language)",
+      "description": "2-3 sentences explaining the musical choices (in the user's language).",
+      "key": "Key signature in English (e.g. 'A minor', 'G major', 'E Dorian')",
       "chords": ["Am", "F", "C", "G"]
     }
   ]
 }
 
 Chord naming rules:
-- Major: C, G, D (just root = major)
-- Minor: Am, Em, Dm (m suffix)
+- Major: C, G, D
+- Minor: Am, Em, Dm
 - Dominant 7th: G7, E7
 - Major 7th: Cmaj7, Fmaj7
 - Minor 7th: Am7, Dm7
@@ -80,8 +99,7 @@ Chord naming rules:
 - Suspended: Dsus4, Gsus2
 - Added: Cadd9
 - 4-8 chords per progression
-- The 3 progressions must be musically distinct from each other
-- Always respond with descriptions and chord names in English, regardless of what language the user writes in`;
+- The 3 progressions must be musically distinct from each other`;
 
 const QUICK_PROMPTS = [
   'Dusty blues-country vibe — Far From Any Road (True Detective)',
@@ -96,9 +114,7 @@ function parseProgressions(raw: string): AIProgression[] | null {
     const parsed = JSON.parse(clean);
     if (Array.isArray(parsed.progressions)) return parsed.progressions;
     return null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function makeChordInProgression(name: string, idx: number): ChordInProgression {
@@ -114,7 +130,6 @@ async function callMuseAPI(
   messages: Array<{ role: 'user' | 'assistant'; content: string }>
 ): Promise<string> {
   if (electronAPI) {
-    // Electron: route through main process (no CORS)
     const result = await electronAPI.callAnthropic({
       apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
       messages,
@@ -123,7 +138,6 @@ async function callMuseAPI(
     return result.content[0]?.type === 'text' ? result.content[0].text : '';
   }
 
-  // Browser / PWA: Anthropic SDK (supports CORS natively)
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1200,
@@ -162,9 +176,7 @@ const ChordPillWithPreview: React.FC<{ name: string; tuningNotes: string[] }> = 
           transition: 'background 0.12s, color 0.12s',
           userSelect: 'none',
         }}
-      >
-        {name}
-      </span>
+      >{name}</span>
 
       {hovered && (
         <div style={{
@@ -181,7 +193,7 @@ const ChordPillWithPreview: React.FC<{ name: string; tuningNotes: string[] }> = 
           pointerEvents: 'none',
         }}>
           <div style={{ fontWeight: 700, color: T.text, fontSize: 13, marginBottom: 6 }}>{name}</div>
-          {voicings.length > 0
+          {voicings.length > 0 && voicings[0]
             ? <MiniFretboard voicing={voicings[0]} tuning={tuningNotes} dotColor={T.primary} />
             : <span style={{ color: T.textDim, fontSize: 11 }}>No voicing found</span>
           }
@@ -196,39 +208,49 @@ const ProgressionCard: React.FC<{
   prog: AIProgression;
   tuningNotes: string[];
   onLoad: () => void;
-}> = ({ prog, tuningNotes, onLoad }) => (
-  <div style={{ ...card(), padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{prog.name}</div>
-        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>🎵 {prog.key}</div>
+}> = ({ prog, tuningNotes, onLoad }) => {
+  const nameRTL = isRTL(prog.name);
+  const descRTL = isRTL(prog.description);
+
+  return (
+    <div style={{ ...card(), padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <div dir={nameRTL ? 'rtl' : 'ltr'} style={{ fontSize: 14, fontWeight: 700, color: T.text, textAlign: nameRTL ? 'right' : 'left' }}>
+            {prog.name}
+          </div>
+          <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>🎵 {prog.key}</div>
+        </div>
+        <button
+          onClick={onLoad}
+          style={{
+            padding: '6px 14px', borderRadius: 8, border: 'none',
+            background: T.secondary, color: T.white,
+            fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            flexShrink: 0, whiteSpace: 'nowrap',
+          }}
+        >← Load</button>
       </div>
-      <button
-        onClick={onLoad}
-        style={{
-          padding: '6px 14px', borderRadius: 8, border: 'none',
-          background: T.secondary, color: T.white,
-          fontSize: 12, fontWeight: 700, cursor: 'pointer',
-          flexShrink: 0, whiteSpace: 'nowrap',
-        }}
+
+      <p
+        dir={descRTL ? 'rtl' : 'ltr'}
+        style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.55, textAlign: descRTL ? 'right' : 'left' }}
       >
-        ← Load
-      </button>
+        {prog.description}
+      </p>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {prog.chords.map((ch, i) => (
+          <ChordPillWithPreview key={i} name={ch} tuningNotes={tuningNotes} />
+        ))}
+      </div>
     </div>
-    <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.55 }}>
-      {prog.description}
-    </p>
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-      {prog.chords.map((ch, i) => (
-        <ChordPillWithPreview key={i} name={ch} tuningNotes={tuningNotes} />
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, tuning }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(loadHistory);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -236,6 +258,10 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, tuning })
 
   const tuningNotes = tuning?.notes ?? TUNINGS[0].notes;
 
+  // Persist history on change
+  useEffect(() => { saveHistory(messages); }, [messages]);
+
+  // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -248,9 +274,9 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, tuning })
     setInput('');
     setLoading(true);
 
-    // Build clean API history (user messages + previous AI text responses)
+    // Build clean history for API (no loading / error messages)
     const apiHistory = [...messages, userMsg]
-      .filter(m => m.text.trim())
+      .filter(m => m.text.trim() && !m.loading && !m.error)
       .map(m => ({ role: m.role as 'user' | 'assistant', content: m.text }));
 
     try {
@@ -283,6 +309,11 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, tuning })
       e.preventDefault();
       sendMessage(input);
     }
+  };
+
+  const clearHistory = () => {
+    setMessages([]);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const isEmpty = messages.length === 0;
@@ -318,27 +349,45 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, tuning })
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = T.primarySoft; e.currentTarget.style.color = T.text; }}
                   onMouseLeave={e => { e.currentTarget.style.background = T.bgCard; e.currentTarget.style.color = T.textMuted; }}
-                >
-                  {p}
-                </button>
+                >{p}</button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Clear history button */}
+        {!isEmpty && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={clearHistory}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 11, color: T.textDim, padding: '2px 4px',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = T.coral}
+              onMouseLeave={e => e.currentTarget.style.color = T.textDim}
+            >
+              Clear history
+            </button>
           </div>
         )}
 
         {/* Messages */}
         {messages.map((msg, i) => {
           if (msg.role === 'user') {
+            const rtl = isRTL(msg.text);
             return (
               <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div style={{
-                  maxWidth: '80%', padding: '10px 14px',
-                  borderRadius: '14px 14px 4px 14px',
-                  background: T.primary, color: T.white,
-                  fontSize: 13, lineHeight: 1.5,
-                }}>
-                  {msg.text}
-                </div>
+                <div
+                  dir={rtl ? 'rtl' : 'ltr'}
+                  style={{
+                    maxWidth: '80%', padding: '10px 14px',
+                    borderRadius: '14px 14px 4px 14px',
+                    background: T.primary, color: T.white,
+                    fontSize: 13, lineHeight: 1.5,
+                    textAlign: rtl ? 'right' : 'left',
+                  }}
+                >{msg.text}</div>
               </div>
             );
           }
@@ -364,9 +413,7 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, tuning })
                   padding: '10px 14px', borderRadius: 10,
                   background: T.coralFaint, color: T.coral,
                   fontSize: 13, border: `1px solid ${T.coralFaint2}`,
-                }}>
-                  ⚠ {msg.error}
-                </div>
+                }}>⚠ {msg.error}</div>
               )}
               {msg.progressions?.map((prog, j) => (
                 <ProgressionCard
@@ -397,6 +444,7 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, tuning })
             background: 'transparent', color: T.text,
             fontSize: 13, lineHeight: 1.5, outline: 'none',
             fontFamily: 'system-ui, -apple-system, sans-serif',
+            direction: isRTL(input) ? 'rtl' : 'ltr',
           }}
           disabled={loading}
         />

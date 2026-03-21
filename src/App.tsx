@@ -345,6 +345,7 @@ export default function App() {
             tuning={tuning}
             onTuningChange={setTuning}
             onAddToProgression={(item) => pushHistory([...progression, item])}
+            onLoadProgression={(chords) => pushHistory(chords)}
           />
         </ErrorBoundary>
       )}

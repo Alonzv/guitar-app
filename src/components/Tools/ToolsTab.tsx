@@ -22,9 +22,10 @@ interface Props {
   tuning: Tuning;
   onTuningChange: (t: Tuning) => void;
   onAddToProgression: (item: ChordInProgression) => void;
+  onLoadProgression: (chords: ChordInProgression[]) => void;
 }
 
-export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgression }) => {
+export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgression, onLoadProgression }) => {
   const [sub,       setSub]       = useState<Sub>('tuner');
   const [wheelView, setWheelView] = useState<WheelView>('cof');   // COF is the default first view
 
@@ -101,7 +102,7 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
       {sub === 'muse'      && (
         <AIProgressionTab
           tuning={tuning}
-          onLoadProgression={(chords) => chords.forEach(c => onAddToProgression(c))}
+          onLoadProgression={onLoadProgression}
         />
       )}
 
