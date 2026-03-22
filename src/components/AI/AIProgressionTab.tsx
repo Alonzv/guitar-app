@@ -265,8 +265,8 @@ const ProgressionCard: React.FC<{
   );
 };
 
-// ── Session Switcher ──────────────────────────────────────────────────────────
-const SessionSwitcher: React.FC<{
+// ── Session Tabs ──────────────────────────────────────────────────────────────
+const SessionTabs: React.FC<{
   sessions: MuseSession[];
   activeId: string;
   onSwitch: (id: string) => void;
@@ -274,30 +274,11 @@ const SessionSwitcher: React.FC<{
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
 }> = ({ sessions, activeId, onSwitch, onNew, onRename, onDelete }) => {
-  const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState('');
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const active = sessions.find(s => s.id === activeId);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setRenaming(null);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  const startRename = (e: React.MouseEvent, id: string, name: string) => {
-    e.stopPropagation();
-    setRenameVal(name);
-    setRenaming(id);
-  };
+  useEffect(() => { if (renaming) inputRef.current?.focus(); }, [renaming]);
 
   const commitRename = (id: string) => {
     if (renameVal.trim()) onRename(id, renameVal.trim());
@@ -305,64 +286,66 @@ const SessionSwitcher: React.FC<{
   };
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative' }}>
-      <button
-        onClick={() => { setOpen(o => !o); setRenaming(null); }}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, border: `1px solid ${T.border}`, background: open ? T.primarySoft : T.bgCard, color: T.text, fontSize: 12, fontWeight: 600, cursor: 'pointer', maxWidth: 200 }}
-      >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-          {active?.name ?? 'שיחה חדשה'}
-        </span>
-        <span style={{ fontSize: 9, color: T.textMuted, flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
-      </button>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
 
-      {open && (
-        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 500, background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.22)', minWidth: 240, maxHeight: 280, overflowY: 'auto' }}>
-
-          {sessions.map((s, i) => (
-            <div
-              key={s.id}
-              onClick={() => { if (renaming !== s.id) { onSwitch(s.id); setOpen(false); } }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', background: s.id === activeId ? T.primarySoft : 'transparent', borderBottom: i < sessions.length - 1 ? `1px solid ${T.border}` : 'none', cursor: 'pointer', transition: 'background 0.1s' }}
-              onMouseEnter={e => { if (s.id !== activeId && renaming !== s.id) e.currentTarget.style.background = T.bgInput; }}
-              onMouseLeave={e => { e.currentTarget.style.background = s.id === activeId ? T.primarySoft : 'transparent'; }}
-            >
-              {renaming === s.id ? (
-                <input
-                  autoFocus
-                  value={renameVal}
-                  onChange={e => setRenameVal(e.target.value)}
-                  onBlur={() => commitRename(s.id)}
-                  onKeyDown={e => { if (e.key === 'Enter') commitRename(s.id); if (e.key === 'Escape') setRenaming(null); e.stopPropagation(); }}
-                  onClick={e => e.stopPropagation()}
-                  style={{ flex: 1, padding: '2px 6px', borderRadius: 5, border: `1px solid ${T.primary}`, background: T.bgInput, color: T.text, fontSize: 12, outline: 'none' }}
-                />
-              ) : (
-                <span style={{ flex: 1, fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', direction: 'rtl', textAlign: 'right' }}>
-                  {s.name}
-                </span>
-              )}
-              <span onClick={e => startRename(e, s.id, s.name)} title="שנה שם" style={{ fontSize: 11, color: T.textDim, cursor: 'pointer', padding: '2px 3px', borderRadius: 4, flexShrink: 0 }}>✏</span>
-              <span
-                onClick={e => { e.stopPropagation(); onDelete(s.id); if (sessions.length === 1) setOpen(false); }}
-                title="מחק שיחה"
-                style={{ fontSize: 13, color: T.textDim, cursor: 'pointer', padding: '2px 3px', borderRadius: 4, flexShrink: 0, lineHeight: 1 }}
-                onMouseEnter={e => e.currentTarget.style.color = T.coral}
-                onMouseLeave={e => e.currentTarget.style.color = T.textDim}
-              >🗑</span>
-            </div>
-          ))}
-
+      {sessions.map(s => {
+        const active = s.id === activeId;
+        return (
           <div
-            onClick={() => { onNew(); setOpen(false); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', cursor: 'pointer', color: T.primary, fontSize: 12, fontWeight: 700, borderTop: sessions.length > 0 ? `1px solid ${T.border}` : 'none' }}
-            onMouseEnter={e => e.currentTarget.style.background = T.primarySoft}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            key={s.id}
+            onClick={() => { if (renaming !== s.id) onSwitch(s.id); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 8px 5px 11px',
+              borderRadius: 8,
+              border: `1px solid ${active ? T.primary : T.border}`,
+              background: active ? T.primarySoft : T.bgCard,
+              cursor: 'pointer', flexShrink: 0,
+              transition: 'background 0.12s, border-color 0.12s',
+              maxWidth: 160,
+            }}
           >
-            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> שיחה חדשה
+            {renaming === s.id ? (
+              <input
+                ref={inputRef}
+                value={renameVal}
+                onChange={e => setRenameVal(e.target.value)}
+                onBlur={() => commitRename(s.id)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') commitRename(s.id);
+                  if (e.key === 'Escape') setRenaming(null);
+                  e.stopPropagation();
+                }}
+                onClick={e => e.stopPropagation()}
+                style={{ width: 100, padding: '0 4px', border: 'none', background: 'transparent', color: T.text, fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
+              />
+            ) : (
+              <span
+                onDoubleClick={e => { e.stopPropagation(); setRenameVal(s.name); setRenaming(s.id); }}
+                title="לחץ פעמיים לשינוי שם"
+                style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? T.primary : T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', direction: 'rtl' }}
+              >{s.name}</span>
+            )}
+
+            <span
+              onClick={e => { e.stopPropagation(); onDelete(s.id); }}
+              title="מחק שיחה"
+              style={{ fontSize: 12, color: active ? T.primary : T.textDim, cursor: 'pointer', lineHeight: 1, opacity: 0.6, flexShrink: 0, paddingLeft: 2 }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = T.coral; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = active ? T.primary : T.textDim; }}
+            >×</span>
           </div>
-        </div>
-      )}
+        );
+      })}
+
+      {/* + New */}
+      <button
+        onClick={onNew}
+        title="שיחה חדשה"
+        style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0, lineHeight: 1 }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.color = T.primary; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textMuted; }}
+      >+</button>
     </div>
   );
 };
@@ -548,8 +531,8 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, onSaveSon
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'clamp(400px, 60vh, 700px)', gap: 10 }}>
 
-      {/* ── Session bar ── */}
-      <SessionSwitcher
+      {/* ── Session tabs ── */}
+      <SessionTabs
         sessions={sessions}
         activeId={activeId}
         onSwitch={handleSwitchSession}
