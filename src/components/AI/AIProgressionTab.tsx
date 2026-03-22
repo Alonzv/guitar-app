@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import Anthropic from '@anthropic-ai/sdk';
 import type { ChordInProgression, Tuning } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { findChordVoicings } from '../../utils/chordVoicings';
@@ -26,12 +25,6 @@ interface Props {
   onLoadProgression: (chords: ChordInProgression[]) => void;
   tuning?: Tuning;
 }
-
-// ── Anthropic client (browser / PWA fallback) ──────────────────────────────────
-const anthropic = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
 
 // ── Detect Electron (IPC path) ─────────────────────────────────────────────────
 type ElectronAPI = {
@@ -125,7 +118,7 @@ function makeChordInProgression(name: string, idx: number): ChordInProgression {
   };
 }
 
-// ── API call (IPC in Electron, SDK in browser) ─────────────────────────────────
+// ── API call (IPC in Electron, fetch in browser) ───────────────────────────────
 async function callMuseAPI(
   messages: Array<{ role: 'user' | 'assistant'; content: string }>
 ): Promise<string> {
@@ -138,13 +131,29 @@ async function callMuseAPI(
     return result.content[0]?.type === 'text' ? result.content[0].text : '';
   }
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1200,
-    system: SYSTEM_PROMPT,
-    messages,
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1200,
+      system: SYSTEM_PROMPT,
+      messages,
+    }),
   });
-  return response.content[0]?.type === 'text' ? response.content[0].text : '';
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`API error ${res.status}: ${err}`);
+  }
+
+  const data = await res.json() as { content: Array<{ type: string; text: string }> };
+  return data.content[0]?.type === 'text' ? data.content[0].text : '';
 }
 
 // ── Chord pill with hover fretboard preview ────────────────────────────────────
