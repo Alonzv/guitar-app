@@ -214,14 +214,15 @@ const ProgressionCard: React.FC<{
   onPlay: () => void;
   onStop: () => void;
   justSaved: boolean;
-}> = ({ prog, tuningNotes, onLoad, onSave, onExplain, onVariation, isPlaying, onPlay, onStop, justSaved, onNavigateToLyrics }) => {
+}> = ({ prog, tuningNotes, onLoad, onSave, isPlaying, onPlay, onStop, justSaved, onNavigateToLyrics }) => {
   const nameRTL = isRTL(prog.name);
   const descRTL = isRTL(prog.description);
 
-  const btnStyle = (color: string): React.CSSProperties => ({
+  const actionBtn = (color: string): React.CSSProperties => ({
     padding: '4px 9px', borderRadius: 7, border: `1px solid ${color}22`,
     background: color + '18', color, fontSize: 11, fontWeight: 700,
-    cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.4,
+    cursor: 'default', whiteSpace: 'nowrap', lineHeight: 1.4,
+    userSelect: 'none', pointerEvents: 'none',
   });
 
   return (
@@ -233,7 +234,7 @@ const ProgressionCard: React.FC<{
           <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>🎵 {prog.key}</div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <button onClick={onSave} style={{ ...btnStyle(T.secondary), background: justSaved ? T.secondary : T.secondary + '18', color: justSaved ? T.white : T.secondary }}>
+          <button onClick={onSave} style={{ padding: '4px 9px', borderRadius: 7, border: `1px solid ${T.secondary}22`, background: justSaved ? T.secondary : T.secondary + '18', color: justSaved ? T.white : T.secondary, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
             {justSaved ? '✓ נשמר' : '💾 שמור'}
           </button>
           <button onClick={onLoad} style={{ padding: '4px 12px', borderRadius: 7, border: 'none', background: T.primary, color: T.white, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>← Load</button>
@@ -243,17 +244,17 @@ const ProgressionCard: React.FC<{
       {/* Description */}
       <p dir={descRTL ? 'rtl' : 'ltr'} style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.55, textAlign: descRTL ? 'right' : 'left' }}>{prog.description}</p>
 
-      {/* Action row */}
+      {/* Info tags (display only) */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-        <button onClick={isPlaying ? onStop : onPlay} style={btnStyle(T.secondary)}>
+        <button onClick={isPlaying ? onStop : onPlay} style={{ padding: '4px 9px', borderRadius: 7, border: `1px solid ${T.secondary}22`, background: T.secondary + '18', color: T.secondary, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
           {isPlaying ? '⏹ עצור' : '▶ נגן'}
         </button>
-        <button onClick={onExplain} style={btnStyle(T.textMuted)}>✏ הסבר</button>
-        <button onClick={() => onVariation('minor')} style={btnStyle(T.textMuted)}>🌙 מינורי</button>
-        <button onClick={() => onVariation('jazz')} style={btnStyle(T.textMuted)}>🎷 ג׳אזי</button>
-        <button onClick={() => onVariation('simple')} style={btnStyle(T.textMuted)}>⬇ פשוט</button>
+        <span style={actionBtn(T.textMuted)}>✏ הסבר</span>
+        <span style={actionBtn(T.textMuted)}>🌙 מינורי</span>
+        <span style={actionBtn(T.textMuted)}>🎷 ג׳אזי</span>
+        <span style={actionBtn(T.textMuted)}>⬇ פשוט</span>
         {onNavigateToLyrics && (
-          <button onClick={onNavigateToLyrics} style={btnStyle(T.primary)}>📝 → Lyrics</button>
+          <span style={actionBtn(T.primary)}>📝 → Lyrics</span>
         )}
       </div>
 
@@ -317,22 +318,30 @@ const SessionTabs: React.FC<{
                   e.stopPropagation();
                 }}
                 onClick={e => e.stopPropagation()}
-                style={{ width: 100, padding: '0 4px', border: 'none', background: 'transparent', color: T.text, fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
+                style={{ width: 90, padding: '0 4px', border: 'none', background: 'transparent', color: T.text, fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
               />
             ) : (
-              <span
-                onDoubleClick={e => { e.stopPropagation(); setRenameVal(s.name); setRenaming(s.id); }}
-                title="לחץ פעמיים לשינוי שם"
-                style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? T.primary : T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', direction: 'rtl' }}
-              >{s.name}</span>
+              <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? T.primary : T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', direction: 'rtl' }}>
+                {s.name}
+              </span>
             )}
 
+            {/* Edit */}
+            <span
+              onClick={e => { e.stopPropagation(); setRenameVal(s.name); setRenaming(s.id); }}
+              title="שנה שם"
+              style={{ fontSize: 10, color: T.textDim, cursor: 'pointer', flexShrink: 0, lineHeight: 1, padding: '1px 2px', borderRadius: 3 }}
+              onMouseEnter={e => { e.currentTarget.style.color = T.primary; }}
+              onMouseLeave={e => { e.currentTarget.style.color = T.textDim; }}
+            >✏</span>
+
+            {/* Delete */}
             <span
               onClick={e => { e.stopPropagation(); onDelete(s.id); }}
               title="מחק שיחה"
-              style={{ fontSize: 12, color: active ? T.primary : T.textDim, cursor: 'pointer', lineHeight: 1, opacity: 0.6, flexShrink: 0, paddingLeft: 2 }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = T.coral; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = active ? T.primary : T.textDim; }}
+              style={{ fontSize: 14, color: T.textDim, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: '0 2px', borderRadius: 3 }}
+              onMouseEnter={e => { e.currentTarget.style.color = T.coral; }}
+              onMouseLeave={e => { e.currentTarget.style.color = T.textDim; }}
             >×</span>
           </div>
         );
