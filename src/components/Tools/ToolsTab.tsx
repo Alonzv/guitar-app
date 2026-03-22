@@ -23,9 +23,11 @@ interface Props {
   onTuningChange: (t: Tuning) => void;
   onAddToProgression: (item: ChordInProgression) => void;
   onLoadProgression: (chords: ChordInProgression[]) => void;
+  onSaveSong: (name: string, chords: ChordInProgression[]) => void;
+  onNavigateToLyrics?: (key: string, mood: string) => void;
 }
 
-export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgression, onLoadProgression }) => {
+export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgression, onLoadProgression, onSaveSong, onNavigateToLyrics }) => {
   const [sub,       setSub]       = useState<Sub>('tuner');
   const [wheelView, setWheelView] = useState<WheelView>('cof');   // COF is the default first view
 
@@ -103,6 +105,8 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
         <AIProgressionTab
           tuning={tuning}
           onLoadProgression={onLoadProgression}
+          onSaveSong={onSaveSong}
+          onNavigateToLyrics={onNavigateToLyrics}
         />
       )}
 

@@ -205,6 +205,33 @@ export default function App() {
     setSongs(prev => [song, ...prev]);
   };
 
+  const handleSaveMuseSong = (name: string, chords: ChordInProgression[]) => {
+    const song: Song = {
+      id: `song-${Date.now()}`,
+      name: name.trim() || `Song ${songs.length + 1}`,
+      progression: chords,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setSongs(prev => [song, ...prev]);
+  };
+
+  const handleNavigateToLyricsFromMuse = (key: string, mood: string) => {
+    const now = Date.now();
+    setLyricsToLoad({
+      id: `muse-lyrics-${now}`,
+      name: mood,
+      lyricsText: '',
+      lyricsChords: [],
+      composer: key,
+      writer: '',
+      isRtl: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    setActiveTab('lyrics');
+  };
+
   const handleLoadSong = (song: Song) => {
     pushHistory(song.progression);
     setActiveTab('chords');
@@ -346,6 +373,8 @@ export default function App() {
             onTuningChange={setTuning}
             onAddToProgression={(item) => pushHistory([...progression, item])}
             onLoadProgression={(chords) => pushHistory(chords)}
+            onSaveSong={handleSaveMuseSong}
+            onNavigateToLyrics={handleNavigateToLyricsFromMuse}
           />
         </ErrorBoundary>
       )}
