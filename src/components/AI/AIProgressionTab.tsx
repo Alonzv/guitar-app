@@ -559,8 +559,8 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, onSaveSon
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 6 }}>Muse — AI Progression Generator</div>
               <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.5 }}>
-                תאר כל וייב, אמן, שיר, סרט או תחושה.<br />
-                Muse מבין בכל שפה.
+                Describe any vibe, artist, song, film or feeling.<br />
+                Muse understands any language.
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%', maxWidth: 480 }}>
