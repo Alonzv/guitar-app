@@ -38,7 +38,7 @@ function loadSessions(): MuseSession[] {
     if (legacy) {
       const msgs = (JSON.parse(legacy) as ChatMessage[]).filter(m => !m.loading);
       if (msgs.length > 0)
-        return [{ id: `session-${Date.now()}`, name: 'שיחה קודמת', messages: msgs, createdAt: Date.now() }];
+        return [{ id: `session-${Date.now()}`, name: 'Previous Session', messages: msgs, createdAt: Date.now() }];
     }
     return [];
   } catch { return []; }
@@ -53,7 +53,7 @@ function saveSessions(sessions: MuseSession[]) {
 }
 
 function newSession(): MuseSession {
-  return { id: `session-${Date.now()}`, name: 'שיחה חדשה', messages: [], createdAt: Date.now() };
+  return { id: `session-${Date.now()}`, name: 'New Session', messages: [], createdAt: Date.now() };
 }
 
 // ── System prompt ─────────────────────────────────────────────────────────────
@@ -100,11 +100,11 @@ Chord naming rules:
 
 // ── Quick prompts (Hebrew) ────────────────────────────────────────────────────
 const QUICK_PROMPTS = [
-  'בלוז כפרי ועשן — ג\'ון לי הוקר',
-  'מתח קולנועי כהה — Interstellar',
-  'שלמה ארצי — מלנכוליה ים תיכונית',
-  'ג\'אז לילי — ניו יורק בחצות',
-  'רוק אנתמי — אנרגיית אצטדיון',
+  'Rural smoky blues — John Lee Hooker',
+  'Dark cinematic tension — Interstellar',
+  'Shlomo Artzi — Mediterranean melancholy',
+  'Late-night jazz — New York at midnight',
+  'Anthemic rock — stadium energy',
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -235,7 +235,7 @@ const ProgressionCard: React.FC<{
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <button onClick={onSave} style={{ padding: '4px 9px', borderRadius: 7, border: `1px solid ${T.secondary}22`, background: justSaved ? T.secondary : T.secondary + '18', color: justSaved ? T.white : T.secondary, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
-            {justSaved ? '✓ נשמר' : '💾 שמור'}
+            {justSaved ? '✓ Saved' : '💾 Save'}
           </button>
           <button onClick={onLoad} style={{ padding: '4px 12px', borderRadius: 7, border: 'none', background: T.primary, color: T.white, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>← Load</button>
         </div>
@@ -247,12 +247,12 @@ const ProgressionCard: React.FC<{
       {/* Info tags (display only) */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
         <button onClick={isPlaying ? onStop : onPlay} style={{ padding: '4px 9px', borderRadius: 7, border: `1px solid ${T.secondary}22`, background: T.secondary + '18', color: T.secondary, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
-          {isPlaying ? '⏹ עצור' : '▶ נגן'}
+          {isPlaying ? '⏹ Stop' : '▶ Play'}
         </button>
-        <span style={actionBtn(T.textMuted)}>✏ הסבר</span>
-        <span style={actionBtn(T.textMuted)}>🌙 מינורי</span>
-        <span style={actionBtn(T.textMuted)}>🎷 ג׳אזי</span>
-        <span style={actionBtn(T.textMuted)}>⬇ פשוט</span>
+        <span style={actionBtn(T.textMuted)}>✏ Explain</span>
+        <span style={actionBtn(T.textMuted)}>🌙 Minor</span>
+        <span style={actionBtn(T.textMuted)}>🎷 Jazzy</span>
+        <span style={actionBtn(T.textMuted)}>⬇ Simpler</span>
         {onNavigateToLyrics && (
           <span style={actionBtn(T.primary)}>📝 → Lyrics</span>
         )}
@@ -321,7 +321,7 @@ const SessionTabs: React.FC<{
                 style={{ width: 90, padding: '0 4px', border: 'none', background: 'transparent', color: T.text, fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
               />
             ) : (
-              <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? T.primary : T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', direction: 'rtl' }}>
+              <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? T.primary : T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {s.name}
               </span>
             )}
@@ -329,7 +329,7 @@ const SessionTabs: React.FC<{
             {/* Edit */}
             <span
               onClick={e => { e.stopPropagation(); setRenameVal(s.name); setRenaming(s.id); }}
-              title="שנה שם"
+              title="Rename"
               style={{ fontSize: 10, color: T.textDim, cursor: 'pointer', flexShrink: 0, lineHeight: 1, padding: '1px 2px', borderRadius: 3 }}
               onMouseEnter={e => { e.currentTarget.style.color = T.primary; }}
               onMouseLeave={e => { e.currentTarget.style.color = T.textDim; }}
@@ -338,7 +338,7 @@ const SessionTabs: React.FC<{
             {/* Delete */}
             <span
               onClick={e => { e.stopPropagation(); onDelete(s.id); }}
-              title="מחק שיחה"
+              title="Delete session"
               style={{ fontSize: 14, color: T.textDim, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: '0 2px', borderRadius: 3 }}
               onMouseEnter={e => { e.currentTarget.style.color = T.coral; }}
               onMouseLeave={e => { e.currentTarget.style.color = T.textDim; }}
@@ -350,7 +350,7 @@ const SessionTabs: React.FC<{
       {/* + New */}
       <button
         onClick={onNew}
-        title="שיחה חדשה"
+        title="New session"
         style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0, lineHeight: 1 }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.color = T.primary; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textMuted; }}
@@ -535,7 +535,7 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, onSaveSon
 
   const isEmpty = messages.length === 0;
 
-  const COMPLEXITY_LABELS: Record<Complexity, string> = { simple: '🎸 פשוט', medium: '🎵 בינוני', complex: '🎶 מורכב' };
+  const COMPLEXITY_LABELS: Record<Complexity, string> = { simple: '🎸 Simple', medium: '🎵 Medium', complex: '🎶 Complex' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'clamp(400px, 60vh, 700px)', gap: 10 }}>
@@ -551,7 +551,7 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, onSaveSon
       />
 
       {/* ── Chat area ── */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, padding: '2px 0' }}>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0 2px' }}>
 
         {isEmpty && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16, padding: '24px 0' }}>
@@ -592,7 +592,7 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, onSaveSon
                   <span style={{ display: 'inline-flex', gap: 4 }}>
                     {[0,1,2].map(d => <span key={d} style={{ width: 7, height: 7, borderRadius: '50%', background: T.secondary, display: 'inline-block', animation: `museBounce 1.2s ${d * 0.2}s ease-in-out infinite` }} />)}
                   </span>
-                  מייצר פרוגרסיות…
+                  Generating progressions…
                 </div>
               )}
               {msg.error && <div style={{ padding: '10px 14px', borderRadius: 10, background: T.coralFaint, color: T.coral, fontSize: 13, border: `1px solid ${T.coralFaint2}` }}>⚠ {msg.error}</div>}
@@ -634,7 +634,7 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, onSaveSon
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
-          placeholder="תאר וייב, אמן, שיר, מצב רוח… (Enter לשליחה)"
+          placeholder="Describe a vibe, artist, song, mood… (Enter to send)"
           rows={2}
           style={{ flex: 1, resize: 'none', border: 'none', background: 'transparent', color: T.text, fontSize: 13, lineHeight: 1.5, outline: 'none', fontFamily: 'system-ui, -apple-system, sans-serif', direction: isRTL(input) ? 'rtl' : 'ltr' }}
           disabled={loading}
