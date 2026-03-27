@@ -5,34 +5,15 @@ const STANDARD_OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
 const AudioCtxClass: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
 
 // ── Audio graph ───────────────────────────────────────────────────────────
-// All synthesis connects to _masterGain → MediaStreamDestinationNode → <audio>.
-// The <audio> element runs in iOS "playback" AVAudioSession category,
-// which ignores the mute/silent switch — unlike AudioContext alone.
 let _ctx: AudioContext | null = null;
 let _masterGain: GainNode | null = null;
-let _mediaEl: HTMLAudioElement | null = null;
 
 function initAudioGraph(): void {
   if (_ctx && _ctx.state !== 'closed') return;
 
   _ctx = new AudioCtxClass();
   _masterGain = _ctx.createGain();
-
-  try {
-    const dest = _ctx.createMediaStreamDestination();
-    _masterGain.connect(dest);
-
-    if (!_mediaEl) {
-      _mediaEl = document.createElement('audio');
-      _mediaEl.setAttribute('playsinline', '');
-      _mediaEl.setAttribute('webkit-playsinline', '');
-      document.body.appendChild(_mediaEl);
-    }
-    _mediaEl.srcObject = dest.stream;
-  } catch {
-    // Fallback for browsers without createMediaStreamDestination
-    _masterGain.connect(_ctx.destination);
-  }
+  _masterGain.connect(_ctx.destination);
 }
 
 export function getSharedContext(): AudioContext {
@@ -47,20 +28,16 @@ export function getOutputNode(): AudioNode {
 }
 
 // ── Unlock ────────────────────────────────────────────────────────────────
-// Call from every user-gesture handler. Resumes AudioContext AND starts
-// the <audio> element (which switches iOS AVAudioSession → "playback").
+// Call from every user-gesture handler to resume AudioContext on iOS.
 export function unlockAudio(): void {
   initAudioGraph();
   _ctx!.resume().catch(() => {});
 
-  if (_mediaEl) {
-    _mediaEl.play().catch(() => {});
-  }
-
-  // Tell iOS this is a media-playback app (reinforces AVAudioSession category).
+  // Explicitly suppress the iOS Now Playing / media session widget.
   try {
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({ title: 'ScaleUp' });
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
     }
   } catch { /* ignore */ }
 }
