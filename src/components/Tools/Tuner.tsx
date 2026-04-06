@@ -10,64 +10,92 @@ interface Props { tuning?: Tuning }
 interface PitchResult { freq: number; confidence: number }
 
 /**
- * Normalized autocorrelation — guitar range only.
- * Finds the FIRST strong peak (avoids octave errors where harmonics
- * score higher than the fundamental).
+ * YIN pitch detection algorithm.
+ * de Cheveigné & Kawahara (2002) — the gold standard for monophonic pitch.
+ * Fixes the normalisation bug in the old autocorrelation approach that caused
+ * it to systematically prefer higher-frequency (wrong) readings.
  */
 function detectPitch(buf: Float32Array, sampleRate: number): PitchResult {
-  const SIZE = buf.length;
+  const W = 1024; // analysis window — ~2 periods of low-E at 82 Hz
 
-  // RMS gate — silence rejection
-  let rmsSum = 0;
-  for (let i = 0; i < SIZE; i++) rmsSum += buf[i] * buf[i];
-  if (Math.sqrt(rmsSum / SIZE) < 0.015) return { freq: -1, confidence: 0 };
+  // RMS silence gate
+  let rms = 0;
+  for (let i = 0; i < W; i++) rms += buf[i] * buf[i];
+  rms = Math.sqrt(rms / W);
+  if (rms < 0.01) return { freq: -1, confidence: 0 };
 
-  // Guitar range: 70 Hz (below low E) → 380 Hz (above high E)
-  const lagMin = Math.floor(sampleRate / 380); // ≈ 116
-  const lagMax = Math.ceil(sampleRate / 70);   // ≈ 630
+  // Guitar range: 55 Hz (A1, below drop-D) → 400 Hz (above high-E)
+  const tauMin = Math.floor(sampleRate / 400);
+  const tauMax = Math.min(
+    Math.ceil(sampleRate / 55),
+    buf.length - W - 1,
+  );
+  if (tauMin >= tauMax) return { freq: -1, confidence: 0 };
 
-  // Only autocorrelate over first 2048 samples to keep it fast
-  const N = Math.min(SIZE, 2048);
-
-  // Normalisation constant (c[0])
-  let c0 = 0;
-  for (let i = 0; i < N; i++) c0 += buf[i] * buf[i];
-  if (c0 === 0) return { freq: -1, confidence: 0 };
-
-  // Compute normalised autocorrelation for relevant lags
-  const numLags = lagMax - lagMin + 1;
-  const c = new Float32Array(numLags);
-  for (let k = 0; k < numLags; k++) {
-    const lag = lagMin + k;
-    let sum = 0;
-    const end = N - lag;
-    for (let j = 0; j < end; j++) sum += buf[j] * buf[j + lag];
-    c[k] = sum / c0;
-  }
-
-  // Track best confidence even if below threshold (for "play louder" hint)
-  let bestC = 0;
-  for (let k = 0; k < numLags; k++) if (c[k] > bestC) bestC = c[k];
-
-  // Find the FIRST local peak above confidence threshold (lowered to 0.3)
-  // "First peak" avoids octave errors — harmonics appear at later lags
-  const CONFIDENCE = 0.3;
-  let peakK = -1;
-  for (let k = 1; k < numLags - 1; k++) {
-    if (c[k] > c[k - 1] && c[k] >= c[k + 1] && c[k] > CONFIDENCE) {
-      peakK = k;
-      break;
+  // Step 1 — squared difference function d(tau)
+  // d(tau) = Σ (x[j] - x[j+tau])²  for j = 0..W-1
+  const d = new Float32Array(tauMax + 1);
+  for (let tau = 1; tau <= tauMax; tau++) {
+    for (let j = 0; j < W; j++) {
+      const delta = buf[j] - buf[j + tau];
+      d[tau] += delta * delta;
     }
   }
-  if (peakK < 0) return { freq: -1, confidence: bestC };
 
-  // Parabolic interpolation for sub-sample precision
-  const y0 = c[peakK - 1], y1 = c[peakK], y2 = c[peakK + 1];
-  const denom = 2 * (y0 - 2 * y1 + y2);
-  const frac = denom !== 0 ? (y0 - y2) / denom : 0;
-  const T0 = lagMin + peakK + Math.max(-0.5, Math.min(0.5, frac));
+  // Step 2 — cumulative mean normalised difference (CMNDF)
+  // d'(0) = 1,  d'(tau) = d(tau) * tau / Σ d(1..tau)
+  // This normalisation is the key improvement over raw autocorrelation —
+  // it removes the bias toward small lags that made the old code go sharp.
+  const cmndf = new Float32Array(tauMax + 1);
+  cmndf[0] = 1;
+  let runningSum = 0;
+  for (let tau = 1; tau <= tauMax; tau++) {
+    runningSum += d[tau];
+    cmndf[tau] = runningSum > 0 ? (d[tau] * tau) / runningSum : 1;
+  }
 
-  return { freq: sampleRate / T0, confidence: c[peakK] };
+  // Step 3 — find first local minimum below threshold in guitar range
+  // Threshold 0.12 is conservative: avoids octave errors, rejects noise.
+  const THRESHOLD = 0.12;
+  let bestTau = -1;
+  let tau = tauMin;
+
+  while (tau < tauMax - 1) {
+    if (cmndf[tau] < THRESHOLD) {
+      // slide right to the local minimum
+      while (tau + 1 < tauMax && cmndf[tau + 1] < cmndf[tau]) tau++;
+      bestTau = tau;
+      break;
+    }
+    tau++;
+  }
+
+  // Nothing below threshold — report confidence for "play louder" hint
+  if (bestTau < 0) {
+    let minVal = 1;
+    for (let t = tauMin; t < tauMax; t++) {
+      if (cmndf[t] < minVal) { minVal = cmndf[t]; bestTau = t; }
+    }
+    return { freq: -1, confidence: Math.max(0, 1 - minVal) };
+  }
+
+  // Step 4 — parabolic interpolation for sub-sample accuracy
+  let refinedTau = bestTau;
+  if (bestTau > tauMin && bestTau < tauMax - 1) {
+    const s0 = cmndf[bestTau - 1];
+    const s1 = cmndf[bestTau];
+    const s2 = cmndf[bestTau + 1];
+    const denom = 2 * (s0 - 2 * s1 + s2);
+    if (Math.abs(denom) > 1e-10) {
+      const frac = (s0 - s2) / denom;
+      refinedTau = bestTau + Math.max(-0.5, Math.min(0.5, frac));
+    }
+  }
+
+  return {
+    freq: sampleRate / refinedTau,
+    confidence: 1 - cmndf[bestTau],
+  };
 }
 
 function findClosest(freq: number, strings: { name: string; freq: number }[]) {
@@ -80,28 +108,35 @@ function findClosest(freq: number, strings: { name: string; freq: number }[]) {
   return { string: best, cents: bestCents };
 }
 
-const MEDIAN_BUF = 24;   // rolling window size
-const OUTLIER_CENTS = 80; // reject readings more than this far from median
+const MEDIAN_BUF  = 10;  // ~330 ms at 30 fps — fast but stable
+const OUTLIER_CENTS = 50; // tighter rejection than before
 
 export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
-  const strings = tuning.notes.map((note, i) => ({ name: note, freq: tuning.openFreqs[i] }));
+  const stringsRef = useRef(
+    tuning.notes.map((note, i) => ({ name: note, freq: tuning.openFreqs[i] }))
+  );
+  // Keep stringsRef current when tuning prop changes
+  useEffect(() => {
+    stringsRef.current = tuning.notes.map((note, i) => ({ name: note, freq: tuning.openFreqs[i] }));
+  }, [tuning]);
+
   const [listening, setListening]       = useState(false);
   const [display, setDisplay]           = useState<{ note: string; hz: number; cents: number } | null>(null);
   const [error, setError]               = useState('');
   const [loudnessHint, setLoudnessHint] = useState(false);
 
-  const ctxRef        = useRef<AudioContext | null>(null);
-  const analyserRef   = useRef<AnalyserNode | null>(null);
-  const streamRef     = useRef<MediaStream | null>(null);
-  const rafRef        = useRef<number | null>(null);
-  const freqBufRef    = useRef<number[]>([]);        // rolling valid readings
-  const lastValidRef  = useRef<number>(0);
-  const frameRef      = useRef(0);                   // for throttling
+  const ctxRef       = useRef<AudioContext | null>(null);
+  const analyserRef  = useRef<AnalyserNode | null>(null);
+  const streamRef    = useRef<MediaStream | null>(null);
+  const rafRef       = useRef<number | null>(null);
+  const freqBufRef   = useRef<number[]>([]);
+  const lastValidRef = useRef<number>(0);
+  const frameRef     = useRef(0);
 
   const tick = useCallback(() => {
     if (!analyserRef.current || !ctxRef.current) return;
 
-    // Throttle to ~30 fps — enough for a tuner display
+    // Throttle to ~30 fps
     frameRef.current++;
     if (frameRef.current % 2 === 0) {
       rafRef.current = requestAnimationFrame(tick);
@@ -118,21 +153,18 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       ring.push(result.freq);
       if (ring.length > MEDIAN_BUF) ring.shift();
 
-      if (ring.length >= 6) {
-        // Median of ring buffer
+      if (ring.length >= 4) {
         const sorted = [...ring].sort((a, b) => a - b);
         const median = sorted[Math.floor(sorted.length / 2)];
 
-        // Reject outliers more than OUTLIER_CENTS away from median
         const valid = ring.filter(
           f => Math.abs(1200 * Math.log2(f / median)) < OUTLIER_CENTS
         );
 
-        if (valid.length >= 4) {
-          // Mean of valid readings
+        if (valid.length >= 3) {
           const mean = valid.reduce((a, b) => a + b, 0) / valid.length;
           lastValidRef.current = Date.now();
-          const { string, cents } = findClosest(mean, strings);
+          const { string, cents } = findClosest(mean, stringsRef.current);
           setDisplay({
             note:  noteName(string.name),
             hz:    Math.round(mean * 10) / 10,
@@ -141,11 +173,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
         }
       }
     } else {
-      // Show "play louder" hint when there's some signal but below threshold
-      if (result.confidence > 0.15) {
-        setLoudnessHint(true);
-      }
-      // Persist display for 2 s after signal drops, then clear
+      if (result.confidence > 0.15) setLoudnessHint(true);
       if (Date.now() - lastValidRef.current > 2000) {
         freqBufRef.current = [];
         setDisplay(null);
@@ -165,8 +193,8 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 4096;
-      analyser.smoothingTimeConstant = 0.0; // no smoothing — we do it ourselves
+      analyser.fftSize = 4096;              // 4096 samples — enough for YIN at any guitar pitch
+      analyser.smoothingTimeConstant = 0.0; // raw signal; YIN handles its own smoothing
       source.connect(analyser);
       analyserRef.current = analyser;
       setListening(true);
@@ -189,12 +217,11 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
   const cents    = display?.cents ?? 0;
   const absCents = Math.abs(cents);
-  const tuneColor = !display      ? T.border
-    : absCents <= 5               ? T.secondary
-    : absCents <= 20              ? '#D4A017'
+  const tuneColor = !display    ? T.border
+    : absCents <= 5             ? T.secondary
+    : absCents <= 20            ? '#D4A017'
     : T.coral;
 
-  // ±50 cents → 0–100 %
   const needlePct = display
     ? Math.min(100, Math.max(0, 50 + (cents / 50) * 50))
     : 50;
@@ -228,9 +255,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
             position: 'absolute', top: -4, width: 8, height: 18, borderRadius: 4,
             background: tuneColor, transform: 'translateX(-50%)',
             left: `${needlePct}%`,
-            // slow transition — the buffer already smooths the data,
-            // the CSS transition just makes it look silky
-            transition: 'left 0.25s ease-out, background 0.3s',
+            transition: 'left 0.15s ease-out, background 0.3s',
           }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 12 }}>
