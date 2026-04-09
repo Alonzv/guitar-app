@@ -1,51 +1,37 @@
 import React, { useState, useRef } from 'react';
 import { Metronome } from './Metronome';
-import { Tuner } from './Tuner';
 import { DiatonicWheel } from '../ScalePanel/DiatonicWheel';
 import { CircleOfFifths } from '../ScalePanel/CircleOfFifths';
-import { AIProgressionTab } from '../AI/AIProgressionTab';
 import type { ChordInProgression, Tuning } from '../../types/music';
-import { TUNINGS } from '../../utils/musicTheory';
 import { T } from '../../theme';
 
-type Sub       = 'tuner' | 'metronome' | 'wheel' | 'muse';
+type Sub       = 'metronome' | 'wheel';
 type WheelView = 'cof' | 'diatonic';
 
 const SUB_LABELS: Record<Sub, string> = {
-  tuner:     '🎤 Tuner',
   metronome: '🥁 Metronome',
   wheel:     '⭕ Wheel',
-  muse:      '🔮 Muse',
 };
 
 interface Props {
   tuning: Tuning;
-  onTuningChange: (t: Tuning) => void;
   onAddToProgression: (item: ChordInProgression) => void;
-  onLoadProgression: (chords: ChordInProgression[]) => void;
-  onSaveSong: (name: string, chords: ChordInProgression[]) => void;
-  onNavigateToLyrics?: (key: string, mood: string) => void;
 }
 
-export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgression, onLoadProgression, onSaveSong, onNavigateToLyrics }) => {
-  const [sub,       setSub]       = useState<Sub>('tuner');
-  const [wheelView, setWheelView] = useState<WheelView>('cof');   // COF is the default first view
+export const ToolsTab: React.FC<Props> = ({ tuning, onAddToProgression }) => {
+  const [sub,       setSub]       = useState<Sub>('metronome');
+  const [wheelView, setWheelView] = useState<WheelView>('cof');
 
-  // Ref to the top of the wheel section — used to prevent page jump on view switch
   const wheelTopRef = useRef<HTMLDivElement>(null);
 
-  // ── View switch (shared logic) ───────────────────────────────────────────────
   const switchView = (next: WheelView) => {
     if (next === wheelView) return;
     setWheelView(next);
-    // After the DOM updates, scroll the wheel section's top back into view so the
-    // page doesn't visually jump when content height changes.
     requestAnimationFrame(() => {
       wheelTopRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
   };
 
-  // ── Swipe detection ──────────────────────────────────────────────────────────
   const touchStartX = useRef(0);
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -59,9 +45,8 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* Sub-tab buttons */}
       <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.border}` }}>
-        {(['tuner', 'metronome', 'wheel', 'muse'] as Sub[]).map(id => (
+        {(['metronome', 'wheel'] as Sub[]).map(id => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 0', border: 'none', cursor: 'pointer',
             fontWeight: 700, fontSize: 12,
@@ -74,41 +59,7 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
         ))}
       </div>
 
-      {/* Tuning selector */}
-      {sub !== 'wheel' && sub !== 'muse' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
-          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <select
-              value={tuning.name}
-              onChange={e => {
-                const t = TUNINGS.find(t => t.name === e.target.value);
-                if (t) onTuningChange(t);
-              }}
-              style={{
-                appearance: 'none', WebkitAppearance: 'none',
-                background: T.bgInput, border: `1px solid ${T.border}`, borderRadius: 8,
-                color: T.text, fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
-                padding: '5px 26px 5px 10px', cursor: 'pointer', outline: 'none',
-              }}
-            >
-              {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
-            </select>
-            <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
-          </div>
-        </div>
-      )}
-
-      {sub === 'tuner'     && <Tuner tuning={tuning} />}
       {sub === 'metronome' && <Metronome />}
-      {sub === 'muse'      && (
-        <AIProgressionTab
-          tuning={tuning}
-          onLoadProgression={onLoadProgression}
-          onSaveSong={onSaveSong}
-          onNavigateToLyrics={onNavigateToLyrics}
-        />
-      )}
 
       {sub === 'wheel' && (
         <div
@@ -117,14 +68,11 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
           onTouchEnd={handleTouchEnd}
           style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
         >
-
-          {/* ── Navigation bar ── */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: T.bgCard, borderRadius: 12, padding: '8px 12px',
             border: `1px solid ${T.border}`,
           }}>
-            {/* ◀ — go to COF (first/left) */}
             <button
               onClick={() => switchView('cof')}
               disabled={wheelView === 'cof'}
@@ -153,7 +101,6 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
               </div>
             </div>
 
-            {/* ▶ — go to Diatonic Wheel (second/right) */}
             <button
               onClick={() => switchView('diatonic')}
               disabled={wheelView === 'diatonic'}
@@ -168,19 +115,12 @@ export const ToolsTab: React.FC<Props> = ({ tuning, onTuningChange, onAddToProgr
             >▶</button>
           </div>
 
-          {/* ── Circle of Fifths (first / default view) ── */}
           {wheelView === 'cof' && (
             <CircleOfFifths onAddToProgression={onAddToProgression} />
           )}
-
-          {/* ── Diatonic Wheel (second view) ── */}
           {wheelView === 'diatonic' && (
-            <DiatonicWheel
-              onAddToProgression={onAddToProgression}
-              tuning={tuning}
-            />
+            <DiatonicWheel onAddToProgression={onAddToProgression} tuning={tuning} />
           )}
-
         </div>
       )}
 

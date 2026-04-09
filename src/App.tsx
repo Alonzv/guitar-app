@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { ChordInProgression, ScaleMatch, Song, SavedLyrics, SavedHarmony, Tuning } from './types/music';
+import type { ChordInProgression, Song, SavedLyrics, SavedHarmony, Tuning } from './types/music';
 import { TUNINGS } from './utils/musicTheory';
-import { detectKey } from './utils/progressionHelper';
 import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { LyricsTab } from './components/Lyrics/LyricsTab';
@@ -139,7 +138,6 @@ export default function App() {
 
   const [lyricsToLoad, setLyricsToLoad] = useState<SavedLyrics | null>(null);
 
-  const [selectedScale, setSelectedScale] = useState<ScaleMatch | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('scaleup_onboarded')
   );
@@ -205,33 +203,6 @@ export default function App() {
     setSongs(prev => [song, ...prev]);
   };
 
-  const handleSaveMuseSong = (name: string, chords: ChordInProgression[]) => {
-    const song: Song = {
-      id: `song-${Date.now()}`,
-      name: name.trim() || `Song ${songs.length + 1}`,
-      progression: chords,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setSongs(prev => [song, ...prev]);
-  };
-
-  const handleNavigateToLyricsFromMuse = (key: string, mood: string) => {
-    const now = Date.now();
-    setLyricsToLoad({
-      id: `muse-lyrics-${now}`,
-      name: mood,
-      lyricsText: '',
-      lyricsChords: [],
-      composer: key,
-      writer: '',
-      isRtl: true,
-      createdAt: now,
-      updatedAt: now,
-    });
-    setActiveTab('lyrics');
-  };
-
   const handleLoadSong = (song: Song) => {
     pushHistory(song.progression);
     setActiveTab('chords');
@@ -266,18 +237,7 @@ export default function App() {
   };
 
   // ── Harmonies ─────────────────────────────────────────────────────────────
-  const handleSaveHarmony = (scale: ScaleMatch, key?: string) => {
-    const now = Date.now();
-    const item: SavedHarmony = {
-      id: `harmony-${now}`,
-      name: `${scale.root} ${scale.type}`,
-      scale, key, createdAt: now,
-    };
-    setSavedHarmonies(prev => [item, ...prev]);
-  };
-
-  const handleLoadHarmony = (harmony: SavedHarmony) => {
-    setSelectedScale(harmony.scale);
+  const handleLoadHarmony = (_harmony: SavedHarmony) => {
     setActiveTab('scales');
   };
 
@@ -346,14 +306,7 @@ export default function App() {
       )}
       {activeTab === 'scales' && (
         <ErrorBoundary label="Scales">
-          <ScalesTab
-            progression={progression}
-            selectedScale={selectedScale}
-            onSelectScale={setSelectedScale}
-            preferredKey={detectKey(progression.map(c => c.chord)) || undefined}
-            tuning={tuning}
-            onSaveHarmony={handleSaveHarmony}
-          />
+          <ScalesTab />
         </ErrorBoundary>
       )}
       {activeTab === 'lyrics' && (
@@ -370,11 +323,7 @@ export default function App() {
         <ErrorBoundary label="Tools">
           <ToolsTab
             tuning={tuning}
-            onTuningChange={setTuning}
             onAddToProgression={(item) => pushHistory([...progression, item])}
-            onLoadProgression={(chords) => pushHistory(chords)}
-            onSaveSong={handleSaveMuseSong}
-            onNavigateToLyrics={handleNavigateToLyricsFromMuse}
           />
         </ErrorBoundary>
       )}
