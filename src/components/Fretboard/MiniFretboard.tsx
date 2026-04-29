@@ -21,8 +21,12 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
   const fretCount = displayMax - displayMin;
 
   const W = 200, H = 90;
-  const LEFT = displayMin === 0 ? 12 : 24;
-  const fretSp = (W - LEFT - 8) / fretCount;
+  // Ensure open-string dots (fretX(0) = LEFT - fretSp/2) stay within SVG bounds (>= 8px)
+  const minLeftForOpen = displayMin === 0 && hasOpen
+    ? Math.ceil((16 * fretCount + W - 8) / (2 * fretCount + 1))
+    : 0;
+  const LEFT = Math.max(displayMin === 0 ? 16 : 24, minLeftForOpen);
+  const fretSp = (W - LEFT - 8) / Math.max(fretCount, 1);
   const strSp = (H - 20) / (STRING_COUNT - 1);
   const topY = 8;
 
