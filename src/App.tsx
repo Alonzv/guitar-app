@@ -1,16 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import type { ChordInProgression, Song, SavedLyrics, SavedHarmony, Tuning } from './types/music';
+import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS } from './utils/musicTheory';
 import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
-import { LyricsTab } from './components/Lyrics/LyricsTab';
-import { ToolsTab } from './components/Tools/ToolsTab';
-import { LibraryTab } from './components/Library/LibraryTab';
+import { WheelTab } from './components/Tools/WheelTab';
+import { TriadsGenerator } from './components/Triads/TriadsGenerator';
 import { Onboarding } from './components/Onboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { T } from './theme';
 
-type Tab = 'chords' | 'scales' | 'lyrics' | 'tools' | 'library';
+type Tab = 'chords' | 'scales' | 'wheel' | 'triads';
 
 const CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const FLAT_TO_SHARP: Record<string, string> = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
@@ -24,7 +23,6 @@ function transposeChordName(name: string, semitones: number): string {
   return CHROMATIC[((idx + semitones) % 12 + 12) % 12] + match[2];
 }
 
-// Decode a shared progression from the URL hash (#s=<base64>)
 function decodeSharedProgression(): ChordInProgression[] | null {
   try {
     const hash = window.location.hash;
@@ -41,11 +39,10 @@ function decodeSharedProgression(): ChordInProgression[] | null {
 }
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'chords',  label: 'Chords',   icon: '🎸' },
-  { id: 'scales',  label: 'Scales',   icon: '🎼' },
-  { id: 'lyrics',  label: 'Lyrics',   icon: '📝' },
-  { id: 'tools',   label: 'Tools',    icon: '🔧' },
-  { id: 'library', label: 'Library',  icon: '🗂️' },
+  { id: 'chords', label: 'Chords', icon: '🎸' },
+  { id: 'scales', label: 'Scales', icon: '🎼' },
+  { id: 'triads', label: 'Triads', icon: '🔺' },
+  { id: 'wheel',  label: 'Wheel',  icon: '⭕' },
 ];
 
 export default function App() {
@@ -70,7 +67,6 @@ export default function App() {
   const [undoStack, setUndoStack] = useState<ChordInProgression[][]>([]);
   const [redoStack, setRedoStack] = useState<ChordInProgression[][]>([]);
 
-  // Refs so keyboard handler always sees current values without re-registering
   const progressionRef = useRef(progression);
   progressionRef.current = progression;
   const undoRef = useRef(undoStack);
@@ -100,80 +96,49 @@ export default function App() {
     setRedoStack(prev => prev.slice(1));
   };
 
-  // Keyboard shortcuts: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
+        e.preventDefault(); handleUndo();
       }
       if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key === 'z') || e.key === 'y')) {
-        e.preventDefault();
-        handleRedo();
+        e.preventDefault(); handleRedo();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []); // uses refs internally — no deps needed
+  }, []);
 
   // ── Tuning & Capo ──────────────────────────────────────────────────────────
   const [tuning, setTuning] = useState<Tuning>(TUNINGS[0]);
-  const [capo, setCapo] = useState(0);
+  const [capo,   setCapo]   = useState(0);
 
-  // ── Other state ────────────────────────────────────────────────────────────
-  const [songs, setSongs] = useState<Song[]>(() => {
-    try { return JSON.parse(localStorage.getItem('scaleup_songs') || '[]'); }
-    catch (e) { console.warn('Could not load songs', e); return []; }
-  });
-
-  const [savedLyrics, setSavedLyrics] = useState<SavedLyrics[]>(() => {
-    try { return JSON.parse(localStorage.getItem('scaleup_lyrics') || '[]'); }
-    catch (e) { console.warn('Could not load lyrics', e); return []; }
-  });
-
-  const [savedHarmonies, setSavedHarmonies] = useState<SavedHarmony[]>(() => {
-    try { return JSON.parse(localStorage.getItem('scaleup_harmonies') || '[]'); }
-    catch (e) { console.warn('Could not load harmonies', e); return []; }
-  });
-
-  const [lyricsToLoad, setLyricsToLoad] = useState<SavedLyrics | null>(null);
-
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !localStorage.getItem('scaleup_onboarded')
-  );
-
-  // Banner for shared progressions loaded from URL
+  // ── Shared progression banner ──────────────────────────────────────────────
   const [sharedProgression] = useState<ChordInProgression[] | null>(decodeSharedProgression);
   const [showSharedBanner, setShowSharedBanner] = useState(() => !!decodeSharedProgression());
 
-  // Persist
+  const handleLoadShared = () => {
+    if (sharedProgression) { pushHistory(sharedProgression); setActiveTab('chords'); }
+    setShowSharedBanner(false);
+    history.replaceState(null, '', window.location.pathname);
+  };
+
+  // ── Persist progression ────────────────────────────────────────────────────
   useEffect(() => {
     try { localStorage.setItem('scaleup_progression', JSON.stringify(progression)); }
     catch (e) { console.warn('Could not save progression', e); }
   }, [progression]);
 
-  useEffect(() => {
-    try { localStorage.setItem('scaleup_songs', JSON.stringify(songs)); }
-    catch (e) { console.warn('Could not save songs', e); }
-  }, [songs]);
-
-  useEffect(() => {
-    try { localStorage.setItem('scaleup_lyrics', JSON.stringify(savedLyrics)); }
-    catch (e) { console.warn('Could not save lyrics', e); }
-  }, [savedLyrics]);
-
-  useEffect(() => {
-    try { localStorage.setItem('scaleup_harmonies', JSON.stringify(savedHarmonies)); }
-    catch (e) { console.warn('Could not save harmonies', e); }
-  }, [savedHarmonies]);
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
-
+  // ── Onboarding ─────────────────────────────────────────────────────────────
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem('scaleup_onboarded')
+  );
   const handleDoneOnboarding = () => {
     localStorage.setItem('scaleup_onboarded', '1');
     setShowOnboarding(false);
   };
 
+  // ── Progression handlers ───────────────────────────────────────────────────
   const handleReorderProgression = (id: string, dir: -1 | 1) => {
     const idx = progression.findIndex(c => c.id === id);
     if (idx === -1) return;
@@ -191,77 +156,10 @@ export default function App() {
     })));
   };
 
-  // ── Progressions ──────────────────────────────────────────────────────────
-  const handleSaveSong = (name: string) => {
-    const song: Song = {
-      id: `song-${Date.now()}`,
-      name: name.trim() || `Song ${songs.length + 1}`,
-      progression: [...progression],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setSongs(prev => [song, ...prev]);
-  };
-
-  const handleLoadSong = (song: Song) => {
-    pushHistory(song.progression);
-    setActiveTab('chords');
-  };
-
-  const handleDeleteSong = (id: string) => {
-    setSongs(prev => prev.filter(s => s.id !== id));
-  };
-
-  const handleRenameSong = (id: string, name: string) => {
-    setSongs(prev => prev.map(s => s.id === id ? { ...s, name, updatedAt: Date.now() } : s));
-  };
-
-  // ── Lyrics ────────────────────────────────────────────────────────────────
-  const handleSaveLyrics = (data: Omit<SavedLyrics, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const now = Date.now();
-    const item: SavedLyrics = { ...data, id: `lyrics-${now}`, createdAt: now, updatedAt: now };
-    setSavedLyrics(prev => [item, ...prev]);
-  };
-
-  const handleLoadLyrics = (lyrics: SavedLyrics) => {
-    setLyricsToLoad(lyrics);
-    setActiveTab('lyrics');
-  };
-
-  const handleDeleteLyrics = (id: string) => {
-    setSavedLyrics(prev => prev.filter(l => l.id !== id));
-  };
-
-  const handleRenameLyrics = (id: string, name: string) => {
-    setSavedLyrics(prev => prev.map(l => l.id === id ? { ...l, name, updatedAt: Date.now() } : l));
-  };
-
-  // ── Harmonies ─────────────────────────────────────────────────────────────
-  const handleLoadHarmony = (_harmony: SavedHarmony) => {
-    setActiveTab('scales');
-  };
-
-  const handleDeleteHarmony = (id: string) => {
-    setSavedHarmonies(prev => prev.filter(h => h.id !== id));
-  };
-
-  const handleRenameHarmony = (id: string, name: string) => {
-    setSavedHarmonies(prev => prev.map(h => h.id === id ? { ...h, name } : h));
-  };
-
-  const handleLoadShared = () => {
-    if (sharedProgression) {
-      pushHistory(sharedProgression);
-      setActiveTab('chords');
-    }
-    setShowSharedBanner(false);
-    history.replaceState(null, '', window.location.pathname);
-  };
-
   const isElectron = navigator.userAgent.includes('Electron');
 
   // ── Sidebar collapse (desktop only) ────────────────────────────────────────
-  const [sidebarPinned, setSidebarPinned] = useState(() => {
+  const [sidebarPinned,  setSidebarPinned]  = useState(() => {
     try { return localStorage.getItem('scaleup_sidebar_pinned') !== '0'; }
     catch { return true; }
   });
@@ -272,15 +170,7 @@ export default function App() {
     catch {}
   }, [sidebarPinned]);
 
-  const DESKTOP_TABS: { id: Tab; label: string; icon: string }[] = [
-    { id: 'library', label: 'Library',  icon: '🗂️' },
-    { id: 'chords',  label: 'Chords',   icon: '🎸' },
-    { id: 'scales',  label: 'Scales',   icon: '🎼' },
-    { id: 'lyrics',  label: 'Lyrics',   icon: '📝' },
-    { id: 'tools',   label: 'Tools',    icon: '🔧' },
-  ];
-
-  // ── Shared tab content (used in both layouts) ──────────────────────────────
+  // ── Shared tab content ─────────────────────────────────────────────────────
   const tabContent = (
     <>
       {activeTab === 'chords' && (
@@ -292,7 +182,6 @@ export default function App() {
             onClearProgression={() => pushHistory([])}
             onReorderProgression={handleReorderProgression}
             onTransposeProgression={handleTransposeProgression}
-            onSaveSong={handleSaveSong}
             tuning={tuning}
             onTuningChange={setTuning}
             capo={capo}
@@ -309,39 +198,16 @@ export default function App() {
           <ScalesTab />
         </ErrorBoundary>
       )}
-      {activeTab === 'lyrics' && (
-        <ErrorBoundary label="Lyrics">
-          <LyricsTab
-            progression={progression}
-            onSaveLyrics={handleSaveLyrics}
-            lyricsToLoad={lyricsToLoad}
-            onLyricsLoaded={() => setLyricsToLoad(null)}
-          />
+      {activeTab === 'triads' && (
+        <ErrorBoundary label="Triads">
+          <TriadsGenerator />
         </ErrorBoundary>
       )}
-      {activeTab === 'tools' && (
-        <ErrorBoundary label="Tools">
-          <ToolsTab
+      {activeTab === 'wheel' && (
+        <ErrorBoundary label="Wheel">
+          <WheelTab
             tuning={tuning}
             onAddToProgression={(item) => pushHistory([...progression, item])}
-          />
-        </ErrorBoundary>
-      )}
-      {activeTab === 'library' && (
-        <ErrorBoundary label="Library">
-          <LibraryTab
-            songs={songs}
-            savedLyrics={savedLyrics}
-            savedHarmonies={savedHarmonies}
-            onLoadProgression={(song) => { handleLoadSong(song); }}
-            onDeleteProgression={handleDeleteSong}
-            onRenameProgression={handleRenameSong}
-            onLoadLyrics={handleLoadLyrics}
-            onDeleteLyrics={handleDeleteLyrics}
-            onRenameLyrics={handleRenameLyrics}
-            onLoadHarmony={handleLoadHarmony}
-            onDeleteHarmony={handleDeleteHarmony}
-            onRenameHarmony={handleRenameHarmony}
           />
         </ErrorBoundary>
       )}
@@ -356,7 +222,6 @@ export default function App() {
       <div style={{ display: 'flex', height: '100vh', position: 'relative', backgroundColor: T.bgDeep, color: T.text, fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'hidden' }}>
         {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 
-        {/* ── Hover zone strip (only when sidebar is unpinned) ── */}
         {!sidebarPinned && (
           <div
             style={{ position: 'absolute', left: 0, top: 28, bottom: 0, width: 12, zIndex: 30 }}
@@ -364,32 +229,21 @@ export default function App() {
           />
         )}
 
-        {/* ── Sidebar ── */}
         <aside
           onMouseEnter={() => { if (!sidebarPinned) setSidebarHovered(true); }}
           onMouseLeave={() => { if (!sidebarPinned) setSidebarHovered(false); }}
           style={{
-            width: 190,
-            flexShrink: 0,
-            backgroundColor: T.bgInput,
-            borderRight: `1px solid ${T.border}`,
-            display: 'flex',
-            flexDirection: 'column',
-            paddingTop: 28, // space for macOS traffic lights
-            // Overlay mode when unpinned
+            width: 190, flexShrink: 0,
+            backgroundColor: T.bgInput, borderRight: `1px solid ${T.border}`,
+            display: 'flex', flexDirection: 'column', paddingTop: 28,
             ...(sidebarPinned ? {} : {
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              zIndex: 40,
+              position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 40,
               transform: sidebarVisible ? 'translateX(0)' : 'translateX(-190px)',
               transition: 'transform 0.22s ease, box-shadow 0.22s ease',
               boxShadow: sidebarVisible ? '4px 0 24px rgba(0,0,0,0.28)' : 'none',
             }),
           }}
         >
-          {/* Brand */}
           <div style={{ padding: '16px 20px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <img
               src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
@@ -398,9 +252,8 @@ export default function App() {
             />
           </div>
 
-          {/* Nav items */}
           <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
-            {DESKTOP_TABS.map(tab => {
+            {TABS.map(tab => {
               const active = activeTab === tab.id;
               return (
                 <button
@@ -426,76 +279,37 @@ export default function App() {
             })}
           </nav>
 
-          {/* Bottom actions */}
           <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
             <button
               onClick={() => setDarkMode(d => !d)}
-              style={{
-                width: 32, height: 32, borderRadius: '50%',
-                border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`,
-                background: darkMode ? '#2D404F' : '#4A6A80',
-                fontSize: 15, cursor: 'pointer', lineHeight: '30px', padding: 0,
-              }}
+              style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`, background: darkMode ? '#2D404F' : '#4A6A80', fontSize: 15, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >{darkMode ? '☀️' : '🌙'}</button>
             <button
               onClick={() => setShowOnboarding(true)}
-              style={{
-                width: 32, height: 32, borderRadius: '50%',
-                border: `1px solid ${T.border}`, background: T.bgCard,
-                color: T.textMuted, fontSize: 14, fontWeight: 700,
-                cursor: 'pointer', lineHeight: '30px', padding: 0,
-              }}
+              style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
               title="Help"
             >?</button>
             {sidebarPinned ? (
-              <button
-                onClick={() => setSidebarPinned(false)}
-                title="Hide sidebar"
-                style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  border: `1px solid ${T.border}`, background: T.bgCard,
-                  color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0,
-                  lineHeight: '30px',
-                }}
-              >‹</button>
+              <button onClick={() => setSidebarPinned(false)} title="Hide sidebar"
+                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0, lineHeight: '30px' }}>‹</button>
             ) : (
-              <button
-                onClick={() => { setSidebarPinned(true); setSidebarHovered(false); }}
-                title="Pin sidebar"
-                style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  border: `1px solid ${T.border}`, background: T.bgCard,
-                  color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0,
-                  lineHeight: '30px',
-                }}
-              >›</button>
+              <button onClick={() => { setSidebarPinned(true); setSidebarHovered(false); }} title="Pin sidebar"
+                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0, lineHeight: '30px' }}>›</button>
             )}
           </div>
         </aside>
 
-        {/* ── Main area ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Page title bar */}
-          <div style={{
-            backgroundColor: T.bgCard, borderBottom: `1px solid ${T.border}`,
-            padding: '14px 24px', flexShrink: 0,
-          }}>
+          <div style={{ backgroundColor: T.bgCard, borderBottom: `1px solid ${T.border}`, padding: '14px 24px', flexShrink: 0 }}>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: T.text, letterSpacing: '-0.3px' }}>
-              {DESKTOP_TABS.find(t => t.id === activeTab)?.label ?? ''}
+              {TABS.find(t => t.id === activeTab)?.label ?? ''}
             </h1>
           </div>
 
-          {/* Shared banner */}
           {showSharedBanner && sharedProgression && (
-            <div style={{
-              background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`,
-              padding: '8px 24px', display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between', gap: 10,
-            }}>
-              <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>
-                🎵 Shared progression — {sharedProgression.length} chords
-              </span>
+            <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>🎵 Shared progression — {sharedProgression.length} chords</span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 8, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Load</button>
                 <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '4px 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
@@ -503,7 +317,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Content */}
           <main style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: 800, width: '100%', boxSizing: 'border-box', margin: '0 auto' }}>
             {tabContent}
           </main>
@@ -512,22 +325,15 @@ export default function App() {
     );
   }
 
-  // ── Mobile layout (unchanged) ──────────────────────────────────────────────
+  // ── Mobile layout ──────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 
-      {/* Shared progression banner */}
       {showSharedBanner && sharedProgression && (
-        <div style={{
-          background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`,
-          padding: '10px 16px', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
-        }}>
-          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>
-            🎵 Shared progression — {sharedProgression.length} chords
-          </span>
+        <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>🎵 Shared progression — {sharedProgression.length} chords</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Load</button>
             <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
@@ -535,7 +341,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Header */}
       <header style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
         <div style={{ textAlign: 'center', marginBottom: 4, position: 'relative' }}>
           <span style={{ fontSize: 'var(--gc-brand-text)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>

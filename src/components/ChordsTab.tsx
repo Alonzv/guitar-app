@@ -13,7 +13,6 @@ interface Props {
   onClearProgression: () => void;
   onReorderProgression: (id: string, dir: -1 | 1) => void;
   onTransposeProgression: (semitones: number) => void;
-  onSaveSong: (name: string) => void;
   tuning: Tuning;
   onTuningChange: (tuning: Tuning) => void;
   capo: number;
@@ -31,7 +30,7 @@ const SUB_LABELS: Record<Sub, string> = {
 
 export const ChordsTab: React.FC<Props> = ({
   progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
-  onReorderProgression, onTransposeProgression, onSaveSong,
+  onReorderProgression, onTransposeProgression,
   tuning, onTuningChange, capo, onCapoChange,
   canUndo, canRedo, onUndo, onRedo,
 }) => {
@@ -62,7 +61,6 @@ export const ChordsTab: React.FC<Props> = ({
           onClearProgression={onClearProgression}
           onReorderProgression={onReorderProgression}
           onTransposeProgression={onTransposeProgression}
-          onSaveSong={onSaveSong}
           tuning={tuning}
           onTuningChange={onTuningChange}
           capo={capo}
