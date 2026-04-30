@@ -5,11 +5,12 @@ import { ChordsTab } from './components/ChordsTab';
 import { ScalesTab } from './components/ScalePanel/ScalesTab';
 import { WheelTab } from './components/Tools/WheelTab';
 import { TriadsGenerator } from './components/Triads/TriadsGenerator';
+import { IntervalsTab } from './components/Intervals/IntervalsTab';
 import { Onboarding } from './components/Onboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { T } from './theme';
 
-type Tab = 'chords' | 'scales' | 'wheel' | 'triads';
+type Tab = 'chords' | 'scales' | 'triads' | 'intervals' | 'wheel';
 
 const CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const FLAT_TO_SHARP: Record<string, string> = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
@@ -39,10 +40,11 @@ function decodeSharedProgression(): ChordInProgression[] | null {
 }
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'chords', label: 'Chords', icon: '🎸' },
-  { id: 'scales', label: 'Scales', icon: '🎼' },
-  { id: 'triads', label: 'Triads', icon: '🔺' },
-  { id: 'wheel',  label: 'Wheel',  icon: '⭕' },
+  { id: 'chords',    label: 'Chords',    icon: '🎸' },
+  { id: 'scales',    label: 'Scales',    icon: '🎼' },
+  { id: 'triads',    label: 'Triads',    icon: '🔺' },
+  { id: 'intervals', label: 'Intervals', icon: '🎵' },
+  { id: 'wheel',     label: 'Wheel',     icon: '⭕' },
 ];
 
 export default function App() {
@@ -201,6 +203,11 @@ export default function App() {
       {activeTab === 'triads' && (
         <ErrorBoundary label="Triads">
           <TriadsGenerator />
+        </ErrorBoundary>
+      )}
+      {activeTab === 'intervals' && (
+        <ErrorBoundary label="Intervals">
+          <IntervalsTab />
         </ErrorBoundary>
       )}
       {activeTab === 'wheel' && (
