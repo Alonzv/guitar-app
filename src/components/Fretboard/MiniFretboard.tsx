@@ -54,7 +54,7 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
         <line key={s}
           x1={LEFT} y1={strY(s)}
           x2={LEFT + fretCount * fretSp} y2={strY(s)}
-          stroke={T.secondary} strokeWidth={0.7 + s * 0.18} opacity={0.5}
+          stroke={T.secondary} strokeWidth={2.2 - s * 0.22} opacity={0.5}
         />
       ))}
       {displayMin > 0 && !hideFretLabel && (

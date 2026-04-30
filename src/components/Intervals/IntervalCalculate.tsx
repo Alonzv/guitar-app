@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
+import { fretToNote, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
 import { playScale, getSharedContext, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
@@ -24,7 +24,7 @@ const INTERVAL_NAMES: Record<number, { name: string; abbrev: string }> = {
 };
 
 // ── Fretboard geometry ────────────────────────────────────────────────────────
-const FB_W = 340, FB_H = 120;
+const FB_W = 340, FB_H = 160;
 const NUT = 24;
 const FRET_SP = (FB_W - NUT - 8) / 12;
 const STR_SP = (FB_H - 20) / 5;
@@ -89,8 +89,7 @@ export function IntervalCalculate() {
   };
 
   const has2 = points.length === 2;
-  const rootPt   = has2 ? (inverted ? points[1] : points[0]) : null;
-  const targetPt = has2 ? (inverted ? points[0] : points[1]) : null;
+  const rootPt = has2 ? (inverted ? points[1] : points[0]) : null;
   const semitones = has2 ? calcSemitones(points[0], points[1], inverted) : null;
   const intervalInfo = semitones !== null ? (INTERVAL_NAMES[semitones] ?? INTERVAL_NAMES[semitones % 12]) : null;
 

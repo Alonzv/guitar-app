@@ -1,6 +1,6 @@
 import { Chord as TonalChord, ChordType, Interval } from '@tonaljs/tonal';
 import type { Chord, FretPosition } from '../types/music';
-import { fretPositionsToNotes, notesToPitchClasses, fretToNote, CHROMATIC, ENHARMONICS } from './musicTheory';
+import { notesToPitchClasses, fretToNote, CHROMATIC, ENHARMONICS } from './musicTheory';
 
 function noteToSemitone(note: string): number {
   const idx = CHROMATIC.indexOf(note);

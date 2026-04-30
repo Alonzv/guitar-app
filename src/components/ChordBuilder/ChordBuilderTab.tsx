@@ -117,7 +117,6 @@ export function ChordBuilderTab({
   const handleClear = () => {
     onClearProgression();
     setProgressionName('');
-    setShowSaveForm(false);
   };
 
   const handleShare = () => {

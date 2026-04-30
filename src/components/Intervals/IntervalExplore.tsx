@@ -35,7 +35,7 @@ const AREAS: { id: Area; label: string; range: [number, number] }[] = [
 ];
 
 // ── Fretboard geometry ────────────────────────────────────────────────────────
-const FB_W = 340, FB_H = 120;
+const FB_W = 340, FB_H = 160;
 const NUT = 24;
 const FRET_SP = (FB_W - NUT - 8) / 12;
 const STR_SP = (FB_H - 20) / 5;
