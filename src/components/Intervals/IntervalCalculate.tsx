@@ -24,7 +24,7 @@ const INTERVAL_NAMES: Record<number, { name: string; abbrev: string }> = {
 };
 
 // ── Fretboard geometry ────────────────────────────────────────────────────────
-const FB_W = 340, FB_H = 160;
+const FB_W = 340, FB_H = 120;
 const NUT = 24;
 const FRET_SP = (FB_W - NUT - 8) / 12;
 const STR_SP = (FB_H - 20) / 5;
@@ -108,54 +108,53 @@ export function IntervalCalculate() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
       {/* Instruction */}
-      <div style={card({ padding: '10px 14px' })}>
-        <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.5 }}>
-          Tap any two frets on the fretboard to calculate the interval between them.
-          Tap the same fret again to deselect it.
+      <div style={card({ padding: '7px 12px' })}>
+        <p style={{ margin: 0, fontSize: 11, color: T.textMuted, lineHeight: 1.4 }}>
+          Tap any two frets to calculate the interval. Tap again to deselect.
         </p>
       </div>
 
       {/* Result panel */}
       <div style={{
-        ...card({ padding: '14px 16px' }),
-        minHeight: 90, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        ...card({ padding: '10px 12px' }),
+        minHeight: 68, display: 'flex', flexDirection: 'column', justifyContent: 'center',
       }}>
         {has2 && intervalInfo ? (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 2 }}>
+                <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 2 }}>
                   {fretToNote(points[inverted ? 1 : 0].string, points[inverted ? 1 : 0].fret)}
                   {' → '}
                   {fretToNote(points[inverted ? 0 : 1].string, points[inverted ? 0 : 1].fret)}
                 </div>
-                <div style={{ fontSize: 34, fontWeight: 900, color: T.secondary, lineHeight: 1 }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: T.secondary, lineHeight: 1 }}>
                   {intervalInfo.abbrev}
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginTop: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginTop: 2 }}>
                   {intervalInfo.name}
                 </div>
-                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
+                <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>
                   {semitones} semitone{semitones !== 1 ? 's' : ''}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}>
                 {/* Invert */}
                 <button onClick={() => setInverted(v => !v)} style={{
-                  padding: '5px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                  padding: '4px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 10, fontWeight: 700,
                   border: `1px solid ${T.border}`, background: inverted ? T.primaryBg : T.bgInput,
                   color: inverted ? T.primary : T.textMuted,
                 }}>↕ Invert</button>
 
                 {/* Mode toggle */}
-                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+                <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: `1px solid ${T.border}` }}>
                   {(['melodic', 'harmonic'] as const).map(m => (
                     <button key={m} onClick={() => setMode(m)} style={{
-                      padding: '4px 8px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                      padding: '3px 7px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
                       background: mode === m ? T.secondary : T.bgInput,
                       color: mode === m ? '#fff' : T.textMuted,
                     }}>{m === 'melodic' ? '♩♩' : '♫'}</button>
@@ -164,21 +163,21 @@ export function IntervalCalculate() {
 
                 {/* Play */}
                 <button onClick={handlePlay} style={{
-                  padding: '5px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  padding: '4px 12px', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 700,
                   border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
                 }}>▶ Play</button>
               </div>
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', color: T.textDim, fontSize: 13 }}>
+          <div style={{ textAlign: 'center', color: T.textDim, fontSize: 12 }}>
             {points.length === 0 ? 'Select two notes on the fretboard' : 'Select one more note…'}
           </div>
         )}
       </div>
 
       {/* Interactive fretboard */}
-      <div style={card({ padding: '12px 12px 10px' })}>
+      <div style={card({ padding: '9px 10px 8px' })}>
         <div style={{ overflowX: 'auto' }}>
           <svg viewBox={`0 0 ${FB_W} ${FB_H}`} style={{ display: 'block', width: '100%', minWidth: 260 }}>
 
@@ -261,9 +260,9 @@ export function IntervalCalculate() {
       </div>
 
       {/* Mode description */}
-      <div style={{ display: 'flex', gap: 14, fontSize: 10, color: T.textDim }}>
-        <span><strong style={{ color: T.textMuted }}>♩♩ Melodic</strong> — low note then high note</span>
-        <span><strong style={{ color: T.textMuted }}>♫ Harmonic</strong> — both notes together</span>
+      <div style={{ display: 'flex', gap: 10, fontSize: 9, color: T.textDim }}>
+        <span><strong style={{ color: T.textMuted }}>♩♩ Melodic</strong> — low then high</span>
+        <span><strong style={{ color: T.textMuted }}>♫ Harmonic</strong> — both together</span>
       </div>
     </div>
   );

@@ -35,7 +35,7 @@ const AREAS: { id: Area; label: string; range: [number, number] }[] = [
 ];
 
 // ── Fretboard geometry ────────────────────────────────────────────────────────
-const FB_W = 340, FB_H = 160;
+const FB_W = 340, FB_H = 120;
 const NUT = 24;
 const FRET_SP = (FB_W - NUT - 8) / 12;
 const STR_SP = (FB_H - 20) / 5;
@@ -78,19 +78,19 @@ export function IntervalExplore() {
   const intervalDots = useMemo(() => getPositions(intervalNote, fretRange), [intervalNote, fretRange]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
       {/* Root selector */}
-      <div style={card()}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Root Note</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+      <div style={card({ padding: '10px 12px' })}>
+        <p style={{ margin: '0 0 6px', fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Root Note</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '7px 4px', borderRadius: 8, cursor: 'pointer',
-                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
+                padding: '5px 3px', borderRadius: 7, cursor: 'pointer',
+                fontSize: sharp ? 9 : 11, fontWeight: sel ? 700 : 400,
                 border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: sel ? T.primary : sharp ? T.textMuted : T.text,
@@ -102,21 +102,21 @@ export function IntervalExplore() {
       </div>
 
       {/* Interval selector */}
-      <div style={card()}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Interval</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5 }}>
+      <div style={card({ padding: '10px 12px' })}>
+        <p style={{ margin: '0 0 6px', fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Interval</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
           {INTERVALS.map(iv => {
             const sel = iv.semitones === interval;
             return (
               <button key={iv.semitones} onClick={() => setInterval(iv.semitones)} style={{
-                padding: '7px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                padding: '5px 4px', borderRadius: 7, cursor: 'pointer', textAlign: 'center',
                 border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                 background: sel ? T.secondaryBg : T.bgInput,
                 color: sel ? T.secondary : T.textMuted,
                 transition: 'all 0.12s',
               }}>
                 <div style={{ fontSize: 9, fontWeight: 700 }}>{iv.abbrev}</div>
-                <div style={{ fontSize: 10, fontWeight: sel ? 700 : 400, marginTop: 1 }}>{iv.name}</div>
+                <div style={{ fontSize: 9, fontWeight: sel ? 700 : 400, marginTop: 1 }}>{iv.name}</div>
               </button>
             );
           })}
@@ -124,24 +124,24 @@ export function IntervalExplore() {
 
         {/* Musical context */}
         <div style={{
-          marginTop: 10, padding: '8px 10px', borderRadius: 8,
+          marginTop: 7, padding: '6px 8px', borderRadius: 7,
           background: T.bgDeep, border: `1px solid ${T.secondary}44`,
         }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: T.secondary }}>{selectedInterval.name} · {selectedInterval.semitones} semitone{selectedInterval.semitones !== 1 ? 's' : ''}</span>
-          <p style={{ margin: '3px 0 0', fontSize: 11, color: T.textMuted, lineHeight: 1.4 }}>
+          <p style={{ margin: '2px 0 0', fontSize: 10, color: T.textMuted, lineHeight: 1.35 }}>
             {selectedInterval.context}
           </p>
         </div>
       </div>
 
       {/* Fretboard + area filter */}
-      <div style={card({ padding: '12px 12px 10px' })}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+      <div style={card({ padding: '9px 10px 8px' })}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <span style={{ fontSize: 10, color: T.textMuted }}>Area:</span>
             {AREAS.map(a => (
               <button key={a.id} onClick={() => setArea(a.id)} style={{
-                padding: '3px 9px', borderRadius: 12, cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                padding: '2px 7px', borderRadius: 10, cursor: 'pointer', fontSize: 10, fontWeight: 600,
                 background: area === a.id ? T.text : T.bgInput,
                 color: area === a.id ? T.bgDeep : T.textMuted,
                 border: area === a.id ? 'none' : `1px solid ${T.border}`,
@@ -151,7 +151,7 @@ export function IntervalExplore() {
         </div>
 
         {/* Legend */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 10 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 6, fontSize: 10 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.primary, display: 'inline-block' }} />
             <span style={{ color: T.textMuted }}>{root} (root)</span>
