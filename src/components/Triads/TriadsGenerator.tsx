@@ -295,7 +295,7 @@ export function TriadsGenerator() {
                         padding: '1px 7px', borderRadius: 6,
                       }}>{fretBadge}</span>
                     </div>
-                    <MiniFretboard voicing={fretPositions} dotColors={colors} dotLabels={labels} hideFretLabel />
+                    <MiniFretboard voicing={fretPositions} dotColors={colors} dotLabels={labels} hideFretLabel showStringLabels showFretNumbers />
                     <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
                       {[...shape].sort((a, b) => a.string - b.string).map((p, j) => (
                         <span key={j} style={{

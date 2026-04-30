@@ -3,6 +3,9 @@ import type { FretPosition } from '../../types/music';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
 import { T } from '../../theme';
 
+// s=0 (low E) → bottom of SVG, s=5 (high e) → top of SVG
+const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'e'] as const;
+
 interface Props {
   voicing: FretPosition[];
   dotColor?: string;
@@ -10,9 +13,14 @@ interface Props {
   tuning?: string[];
   dotLabels?: string[];
   hideFretLabel?: boolean;
+  showStringLabels?: boolean;
+  showFretNumbers?: boolean;
 }
 
-export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, dotColors, tuning, dotLabels, hideFretLabel }) => {
+export const MiniFretboard: React.FC<Props> = ({
+  voicing, dotColor = T.primary, dotColors, tuning,
+  dotLabels, hideFretLabel, showStringLabels, showFretNumbers,
+}) => {
   const hasOpen = voicing.some(p => p.fret === 0);
   const nonZeroFrets = voicing.map(p => p.fret).filter(f => f > 0);
   const minFret = nonZeroFrets.length > 0 ? Math.min(...nonZeroFrets) : 0;
@@ -23,11 +31,12 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
   const fretCount = displayMax - displayMin;
 
   const W = 200, H = 90;
-  // Ensure open-string dots (fretX(0) = LEFT - fretSp/2) stay within SVG bounds (>= 8px)
+  const strLabelW = showStringLabels ? 14 : 0;
+
   const minLeftForOpen = displayMin === 0 && hasOpen
     ? Math.ceil((16 * fretCount + W - 8) / (2 * fretCount + 1))
     : 0;
-  const LEFT = Math.max(displayMin === 0 ? 16 : 24, minLeftForOpen);
+  const LEFT = Math.max(displayMin === 0 ? 16 : 24, minLeftForOpen) + strLabelW;
   const fretSp = (W - LEFT - 8) / Math.max(fretCount, 1);
   const strSp = (H - 20) / (STRING_COUNT - 1);
   const topY = 8;
@@ -38,6 +47,8 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
+
+      {/* Fret lines */}
       {Array.from({ length: fretCount + 1 }).map((_, i) => {
         const isNut = i === 0 && displayMin === 0;
         return (
@@ -50,6 +61,8 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
           />
         );
       })}
+
+      {/* Strings */}
       {Array.from({ length: STRING_COUNT }).map((_, s) => (
         <line key={s}
           x1={LEFT} y1={strY(s)}
@@ -57,10 +70,36 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
           stroke={T.secondary} strokeWidth={2.2 - s * 0.22} opacity={0.5}
         />
       ))}
-      {displayMin > 0 && !hideFretLabel && (
-        <text x={LEFT - 4} y={topY + (STRING_COUNT - 1) * strSp / 2 + 4}
+
+      {/* Legacy fret position label (top-left, when not hidden) */}
+      {displayMin > 0 && !hideFretLabel && !showFretNumbers && (
+        <text x={LEFT - strLabelW - 4} y={topY + (STRING_COUNT - 1) * strSp / 2 + 4}
           textAnchor="end" fontSize={7} fill={T.textMuted}>{displayMin + 1}fr</text>
       )}
+
+      {/* String name labels on the left */}
+      {showStringLabels && Array.from({ length: STRING_COUNT }).map((_, s) => (
+        <text key={`sl-${s}`}
+          x={LEFT - strLabelW / 2 - 1}
+          y={strY(s) + 2.5}
+          textAnchor="middle" dominantBaseline="middle"
+          fontSize={6.5} fontWeight={600} fill={T.textMuted}
+        >{STRING_NAMES[s]}</text>
+      ))}
+
+      {/* Fret number labels at the bottom */}
+      {showFretNumbers && Array.from({ length: fretCount }).map((_, i) => {
+        const fretNum = displayMin + 1 + i;
+        return (
+          <text key={`fn-${fretNum}`}
+            x={LEFT + (i + 0.5) * fretSp}
+            y={H - 3}
+            textAnchor="middle" fontSize={6.5} fill={T.textMuted}
+          >{fretNum}</text>
+        );
+      })}
+
+      {/* Dots */}
       {voicing.map((p, i) => {
         const cx = fretX(p.fret);
         const cy = strY(p.string);
