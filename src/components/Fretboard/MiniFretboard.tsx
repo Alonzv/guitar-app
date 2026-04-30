@@ -8,9 +8,11 @@ interface Props {
   dotColor?: string;
   dotColors?: string[];
   tuning?: string[];
+  dotLabels?: string[];
+  hideFretLabel?: boolean;
 }
 
-export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, dotColors, tuning }) => {
+export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, dotColors, tuning, dotLabels, hideFretLabel }) => {
   const hasOpen = voicing.some(p => p.fret === 0);
   const nonZeroFrets = voicing.map(p => p.fret).filter(f => f > 0);
   const minFret = nonZeroFrets.length > 0 ? Math.min(...nonZeroFrets) : 0;
@@ -21,8 +23,12 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
   const fretCount = displayMax - displayMin;
 
   const W = 200, H = 90;
-  const LEFT = displayMin === 0 ? 12 : 24;
-  const fretSp = (W - LEFT - 8) / fretCount;
+  // Ensure open-string dots (fretX(0) = LEFT - fretSp/2) stay within SVG bounds (>= 8px)
+  const minLeftForOpen = displayMin === 0 && hasOpen
+    ? Math.ceil((16 * fretCount + W - 8) / (2 * fretCount + 1))
+    : 0;
+  const LEFT = Math.max(displayMin === 0 ? 16 : 24, minLeftForOpen);
+  const fretSp = (W - LEFT - 8) / Math.max(fretCount, 1);
   const strSp = (H - 20) / (STRING_COUNT - 1);
   const topY = 8;
 
@@ -51,18 +57,18 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
           stroke={T.secondary} strokeWidth={0.7 + s * 0.18} opacity={0.5}
         />
       ))}
-      {displayMin > 0 && (
+      {displayMin > 0 && !hideFretLabel && (
         <text x={LEFT - 4} y={topY + (STRING_COUNT - 1) * strSp / 2 + 4}
           textAnchor="end" fontSize={7} fill={T.textMuted}>{displayMin + 1}fr</text>
       )}
       {voicing.map((p, i) => {
         const cx = fretX(p.fret);
         const cy = strY(p.string);
-        const note = fretToNote(p.string, p.fret, tuning);
+        const label = dotLabels?.[i] ?? fretToNote(p.string, p.fret, tuning);
         return (
           <g key={i}>
             <circle cx={cx} cy={cy} r={7} fill={dotColors?.[i] ?? dotColor} stroke={T.bgDeep} strokeWidth={1} opacity={0.92} />
-            <text x={cx} y={cy + 3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{note}</text>
+            <text x={cx} y={cy + 3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{label}</text>
           </g>
         );
       })}

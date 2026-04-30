@@ -173,7 +173,8 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} width="100%" style={{ display: 'block' }}>
+      <div style={{ width: 'min(400px, 90vw)', margin: '0 auto' }}>
+      <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} style={{ display: 'block', width: '100%' }}>
 
         {/* Border ring */}
         <circle cx={CX} cy={CY} r={R_OUT_OUTER + 2} fill="none" stroke={T.border} strokeWidth="1" opacity="0.5" />
@@ -327,6 +328,7 @@ export const CircleOfFifths: React.FC<Props> = ({ onAddToProgression }) => {
         )}
 
       </svg>
+      </div>
 
       {/* ── Legend ── */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

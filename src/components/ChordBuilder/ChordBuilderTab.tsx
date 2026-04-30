@@ -8,7 +8,6 @@ import { VoicingVariations } from './VoicingVariations';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { suggestNextChords, suggestCustomChords, detectKey } from '../../utils/progressionHelper';
 import { findChordVoicings } from '../../utils/chordVoicings';
-import { exportProgressionPDF } from '../../utils/pdfExport';
 import { playChord } from '../../utils/audioPlayback';
 import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
@@ -142,6 +141,7 @@ export function ChordBuilderTab({
   const handleExportPDF = async () => {
     setExporting(true);
     try {
+      const { exportProgressionPDF } = await import('../../utils/pdfExport');
       await exportProgressionPDF(progressionName || 'Chord Progression', progression);
     } finally {
       setExporting(false);

@@ -28,6 +28,10 @@ export const TUNINGS: Tuning[] = [
 export const STANDARD_TUNING: Note[] = TUNINGS[0].notes;
 export const FRET_COUNT = 12;
 export const STRING_COUNT = 6;
+/** MIDI values for open strings in standard tuning (index 0 = low E2). */
+export const STANDARD_OPEN_MIDI = [40, 45, 50, 55, 59, 64] as const;
+/** All 12 chromatic pitch classes using sharp notation. */
+export const ALL_NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const;
 
 // Convert string index + fret to a note name (pitch class, e.g. "C", "F#")
 export function fretToNote(
