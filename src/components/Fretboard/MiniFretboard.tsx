@@ -9,9 +9,10 @@ interface Props {
   dotColors?: string[];
   tuning?: string[];
   dotLabels?: string[];
+  hideFretLabel?: boolean;
 }
 
-export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, dotColors, tuning, dotLabels }) => {
+export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, dotColors, tuning, dotLabels, hideFretLabel }) => {
   const hasOpen = voicing.some(p => p.fret === 0);
   const nonZeroFrets = voicing.map(p => p.fret).filter(f => f > 0);
   const minFret = nonZeroFrets.length > 0 ? Math.min(...nonZeroFrets) : 0;
@@ -56,7 +57,7 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
           stroke={T.secondary} strokeWidth={0.7 + s * 0.18} opacity={0.5}
         />
       ))}
-      {displayMin > 0 && (
+      {displayMin > 0 && !hideFretLabel && (
         <text x={LEFT - 4} y={topY + (STRING_COUNT - 1) * strSp / 2 + 4}
           textAnchor="end" fontSize={7} fill={T.textMuted}>{displayMin + 1}fr</text>
       )}

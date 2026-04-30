@@ -278,7 +278,10 @@ export function TriadsGenerator() {
                 const fretPositions = shape.map(p => ({ string: p.string, fret: p.fret }));
                 const colors        = shape.map(p => DEGREE_COLORS[p.degree]);
                 const labels        = makeDotLabels(shape);
-                const minFret       = Math.min(...shape.map(p => p.fret));
+                const frets         = shape.map(p => p.fret);
+                const minFret       = Math.min(...frets);
+                const maxFret       = Math.max(...frets);
+                const fretBadge     = minFret === maxFret ? `fr ${minFret}` : `fr ${minFret}–${maxFret}`;
 
                 return (
                   <div key={inv} style={{
@@ -289,9 +292,13 @@ export function TriadsGenerator() {
                       <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {INVERSION_LABELS[inv]}
                       </span>
-                      <span style={{ fontSize: 9, fontWeight: 600, color: T.textDim }}>fr {minFret}</span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, color: T.text,
+                        background: T.bgDeep, border: `1px solid ${T.border}`,
+                        padding: '1px 7px', borderRadius: 6,
+                      }}>{fretBadge}</span>
                     </div>
-                    <MiniFretboard voicing={fretPositions} dotColors={colors} dotLabels={labels} />
+                    <MiniFretboard voicing={fretPositions} dotColors={colors} dotLabels={labels} hideFretLabel />
                     <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
                       {[...shape].sort((a, b) => a.string - b.string).map((p, j) => (
                         <span key={j} style={{
