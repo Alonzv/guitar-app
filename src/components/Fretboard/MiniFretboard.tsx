@@ -8,9 +8,10 @@ interface Props {
   dotColor?: string;
   dotColors?: string[];
   tuning?: string[];
+  dotLabels?: string[];
 }
 
-export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, dotColors, tuning }) => {
+export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, dotColors, tuning, dotLabels }) => {
   const hasOpen = voicing.some(p => p.fret === 0);
   const nonZeroFrets = voicing.map(p => p.fret).filter(f => f > 0);
   const minFret = nonZeroFrets.length > 0 ? Math.min(...nonZeroFrets) : 0;
@@ -62,11 +63,11 @@ export const MiniFretboard: React.FC<Props> = ({ voicing, dotColor = T.primary, 
       {voicing.map((p, i) => {
         const cx = fretX(p.fret);
         const cy = strY(p.string);
-        const note = fretToNote(p.string, p.fret, tuning);
+        const label = dotLabels?.[i] ?? fretToNote(p.string, p.fret, tuning);
         return (
           <g key={i}>
             <circle cx={cx} cy={cy} r={7} fill={dotColors?.[i] ?? dotColor} stroke={T.bgDeep} strokeWidth={1} opacity={0.92} />
-            <text x={cx} y={cy + 3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{note}</text>
+            <text x={cx} y={cy + 3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{label}</text>
           </g>
         );
       })}

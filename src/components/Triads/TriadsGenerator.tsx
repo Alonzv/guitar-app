@@ -1,37 +1,32 @@
 import { useState, useMemo } from 'react';
 import { Note as TonalNote } from '@tonaljs/tonal';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
-import { fretToNote, STRING_COUNT, FRET_COUNT, CHROMATIC } from '../../utils/musicTheory';
+import { fretToNote, CHROMATIC } from '../../utils/musicTheory';
 import { playScale } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 import type { Note } from '../../types/music';
 
-const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+// Standard tuning MIDI for each string (index 0 = low E)
+const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
 
-const ENHARMONIC_MAP: Record<string, string> = {
-  'Db':'C#','Eb':'D#','Gb':'F#','Ab':'G#','Bb':'A#',
-  'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb',
-};
-const samePitch = (a: string, b: string) => a === b || ENHARMONIC_MAP[a] === b || a === ENHARMONIC_MAP[b];
+const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 type TriadType = 'major' | 'minor' | 'diminished' | 'augmented';
 type Degree = 'root' | 'third' | 'fifth';
+type DisplayMode = 'notes' | 'intervals';
 
 interface TriadDef {
   label: string;
   suffix: string;
   intervals: [number, number, number];
-  thirdLabel: string;
-  fifthLabel: string;
-  thirdDeg: string;
-  fifthDeg: string;
+  intervalLabels: [string, string, string];
 }
 
 const TRIADS: Record<TriadType, TriadDef> = {
-  major:      { label: 'Major',      suffix: '',    intervals: [0, 4, 7], thirdLabel: 'Maj 3rd', fifthLabel: 'Perf 5th', thirdDeg: '3',  fifthDeg: '5'  },
-  minor:      { label: 'Minor',      suffix: 'm',   intervals: [0, 3, 7], thirdLabel: 'Min 3rd', fifthLabel: 'Perf 5th', thirdDeg: '♭3', fifthDeg: '5'  },
-  diminished: { label: 'Diminished', suffix: 'dim', intervals: [0, 3, 6], thirdLabel: 'Min 3rd', fifthLabel: 'Dim 5th',  thirdDeg: '♭3', fifthDeg: '♭5' },
-  augmented:  { label: 'Augmented',  suffix: 'aug', intervals: [0, 4, 8], thirdLabel: 'Maj 3rd', fifthLabel: 'Aug 5th',  thirdDeg: '3',  fifthDeg: '♯5' },
+  major:      { label: 'Major',      suffix: '',  intervals: [0, 4, 7], intervalLabels: ['1', '3',  '5' ] },
+  minor:      { label: 'Minor',      suffix: 'm', intervals: [0, 3, 7], intervalLabels: ['1', '♭3', '5' ] },
+  diminished: { label: 'Diminished', suffix: '°', intervals: [0, 3, 6], intervalLabels: ['1', '♭3', '♭5'] },
+  augmented:  { label: 'Augmented',  suffix: '+', intervals: [0, 4, 8], intervalLabels: ['1', '3',  '♯5'] },
 };
 
 const DEGREE_COLORS: Record<Degree, string> = {
@@ -40,8 +35,18 @@ const DEGREE_COLORS: Record<Degree, string> = {
   fifth: '#b8921a',
 };
 
-const POSITION_WINDOWS = [[0,3],[2,5],[4,8],[6,10],[9,12]] as const;
-const POS_COLORS = [T.primary, T.secondary, '#c4a000', '#8a4aa0', '#2a7aa0'];
+const DEGREES: Degree[] = ['root', 'third', 'fifth'];
+const INVERSION_LABELS = ['Root', '1st Inv', '2nd Inv'] as const;
+
+interface StringSetInfo { label: string; strings: [number, number, number] }
+
+// Ordered high → low (more natural for reading on screen)
+const STRING_SETS: StringSetInfo[] = [
+  { label: 'G·B·E', strings: [3, 4, 5] },
+  { label: 'D·G·B', strings: [2, 3, 4] },
+  { label: 'A·D·G', strings: [1, 2, 3] },
+  { label: 'E·A·D', strings: [0, 1, 2] },
+];
 
 interface PosDot { string: number; fret: number; degree: Degree }
 
@@ -51,275 +56,268 @@ function getTriadNotes(root: string, intervals: [number, number, number]): [stri
   return intervals.map(i => CHROMATIC[(rootIdx + i) % 12]) as [string, string, string];
 }
 
-// All fretboard positions for the 3 triad tones
-function getAllTriadPositions(root: string, intervals: [number, number, number]): PosDot[] {
-  const [rootNote, thirdNote, fifthNote] = getTriadNotes(root, intervals);
-  const result: PosDot[] = [];
-  for (let s = 0; s < STRING_COUNT; s++) {
-    for (let f = 0; f <= FRET_COUNT; f++) {
-      const note = fretToNote(s, f);
-      if (samePitch(note, rootNote))       result.push({ string: s, fret: f, degree: 'root'  });
-      else if (samePitch(note, thirdNote)) result.push({ string: s, fret: f, degree: 'third' });
-      else if (samePitch(note, fifthNote)) result.push({ string: s, fret: f, degree: 'fifth' });
-    }
+// Returns all closed frets (1–17) that produce the given note on a string.
+function fretsForNote(stringIdx: number, note: string): number[] {
+  const openMidi  = OPEN_MIDI[stringIdx];
+  const targetPc  = CHROMATIC.indexOf(note);
+  if (targetPc === -1) return [];
+  const result: number[] = [];
+  for (let f = 1; f <= 17; f++) {
+    if ((openMidi + f) % 12 === targetPc) result.push(f);
   }
   return result;
 }
 
-// Cartesian product helper
-function cartesian<T>(arrays: T[][]): T[][] {
-  return arrays.reduce<T[][]>(
-    (acc, curr) => acc.flatMap(a => curr.map(b => [...a, b])),
-    [[]]
-  );
-}
-
-// Find all playable 3-string triad shapes within a fret window
-function findTriadShapes(
+// Find the lowest-position closed shape for one inversion on one string set.
+// inversion 0 = root in bass, 1 = 3rd in bass, 2 = 5th in bass.
+function findShape(
   root: string,
   intervals: [number, number, number],
-  minFret: number,
-  maxFret: number
-): PosDot[][] {
-  const allPos = getAllTriadPositions(root, intervals);
-  const shapes: PosDot[][] = [];
-  const seen = new Set<string>();
+  strings: [number, number, number],
+  inversion: 0 | 1 | 2,
+): PosDot[] | null {
+  const notes      = getTriadNotes(root, intervals);
+  const bassIdx    = inversion;
+  const remaining  = [0, 1, 2].filter(i => i !== bassIdx) as [number, number];
 
-  for (let startStr = 0; startStr <= STRING_COUNT - 3; startStr++) {
-    const endStr = startStr + 2;
+  let best: PosDot[] | null = null;
+  let bestMin = Infinity;
 
-    // Collect options per string within fret window
-    const perString: PosDot[][] = [];
-    let hasEmpty = false;
-    for (let s = startStr; s <= endStr; s++) {
-      const opts = allPos.filter(p =>
-        p.string === s &&
-        (p.fret === 0 ? minFret === 0 : p.fret >= minFret && p.fret <= maxFret)
-      );
-      perString.push(opts);
-      if (opts.length === 0) hasEmpty = true;
-    }
-    if (hasEmpty) continue;
+  for (const bassFret of fretsForNote(strings[0], notes[bassIdx])) {
+    const lo = bassFret - 4, hi = bassFret + 4;
 
-    // Try all combinations (one note per string)
-    for (const combo of cartesian(perString)) {
-      // Need all 3 degrees
-      const degrees = new Set(combo.map(p => p.degree));
-      if (!degrees.has('root') || !degrees.has('third') || !degrees.has('fifth')) continue;
+    for (const [midIdx, topIdx] of [
+      [remaining[0], remaining[1]],
+      [remaining[1], remaining[0]],
+    ] as [number, number][]) {
+      const mids = fretsForNote(strings[1], notes[midIdx]).filter(f => f >= lo && f <= hi);
+      const tops = fretsForNote(strings[2], notes[topIdx]).filter(f => f >= lo && f <= hi);
 
-      // Fret spread must be ≤ 4
-      const nonOpenFrets = combo.filter(p => p.fret > 0).map(p => p.fret);
-      if (nonOpenFrets.length > 0) {
-        const spread = Math.max(...nonOpenFrets) - Math.min(...nonOpenFrets);
-        if (spread > 4) continue;
+      for (const mf of mids) {
+        for (const tf of tops) {
+          const span = Math.max(bassFret, mf, tf) - Math.min(bassFret, mf, tf);
+          if (span <= 4) {
+            const minF = Math.min(bassFret, mf, tf);
+            if (minF < bestMin) {
+              bestMin = minF;
+              best = [
+                { string: strings[0], fret: bassFret, degree: DEGREES[bassIdx]  },
+                { string: strings[1], fret: mf,       degree: DEGREES[midIdx]   },
+                { string: strings[2], fret: tf,       degree: DEGREES[topIdx]   },
+              ];
+            }
+          }
+        }
       }
-
-      const key = combo.map(p => `${p.string}-${p.fret}`).join('|');
-      if (seen.has(key)) continue;
-      seen.add(key);
-      shapes.push(combo);
     }
   }
-
-  // Sort by lowest fret of the shape
-  return shapes.sort((a, b) => {
-    const aMin = Math.min(...a.map(p => p.fret));
-    const bMin = Math.min(...b.map(p => p.fret));
-    return aMin - bMin;
-  });
-}
-
-function inversionLabel(shape: PosDot[]): string {
-  const sorted = [...shape].sort((a, b) => a.string - b.string);
-  const bass = sorted[0].degree;
-  if (bass === 'root')  return 'Root';
-  if (bass === 'third') return '1st inv.';
-  return '2nd inv.';
+  return best;
 }
 
 export function TriadsGenerator() {
-  const [root,      setRoot]      = useState<Note>('C');
-  const [triadType, setTriadType] = useState<TriadType>('major');
-  const [pos,       setPos]       = useState<number | null>(null);
+  const [root,        setRoot]        = useState<Note>('C');
+  const [triadType,   setTriadType]   = useState<TriadType>('major');
+  const [selectedSet, setSelectedSet] = useState<number | null>(null);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('notes');
 
-  const def = TRIADS[triadType];
-  const [rootNote, thirdNote, fifthNote] = useMemo(() => getTriadNotes(root, def.intervals), [root, def]);
+  const def   = TRIADS[triadType];
+  const notes = useMemo(() => getTriadNotes(root, def.intervals), [root, def]);
 
-  const shapes = useMemo(() => {
-    if (pos === null) {
-      // Full neck: search 0–12, collect all unique shapes
-      return findTriadShapes(root, def.intervals, 0, FRET_COUNT);
-    }
-    const [min, max] = POSITION_WINDOWS[pos];
-    return findTriadShapes(root, def.intervals, min, max);
-  }, [root, def, pos]);
+  // [stringSetIdx][inversionIdx] → shape | null
+  const allShapes = useMemo(() =>
+    STRING_SETS.map(ss =>
+      ([0, 1, 2] as const).map(inv => findShape(root, def.intervals, ss.strings, inv))
+    ),
+    [root, def]
+  );
 
   const handlePlay = () => {
-    const midiNotes = [rootNote, thirdNote, fifthNote, rootNote].map(n => TonalNote.midi(`${n}4`) ?? 60);
-    playScale(midiNotes);
+    const midi = [...notes, notes[0]].map(n => TonalNote.midi(`${n}4`) ?? 60);
+    playScale(midi);
   };
+
+  const makeDotLabels = (shape: PosDot[]): string[] =>
+    shape.map(p =>
+      displayMode === 'notes'
+        ? fretToNote(p.string, p.fret)
+        : def.intervalLabels[DEGREES.indexOf(p.degree)]
+    );
+
+  const visibleSets = selectedSet !== null ? [selectedSet] : [0, 1, 2, 3];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* ── Root note ── */}
+      {/* Root selector */}
       <div style={card()}>
-        <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Root Note
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 7 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
           {ALL_NOTES.map(n => {
-            const sharp    = n.includes('#');
-            const selected = n === root;
+            const sharp = n.includes('#');
+            const sel   = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '9px 4px', borderRadius: 9, cursor: 'pointer',
-                fontSize: sharp ? 11 : 13, fontWeight: selected ? 700 : 400,
-                border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
-                background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
-                color: selected ? T.primary : sharp ? T.textMuted : T.text,
+                padding: '8px 4px', borderRadius: 8, cursor: 'pointer',
+                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
+                border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
+                background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
+                color: sel ? T.primary : sharp ? T.textMuted : T.text,
                 transition: 'all 0.12s',
-              }}>
-                {n}
-              </button>
+              }}>{n}</button>
             );
           })}
         </div>
       </div>
 
-      {/* ── Triad type ── */}
+      {/* Triad type */}
       <div style={card()}>
-        <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Triad Type
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
           {(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => {
             const sel = triadType === type;
             return (
               <button key={type} onClick={() => setTriadType(type)} style={{
-                padding: '11px 12px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                padding: '9px 10px', borderRadius: 9, cursor: 'pointer', textAlign: 'left',
                 border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                 background: sel ? T.secondaryBg : T.bgInput,
                 color: sel ? T.secondary : T.textMuted,
                 transition: 'all 0.12s',
               }}>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>{d.label}</div>
-                <div style={{ fontSize: 11, marginTop: 2, opacity: 0.75 }}>
-                  R · {d.thirdLabel} · {d.fifthLabel}
-                </div>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
+                <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>
+                  {d.intervalLabels.join(' · ')}
+                </span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* ── Notes info ── */}
-      <div style={card({ padding: '12px 16px' })}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 17, fontWeight: 800, color: T.text }}>{root}{def.suffix}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, color: T.textMuted }}>{shapes.length} shapes found</span>
+      {/* Chord summary + controls */}
+      <div style={card({ padding: '10px 14px' })}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{root}{def.suffix}</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
+              title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
+              style={{
+                padding: '4px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted,
+              }}
+            >
+              {displayMode === 'notes' ? '1·3·5' : 'A·B·C'}
+            </button>
             <button onClick={handlePlay} style={{
               padding: '4px 12px', borderRadius: 8, border: `1px solid ${T.secondary}`,
               background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-            }}>▶ Play</button>
+            }}>▶</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {[
-            { note: rootNote,  label: 'Root',        deg: '1',        color: DEGREE_COLORS.root  },
-            { note: thirdNote, label: def.thirdLabel, deg: def.thirdDeg, color: DEGREE_COLORS.third },
-            { note: fifthNote, label: def.fifthLabel, deg: def.fifthDeg, color: DEGREE_COLORS.fifth },
-          ].map(({ note, label, deg, color }) => (
-            <div key={label} style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '8px 6px', borderRadius: 10, gap: 3,
-              background: T.bgInput, border: `1px solid ${color}44`,
-            }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1 }}>{deg}</span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: T.text, lineHeight: 1.2 }}>{note}</span>
-              <span style={{ fontSize: 9, color: T.textMuted, lineHeight: 1, textAlign: 'center' }}>{label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Position filter ── */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, color: T.textMuted }}>Area:</span>
-        <button onClick={() => setPos(null)} style={{
-          padding: '4px 13px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11,
-          background: pos === null ? T.text : T.bgInput,
-          color: pos === null ? T.bgDeep : T.textMuted,
-          fontWeight: pos === null ? 700 : 400,
-        }}>Full Neck</button>
-        {POSITION_WINDOWS.map((w, i) => (
-          <button key={i} onClick={() => setPos(pos === i ? null : i)}
-            title={`Frets ${w[0]}–${w[1]}`}
-            style={{
-              padding: '4px 11px', borderRadius: 20, cursor: 'pointer', fontSize: 11, fontWeight: 600,
-              background: pos === i ? POS_COLORS[i] : T.bgInput,
-              color: pos === i ? '#fff' : T.textMuted,
-              border: pos === i ? 'none' : `1px solid ${T.border}`,
-            }}>
-            {w[0]}–{w[1]}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Voicing cards grid ── */}
-      {shapes.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-          {shapes.map((shape, i) => {
-            const label = inversionLabel(shape);
-            const fretPositions = shape.map(p => ({ string: p.string, fret: p.fret }));
-            const dotColors     = shape.map(p => DEGREE_COLORS[p.degree]);
-            const minF = Math.min(...shape.map(p => p.fret));
+          {notes.map((n, i) => {
+            const color = DEGREE_COLORS[DEGREES[i]];
             return (
               <div key={i} style={{
-                ...card({ padding: '10px 10px 6px' }),
-                display: 'flex', flexDirection: 'column', gap: 4,
+                flex: 1, textAlign: 'center', padding: '6px', borderRadius: 8,
+                background: T.bgInput, border: `1px solid ${color}44`,
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {label}
-                  </span>
-                  {minF > 0 && (
-                    <span style={{ fontSize: 9, color: T.textDim }}>fr {minF}</span>
-                  )}
-                </div>
-                <MiniFretboard voicing={fretPositions} dotColors={dotColors} />
-                <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                  {shape.sort((a,b) => a.string - b.string).map((p, j) => (
-                    <span key={j} style={{
-                      fontSize: 9, fontWeight: 700, color: DEGREE_COLORS[p.degree],
-                      background: `${DEGREE_COLORS[p.degree]}18`,
-                      padding: '1px 5px', borderRadius: 4,
-                    }}>
-                      {fretToNote(p.string, p.fret)}
-                    </span>
-                  ))}
-                </div>
+                <div style={{ fontSize: 9, fontWeight: 700, color, lineHeight: 1 }}>{def.intervalLabels[i]}</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{n}</div>
               </div>
             );
           })}
         </div>
-      ) : (
-        <div style={{ textAlign: 'center', padding: 32, color: T.textDim, fontSize: 13 }}>
-          No shapes found in this area
-        </div>
-      )}
+      </div>
 
-      {/* ── Legend ── */}
-      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: T.textMuted, flexWrap: 'wrap' }}>
-        {[
-          { color: DEGREE_COLORS.root,  label: `Root (${rootNote})`   },
-          { color: DEGREE_COLORS.third, label: `3rd (${thirdNote})`  },
-          { color: DEGREE_COLORS.fifth, label: `5th (${fifthNote})`   },
-        ].map(({ color, label }) => (
-          <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block' }} />
-            {label}
+      {/* String set filter */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, color: T.textMuted }}>Strings:</span>
+        <button onClick={() => setSelectedSet(null)} style={{
+          padding: '4px 11px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11,
+          background: selectedSet === null ? T.text : T.bgInput,
+          color: selectedSet === null ? T.bgDeep : T.textMuted,
+          fontWeight: selectedSet === null ? 700 : 400,
+        }}>All</button>
+        {STRING_SETS.map((ss, i) => (
+          <button key={i} onClick={() => setSelectedSet(selectedSet === i ? null : i)} style={{
+            padding: '4px 10px', borderRadius: 20, cursor: 'pointer', fontSize: 11, fontWeight: 600,
+            background: selectedSet === i ? T.primary : T.bgInput,
+            color: selectedSet === i ? '#fff' : T.textMuted,
+            border: selectedSet === i ? 'none' : `1px solid ${T.border}`,
+          }}>{ss.label}</button>
+        ))}
+      </div>
+
+      {/* Shape rows: one section per string set, three cards per inversion */}
+      {visibleSets.map(setIdx => {
+        const ss     = STRING_SETS[setIdx];
+        const shapes = allShapes[setIdx];
+        return (
+          <div key={setIdx}>
+            <p style={{ margin: '0 0 6px 2px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {ss.label}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {([0, 1, 2] as const).map(inv => {
+                const shape = shapes[inv];
+
+                if (!shape) return (
+                  <div key={inv} style={{ ...card({ padding: '10px 8px' }), opacity: 0.4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase' }}>
+                      {INVERSION_LABELS[inv]}
+                    </span>
+                    <div style={{ textAlign: 'center', padding: '18px 0', fontSize: 10, color: T.textDim }}>—</div>
+                  </div>
+                );
+
+                const fretPositions = shape.map(p => ({ string: p.string, fret: p.fret }));
+                const colors        = shape.map(p => DEGREE_COLORS[p.degree]);
+                const labels        = makeDotLabels(shape);
+                const minFret       = Math.min(...shape.map(p => p.fret));
+
+                return (
+                  <div key={inv} style={{
+                    ...card({ padding: '10px 8px 7px' }),
+                    display: 'flex', flexDirection: 'column', gap: 4,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {INVERSION_LABELS[inv]}
+                      </span>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: T.textDim }}>fr {minFret}</span>
+                    </div>
+                    <MiniFretboard voicing={fretPositions} dotColors={colors} dotLabels={labels} />
+                    <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+                      {[...shape].sort((a, b) => a.string - b.string).map((p, j) => (
+                        <span key={j} style={{
+                          fontSize: 8, fontWeight: 700,
+                          color: DEGREE_COLORS[p.degree],
+                          background: `${DEGREE_COLORS[p.degree]}18`,
+                          padding: '1px 4px', borderRadius: 3,
+                        }}>
+                          {fretToNote(p.string, p.fret)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 14, fontSize: 11, color: T.textMuted, flexWrap: 'wrap', paddingBottom: 4 }}>
+        {DEGREES.map((deg, i) => (
+          <span key={deg} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 9, height: 9, borderRadius: '50%', background: DEGREE_COLORS[deg], display: 'inline-block' }} />
+            {def.intervalLabels[i]} ({notes[i]})
           </span>
         ))}
       </div>
