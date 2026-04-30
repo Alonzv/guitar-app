@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { Note as TonalNote, Interval, Scale } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
 import type { Tuning } from '../../types/music';
-import { exportHarmonyPDF } from '../../utils/pdfExport';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -261,6 +260,7 @@ export const HarmonyBuilder: React.FC<Props> = ({ tuning }) => {
       const label = HARMONY_OPTIONS.find(o => o.value === harmonyType)?.label ?? harmonyType;
       const scaleName = `${root} ${SCALE_TYPES.find(s => s.value === scaleType)?.label ?? scaleType}`;
       const activeIndices = STRINGS.map((_, i) => i).filter(i => result.origLines[i]);
+      const { exportHarmonyPDF } = await import('../../utils/pdfExport');
       await exportHarmonyPDF(
         `${scaleName} — ${label}`,
         activeIndices.map(i => STRINGS[i].label),

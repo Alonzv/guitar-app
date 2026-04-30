@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react';
-import { CHROMATIC } from '../../utils/musicTheory';
+import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { T, card } from '../../theme';
 
-const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
-const ALL_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const OPEN_MIDI = STANDARD_OPEN_MIDI;
 
 interface IntervalInfo {
   semitones: number;

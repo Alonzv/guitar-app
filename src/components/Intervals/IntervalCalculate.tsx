@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { fretToNote, CHROMATIC } from '../../utils/musicTheory';
+import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
 import { playScale, getSharedContext, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
-const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
+const OPEN_MIDI = STANDARD_OPEN_MIDI;
 
 interface Point { string: number; fret: number }
 

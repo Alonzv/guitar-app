@@ -1,15 +1,12 @@
 import { useState, useMemo } from 'react';
 import { Note as TonalNote } from '@tonaljs/tonal';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
-import { fretToNote, CHROMATIC } from '../../utils/musicTheory';
+import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { playScale } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 import type { Note } from '../../types/music';
 
-// Standard tuning MIDI for each string (index 0 = low E)
-const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
-
-const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const OPEN_MIDI = STANDARD_OPEN_MIDI;
 
 type TriadType = 'major' | 'minor' | 'diminished' | 'augmented';
 type Degree = 'root' | 'third' | 'fifth';
