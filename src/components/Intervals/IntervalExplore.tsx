@@ -17,8 +17,10 @@ const INTERVALS: IntervalInfo[] = [
   { semitones: 3,  name: 'Minor 3rd',   abbrev: 'm3', context: 'Core of minor chords — dark, melancholic, essential in blues' },
   { semitones: 4,  name: 'Major 3rd',   abbrev: 'M3', context: 'Core of major chords — bright, happy, the "happy" sound' },
   { semitones: 5,  name: 'Perfect 4th', abbrev: 'P4', context: 'Very consonant — common in sus4 chords and bass riffs' },
-  { semitones: 6,  name: 'Tritone',     abbrev: 'TT', context: 'Maximum tension — the "devil\'s interval", drives resolution' },
   { semitones: 7,  name: 'Perfect 5th', abbrev: 'P5', context: 'The power chord — most stable interval, used in rock/metal' },
+  { semitones: 9,  name: 'Major 6th',   abbrev: 'M6', context: 'Warm and pleasant — found in 6th chords and pentatonic scales' },
+  { semitones: 10, name: 'Minor 7th',   abbrev: 'm7', context: 'Essential in dominant 7th chords — the heart of blues and jazz' },
+  { semitones: 11, name: 'Major 7th',   abbrev: 'M7', context: 'Leading tone — creates strong upward pull toward the tonic' },
 ];
 
 type Area = 'full' | '1-4' | '5-8' | '9-12';
