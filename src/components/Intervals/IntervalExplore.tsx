@@ -12,15 +12,19 @@ interface IntervalInfo {
 }
 
 const INTERVALS: IntervalInfo[] = [
-  { semitones: 1,  name: 'Minor 2nd',   abbrev: 'm2', context: 'Chromatic semitone — dissonant, creates strong tension and pull' },
-  { semitones: 2,  name: 'Major 2nd',   abbrev: 'M2', context: 'Whole step — the basic building block of major and minor scales' },
-  { semitones: 3,  name: 'Minor 3rd',   abbrev: 'm3', context: 'Core of minor chords — dark, melancholic, essential in blues' },
-  { semitones: 4,  name: 'Major 3rd',   abbrev: 'M3', context: 'Core of major chords — bright, happy, the "happy" sound' },
-  { semitones: 5,  name: 'Perfect 4th', abbrev: 'P4', context: 'Very consonant — common in sus4 chords and bass riffs' },
-  { semitones: 7,  name: 'Perfect 5th', abbrev: 'P5', context: 'The power chord — most stable interval, used in rock/metal' },
-  { semitones: 9,  name: 'Major 6th',   abbrev: 'M6', context: 'Warm and pleasant — found in 6th chords and pentatonic scales' },
-  { semitones: 10, name: 'Minor 7th',   abbrev: 'm7', context: 'Essential in dominant 7th chords — the heart of blues and jazz' },
-  { semitones: 11, name: 'Major 7th',   abbrev: 'M7', context: 'Leading tone — creates strong upward pull toward the tonic' },
+  { semitones: 0,  name: 'Perfect Unison', abbrev: 'P1', context: 'Same note — the reference point, zero distance' },
+  { semitones: 1,  name: 'Minor 2nd',      abbrev: 'm2', context: 'Chromatic semitone — dissonant, creates strong tension and pull' },
+  { semitones: 2,  name: 'Major 2nd',      abbrev: 'M2', context: 'Whole step — the basic building block of major and minor scales' },
+  { semitones: 3,  name: 'Minor 3rd',      abbrev: 'm3', context: 'Core of minor chords — dark, melancholic, essential in blues' },
+  { semitones: 4,  name: 'Major 3rd',      abbrev: 'M3', context: 'Core of major chords — bright, happy, the "happy" sound' },
+  { semitones: 5,  name: 'Perfect 4th',    abbrev: 'P4', context: 'Very consonant — common in sus4 chords and bass riffs' },
+  { semitones: 6,  name: 'Tritone',        abbrev: 'TT', context: 'Aug 4th / Dim 5th — maximum tension, the "devil\'s interval"' },
+  { semitones: 7,  name: 'Perfect 5th',    abbrev: 'P5', context: 'The power chord — most stable interval, used in rock/metal' },
+  { semitones: 8,  name: 'Minor 6th',      abbrev: 'm6', context: 'Inversion of Major 3rd — adds colour in minor key harmony' },
+  { semitones: 9,  name: 'Major 6th',      abbrev: 'M6', context: 'Warm and pleasant — found in 6th chords and pentatonic scales' },
+  { semitones: 10, name: 'Minor 7th',      abbrev: 'm7', context: 'Essential in dominant 7th chords — the heart of blues and jazz' },
+  { semitones: 11, name: 'Major 7th',      abbrev: 'M7', context: 'Leading tone — creates strong upward pull toward the tonic' },
+  { semitones: 12, name: 'Perfect Octave', abbrev: 'P8', context: 'Same pitch class, doubled frequency — perfectly consonant' },
 ];
 
 type Area = 'full' | '1-4' | '5-8' | '9-12';
