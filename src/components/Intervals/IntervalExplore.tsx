@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
+import { playScale, getSharedContext, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
 const OPEN_MIDI = STANDARD_OPEN_MIDI;
@@ -66,9 +67,41 @@ export function IntervalExplore() {
   const [root,     setRoot]     = useState('E');
   const [interval, setInterval] = useState(7); // Perfect 5th default
   const [area,     setArea]     = useState<Area>('full');
+  const [mode,     setMode]     = useState<'melodic' | 'harmonic'>('melodic');
 
   const selectedInterval = INTERVALS.find(i => i.semitones === interval) ?? INTERVALS[6];
   const fretRange = AREAS.find(a => a.id === area)!.range;
+
+  // MIDI 60 = C4; derive root MIDI from chromatic index
+  const rootMidi     = 60 + CHROMATIC.indexOf(root);
+  const intervalMidi = rootMidi + interval;
+
+  const handlePlay = () => {
+    unlockAudio();
+    if (mode === 'melodic') {
+      playScale([rootMidi, intervalMidi]);
+    } else {
+      const ctx = getSharedContext();
+      const go = () => {
+        const t = ctx.currentTime + 0.05;
+        [rootMidi, intervalMidi].forEach(midi => {
+          const freq = 440 * Math.pow(2, (midi - 69) / 12);
+          const osc  = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.2, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 1.8);
+        });
+      };
+      if (ctx.state === 'running') go();
+      else ctx.resume().then(go).catch(() => {});
+    }
+  };
 
   const intervalNote = useMemo(() => {
     const pc = (notePitchClass(root) + interval) % 12;
@@ -132,6 +165,25 @@ export function IntervalExplore() {
           <p style={{ margin: '2px 0 0', fontSize: 10, color: T.textMuted, lineHeight: 1.35 }}>
             {selectedInterval.context}
           </p>
+        </div>
+
+        {/* Play controls */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
+          <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+            {(['melodic', 'harmonic'] as const).map(m => (
+              <button key={m} onClick={() => setMode(m)} style={{
+                padding: '5px 11px', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                background: mode === m ? T.secondary : T.bgInput,
+                color: mode === m ? '#fff' : T.textMuted,
+                transition: 'background 0.15s',
+              }}>{m === 'melodic' ? '♩♩ Melodic' : '♫ Harmonic'}</button>
+            ))}
+          </div>
+          <button onClick={handlePlay} style={{
+            padding: '6px 20px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 800,
+            border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
+            letterSpacing: '0.02em',
+          }}>▶ Play</button>
         </div>
       </div>
 
