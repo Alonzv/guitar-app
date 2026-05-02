@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Note as TonalNote } from '@tonaljs/tonal';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
@@ -46,6 +46,17 @@ const STRING_SETS: StringSetInfo[] = [
 ];
 
 interface PosDot { string: number; fret: number; degree: Degree }
+
+interface ExpandedCard {
+  chordName: string;
+  setLabel: string;
+  invLabel: string;
+  fretBadge: string;
+  fretPositions: { string: number; fret: number }[];
+  colors: string[];
+  labels: string[];
+  shape: PosDot[];
+}
 
 function getTriadNotes(root: string, intervals: [number, number, number]): [string, string, string] {
   const rootIdx = CHROMATIC.indexOf(root);
@@ -116,6 +127,14 @@ export function TriadsGenerator() {
   const [triadType,   setTriadType]   = useState<TriadType>('major');
   const [selectedSet, setSelectedSet] = useState<number | null>(null);
   const [displayMode, setDisplayMode] = useState<DisplayMode>('notes');
+  const [expanded,    setExpanded]    = useState<ExpandedCard | null>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [expanded]);
 
   const def   = TRIADS[triadType];
   const notes = useMemo(() => getTriadNotes(root, def.intervals), [root, def]);
@@ -280,11 +299,25 @@ export function TriadsGenerator() {
                 const maxFret       = Math.max(...frets);
                 const fretBadge     = minFret === maxFret ? `fr ${minFret}` : `fr ${minFret}–${maxFret}`;
 
+                const expandCard: ExpandedCard = {
+                  chordName: `${root}${def.suffix}`,
+                  setLabel: ss.label,
+                  invLabel: INVERSION_LABELS[inv],
+                  fretBadge,
+                  fretPositions,
+                  colors,
+                  labels,
+                  shape,
+                };
+
                 return (
-                  <div key={inv} style={{
-                    ...card({ padding: '10px 8px 7px' }),
-                    display: 'flex', flexDirection: 'column', gap: 4,
-                  }}>
+                  <div key={inv}
+                    onClick={() => setExpanded(expandCard)}
+                    style={{
+                      ...card({ padding: '10px 8px 7px' }),
+                      display: 'flex', flexDirection: 'column', gap: 4,
+                      cursor: 'pointer',
+                    }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {INVERSION_LABELS[inv]}
@@ -325,6 +358,95 @@ export function TriadsGenerator() {
           </span>
         ))}
       </div>
+
+      {/* ── Expanded card modal ───────────────────────────────────── */}
+      {expanded && (
+        <div
+          onClick={() => setExpanded(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.65)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px 16px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: T.bgCard,
+              border: `1px solid ${T.border}`,
+              borderRadius: 18,
+              padding: '18px 18px 14px',
+              width: '100%',
+              maxWidth: 420,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+              boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: T.text, lineHeight: 1 }}>
+                  {expanded.chordName}
+                </div>
+                <div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>
+                  {expanded.setLabel} · {expanded.invLabel} · <span style={{ color: T.text, fontWeight: 700 }}>{expanded.fretBadge}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setExpanded(null)}
+                style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  border: `1px solid ${T.border}`,
+                  background: T.bgInput, color: T.textMuted,
+                  fontSize: 18, lineHeight: '30px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >×</button>
+            </div>
+
+            {/* Large fretboard */}
+            <div style={{ background: T.bgDeep, borderRadius: 12, padding: '16px 12px 12px' }}>
+              <MiniFretboard
+                voicing={expanded.fretPositions}
+                dotColors={expanded.colors}
+                dotLabels={expanded.labels}
+                hideFretLabel
+                showStringLabels
+                showFretNumbers
+              />
+            </div>
+
+            {/* Note badges */}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {[...expanded.shape].sort((a, b) => a.string - b.string).map((p, j) => (
+                <span key={j} style={{
+                  fontSize: 13, fontWeight: 800,
+                  color: DEGREE_COLORS[p.degree],
+                  background: `${DEGREE_COLORS[p.degree]}22`,
+                  border: `1px solid ${DEGREE_COLORS[p.degree]}55`,
+                  padding: '4px 12px', borderRadius: 8,
+                }}>
+                  {fretToNote(p.string, p.fret)}
+                </span>
+              ))}
+            </div>
+
+            {/* Degree legend */}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', fontSize: 11, color: T.textMuted }}>
+              {DEGREES.map((deg, i) => (
+                <span key={deg} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: DEGREE_COLORS[deg], display: 'inline-block' }} />
+                  {def.intervalLabels[i]} ({notes[i]})
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
