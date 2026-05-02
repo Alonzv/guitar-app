@@ -1,5 +1,6 @@
 import React from 'react';
 import { T } from '../theme';
+import { IconWarn } from './Icons';
 
 interface State { hasError: boolean; error: Error | null }
 
@@ -24,7 +25,7 @@ export class ErrorBoundary extends React.Component<
         padding: 32, textAlign: 'center',
         border: `1px dashed ${T.border}`, borderRadius: 14, margin: 8,
       }}>
-        <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+        <div style={{ marginBottom: 12, color: T.textMuted }}><IconWarn size={32} /></div>
         <p style={{ fontWeight: 700, color: T.text, marginBottom: 6, margin: '0 0 6px' }}>
           Something went wrong{this.props.label ? ` in ${this.props.label}` : ''}
         </p>

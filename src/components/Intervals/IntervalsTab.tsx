@@ -6,8 +6,8 @@ import { T } from '../../theme';
 type Sub = 'explore' | 'calculate';
 
 const SUB_LABELS: Record<Sub, string> = {
-  explore:   '🔍  Explore',
-  calculate: '🧮  Calculate',
+  explore:   'Explore',
+  calculate: 'Calculate',
 };
 
 export function IntervalsTab() {

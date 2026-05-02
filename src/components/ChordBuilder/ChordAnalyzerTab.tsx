@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Key, Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import { detectKey } from '../../utils/progressionHelper';
 import type { ChordInProgression } from '../../types/music';
+import { IconSearch } from '../Icons';
 import { T, card } from '../../theme';
 
 interface Props {
@@ -98,7 +99,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
   if (progression.length === 0) {
     return (
       <div style={card({ padding: '32px 16px', textAlign: 'center' })}>
-        <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
+        <div style={{ marginBottom: 10, color: T.textMuted }}><IconSearch size={32} /></div>
         <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>No progression to analyze</div>
         <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.5 }}>
           Build a chord progression in the By Ear or By Name tab,<br />then come back here to analyze it.

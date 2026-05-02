@@ -6,8 +6,8 @@ import { T } from '../../theme';
 type Sub = 'tuner' | 'metronome';
 
 const SUB_LABELS: Record<Sub, string> = {
-  tuner:     '🎙️ Tuner',
-  metronome: '🥁 Metronome',
+  tuner:     'Tuner',
+  metronome: 'Metronome',
 };
 
 export const ToolsTab: React.FC = () => {

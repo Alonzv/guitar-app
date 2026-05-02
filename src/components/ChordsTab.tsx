@@ -25,9 +25,9 @@ interface Props {
 }
 
 const SUB_LABELS: Record<Sub, string> = {
-  builder:  '🎸  By Ear',
-  finder:   '🎹  By Name',
-  analyzer: '🔍  Analyze',
+  builder:  'By Ear',
+  finder:   'By Name',
+  analyzer: 'Analyze',
 };
 
 export const ChordsTab: React.FC<Props> = ({

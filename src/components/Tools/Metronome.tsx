@@ -257,7 +257,7 @@ export const Metronome: React.FC = () => {
             transition: 'background 0.1s',
           }}
         >
-          🥁 Tap Tempo
+          Tap Tempo
         </button>
 
         {/* Subdivision buttons */}

@@ -9,6 +9,7 @@ import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { suggestNextChords, suggestCustomChords, detectKey } from '../../utils/progressionHelper';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { playChord } from '../../utils/audioPlayback';
+import { IconClipboard, IconLink } from '../Icons';
 import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
 
@@ -330,7 +331,7 @@ export function ChordBuilderTab({
                   cursor: 'pointer', fontWeight: 600, transition: 'filter 0.15s',
                 }}
               >
-                {copied ? '✓ Copied' : '📋 Copy'}
+                {copied ? '✓ Copied' : <><IconClipboard size={12} /> Copy</>}
               </button>
               <button
                 onClick={handleExportPDF}
@@ -342,7 +343,7 @@ export function ChordBuilderTab({
                   transition: 'filter 0.15s',
                 }}
               >
-                {exporting ? '…' : '📄 PDF'}
+                {exporting ? '…' : 'PDF'}
               </button>
             </div>
           </div>
@@ -358,7 +359,7 @@ export function ChordBuilderTab({
                 transition: 'all 0.15s',
               }}
             >
-              {shared ? '✓ Copied!' : '🔗 Share Link'}
+              {shared ? '✓ Copied!' : <><IconLink size={12} /> Share Link</>}
             </button>
           </div>
 

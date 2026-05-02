@@ -217,7 +217,7 @@ export function ScaleExplorer() {
                 background: viewMode === v ? T.primary : T.bgCard,
                 color: viewMode === v ? T.text : T.textMuted,
               }}>
-                {v === 'fretboard' ? '🎸 Fretboard' : '📋 Tab'}
+                {v === 'fretboard' ? 'Fretboard' : 'Tab'}
               </button>
             ))}
           </div>

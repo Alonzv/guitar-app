@@ -231,11 +231,11 @@ const ProgressionCard: React.FC<{
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1 }}>
           <div dir={nameRTL ? 'rtl' : 'ltr'} style={{ fontSize: 14, fontWeight: 700, color: T.text, textAlign: nameRTL ? 'right' : 'left' }}>{prog.name}</div>
-          <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>🎵 {prog.key}</div>
+          <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{prog.key}</div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <button onClick={onSave} style={{ padding: '4px 9px', borderRadius: 7, border: `1px solid ${T.secondary}22`, background: justSaved ? T.secondary : T.secondary + '18', color: justSaved ? T.white : T.secondary, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
-            {justSaved ? '✓ Saved' : '💾 Save'}
+            {justSaved ? '✓ Saved' : 'Save'}
           </button>
           <button onClick={onLoad} style={{ padding: '4px 12px', borderRadius: 7, border: 'none', background: T.primary, color: T.white, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>← Load</button>
         </div>
@@ -250,11 +250,11 @@ const ProgressionCard: React.FC<{
           {isPlaying ? '⏹ Stop' : '▶ Play'}
         </button>
         <span style={actionBtn(T.textMuted)}>✏ Explain</span>
-        <span style={actionBtn(T.textMuted)}>🌙 Minor</span>
-        <span style={actionBtn(T.textMuted)}>🎷 Jazzy</span>
+        <span style={actionBtn(T.textMuted)}>Minor</span>
+        <span style={actionBtn(T.textMuted)}>Jazzy</span>
         <span style={actionBtn(T.textMuted)}>⬇ Simpler</span>
         {onNavigateToLyrics && (
-          <span style={actionBtn(T.primary)}>📝 → Lyrics</span>
+          <span style={actionBtn(T.primary)}>→ Lyrics</span>
         )}
       </div>
 
@@ -535,7 +535,7 @@ export const AIProgressionTab: React.FC<Props> = ({ onLoadProgression, onSaveSon
 
   const isEmpty = messages.length === 0;
 
-  const COMPLEXITY_LABELS: Record<Complexity, string> = { simple: '🎸 Simple', medium: '🎵 Medium', complex: '🎶 Complex' };
+  const COMPLEXITY_LABELS: Record<Complexity, string> = { simple: 'Simple', medium: 'Medium', complex: 'Complex' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'clamp(400px, 60vh, 700px)', gap: 10 }}>

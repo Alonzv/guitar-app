@@ -171,9 +171,9 @@ export function LibraryTab({
   const [section, setSection] = useState<Section>('progressions');
 
   const SECTIONS: { id: Section; label: string; count: number }[] = [
-    { id: 'progressions', label: '🎵 Progressions', count: songs.length },
-    { id: 'songs',        label: '📝 Songs',         count: savedLyrics.length },
-    { id: 'harmonies',    label: '🎼 Harmonies',     count: savedHarmonies.length },
+    { id: 'progressions', label: 'Progressions', count: songs.length },
+    { id: 'songs',        label: 'Songs',         count: savedLyrics.length },
+    { id: 'harmonies',    label: 'Harmonies',     count: savedHarmonies.length },
   ];
 
   return (
@@ -212,7 +212,7 @@ export function LibraryTab({
           <SectionHeader label="Saved Progressions" count={songs.length} />
           {songs.length === 0 ? (
             <EmptyState
-              icon="🎵"
+              icon="♪"
               text={"No saved progressions yet.\nGo to Chords → build a progression → press 💾 Save."}
             />
           ) : (
@@ -239,7 +239,7 @@ export function LibraryTab({
           <SectionHeader label="Saved Songs" count={savedLyrics.length} />
           {savedLyrics.length === 0 ? (
             <EmptyState
-              icon="📝"
+              icon="✎"
               text={"No saved songs yet.\nGo to Lyrics → write your song → press 💾 Save."}
             />
           ) : (
@@ -270,7 +270,7 @@ export function LibraryTab({
           <SectionHeader label="Saved Harmonies" count={savedHarmonies.length} />
           {savedHarmonies.length === 0 ? (
             <EmptyState
-              icon="🎼"
+              icon="≋"
               text={"No saved harmonies yet.\nGo to Scales → detect a scale → press 💾 Save."}
             />
           ) : (

@@ -73,10 +73,10 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
-            { icon: '🎼', text: 'Scales tab auto-detects scales from your progression' },
-            { icon: '📝', text: 'Lyrics tab lets you write lead sheets with chords above words' },
-            { icon: '🎤', text: 'Tuner listens to your guitar in real time' },
-            { icon: '🥁', text: 'Metronome keeps your practice in time' },
+            { icon: '♪', text: 'Scales tab auto-detects scales from your progression' },
+            { icon: '✎', text: 'Lyrics tab lets you write lead sheets with chords above words' },
+            { icon: '⊙', text: 'Tuner listens to your guitar in real time' },
+            { icon: '♩', text: 'Metronome keeps your practice in time' },
           ].map(({ icon, text }) => (
             <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 22, flexShrink: 0 }}>{icon}</span>

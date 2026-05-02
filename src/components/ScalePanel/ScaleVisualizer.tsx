@@ -128,7 +128,7 @@ export const ScaleVisualizer: React.FC<Props> = ({ scale }) => {
             background: viewMode === v ? T.secondary : T.bgCard,
             color: viewMode === v ? T.white : T.textMuted,
           }}>
-            {v === 'fretboard' ? '🎸 Fretboard' : '📋 Tab'}
+            {v === 'fretboard' ? 'Fretboard' : 'Tab'}
           </button>
         ))}
       </div>

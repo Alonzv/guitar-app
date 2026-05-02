@@ -137,6 +137,7 @@ body.dark {
 .gc-tabs {
   display: flex;
   gap: 5px;
+  justify-content: center;
   overflow-x: auto;
   /* Extra top padding absorbs the hover translateY(-2px) so tabs don't clip */
   padding-top: 4px;
@@ -150,30 +151,29 @@ body.dark {
 
 /* Each tab button — layout only; colors stay inline */
 .gc-tab {
-  flex: 1;                      /* all 6 fill the bar equally on mobile */
-  min-width: 44px;
+  flex: 0 0 auto;
+  min-width: 110px;
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
   font-family: inherit;
+  padding: 0 18px;
 }
 @media (min-width: 480px) {
   .gc-tab {
-    flex: 1 0 auto;             /* natural width, scrolls if needed */
-    font-size: 12px;
-    gap: 5px;
+    min-width: 130px;
+    font-size: 13px;
+    gap: 7px;
+    padding: 0 22px;
   }
 }
 
-/* Label text hidden on small screens — only emoji shown */
-.gc-tab-label { display: none; }
-@media (min-width: 480px) {
-  .gc-tab-label { display: inline; }
-}
+/* Label text always visible (no icon-only mode needed without emoji) */
+.gc-tab-label { display: inline; }
 
 /* Hover lift */
 .gc-tab:hover {

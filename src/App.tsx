@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 import { TheoryTab } from './components/TheoryTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
 import { Onboarding } from './components/Onboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { IconNote, IconSliders, IconMoon, IconSun } from './components/Icons';
 import { T } from './theme';
 
 type Tab = 'theory' | 'tools';
@@ -35,9 +36,10 @@ function decodeSharedProgression(): ChordInProgression[] | null {
   } catch { return null; }
 }
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'theory', label: 'Theory', icon: '🎼' },
-  { id: 'tools',  label: 'Tools',  icon: '🔧' },
+type TabDef = { id: Tab; label: string; icon: React.ReactNode };
+const TABS: TabDef[] = [
+  { id: 'theory', label: 'Theory', icon: <IconNote size={18} /> },
+  { id: 'tools',  label: 'Tools',  icon: <IconSliders size={18} /> },
 ];
 
 export default function App() {
@@ -254,7 +256,7 @@ export default function App() {
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bgCard; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{tab.icon}</span>
+                  <span style={{ lineHeight: 1, flexShrink: 0 }}>{tab.icon}</span>
                   <span>{tab.label}</span>
                 </button>
               );
@@ -266,7 +268,7 @@ export default function App() {
               onClick={() => setDarkMode(d => !d)}
               style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`, background: darkMode ? '#2D404F' : '#4A6A80', fontSize: 15, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            >{darkMode ? '☀️' : '🌙'}</button>
+            >{darkMode ? <IconSun size={15} /> : <IconMoon size={15} />}</button>
             <button
               onClick={() => setShowOnboarding(true)}
               style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
@@ -291,7 +293,7 @@ export default function App() {
 
           {showSharedBanner && sharedProgression && (
             <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>🎵 Shared progression — {sharedProgression.length} chords</span>
+              <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 8, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Load</button>
                 <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '4px 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
@@ -315,7 +317,7 @@ export default function App() {
 
       {showSharedBanner && sharedProgression && (
         <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>🎵 Shared progression — {sharedProgression.length} chords</span>
+          <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Load</button>
             <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
@@ -329,7 +331,7 @@ export default function App() {
             <span style={{ color: '#3D5A6C' }}>Scale</span><span style={{ color: '#E8736A' }}>Up</span>
           </span>
           <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
-            <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`, background: darkMode ? '#2D404F' : '#4A6A80', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? '☀️' : '🌙'}</button>
+            <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${darkMode ? '#6A8FAA' : '#4A6A80'}`, background: darkMode ? '#2D404F' : '#4A6A80', color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0, display:'flex', alignItems:'center', justifyContent:'center' }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <IconSun size={13} /> : <IconMoon size={13} />}</button>
             <button onClick={() => setShowOnboarding(true)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title="Help">?</button>
           </div>
         </div>
@@ -341,7 +343,7 @@ export default function App() {
             const active = activeTab === tab.id;
             return (
               <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 10, border: active ? 'none' : `1px solid ${T.border}`, background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, boxShadow: active ? `0 2px 8px rgba(196,73,0,0.4)` : 'none', transition: 'all 0.15s' }}>
-                <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                {tab.icon}
                 <span className="gc-tab-label">{tab.label}</span>
               </button>
             );

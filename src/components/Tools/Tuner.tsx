@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { T, card } from '../../theme';
 import type { Tuning } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
+import { IconMic } from '../Icons';
 
 const noteName = (s: string) => s.replace(/\d/g, '');
 
@@ -282,7 +283,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
             transition: 'background 0.2s',
           }}
         >
-          {listening ? '■  Stop' : '🎤  Start Tuning'}
+          {listening ? '■  Stop' : <><IconMic size={14} />  Start Tuning</>}
         </button>
       </div>
     </div>

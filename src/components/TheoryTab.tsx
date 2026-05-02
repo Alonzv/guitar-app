@@ -1,20 +1,21 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ChordsTab } from './ChordsTab';
 import { ScalesTab } from './ScalePanel/ScalesTab';
 import { TriadsGenerator } from './Triads/TriadsGenerator';
 import { IntervalsTab } from './Intervals/IntervalsTab';
 import { WheelTab } from './Tools/WheelTab';
+import { IconChord, IconSteps, IconTriangle, IconInterval, IconWheel } from './Icons';
 import type { ChordInProgression, Tuning } from '../types/music';
 import { T } from '../theme';
 
 type Sub = 'chords' | 'scales' | 'triads' | 'intervals' | 'wheel';
 
-const SUBS: { id: Sub; label: string; icon: string }[] = [
-  { id: 'chords',    label: 'Chords',    icon: '🎸' },
-  { id: 'scales',    label: 'Scales',    icon: '🎼' },
-  { id: 'triads',    label: 'Triads',    icon: '🔺' },
-  { id: 'intervals', label: 'Intervals', icon: '🎵' },
-  { id: 'wheel',     label: 'Wheel',     icon: '⭕' },
+const SUBS: { id: Sub; label: string; icon: React.ReactNode }[] = [
+  { id: 'chords',    label: 'Chords',    icon: <IconChord size={14} />    },
+  { id: 'scales',    label: 'Scales',    icon: <IconSteps size={14} />    },
+  { id: 'triads',    label: 'Triads',    icon: <IconTriangle size={14} /> },
+  { id: 'intervals', label: 'Intervals', icon: <IconInterval size={14} /> },
+  { id: 'wheel',     label: 'Wheel',     icon: <IconWheel size={14} />    },
 ];
 
 interface Props {
@@ -75,7 +76,7 @@ export function TheoryTab({
                 borderRight: `1px solid ${T.border}`,
               }}
             >
-              <span style={{ fontSize: 14 }}>{s.icon}</span>
+              {s.icon}
               <span>{s.label}</span>
             </button>
           );
