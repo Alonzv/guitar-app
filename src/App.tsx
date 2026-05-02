@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS, CHROMATIC } from './utils/musicTheory';
-import { ChordsTab } from './components/ChordsTab';
 import { TheoryTab } from './components/TheoryTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
 import { Onboarding } from './components/Onboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { T } from './theme';
 
-type Tab = 'chords' | 'theory' | 'tools';
+type Tab = 'theory' | 'tools';
 
 const FLAT_TO_SHARP: Record<string, string> = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
 
@@ -37,13 +36,12 @@ function decodeSharedProgression(): ChordInProgression[] | null {
 }
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'chords', label: 'Chords', icon: '🎸' },
   { id: 'theory', label: 'Theory', icon: '🎼' },
   { id: 'tools',  label: 'Tools',  icon: '🔧' },
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('chords');
+  const [activeTab, setActiveTab] = useState<Tab>('theory');
 
   // ── Dark mode ──────────────────────────────────────────────────────────────
   const [darkMode, setDarkMode] = useState(() => {
@@ -115,7 +113,7 @@ export default function App() {
   const [showSharedBanner, setShowSharedBanner] = useState(() => !!decodeSharedProgression());
 
   const handleLoadShared = () => {
-    if (sharedProgression) { pushHistory(sharedProgression); setActiveTab('chords'); }
+    if (sharedProgression) { pushHistory(sharedProgression); setActiveTab('theory'); }
     setShowSharedBanner(false);
     history.replaceState(null, '', window.location.pathname);
   };
@@ -170,31 +168,23 @@ export default function App() {
   // ── Shared tab content ─────────────────────────────────────────────────────
   const tabContent = (
     <>
-      {activeTab === 'chords' && (
-        <ErrorBoundary label="Chords">
-          <ChordsTab
+      {activeTab === 'theory' && (
+        <ErrorBoundary label="Theory">
+          <TheoryTab
+            tuning={tuning}
+            onTuningChange={setTuning}
+            capo={capo}
+            onCapoChange={setCapo}
             progression={progression}
             onAddToProgression={(item) => pushHistory([...progression, item])}
             onRemoveFromProgression={(id) => pushHistory(progression.filter(c => c.id !== id))}
             onClearProgression={() => pushHistory([])}
             onReorderProgression={handleReorderProgression}
             onTransposeProgression={handleTransposeProgression}
-            tuning={tuning}
-            onTuningChange={setTuning}
-            capo={capo}
-            onCapoChange={setCapo}
             canUndo={undoStack.length > 0}
             canRedo={redoStack.length > 0}
             onUndo={handleUndo}
             onRedo={handleRedo}
-          />
-        </ErrorBoundary>
-      )}
-      {activeTab === 'theory' && (
-        <ErrorBoundary label="Theory">
-          <TheoryTab
-            tuning={tuning}
-            onAddToProgression={(item) => pushHistory([...progression, item])}
           />
         </ErrorBoundary>
       )}
