@@ -161,6 +161,7 @@ export function TriadsGenerator() {
   const [selectedInversion,  setSelectedInversion]  = useState<0 | 1 | 2 | null>(null);
   const [selectedArea,       setSelectedArea]       = useState<FretArea>('all');
   const [expandedIdx,        setExpandedIdx]        = useState<number | null>(null);
+  const [filtersOpen,        setFiltersOpen]        = useState(false);
 
   const def   = TRIADS[triadType];
   const notes = useMemo(() => getTriadNotes(root, def.intervals), [root, def]);
@@ -319,41 +320,72 @@ export function TriadsGenerator() {
         </div>
       </div>
 
-      {/* ── Filters ──────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+      {/* ── Filters (collapsible) ────────────────────────────────────────── */}
+      {(() => {
+        const activeCount =
+          (selectedSet        !== null ? 1 : 0) +
+          (selectedInversion  !== null ? 1 : 0) +
+          (selectedArea       !== 'all' ? 1 : 0);
+        return (
+          <div style={{ ...card({ padding: 0 }), overflow: 'hidden' }}>
+            {/* Toggle header */}
+            <button
+              onClick={() => setFiltersOpen(o => !o)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '9px 12px', border: 'none', background: 'transparent', cursor: 'pointer',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Filters</span>
+                {activeCount > 0 && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color: T.primary,
+                    background: T.primaryBg, border: `1px solid ${T.primary}55`,
+                    padding: '1px 6px', borderRadius: 10,
+                  }}>{activeCount} active</span>
+                )}
+              </div>
+              <span style={{ fontSize: 12, color: T.textMuted, transform: filtersOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
+            </button>
 
-        {/* Strings */}
-        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Strings:</span>
-          {pill(selectedSet === null, () => setSelectedSet(null), 'All')}
-          {STRING_SETS.map((ss, i) => pill(
-            selectedSet === i,
-            () => setSelectedSet(selectedSet === i ? null : i),
-            ss.label,
-          ))}
-        </div>
+            {/* Filter rows */}
+            {filtersOpen && (
+              <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: `1px solid ${T.border}` }}>
 
-        {/* Inversion */}
-        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Inversion:</span>
-          {pill(selectedInversion === null, () => setSelectedInversion(null), 'All')}
-          {([0, 1, 2] as const).map(inv => pill(
-            selectedInversion === inv,
-            () => setSelectedInversion(selectedInversion === inv ? null : inv),
-            INV_SHORT_LABELS[inv],
-          ))}
-        </div>
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', paddingTop: 10 }}>
+                  <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Strings:</span>
+                  {pill(selectedSet === null, () => setSelectedSet(null), 'All')}
+                  {STRING_SETS.map((ss, i) => pill(
+                    selectedSet === i,
+                    () => setSelectedSet(selectedSet === i ? null : i),
+                    ss.label,
+                  ))}
+                </div>
 
-        {/* Fret area */}
-        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Position:</span>
-          {FRET_AREAS.map(a => pill(
-            selectedArea === a.id,
-            () => setSelectedArea(a.id),
-            a.label,
-          ))}
-        </div>
-      </div>
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Inversion:</span>
+                  {pill(selectedInversion === null, () => setSelectedInversion(null), 'All')}
+                  {([0, 1, 2] as const).map(inv => pill(
+                    selectedInversion === inv,
+                    () => setSelectedInversion(selectedInversion === inv ? null : inv),
+                    INV_SHORT_LABELS[inv],
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Position:</span>
+                  {FRET_AREAS.map(a => pill(
+                    selectedArea === a.id,
+                    () => setSelectedArea(a.id),
+                    a.label,
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Shape grid ───────────────────────────────────────────────────── */}
       {visibleSets.map(setIdx => {
