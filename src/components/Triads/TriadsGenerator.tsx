@@ -322,10 +322,11 @@ export function TriadsGenerator() {
 
       {/* ── Filters (collapsible) ────────────────────────────────────────── */}
       {(() => {
-        const activeCount =
-          (selectedSet        !== null ? 1 : 0) +
-          (selectedInversion  !== null ? 1 : 0) +
-          (selectedArea       !== 'all' ? 1 : 0);
+        const activeLabels = [
+          selectedSet       !== null  ? STRING_SETS[selectedSet].label   : null,
+          selectedInversion !== null  ? INV_SHORT_LABELS[selectedInversion] : null,
+          selectedArea      !== 'all' ? selectedArea                      : null,
+        ].filter(Boolean) as string[];
         return (
           <div style={{ ...card({ padding: 0 }), overflow: 'hidden' }}>
             {/* Toggle header */}
@@ -338,12 +339,12 @@ export function TriadsGenerator() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Filters</span>
-                {activeCount > 0 && (
+                {activeLabels.length > 0 && (
                   <span style={{
                     fontSize: 10, fontWeight: 700, color: T.primary,
                     background: T.primaryBg, border: `1px solid ${T.primary}55`,
                     padding: '1px 6px', borderRadius: 10,
-                  }}>{activeCount} active</span>
+                  }}>{activeLabels.join(' · ')}</span>
                 )}
               </div>
               <span style={{ fontSize: 12, color: T.textMuted, transform: filtersOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
