@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import type { ChordInProgression, FretPosition } from '../../types/music';
+import type { ChordInProgression, FretPosition, Tuning } from '../../types/music';
 import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
 import { ChordStructure } from '../ChordBuilder/ChordStructure';
+import { ProgressionPanel } from '../ChordBuilder/ProgressionPanel';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { T, card, btn } from '../../theme';
@@ -9,6 +10,17 @@ import { TUNINGS } from '../../utils/musicTheory';
 
 interface Props {
   onAddToProgression: (item: ChordInProgression) => void;
+  progression: ChordInProgression[];
+  onRemoveFromProgression: (id: string) => void;
+  onClearProgression: () => void;
+  onReorderProgression: (id: string, dir: -1 | 1) => void;
+  onTransposeProgression: (semitones: number) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  tuning: Tuning;
+  capo: number;
 }
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -77,14 +89,20 @@ const SELECT_STYLE: React.CSSProperties = {
   outline: 'none',
 };
 
-export function ChordPickerTab({ onAddToProgression }: Props) {
+export function ChordPickerTab({
+  onAddToProgression, progression,
+  onRemoveFromProgression, onClearProgression, onReorderProgression, onTransposeProgression,
+  canUndo, canRedo, onUndo, onRedo,
+  tuning: tuningProp, capo,
+}: Props) {
   const [selectedRoot,      setSelectedRoot]      = useState<string | null>(null);
   const [selectedTriad,     setSelectedTriad]     = useState<string | null>(null);
   const [selectedExtension, setSelectedExtension] = useState<string>('');
   const [pickerDots,        setPickerDots]        = useState<FretPosition[]>([]);
   const [selectedVoicingIndex, setSelectedVoicingIndex] = useState<number | undefined>(undefined);
-  const [tuningName, setTuningName] = useState<string>(TUNINGS[0].name);
-  const tuning = TUNINGS.find(t => t.name === tuningName)?.notes ?? TUNINGS[0].notes;
+  const [tuningName, setTuningName] = useState<string>(tuningProp?.name ?? TUNINGS[0].name);
+  const tuningObj = TUNINGS.find(t => t.name === tuningName) ?? TUNINGS[0];
+  const tuning = tuningObj.notes;
 
   const suffix = selectedTriad
     ? (SUFFIX_MAP[selectedTriad]?.[selectedExtension] ?? SUFFIX_MAP[selectedTriad]?.[''] ?? '')
@@ -283,6 +301,18 @@ export function ChordPickerTab({ onAddToProgression }: Props) {
           onSelect={handleVoicingSelect}
         />
       )}
+
+      {/* ── Progression ── */}
+      <ProgressionPanel
+        progression={progression}
+        onAddToProgression={onAddToProgression}
+        onRemoveFromProgression={onRemoveFromProgression}
+        onClearProgression={onClearProgression}
+        onReorderProgression={onReorderProgression}
+        onTransposeProgression={onTransposeProgression}
+        canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
+        tuning={tuningObj} capo={capo}
+      />
     </div>
   );
 }
