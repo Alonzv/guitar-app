@@ -91,11 +91,22 @@ export function findChordVoicings(
   // Sort by average fret position so we can pick a neck-spread selection
   allVoicings.sort((a, b) => avgFret(a) - avgFret(b));
 
-  // Pick `count` evenly-distributed voicings across the sorted list
-  const step = count <= 1 ? 0 : (allVoicings.length - 1) / (count - 1);
-  const result: FretPosition[][] = [];
-  for (let i = 0; i < count; i++) {
-    result.push(allVoicings[Math.round(i * step)]);
+  // Always lead with the fullest (most strings), lowest-fret voicing —
+  // this guarantees the standard barre chord is never skipped by sampling.
+  const maxStrings = Math.max(...allVoicings.map(v => v.length));
+  const primaryIdx = allVoicings.findIndex(v => v.length === maxStrings);
+  const primary = allVoicings[primaryIdx];
+  const rest = allVoicings.filter((_, i) => i !== primaryIdx);
+
+  const result: FretPosition[][] = [primary];
+  const need = count - 1;
+  if (rest.length <= need) {
+    result.push(...rest);
+  } else {
+    const step = (rest.length - 1) / need;
+    for (let i = 0; i < need; i++) {
+      result.push(rest[Math.round(i * step)]);
+    }
   }
   return result;
 }
