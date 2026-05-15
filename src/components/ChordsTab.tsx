@@ -74,7 +74,16 @@ export const ChordsTab: React.FC<Props> = ({
         />
       )}
       {sub === 'finder' && (
-        <ChordPickerTab onAddToProgression={onAddToProgression} />
+        <ChordPickerTab
+          onAddToProgression={onAddToProgression}
+          progression={progression}
+          onRemoveFromProgression={onRemoveFromProgression}
+          onClearProgression={onClearProgression}
+          onReorderProgression={onReorderProgression}
+          onTransposeProgression={onTransposeProgression}
+          canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
+          tuning={tuning} capo={capo}
+        />
       )}
       {sub === 'analyzer' && (
         <ChordAnalyzerTab progression={progression} />
