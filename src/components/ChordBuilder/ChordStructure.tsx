@@ -2,6 +2,10 @@ import React from 'react';
 import { Chord, Note } from '@tonaljs/tonal';
 import { T } from '../../theme';
 
+function simplifyNote(note: string): string {
+  return Note.simplify(note) || note;
+}
+
 const INTERVAL_LABEL: Record<string, string> = {
   '1P': '1', '2m': '♭2', '2M': '2', '2A': '♯2',
   '3m': '♭3', '3M': '3', '4P': '4', '4A': '♯4',
@@ -60,7 +64,7 @@ export const ChordStructure: React.FC<Props> = ({ chordName }) => {
           <React.Fragment key={i}>
             {i > 0 && <span style={{ fontSize: 11, color: T.textDim }}>·</span>}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1 }}>{note}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1 }}>{simplifyNote(note)}</span>
               <span style={{ fontSize: 10, fontWeight: 700, color, opacity: 0.85, lineHeight: 1 }}>{deg}</span>
               {name && <span style={{ fontSize: 9, color: T.textDim, lineHeight: 1, whiteSpace: 'nowrap' }}>{name}</span>}
             </div>
