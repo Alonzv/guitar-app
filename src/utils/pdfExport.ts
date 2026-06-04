@@ -1,4 +1,4 @@
-import type { ChordInProgression, ChordPlacement, FretPosition } from '../types/music';
+import type { ChordInProgression, FretPosition } from '../types/music';
 import { formatChordName } from './chordIdentifier';
 import { fretToNote } from './musicTheory';
 
@@ -10,66 +10,6 @@ function escapeHtml(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function buildLeadSheetHTML(
-  title: string,
-  composer: string,
-  writer: string,
-  lyricsText: string,
-  lyricsChords: ChordPlacement[],
-): string {
-  const chordMap = new Map<number, string>();
-  lyricsChords.forEach(c => chordMap.set(c.wordIndex, c.chordName));
-
-  const lines = lyricsText.split('\n');
-  let globalIdx = 0;
-  let bodyHTML = '';
-
-  for (const line of lines) {
-    const words = line.split(/\s+/).filter(Boolean);
-    if (words.length === 0) {
-      bodyHTML += '<div style="height:10px"></div>';
-      continue;
-    }
-
-    bodyHTML += '<div style="display:flex;flex-wrap:wrap;direction:rtl;gap:2px 10px;margin-bottom:6px;">';
-    for (const word of words) {
-      const chord = chordMap.get(globalIdx);
-      bodyHTML += `
-        <div style="display:inline-flex;flex-direction:column;align-items:flex-end;">
-          <span style="font-size:10px;font-weight:700;color:#C44900;min-height:14px;direction:ltr;display:block;">
-            ${chord ? escapeHtml(chord) : ''}
-          </span>
-          <span style="font-size:13px;color:#111;">${escapeHtml(word)}</span>
-        </div>`;
-      globalIdx++;
-    }
-    bodyHTML += '</div>';
-  }
-
-  const metaHTML = [
-    composer ? `<div style="font-size:11px;color:#555;">Composer: ${escapeHtml(composer)}</div>` : '',
-    writer   ? `<div style="font-size:11px;color:#555;">Lyricist: ${escapeHtml(writer)}</div>` : '',
-  ].filter(Boolean).join('');
-
-  return `
-    <div style="
-      font-family: Arial, Helvetica, sans-serif;
-      padding: 28px 32px;
-      width: 680px;
-      background: #ffffff;
-      color: #111;
-      direction: rtl;
-      box-sizing: border-box;
-    ">
-      <h1 style="font-size:20px;font-weight:800;margin:0 0 4px;color:#111;">
-        ${escapeHtml(title || 'Song')}
-      </h1>
-      ${metaHTML}
-      <div style="height:2px;background:#C44900;margin:12px 0 18px;"></div>
-      ${bodyHTML}
-    </div>`;
 }
 
 function buildProgressionHTML(
@@ -131,20 +71,16 @@ function fretboardSVGHtml(voicing: FretPosition[]): string {
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
 
-  // Fret lines
   for (let i = 0; i <= fretCount; i++) {
     const isNut = i === 0 && displayMin === 0;
     svg += `<line x1="${LEFT + i * fretSp}" y1="${topY}" x2="${LEFT + i * fretSp}" y2="${topY + (STRING_COUNT - 1) * strSp}" stroke="${isNut ? '#2E4A5A' : '#CDBF96'}" stroke-width="${isNut ? 3 : 1}" opacity="${isNut ? 0.7 : 1}"/>`;
   }
-  // String lines
   for (let s = 0; s < STRING_COUNT; s++) {
     svg += `<line x1="${LEFT}" y1="${sy(s)}" x2="${LEFT + fretCount * fretSp}" y2="${sy(s)}" stroke="#629677" stroke-width="${0.7 + s * 0.18}" opacity="0.5"/>`;
   }
-  // Position label
   if (displayMin > 0) {
     svg += `<text x="${LEFT - 4}" y="${topY + (STRING_COUNT - 1) * strSp / 2 + 4}" text-anchor="end" font-size="7" fill="rgba(46,74,90,0.58)">${displayMin + 1}fr</text>`;
   }
-  // Dots
   for (const p of voicing) {
     const cx = fx(p.fret), cy = sy(p.string);
     const note = fretToNote(p.string, p.fret);
@@ -158,16 +94,14 @@ function fretboardSVGHtml(voicing: FretPosition[]): string {
 
 // ── Shared renderer ───────────────────────────────────────
 
-const RENDER_WIDTH = 680;   // source HTML width in px
-const SCALE = 2;            // retina / hi-DPI multiplier
+const RENDER_WIDTH = 680;
+const SCALE = 2;
 const A4_W_MM = 210;
 const A4_H_MM = 297;
 
-// How many source-px of the element correspond to one A4 page height?
-const SRC_PX_PER_PAGE = A4_H_MM * (RENDER_WIDTH / A4_W_MM);   // ≈ 961 px
+const SRC_PX_PER_PAGE = A4_H_MM * (RENDER_WIDTH / A4_W_MM);
 
 async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
-  // 1. Dark overlay — hides the render div from the user
   const overlay = document.createElement('div');
   Object.assign(overlay.style, {
     position: 'fixed',
@@ -184,7 +118,6 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
   overlay.textContent = 'Creating PDF…';
   document.body.appendChild(overlay);
 
-  // 2. Render container — positioned in viewport (z-index below overlay)
   const container = document.createElement('div');
   Object.assign(container.style, {
     position: 'fixed',
@@ -198,7 +131,6 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
   document.body.appendChild(container);
 
   try {
-    // Wait for fonts so Hebrew characters render correctly
     await document.fonts.ready;
 
     const target = (container.firstElementChild as HTMLElement) ?? container;
@@ -216,7 +148,6 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
       windowWidth: RENDER_WIDTH,
     });
 
-    // 3. Slice canvas into A4 pages
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const canvasPixelsPerPage = SRC_PX_PER_PAGE * SCALE;
     const totalPages = Math.ceil(canvas.height / canvasPixelsPerPage);
@@ -227,7 +158,6 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
       const yStart = page * canvasPixelsPerPage;
       const sliceHeightPx = Math.min(canvasPixelsPerPage, canvas.height - yStart);
 
-      // Draw slice onto a temporary canvas
       const slice = document.createElement('canvas');
       slice.width  = canvas.width;
       slice.height = sliceHeightPx;
@@ -237,7 +167,6 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
       ctx.drawImage(canvas, 0, yStart, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
 
       const imgData = slice.toDataURL('image/jpeg', 0.93);
-      // Image height in mm = (sliceHeight in src-px) × (A4_W_MM / RENDER_WIDTH)
       const imgH_mm = (sliceHeightPx / SCALE) * (A4_W_MM / RENDER_WIDTH);
       pdf.addImage(imgData, 'JPEG', 0, 0, A4_W_MM, imgH_mm);
     }
@@ -249,99 +178,13 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
   }
 }
 
-// ── Harmony Builder PDF ───────────────────────────────────
-
-function buildHarmonyHTML(
-  harmonyLabel: string,
-  stringLabels: string[],
-  originalLines: string[],
-  harmonyLines: string[],
-): string {
-  const tabRow = (label: string, content: string, color: string) => `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:3px;">
-      <span style="width:14px;font-weight:700;font-size:13px;color:${color};flex-shrink:0;">${escapeHtml(label)}</span>
-      <span style="color:#888;font-size:13px;">|</span>
-      <span style="font-size:13px;color:#222;letter-spacing:0.5px;">${escapeHtml(content || '--')}</span>
-    </div>`;
-
-  const originalBlock = stringLabels
-    .map((lbl, i) => tabRow(lbl, originalLines[i] || '', '#2E4A5A'))
-    .join('');
-
-  const harmonyBlock = stringLabels
-    .map((lbl, i) => tabRow(lbl, harmonyLines[i] || '', '#629677'))
-    .join('');
-
-  return `
-    <div style="
-      font-family: 'Courier New', Courier, monospace;
-      padding: 36px 40px;
-      width: 680px;
-      background: #ffffff;
-      color: #111;
-      box-sizing: border-box;
-    ">
-      <div style="font-family:Arial,Helvetica,sans-serif;">
-        <h1 style="font-size:22px;font-weight:800;margin:0 0 4px;color:#2E4A5A;">
-          ScaleUp — Harmony Builder
-        </h1>
-        <div style="font-size:13px;color:#629677;font-weight:600;margin-bottom:14px;">
-          Harmony type: ${escapeHtml(harmonyLabel)}
-        </div>
-        <div style="height:2px;background:#C44900;margin-bottom:24px;"></div>
-      </div>
-
-      <div style="margin-bottom:24px;">
-        <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;
-          color:#888;letter-spacing:1px;margin-bottom:8px;">ORIGINAL RIFF</div>
-        <div style="background:#F7F0DC;border-radius:8px;padding:14px 16px;border:1px solid #CDBF96;">
-          ${originalBlock}
-        </div>
-      </div>
-
-      <div>
-        <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;
-          color:#629677;letter-spacing:1px;margin-bottom:8px;">HARMONY</div>
-        <div style="background:#F0F9F5;border-radius:8px;padding:14px 16px;border:1px solid #629677;">
-          ${harmonyBlock}
-        </div>
-      </div>
-
-      <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#aaa;margin-top:28px;">
-        Generated by ScaleUp · scaleup.app
-      </div>
-    </div>`;
-}
-
-export async function exportHarmonyPDF(
-  harmonyLabel: string,
-  stringLabels: string[],
-  originalLines: string[],
-  harmonyLines: string[],
-): Promise<void> {
-  const html = buildHarmonyHTML(harmonyLabel, stringLabels, originalLines, harmonyLines);
-  await renderHTMLToPDF(html, 'harmony.pdf');
-}
-
 // ── Public API ────────────────────────────────────────────
-
-export async function exportLyricsPDF(
-  title: string,
-  composer: string,
-  writer: string,
-  lyricsText: string,
-  lyricsChords: ChordPlacement[],
-): Promise<void> {
-  const html = buildLeadSheetHTML(title, composer, writer, lyricsText, lyricsChords);
-  const filename = `${(title || 'song').replace(/[^a-zA-Z0-9\u0590-\u05FF ]/g, '_')}.pdf`;
-  await renderHTMLToPDF(html, filename);
-}
 
 export async function exportProgressionPDF(
   name: string,
   progression: ChordInProgression[],
 ): Promise<void> {
   const html = buildProgressionHTML(name, progression);
-  const filename = `${(name || 'progression').replace(/[^a-zA-Z0-9\u0590-\u05FF ]/g, '_')}.pdf`;
+  const filename = `${(name || 'progression').replace(/[^a-zA-Z0-9֐-׿ ]/g, '_')}.pdf`;
   await renderHTMLToPDF(html, filename);
 }
