@@ -41,36 +41,3 @@ export interface ProgressionSuggestion {
 
 export type Genre = 'blues' | 'jazz' | 'pop' | 'rock' | 'metal' | 'any' | 'custom';
 
-export interface Song {
-  id: string;
-  name: string;
-  progression: ChordInProgression[];
-  createdAt: number;
-  updatedAt?: number;
-}
-
-export interface SavedLyrics {
-  id: string;
-  name: string;
-  lyricsText: string;
-  lyricsChords: ChordPlacement[];
-  composer: string;
-  writer: string;
-  isRtl: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface SavedHarmony {
-  id: string;
-  name: string;
-  scale: ScaleMatch;
-  key?: string;
-  createdAt: number;
-}
-
-export interface ChordPlacement {
-  id: string;
-  chordName: string;
-  wordIndex: number;
-}
