@@ -383,8 +383,8 @@ function AnalysisCard({
 
 export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   // Chord builder
-  const [root,  setRoot]  = useState('A');
-  const [triad, setTriad] = useState('m');
+  const [root,  setRoot]  = useState('');
+  const [triad, setTriad] = useState('');
   const [ext,   setExt]   = useState('');
 
   // Progression
@@ -459,7 +459,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   }, [chords, genre, paths.length]);
 
   const addChord = () => {
-    if (chords.length >= 8) return;
+    if (!root || !triad || chords.length >= 8) return;
     setChords(prev => [...prev, chordName]);
   };
 
@@ -595,12 +595,12 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           </span>
           <button
             onClick={addChord}
-            disabled={chords.length >= 8}
+            disabled={!root || !triad || chords.length >= 8}
             style={{
               padding: '9px 20px', borderRadius: 8, border: 'none',
-              background: chords.length < 8 ? T.secondary : T.border,
+              background: (root && triad && chords.length < 8) ? T.secondary : T.border,
               color: '#fff', fontWeight: 700, fontSize: 14,
-              cursor: chords.length < 8 ? 'pointer' : 'not-allowed',
+              cursor: (root && triad && chords.length < 8) ? 'pointer' : 'not-allowed',
               transition: 'background 0.15s',
             }}
           >
