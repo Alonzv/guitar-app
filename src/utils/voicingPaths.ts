@@ -207,7 +207,9 @@ function generateFullCandidates(
     : [chordNotes[0], chordNotes[1], chordNotes[chordNotes.length - 1]];
 
   const voicings: FretPosition[][] = [];
+  const fallback: FretPosition[][] = [];
   const seen = new Set<string>();
+  const seenFb = new Set<string>();
 
   for (let startFret = 0; startFret <= 12; startFret++) {
     const windowMax = Math.min(startFret + 4, 12);
@@ -226,13 +228,17 @@ function generateFullCandidates(
       voicing.some(p => samePitch(fretToNote(p.string, p.fret, tuning), rn))
     );
 
-    if (voicing.length >= minStrings && covers && isPlayable(voicing)) {
+    if (voicing.length >= minStrings && isPlayable(voicing)) {
       const hash = voicing.map(p => `${p.string}:${p.fret}`).join(',');
-      if (!seen.has(hash)) { seen.add(hash); voicings.push([...voicing]); }
+      if (covers) {
+        if (!seen.has(hash)) { seen.add(hash); voicings.push([...voicing]); }
+      } else {
+        if (!seenFb.has(hash)) { seenFb.add(hash); fallback.push([...voicing]); }
+      }
     }
   }
 
-  return voicings;
+  return voicings.length > 0 ? voicings : fallback;
 }
 
 function generateTriadCandidates(
