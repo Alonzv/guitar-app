@@ -30,7 +30,7 @@ export async function analyzeProgression(
       .join('\n');
 
     const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4-5',
       max_tokens: 400,
       messages: [{
         role: 'user',
@@ -61,7 +61,8 @@ Reply with valid JSON only, no markdown. Write "character", "advice", and "recom
     // Clamp recommendedPath to valid range
     parsed.recommendedPath = Math.max(0, Math.min(paths.length - 1, parsed.recommendedPath ?? 0));
     return parsed;
-  } catch {
+  } catch (err) {
+    console.error('[musicalAnalysis] API error:', err);
     return null;
   }
 }
