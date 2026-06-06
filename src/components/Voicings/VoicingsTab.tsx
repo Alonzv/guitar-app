@@ -1011,8 +1011,12 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                       {perChord.map(({ chordName, noteName }, ci) => (
                         <React.Fragment key={ci}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                            <span style={{ fontSize: 22, fontWeight: 800, color: ivColor, lineHeight: 1 }}>
-                              {noteName}
+                            <span style={{
+                              fontSize: 22, fontWeight: 800, lineHeight: 1,
+                              color: noteName === '—' ? T.textDim : ivColor,
+                              opacity: noteName === '—' ? 0.4 : 1,
+                            }}>
+                              {noteName === '—' ? '∅' : noteName}
                             </span>
                             <span style={{ fontSize: 10, color: T.textDim, fontWeight: 600 }}>{chordName}</span>
                           </div>
@@ -1033,32 +1037,38 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                           computeDotColors(currentPath.voicings[fi], chords[fi], isolate, tuning.notes, ivColor)
                         );
                         return (
-                        <button
+                        <div
                           key={ci}
                           onClick={() => filtered.length > 0 && openModal(ci, currentPath.voicings, chords, ivColor, allDotColors)}
                           style={{
                             flexShrink: 0, width: 110,
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                            background: 'none', border: 'none',
-                            cursor: filtered.length > 0 ? 'pointer' : 'default', padding: 0,
+                            cursor: filtered.length > 0 ? 'pointer' : 'default',
+                            opacity: filtered.length > 0 ? 1 : 0.38,
                           }}
                         >
-                          <span style={{ fontSize: 12, fontWeight: 800, color: ivColor }}>{chordName}</span>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: filtered.length > 0 ? ivColor : T.textDim }}>
+                            {chordName}
+                          </span>
                           <div style={{
                             width: '100%', background: T.bgInput,
-                            borderRadius: 10, border: `1px solid ${ivColor}33`,
+                            borderRadius: 10,
+                            border: `1px solid ${filtered.length > 0 ? ivColor + '33' : T.border}`,
                             padding: '4px 4px 2px', boxSizing: 'border-box',
                           }}>
                             {filtered.length > 0 ? (
                               <MiniFretboard voicing={filtered} dotColor={ivColor} tuning={tuning.notes} />
                             ) : (
-                              <div style={{ height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <span style={{ fontSize: 10, color: T.textDim }}>—</span>
+                              <div style={{ height: 70, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                <span style={{ fontSize: 16, color: T.textDim }}>∅</span>
+                                <span style={{ fontSize: 9, color: T.textDim, textAlign: 'center', lineHeight: 1.3 }}>
+                                  no {isolate}<br />in this chord
+                                </span>
                               </div>
                             )}
                           </div>
                           {filtered.length > 0 && <FretBadge voicing={filtered} color={ivColor} />}
-                        </button>
+                        </div>
                         );
                       })}
                     </div>
