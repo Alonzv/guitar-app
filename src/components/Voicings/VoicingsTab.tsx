@@ -223,48 +223,65 @@ function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, 
 
 // ── AI Analysis card ──────────────────────────────────────────────────────
 
-function AnalysisCard({ analysis, loading }: { analysis: MusicalAnalysis | null; loading: boolean }) {
-  if (!loading && !analysis) return null;
+function AnalysisCard({
+  analysis, loading, noKey,
+}: { analysis: MusicalAnalysis | null; loading: boolean; noKey: boolean }) {
   return (
     <div style={{
       ...card({ padding: '14px 16px' }),
-      borderLeft: `3px solid ${T.primary}`,
+      borderLeft: `3px solid ${noKey ? T.border : T.primary}`,
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: T.primary }}>ניתוח AI</span>
-        {loading && (
-          <span style={{ fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>מנתח…</span>
-        )}
+        <span style={{ fontSize: 13, fontWeight: 800, color: noKey ? T.textDim : T.primary }}>
+          ✦ ניתוח AI
+        </span>
+        {loading && <span style={{ fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>מנתח…</span>}
         {analysis && (
           <span style={{
             padding: '2px 8px', borderRadius: 10,
             background: T.primarySoft, color: T.primary,
             fontSize: 10, fontWeight: 700,
-          }}>
-            {analysis.key}
+          }}>{analysis.key}</span>
+        )}
+        {noKey && (
+          <span style={{ fontSize: 10, color: T.textDim }}>
+            הגדר VITE_ANTHROPIC_API_KEY להפעלה
           </span>
         )}
       </div>
+
       {analysis && (
         <>
-          <p style={{ margin: 0, fontSize: 12, color: T.text, lineHeight: 1.7, direction: 'rtl', textAlign: 'right' }}>
+          <p style={{
+            margin: 0, fontSize: 12, color: T.text,
+            lineHeight: 1.8, direction: 'rtl', textAlign: 'right',
+          }}>
             {analysis.character}
           </p>
-          <div style={{
-            paddingTop: 8, borderTop: `1px solid ${T.border}`,
-            display: 'flex', flexDirection: 'column', gap: 5,
-          }}>
-            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, fontStyle: 'italic', direction: 'rtl', textAlign: 'right' }}>
+          <div style={{ paddingTop: 8, borderTop: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <p style={{
+              margin: 0, fontSize: 11, color: T.textMuted,
+              fontStyle: 'italic', direction: 'rtl', textAlign: 'right',
+            }}>
               💡 {analysis.advice}
             </p>
             {analysis.recommendedReason && (
-              <p style={{ margin: 0, fontSize: 11, color: T.primary, direction: 'rtl', textAlign: 'right' }}>
+              <p style={{
+                margin: 0, fontSize: 11, color: T.primary,
+                direction: 'rtl', textAlign: 'right', fontWeight: 600,
+              }}>
                 ✦ {analysis.recommendedReason}
               </p>
             )}
           </div>
         </>
+      )}
+
+      {!analysis && !loading && !noKey && (
+        <p style={{ margin: 0, fontSize: 11, color: T.textDim, fontStyle: 'italic' }}>
+          הניתוח לא הצליח — בדוק את חיבור ה-API
+        </p>
       )}
     </div>
   );
@@ -297,7 +314,6 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   // AI analysis
   const [analysis,        setAnalysis]        = useState<MusicalAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
-  const analysisAbort = useRef<AbortController | null>(null);
 
   // Derived chord name
   const suffix    = SUFFIX_MAP[triad]?.[ext] ?? '';
@@ -525,38 +541,43 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
         </div>
       )}
 
-      {/* ── Genre chips ─────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <p style={LABEL_STYLE}>Vibe</p>
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-          {GENRES.map(g => (
-            <button key={g.id} onClick={() => setGenre(g.id)} style={{
-              flexShrink: 0, padding: '7px 15px', borderRadius: 20,
-              border: genre === g.id ? 'none' : `1px solid ${T.border}`,
-              background: genre === g.id ? T.primary : T.bgInput,
-              color: genre === g.id ? '#fff' : T.textMuted,
-              fontSize: 12, fontWeight: genre === g.id ? 700 : 400,
-              cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
-            }}>
-              {g.label}
-            </button>
-          ))}
+      {/* ── Genre select ────────────────────────────────────────────── */}
+      <div style={{ ...card({ padding: '10px 14px' }), display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Vibe</span>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <select
+            value={genre}
+            onChange={e => setGenre(e.target.value as VoicingGenre)}
+            style={{
+              width: '100%', appearance: 'none', WebkitAppearance: 'none',
+              padding: '8px 32px 8px 12px', borderRadius: 9,
+              border: `1px solid ${T.border}`,
+              background: T.bgInput, color: T.text,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {GENRES.map(g => (
+              <option key={g.id} value={g.id}>
+                {g.label}{g.id !== 'any' ? ` — ${g.hint}` : ''}
+              </option>
+            ))}
+          </select>
+          <span style={{
+            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+            pointerEvents: 'none', color: T.textMuted, fontSize: 11,
+          }}>▾</span>
         </div>
-        {genre !== 'any' && (
-          <p style={{ margin: 0, fontSize: 11, color: T.textMuted, fontStyle: 'italic' }}>
-            {GENRES.find(g => g.id === genre)?.hint}
-          </p>
-        )}
       </div>
 
-      {/* ── Mode + String group ──────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ ...card({ padding: '10px 14px' }), display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 155 }}>
+      {/* ── Mode + String group — single card, two segmented controls ── */}
+      <div style={{ ...card({ padding: '10px 14px' }), display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 130 }}>
           <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
           <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
             {(['full', 'triads'] as VoicingMode[]).map(m => (
               <button key={m} onClick={() => setMode(m)} style={{
-                flex: 1, padding: '6px 0', border: 'none', cursor: 'pointer',
+                flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
                 fontSize: 12, fontWeight: 700,
                 background: mode === m ? T.secondary : T.bgInput,
                 color: mode === m ? '#fff' : T.textMuted,
@@ -568,27 +589,35 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           </div>
         </div>
 
-        <div style={{ ...card({ padding: '10px 14px' }), display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 190 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 }}>
           <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Strings</span>
           <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
-            {(['all', 'bass', 'treble'] as StringGroup[]).map(sg => (
-              <button key={sg} onClick={() => setStringGroup(sg)} style={{
-                flex: 1, padding: '6px 0', border: 'none', cursor: 'pointer',
-                fontSize: 11, fontWeight: 700,
-                background: stringGroup === sg ? T.secondary : T.bgInput,
-                color: stringGroup === sg ? '#fff' : T.textMuted,
+            {([
+              { id: 'all',    label: 'All'  },
+              { id: 'bass',   label: 'Low'  },
+              { id: 'treble', label: 'High' },
+            ] as { id: StringGroup; label: string }[]).map(sg => (
+              <button key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
+                flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700,
+                background: stringGroup === sg.id ? T.secondary : T.bgInput,
+                color: stringGroup === sg.id ? '#fff' : T.textMuted,
                 transition: 'background 0.15s',
               }}>
-                {sg === 'all' ? 'All' : sg.charAt(0).toUpperCase() + sg.slice(1)}
+                {sg.label}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── AI Analysis ─────────────────────────────────────────────── */}
-      {(analysisLoading || analysis) && (
-        <AnalysisCard analysis={analysis} loading={analysisLoading} />
+      {/* ── AI Analysis — always visible when paths exist ───────────── */}
+      {paths.length > 0 && (
+        <AnalysisCard
+          analysis={analysis}
+          loading={analysisLoading}
+          noKey={!import.meta.env.VITE_ANTHROPIC_API_KEY}
+        />
       )}
 
       {/* ── Empty state ──────────────────────────────────────────────── */}
