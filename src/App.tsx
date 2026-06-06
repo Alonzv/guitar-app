@@ -3,12 +3,13 @@ import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 import { TheoryTab } from './components/TheoryTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
+import { VoicingsTab } from './components/Voicings/VoicingsTab';
 import { Onboarding } from './components/Onboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { IconNote, IconSliders, IconMoon, IconSun } from './components/Icons';
+import { IconNote, IconSliders, IconPath, IconMoon, IconSun } from './components/Icons';
 import { T } from './theme';
 
-type Tab = 'theory' | 'tools';
+type Tab = 'theory' | 'voicings' | 'tools';
 
 const FLAT_TO_SHARP: Record<string, string> = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
 
@@ -38,8 +39,9 @@ function decodeSharedProgression(): ChordInProgression[] | null {
 
 type TabDef = { id: Tab; label: string; icon: React.ReactNode };
 const TABS: TabDef[] = [
-  { id: 'theory', label: 'Theory', icon: <IconNote size={18} /> },
-  { id: 'tools',  label: 'Tools',  icon: <IconSliders size={18} /> },
+  { id: 'theory',   label: 'Theory',   icon: <IconNote size={18} />    },
+  { id: 'voicings', label: 'Voicings', icon: <IconPath size={18} />    },
+  { id: 'tools',    label: 'Tools',    icon: <IconSliders size={18} /> },
 ];
 
 export default function App() {
@@ -188,6 +190,11 @@ export default function App() {
             onUndo={handleUndo}
             onRedo={handleRedo}
           />
+        </ErrorBoundary>
+      )}
+      {activeTab === 'voicings' && (
+        <ErrorBoundary label="Voicings">
+          <VoicingsTab globalProgression={progression} tuning={tuning} />
         </ErrorBoundary>
       )}
       {activeTab === 'tools' && (

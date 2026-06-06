@@ -322,3 +322,15 @@ export function IconComplex({ size = 16 }: P) {
     </svg>
   );
 }
+
+// ── Voicing paths (connected dots across neck) ───────────────────────────────
+export function IconPath({ size = 16 }: P) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden style={base}>
+      <circle cx="2.5" cy="13"  r="1.8" fill="currentColor" stroke="none" />
+      <circle cx="8"   cy="3"   r="1.8" fill="currentColor" stroke="none" />
+      <circle cx="13.5" cy="10" r="1.8" fill="currentColor" stroke="none" />
+      <polyline points="2.5,11.2 8,4.8 13.5,8.2" />
+    </svg>
+  );
+}
