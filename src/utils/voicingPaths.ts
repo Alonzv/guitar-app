@@ -11,6 +11,8 @@ export interface VoicingPath {
   voicings: FretPosition[][];
   label: string;
   avgFret: number;
+  description: string;
+  smoothness: number; // 0–5
 }
 
 export interface PathOptions {
@@ -21,11 +23,34 @@ export interface PathOptions {
   pathCount?: number;
 }
 
+// ── Genre hard constraints ─────────────────────────────────────────────────
+
+interface GenreConstraints {
+  allowOpen: boolean;       // false → filter out voicings that use open strings
+  requireOpen: boolean;     // true  → filter out voicings with NO open strings
+  minNotes: number;
+  maxNotes: number;
+  maxFret: number;          // non-open notes must not exceed this fret
+  transitionWeight: number; // multiplier on voice-leading cost
+}
+
+const GC: Record<VoicingGenre, GenreConstraints> = {
+  any:       { allowOpen: true,  requireOpen: false, minNotes: 4, maxNotes: 6, maxFret: 12, transitionWeight: 1.0 },
+  americana: { allowOpen: true,  requireOpen: true,  minNotes: 3, maxNotes: 6, maxFret: 12, transitionWeight: 1.0 },
+  swamp:     { allowOpen: true,  requireOpen: false, minNotes: 3, maxNotes: 4, maxFret:  7, transitionWeight: 0.7 },
+  'neo-soul':{ allowOpen: true,  requireOpen: false, minNotes: 4, maxNotes: 6, maxFret: 12, transitionWeight: 2.5 },
+  blues:     { allowOpen: true,  requireOpen: false, minNotes: 3, maxNotes: 6, maxFret: 12, transitionWeight: 1.0 },
+  rock:      { allowOpen: false, requireOpen: false, minNotes: 4, maxNotes: 6, maxFret: 12, transitionWeight: 1.0 },
+  country:   { allowOpen: true,  requireOpen: true,  minNotes: 3, maxNotes: 5, maxFret:  5, transitionWeight: 0.8 },
+};
+
 const STRING_GROUPS: Record<StringGroup, number[]> = {
   all:    [0, 1, 2, 3, 4, 5],
   bass:   [0, 1, 2],
   treble: [3, 4, 5],
 };
+
+// ── Low-level helpers ──────────────────────────────────────────────────────
 
 function samePitch(a: string, b: string): boolean {
   const ca = TonalNote.chroma(a);
@@ -53,6 +78,26 @@ function isPlayable(voicing: FretPosition[]): boolean {
   return true;
 }
 
+// ── Genre constraint filter ────────────────────────────────────────────────
+
+function applyGenreFilter(voicings: FretPosition[][], gc: GenreConstraints): FretPosition[][] {
+  const filtered = voicings.filter(v => {
+    const hasOpen = v.some(p => p.fret === 0);
+    if (!gc.allowOpen && hasOpen) return false;
+    if (gc.requireOpen && !hasOpen) return false;
+    if (v.length < gc.minNotes || v.length > gc.maxNotes) return false;
+    const nonOpen = v.filter(p => p.fret > 0);
+    if (nonOpen.length > 0 && Math.max(...nonOpen.map(p => p.fret)) > gc.maxFret) return false;
+    return true;
+  });
+  // Graceful relaxation: loosen requireOpen first, then everything
+  if (filtered.length === 0 && gc.requireOpen) return applyGenreFilter(voicings, { ...gc, requireOpen: false });
+  if (filtered.length === 0) return voicings;
+  return filtered;
+}
+
+// ── Voice-leading cost ─────────────────────────────────────────────────────
+
 function transitionCost(a: FretPosition[], b: FretPosition[]): number {
   const aMap = new Map(a.map(p => [p.string, p.fret]));
   const bMap = new Map(b.map(p => [p.string, p.fret]));
@@ -68,29 +113,49 @@ function transitionCost(a: FretPosition[], b: FretPosition[]): number {
   return movement + (1 - overlap) * 6;
 }
 
+// ── Genre-aware voicing scorer ─────────────────────────────────────────────
+// Returns a negative value — lower total cost = better path.
+
 function genreCost(voicing: FretPosition[], chordName: string, genre: VoicingGenre): number {
   const openCount  = voicing.filter(p => p.fret === 0).length;
   const avg        = avgNonOpenFret(voicing);
   const lowStr     = voicing.filter(p => p.string <= 2).length;
   const highStr    = voicing.filter(p => p.string >= 3).length;
+  const hasDrone   = openCount > 0 && avg > 4; // open drone + fretted note high up
+  const isDom7     = chordName.includes('7') && !chordName.includes('maj7');
+  const isExtended = chordName.includes('7') || chordName.includes('9') || chordName.includes('11') || chordName.includes('13');
 
   switch (genre) {
     case 'americana':
-      return -(openCount * 3 + (openCount > 0 && avg > 3 ? 4 : 0));
+      // Best: open strings + fretted notes high up the neck (pedal-steel effect)
+      return -(openCount * 4 + (hasDrone ? 8 : 0) + (openCount > 0 ? 3 : 0));
+
     case 'swamp':
-      return -(lowStr * 3 + (voicing.length <= 4 ? 2 : -2));
+      // Best: low strings, lean chord (3-4 notes), no bright high-string content
+      return -(lowStr * 4 + (voicing.length <= 4 ? 4 : -5) + (highStr === 0 ? 4 : -highStr * 3));
+
     case 'neo-soul':
-      return -(voicing.length * 1.5 + highStr * 2);
+      // Best: extended chords, more notes, high-register strings, ultra-smooth
+      return -(voicing.length * 2 + highStr * 2.5 + (isExtended ? 5 : 0));
+
     case 'blues':
-      return -((chordName.includes('7') && !chordName.includes('maj7')) ? 5 : 0) - (openCount === 0 ? 2 : 0);
+      // Best: dominant 7th shapes, movable (no open strings for barre positions)
+      return -(isDom7 ? 7 : 0) - (openCount === 0 ? 4 : 0) - (avg >= 3 && avg <= 9 ? 2 : 0);
+
     case 'rock':
-      return -(openCount === 0 ? 4 : 0) - Math.min(voicing.length, 5) * 0.5;
+      // Best: no open strings, full barre shapes, punchy
+      return -(openCount === 0 ? 8 : 0) - Math.min(voicing.length, 6) * 1;
+
     case 'country':
-      return -(openCount * 2 + (avg <= 3 ? 5 : 0));
+      // Best: open position, open strings, bright voicings
+      return -(openCount * 3 + (avg <= 3 ? 6 : avg <= 5 ? 2 : 0));
+
     default:
       return 0;
   }
 }
+
+// ── Candidate generation ───────────────────────────────────────────────────
 
 function generateFullCandidates(
   chordName: string,
@@ -115,8 +180,7 @@ function generateFullCandidates(
 
     for (const s of allowedStrings) {
       for (let f = startFret; f <= windowMax; f++) {
-        const note = fretToNote(s, f, tuning);
-        if (noteInChord(note, chordNotes)) {
+        if (noteInChord(fretToNote(s, f, tuning), chordNotes)) {
           voicing.push({ string: s, fret: f });
           break;
         }
@@ -129,10 +193,7 @@ function generateFullCandidates(
 
     if (voicing.length >= minStrings && covers && isPlayable(voicing)) {
       const hash = voicing.map(p => `${p.string}:${p.fret}`).join(',');
-      if (!seen.has(hash)) {
-        seen.add(hash);
-        voicings.push([...voicing]);
-      }
+      if (!seen.has(hash)) { seen.add(hash); voicings.push([...voicing]); }
     }
   }
 
@@ -162,8 +223,7 @@ function generateTriadCandidates(
       for (const s of strings) {
         let placed = false;
         for (let f = startFret; f <= Math.min(startFret + 4, 12); f++) {
-          const note = fretToNote(s, f, tuning);
-          if (triadNotes.some(n => samePitch(n, note))) {
+          if (triadNotes.some(n => samePitch(n, fretToNote(s, f, tuning)))) {
             voicing.push({ string: s, fret: f });
             placed = true;
             break;
@@ -174,16 +234,15 @@ function generateTriadCandidates(
 
       if (valid && voicing.length === 3 && isPlayable(voicing)) {
         const hash = voicing.map(p => `${p.string}:${p.fret}`).join(',');
-        if (!seen.has(hash)) {
-          seen.add(hash);
-          voicings.push([...voicing]);
-        }
+        if (!seen.has(hash)) { seen.add(hash); voicings.push([...voicing]); }
       }
     }
   }
 
   return voicings;
 }
+
+// ── Path metadata ──────────────────────────────────────────────────────────
 
 function pathLabel(avg: number, openCount: number): string {
   if (openCount >= 2) return 'Open Drones';
@@ -194,38 +253,94 @@ function pathLabel(avg: number, openCount: number): string {
   return 'High Neck';
 }
 
+function computeCommonTones(voicings: FretPosition[][]): number {
+  if (voicings.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < voicings.length; i++) {
+    const prevSet = new Set(voicings[i - 1].map(p => `${p.string}:${p.fret}`));
+    total += voicings[i].filter(p => prevSet.has(`${p.string}:${p.fret}`)).length;
+  }
+  return total / (voicings.length - 1);
+}
+
+function computeSmoothness(rawCost: number, chordCount: number): number {
+  const perChord = rawCost / Math.max(chordCount - 1, 1);
+  return Math.max(0, Math.min(5, Math.round(5 - perChord * 0.4)));
+}
+
+function generateDescription(
+  genre: VoicingGenre,
+  avg: number,
+  openCount: number,
+  commonTones: number,
+  chordCount: number,
+): string {
+  const hasDrone  = openCount >= chordCount;
+  const smLabel   = commonTones >= 1.5 ? 'silky smooth' : commonTones >= 0.5 ? 'smooth' : 'wide-leaping';
+  const pos       = avg <= 2 ? 'open position' : avg <= 5 ? 'lower neck' : avg <= 8 ? 'mid neck' : 'upper neck';
+
+  switch (genre) {
+    case 'americana':
+      return hasDrone
+        ? 'Open strings drone while fretted notes ring above — wide, cinematic, like a resonator guitar'
+        : 'First-position resonance — natural sustain with open-string coloring';
+    case 'swamp':
+      return 'Lean, dark shapes on the low strings — 3-4 notes, raw texture. Dig in hard';
+    case 'neo-soul':
+      return `Extended ${chordCount}-chord harmony in ${pos} — ${smLabel} voice leading, every note earns its place`;
+    case 'blues':
+      return avg <= 3
+        ? 'Open-position dominant shapes — the classic I-IV-V feel with built-in grit'
+        : `Movable dominant barre shapes at ${Math.round(avg)}fr — slide-ready and authentic`;
+    case 'rock':
+      return `Full barre shapes, zero open strings — locked-in ${pos} punch, mix-ready`;
+    case 'country':
+      return hasDrone
+        ? 'Open-position brightness — classic Travis-picking territory, crystal clear'
+        : `First-position clarity — open-chord country sound`;
+    default:
+      return `${pos.charAt(0).toUpperCase() + pos.slice(1)} — ${smLabel} transitions with ${Math.round(commonTones * 10) / 10} avg common tones`;
+  }
+}
+
+// ── Main export ────────────────────────────────────────────────────────────
+
 export function findVoicingPaths(
   chordNames: string[],
   options: PathOptions,
 ): VoicingPath[] {
   if (!chordNames.length) return [];
 
-  const tuning     = options.tuning ?? TUNINGS[0].notes;
-  const allowed    = STRING_GROUPS[options.stringGroup];
-  const pathCount  = options.pathCount ?? 5;
-  const generate   = options.mode === 'triads' ? generateTriadCandidates : generateFullCandidates;
+  const tuning    = options.tuning ?? TUNINGS[0].notes;
+  const allowed   = STRING_GROUPS[options.stringGroup];
+  const pathCount = options.pathCount ?? 5;
+  const gc        = GC[options.genre];
+  const generate  = options.mode === 'triads' ? generateTriadCandidates : generateFullCandidates;
 
-  const candidatesPerChord = chordNames.map(name => generate(name, allowed, tuning));
+  // For each chord: generate candidates then apply genre filter
+  const candidatesPerChord = chordNames.map(name => {
+    const raw = generate(name, allowed, tuning);
+    return applyGenreFilter(raw, gc);
+  });
+
   if (candidatesPerChord.some(c => !c.length)) return [];
 
   const BEAM = 80;
-  type Beam = { vi: number; cost: number; trail: number[] };
+  type B = { vi: number; cost: number; trail: number[] };
 
-  let beams: Beam[] = candidatesPerChord[0].map((v, vi) => ({
-    vi,
-    cost: genreCost(v, chordNames[0], options.genre),
-    trail: [vi],
+  let beams: B[] = candidatesPerChord[0].map((v, vi) => ({
+    vi, cost: genreCost(v, chordNames[0], options.genre), trail: [vi],
   }));
 
   for (let ci = 1; ci < chordNames.length; ci++) {
-    const next: Beam[] = [];
+    const next: B[] = [];
     for (const b of beams) {
       const prev = candidatesPerChord[ci - 1][b.vi];
       for (let vi = 0; vi < candidatesPerChord[ci].length; vi++) {
         const curr = candidatesPerChord[ci][vi];
         next.push({
           vi,
-          cost: b.cost + transitionCost(prev, curr) + genreCost(curr, chordNames[ci], options.genre),
+          cost: b.cost + transitionCost(prev, curr) * gc.transitionWeight + genreCost(curr, chordNames[ci], options.genre),
           trail: [...b.trail, vi],
         });
       }
@@ -237,10 +352,12 @@ export function findVoicingPaths(
   beams.sort((a, b) => a.cost - b.cost);
 
   const full = beams.map(b => {
-    const voicings = b.trail.map((vi, ci) => candidatesPerChord[ci][vi]);
-    const pathAvg  = voicings.reduce((s, v) => s + avgNonOpenFret(v), 0) / voicings.length;
+    const voicings  = b.trail.map((vi, ci) => candidatesPerChord[ci][vi]);
+    const pathAvg   = voicings.reduce((s, v) => s + avgNonOpenFret(v), 0) / voicings.length;
     const openCount = voicings.reduce((s, v) => s + v.filter(p => p.fret === 0).length, 0);
-    return { voicings, cost: b.cost, pathAvg, openCount };
+    const ct        = computeCommonTones(voicings);
+    const smooth    = computeSmoothness(b.cost, chordNames.length);
+    return { voicings, cost: b.cost, pathAvg, openCount, ct, smooth };
   });
 
   const zoneOf = (avg: number, open: number) => {
@@ -254,13 +371,16 @@ export function findVoicingPaths(
   const result: VoicingPath[] = [];
   const usedZones = new Set<string>();
 
+  const push = (p: typeof full[number]) => {
+    const label = pathLabel(p.pathAvg, p.openCount);
+    const desc  = generateDescription(options.genre, p.pathAvg, p.openCount, p.ct, chordNames.length);
+    result.push({ id: `path-${result.length}`, voicings: p.voicings, label, avgFret: p.pathAvg, description: desc, smoothness: p.smooth });
+  };
+
   for (const p of full) {
     if (result.length >= pathCount) break;
     const z = zoneOf(p.pathAvg, p.openCount);
-    if (!usedZones.has(z)) {
-      usedZones.add(z);
-      result.push({ id: `path-${result.length}`, voicings: p.voicings, label: pathLabel(p.pathAvg, p.openCount), avgFret: p.pathAvg });
-    }
+    if (!usedZones.has(z)) { usedZones.add(z); push(p); }
   }
 
   for (const p of full) {
@@ -271,9 +391,7 @@ export function findVoicingPaths(
         v.every((pos, pi) => pos.fret === p.voicings[ci][pi]?.fret && pos.string === p.voicings[ci][pi]?.string)
       )
     );
-    if (!dup) {
-      result.push({ id: `path-${result.length}`, voicings: p.voicings, label: pathLabel(p.pathAvg, p.openCount), avgFret: p.pathAvg });
-    }
+    if (!dup) push(p);
   }
 
   return result;
