@@ -20,6 +20,7 @@ export async function analyzeProgression(
   paths: PathInfo[],
 ): Promise<MusicalAnalysis | null> {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  console.log('[musicalAnalysis] apiKey present:', !!apiKey, '| first chars:', apiKey ? apiKey.slice(0, 8) : 'none');
   if (!apiKey) return null;
 
   try {
