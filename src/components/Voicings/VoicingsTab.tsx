@@ -408,6 +408,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   // Voice isolator
   const [isolate, setIsolate] = useState<IsolateGroup>(null);
 
+  // Sub-tab
+  const [subTab, setSubTab] = useState<'paths' | 'voiceleading'>('paths');
+
   // Derived chord name
   const suffix    = SUFFIX_MAP[triad]?.[ext] ?? '';
   const chordName = root + (suffix === 'M' ? '' : suffix);
@@ -509,6 +512,27 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* ── Sub-tab selector ───────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', borderRadius: 10, overflow: 'hidden',
+        border: `1px solid ${T.border}`, background: T.bgDeep,
+      }}>
+        {([
+          { id: 'paths',        label: 'Paths'         },
+          { id: 'voiceleading', label: 'Voice Leading' },
+        ] as { id: SubTab; label: string }[]).map(tab => (
+          <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
+            flex: 1, padding: '10px 0', border: 'none',
+            background: subTab === tab.id ? T.secondary : 'transparent',
+            color: subTab === tab.id ? '#fff' : T.textMuted,
+            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}>{tab.label}</button>
+        ))}
+      </div>
+
+      {subTab === 'paths' && <>
 
       {/* ── Chord builder ──────────────────────────────────────────── */}
       <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -811,34 +835,6 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 </div>
               </div>
 
-              {/* Voice isolator */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ ...LABEL_STYLE, fontSize: 10 }}>Isolate</span>
-                {([
-                  { id: null,    label: 'All'   },
-                  { id: 'root',  label: 'Root'  },
-                  { id: '3rd',   label: '3rd'   },
-                  { id: '5th',   label: '5th'   },
-                  { id: '7th',   label: '7th'   },
-                ] as { id: IsolateGroup; label: string }[]).map(opt => {
-                  const active = isolate === opt.id;
-                  const accentColor = opt.id === 'root' ? INTERVAL_COLOR['1P']
-                    : opt.id === '3rd' ? INTERVAL_COLOR['3M']
-                    : opt.id === '5th' ? INTERVAL_COLOR['5P']
-                    : opt.id === '7th' ? INTERVAL_COLOR['7M']
-                    : currentColor;
-                  return (
-                    <button key={String(opt.id)} onClick={() => setIsolate(opt.id)} style={{
-                      padding: '4px 10px', borderRadius: 14, border: 'none',
-                      background: active ? accentColor : T.bgDeep,
-                      color: active ? '#fff' : T.textMuted,
-                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}>{opt.label}</button>
-                  );
-                })}
-              </div>
-
               {/* Chord diagrams — tap to enlarge */}
               <p style={{ margin: 0, fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>
                 Tap a diagram to enlarge
@@ -848,9 +844,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 paddingBottom: 4, flexWrap: 'nowrap',
                 minHeight: 148,
               }}>
-                {currentPath.voicings.map((voicing, ci) => {
-                  const dotColors = computeDotColors(voicing, chords[ci], isolate, tuning.notes, currentColor);
-                  return (
+                {currentPath.voicings.map((voicing, ci) => (
                   <button
                     key={ci}
                     onClick={() => openModal(ci, currentPath.voicings, chords, currentColor)}
@@ -878,12 +872,11 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                         (e.currentTarget as HTMLDivElement).style.boxShadow   = '';
                       }}
                     >
-                      <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning.notes} />
+                      <MiniFretboard voicing={voicing} dotColor={currentColor} tuning={tuning.notes} />
                     </div>
                     <FretBadge voicing={voicing} color={currentColor} />
                   </button>
-                  );
-                })}
+                ))}
               </div>
 
               {/* Play button */}
@@ -904,6 +897,146 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           )}
         </div>
       )}
+
+      </> /* end subTab === 'paths' */}
+
+      {subTab === 'voiceleading' && <>
+
+        {/* ── Progression display (read-only) ────────────────────── */}
+        {chords.length > 0 ? (
+          <div style={{ ...card({ padding: '12px 14px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <p style={LABEL_STYLE}>Progression</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {chords.map((c, i) => (
+                <span key={i} style={{
+                  padding: '5px 12px', borderRadius: 20,
+                  background: T.bgDeep, border: `1px solid ${T.border}`,
+                  fontSize: 13, fontWeight: 700, color: T.text,
+                }}>{c}</span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ ...card(), textAlign: 'center', padding: '40px 16px' }}>
+            <div style={{ fontSize: 30, marginBottom: 10 }}>🎸</div>
+            <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
+              Build a progression in the <b>Paths</b> tab first,<br />
+              then come back here to isolate voices.
+            </p>
+          </div>
+        )}
+
+        {/* ── Path selector + isolator + diagrams ────────────────── */}
+        {chords.length > 0 && paths.length > 0 && (
+          <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Path selector */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={LABEL_STYLE}>Path</p>
+              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                {paths.map((path, pi) => {
+                  const c      = PATH_COLOR[path.label] ?? T.primary;
+                  const active = pi === selectedIdx;
+                  return (
+                    <button key={path.id} onClick={() => setSelectedIdx(pi)} style={{
+                      flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 12px', borderRadius: 20,
+                      border: active ? 'none' : `1px solid ${T.border}`,
+                      background: active ? c : T.bgDeep,
+                      color: active ? '#fff' : T.textMuted,
+                      fontSize: 12, fontWeight: active ? 700 : 400,
+                      cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
+                    }}>
+                      <span style={{
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: active ? 'rgba(255,255,255,0.3)' : c, color: '#fff',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 9, fontWeight: 800, flexShrink: 0,
+                      }}>{pi + 1}</span>
+                      {path.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Isolate selector */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={LABEL_STYLE}>Isolate Voice</p>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {([
+                  { id: null,    label: 'All Notes', color: currentColor },
+                  { id: 'root',  label: 'Root (1)',  color: INTERVAL_COLOR['1P'] },
+                  { id: '3rd',   label: '3rd',       color: INTERVAL_COLOR['3M'] },
+                  { id: '5th',   label: '5th',       color: INTERVAL_COLOR['5P'] },
+                  { id: '7th',   label: '7th',       color: INTERVAL_COLOR['7M'] },
+                ] as { id: IsolateGroup; label: string; color: string }[]).map(opt => {
+                  const active = isolate === opt.id;
+                  return (
+                    <button key={String(opt.id)} onClick={() => setIsolate(opt.id)} style={{
+                      padding: '7px 14px', borderRadius: 20,
+                      border: active ? 'none' : `1px solid ${opt.color}55`,
+                      background: active ? opt.color : opt.color + '14',
+                      color: active ? '#fff' : opt.color,
+                      fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}>{opt.label}</button>
+                  );
+                })}
+              </div>
+              {isolate && (
+                <p style={{ margin: 0, fontSize: 11, color: T.textDim, fontStyle: 'italic' }}>
+                  Showing only the <b>{isolate === 'root' ? 'root' : isolate}</b> of each chord — other notes are dimmed
+                </p>
+              )}
+            </div>
+
+            {/* Chord diagrams */}
+            <div style={{
+              display: 'flex', gap: 8, overflowX: 'auto',
+              paddingBottom: 4, flexWrap: 'nowrap', minHeight: 148,
+            }}>
+              {currentPath?.voicings.map((voicing, ci) => {
+                const dotColors = computeDotColors(voicing, chords[ci], isolate, tuning.notes, currentColor);
+                return (
+                  <button
+                    key={ci}
+                    onClick={() => openModal(ci, currentPath.voicings, chords, currentColor)}
+                    style={{
+                      flexShrink: 0, width: 120,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 800, color: currentColor }}>{chords[ci]}</span>
+                    <div style={{
+                      width: '100%', background: T.bgInput,
+                      borderRadius: 10, border: `1px solid ${currentColor}33`,
+                      padding: '4px 4px 2px', boxSizing: 'border-box',
+                    }}>
+                      <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning.notes} />
+                    </div>
+                    <FretBadge voicing={voicing} color={currentColor} />
+                  </button>
+                );
+              })}
+            </div>
+
+            <p style={{ margin: 0, fontSize: 10, color: T.textDim, fontStyle: 'italic', textAlign: 'center' }}>
+              Tap a diagram to enlarge
+            </p>
+          </div>
+        )}
+
+        {chords.length > 0 && paths.length === 0 && (
+          <div style={{ ...card(), textAlign: 'center', padding: '28px 16px' }}>
+            <p style={{ margin: 0, fontSize: 14, color: T.textMuted }}>
+              No paths found. Switch to <b>Paths</b> tab and try Full mode + All strings.
+            </p>
+          </div>
+        )}
+
+      </> /* end subTab === 'voiceleading' */}
 
       {/* ── Modal ────────────────────────────────────────────────────── */}
       {modal && (
