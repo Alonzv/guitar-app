@@ -907,7 +907,6 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
         {chords.length === 0 ? (
           /* ── Empty state ─────────────────────────────────────────── */
           <div style={{ ...card(), textAlign: 'center', padding: '48px 20px' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>🎸</div>
             <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.7 }}>
               Build a progression in the <b>Paths</b> tab,<br />then come back here to trace any voice.
             </p>
