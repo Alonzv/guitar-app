@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import type { ChordInProgression, FretPosition, Tuning } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
+import { fretToNote } from '../../utils/musicTheory';
 import {
   findVoicingPaths,
   type VoicingGenre,
@@ -80,6 +82,94 @@ const PATH_COLOR: Record<string, string> = {
   'Upper Neck':    '#C44900',
   'High Neck':     '#9a3a3a',
 };
+
+// ── Interval display ──────────────────────────────────────────────────────
+
+export type IsolateGroup = null | 'root' | '3rd' | '5th' | '7th';
+
+const INTERVAL_COLOR: Record<string, string> = {
+  '1P': '#C44900',               // Root — orange
+  '3m': '#4a9669', '3M': '#4a9669', // 3rd — green
+  '5P': '#b08a00', '5A': '#b08a00', '5d': '#b08a00', // 5th — gold
+  '7m': '#2a78a8', '7M': '#2a78a8', '7d': '#2a78a8', // 7th — blue
+  '9M': '#8a4a9a', '9m': '#8a4a9a', '9A': '#8a4a9a', // ext — purple
+  '11P': '#8a4a9a', '11A': '#8a4a9a',
+  '13M': '#8a4a9a', '13m': '#8a4a9a',
+};
+
+const INTERVAL_SHORT: Record<string, string> = {
+  '1P': '1', '3m': 'b3', '3M': '3', '5P': '5', '5A': '#5', '5d': 'b5',
+  '7m': 'b7', '7M': '7', '7d': 'bb7',
+  '9M': '9', '9m': 'b9', '9A': '#9',
+  '11P': '11', '11A': '#11', '13M': '13', '13m': 'b13',
+};
+
+const INTERVAL_NAME: Record<string, string> = {
+  '1P': 'Root', '3m': 'Min 3rd', '3M': 'Maj 3rd',
+  '5P': 'Fifth', '5A': 'Aug 5th', '5d': 'Dim 5th',
+  '7m': 'Min 7th', '7M': 'Maj 7th', '7d': 'Dim 7th',
+  '9M': '9th', '9m': 'b9th', '9A': '#9th',
+  '11P': '11th', '11A': '#11th', '13M': '13th', '13m': 'b13th',
+};
+
+const INTERVAL_GROUP: Record<string, IsolateGroup> = {
+  '1P': 'root',
+  '3m': '3rd', '3M': '3rd',
+  '5P': '5th', '5A': '5th', '5d': '5th',
+  '7m': '7th', '7M': '7th', '7d': '7th',
+};
+
+function getIntervalForNote(noteName: string, chordName: string): string | null {
+  const info = TonalChord.get(chordName);
+  const nc = TonalNote.chroma(noteName);
+  if (nc == null) return null;
+  for (let i = 0; i < info.notes.length; i++) {
+    if (TonalNote.chroma(info.notes[i]) === nc) return info.intervals[i];
+  }
+  return null;
+}
+
+function computeDotColors(
+  voicing: FretPosition[], chordName: string,
+  isolate: IsolateGroup, tuning: string[], defaultColor: string,
+): string[] {
+  if (!isolate) return voicing.map(() => defaultColor);
+  return voicing.map(p => {
+    const note = fretToNote(p.string, p.fret, tuning);
+    const iv = getIntervalForNote(note, chordName);
+    if (iv && INTERVAL_GROUP[iv] === isolate) return INTERVAL_COLOR[iv] ?? defaultColor;
+    return '#00000020';
+  });
+}
+
+// ── Chord spelling component ───────────────────────────────────────────────
+
+function ChordSpelling({ chordName }: { chordName: string }) {
+  const info = TonalChord.get(chordName);
+  if (info.notes.length < 2) return null;
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {info.notes.map((note, i) => {
+        const iv    = info.intervals[i] ?? '';
+        const color = INTERVAL_COLOR[iv] ?? T.textMuted;
+        const short = INTERVAL_SHORT[iv] ?? iv;
+        const name  = INTERVAL_NAME[iv]  ?? iv;
+        return (
+          <div key={i} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            padding: '5px 10px', borderRadius: 8,
+            background: color + '18', border: `1px solid ${color}44`,
+            minWidth: 34,
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1.1 }}>{note}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1.3 }}>{short}</span>
+            <span style={{ fontSize: 8, color: color + 'aa', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{name}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const LABEL_STYLE: React.CSSProperties = {
   margin: 0,
@@ -315,6 +405,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   const [analysis,        setAnalysis]        = useState<MusicalAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
 
+  // Voice isolator
+  const [isolate, setIsolate] = useState<IsolateGroup>(null);
+
   // Derived chord name
   const suffix    = SUFFIX_MAP[triad]?.[ext] ?? '';
   const chordName = root + (suffix === 'M' ? '' : suffix);
@@ -488,6 +581,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             + Add
           </button>
         </div>
+
+        {/* Chord spelling */}
+        <ChordSpelling chordName={chordName} />
       </div>
 
       {/* ── Progression ────────────────────────────────────────────── */}
@@ -715,6 +811,34 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 </div>
               </div>
 
+              {/* Voice isolator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ ...LABEL_STYLE, fontSize: 10 }}>Isolate</span>
+                {([
+                  { id: null,    label: 'All'   },
+                  { id: 'root',  label: 'Root'  },
+                  { id: '3rd',   label: '3rd'   },
+                  { id: '5th',   label: '5th'   },
+                  { id: '7th',   label: '7th'   },
+                ] as { id: IsolateGroup; label: string }[]).map(opt => {
+                  const active = isolate === opt.id;
+                  const accentColor = opt.id === 'root' ? INTERVAL_COLOR['1P']
+                    : opt.id === '3rd' ? INTERVAL_COLOR['3M']
+                    : opt.id === '5th' ? INTERVAL_COLOR['5P']
+                    : opt.id === '7th' ? INTERVAL_COLOR['7M']
+                    : currentColor;
+                  return (
+                    <button key={String(opt.id)} onClick={() => setIsolate(opt.id)} style={{
+                      padding: '4px 10px', borderRadius: 14, border: 'none',
+                      background: active ? accentColor : T.bgDeep,
+                      color: active ? '#fff' : T.textMuted,
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}>{opt.label}</button>
+                  );
+                })}
+              </div>
+
               {/* Chord diagrams — tap to enlarge */}
               <p style={{ margin: 0, fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>
                 Tap a diagram to enlarge
@@ -724,7 +848,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 paddingBottom: 4, flexWrap: 'nowrap',
                 minHeight: 148,
               }}>
-                {currentPath.voicings.map((voicing, ci) => (
+                {currentPath.voicings.map((voicing, ci) => {
+                  const dotColors = computeDotColors(voicing, chords[ci], isolate, tuning.notes, currentColor);
+                  return (
                   <button
                     key={ci}
                     onClick={() => openModal(ci, currentPath.voicings, chords, currentColor)}
@@ -752,11 +878,12 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                         (e.currentTarget as HTMLDivElement).style.boxShadow   = '';
                       }}
                     >
-                      <MiniFretboard voicing={voicing} dotColor={currentColor} tuning={tuning.notes} />
+                      <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning.notes} />
                     </div>
                     <FretBadge voicing={voicing} color={currentColor} />
                   </button>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Play button */}
