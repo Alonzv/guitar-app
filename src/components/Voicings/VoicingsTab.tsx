@@ -233,8 +233,8 @@ function AnalysisCard({
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: noKey ? T.textDim : T.primary }}>
-          ✦ ניתוח AI
+        <span style={{ fontSize: 13, fontWeight: 800, color: noKey ? T.textDim : T.primary, direction: 'ltr', unicodeBidi: 'isolate' }}>
+          ✦ AI ניתוח
         </span>
         {loading && <span style={{ fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>מנתח…</span>}
         {analysis && (
