@@ -211,10 +211,11 @@ interface ModalProps {
   index: number;
   color: string;
   tuning: string[];
+  dotColors?: string[][];
   onClose: () => void;
 }
 
-function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, onClose }: ModalProps) {
+function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, dotColors, onClose }: ModalProps) {
   const [idx, setIdx] = useState(initialIndex);
   const total    = voicings.length;
   const voicing  = voicings[idx];
@@ -285,6 +286,7 @@ function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, 
         }}>
           <MiniFretboard
             voicing={voicing}
+            dotColors={dotColors?.[idx]}
             dotColor={color}
             tuning={tuning}
             showStringLabels
@@ -399,7 +401,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   const playTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Modal
-  const [modal, setModal] = useState<{ voicings: FretPosition[][]; chordNames: string[]; index: number; color: string } | null>(null);
+  const [modal, setModal] = useState<{ voicings: FretPosition[][]; chordNames: string[]; index: number; color: string; dotColors?: string[][] } | null>(null);
 
   // AI analysis
   const [analysis,        setAnalysis]        = useState<MusicalAnalysis | null>(null);
@@ -500,8 +502,8 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
     });
   };
 
-  const openModal = useCallback((index: number, voicings: FretPosition[][], names: string[], color: string) => {
-    setModal({ voicings, chordNames: names, index, color });
+  const openModal = useCallback((index: number, voicings: FretPosition[][], names: string[], color: string, dotColors?: string[][]) => {
+    setModal({ voicings, chordNames: names, index, color, dotColors });
   }, []);
 
   const currentPath: VoicingPath | undefined = paths[selectedIdx];
@@ -913,6 +915,36 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
+            {/* ── Progression with optional note names ─────────────── */}
+            <div style={{ ...card({ padding: '12px 14px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={LABEL_STYLE}>Progression</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
+                {chords.map((c, i) => {
+                  const ivColor = isolate === 'root' ? INTERVAL_COLOR['1P']
+                    : isolate === '3rd' ? INTERVAL_COLOR['3M']
+                    : isolate === '5th' ? INTERVAL_COLOR['5P']
+                    : isolate === '7th' ? INTERVAL_COLOR['7M'] : null;
+                  const noteIdx = isolate
+                    ? TonalChord.get(c).intervals.findIndex(iv => INTERVAL_GROUP[iv] === isolate)
+                    : -1;
+                  const noteName = noteIdx >= 0 ? TonalChord.get(c).notes[noteIdx] : null;
+                  return (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <span style={{
+                        padding: '5px 12px', borderRadius: 20,
+                        background: noteName ? (ivColor! + '18') : T.bgDeep,
+                        border: `1px solid ${noteName ? (ivColor! + '55') : T.border}`,
+                        fontSize: 13, fontWeight: 700, color: T.text,
+                      }}>{c}</span>
+                      {noteName && ivColor && (
+                        <span style={{ fontSize: 12, fontWeight: 800, color: ivColor }}>{noteName}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* ── Filter buttons ───────────────────────────────────── */}
             <div style={{ ...card({ padding: '14px 16px' }), display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={LABEL_STYLE}>Isolate interval</p>
@@ -993,15 +1025,25 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                     </div>
                   </div>
 
-                  {/* Fretboard diagrams — only matching notes */}
+                  {/* Fretboard diagrams — only matching notes, clickable */}
                   <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <p style={LABEL_STYLE}>On the neck — {currentPath.label}</p>
                     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, flexWrap: 'nowrap', minHeight: 120 }}>
-                      {perChord.map(({ chordName, filtered }, ci) => (
-                        <div key={ci} style={{
-                          flexShrink: 0, width: 110,
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                        }}>
+                      {perChord.map(({ chordName, filtered }, ci) => {
+                        const allDotColors = perChord.map(({ filtered: fv }, fi) =>
+                          computeDotColors(currentPath.voicings[fi], chords[fi], isolate, tuning.notes, ivColor)
+                        );
+                        return (
+                        <button
+                          key={ci}
+                          onClick={() => filtered.length > 0 && openModal(ci, currentPath.voicings, chords, ivColor, allDotColors)}
+                          style={{
+                            flexShrink: 0, width: 110,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                            background: 'none', border: 'none',
+                            cursor: filtered.length > 0 ? 'pointer' : 'default', padding: 0,
+                          }}
+                        >
                           <span style={{ fontSize: 12, fontWeight: 800, color: ivColor }}>{chordName}</span>
                           <div style={{
                             width: '100%', background: T.bgInput,
@@ -1017,11 +1059,12 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                             )}
                           </div>
                           {filtered.length > 0 && <FretBadge voicing={filtered} color={ivColor} />}
-                        </div>
-                      ))}
+                        </button>
+                        );
+                      })}
                     </div>
                     <p style={{ margin: 0, fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>
-                      Path: {currentPath.label} · tap a diagram to enlarge
+                      Tap a diagram to enlarge
                     </p>
                   </div>
                 </>
@@ -1055,6 +1098,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           index={modal.index}
           color={modal.color}
           tuning={tuning.notes}
+          dotColors={modal.dotColors}
           onClose={() => setModal(null)}
         />
       )}
