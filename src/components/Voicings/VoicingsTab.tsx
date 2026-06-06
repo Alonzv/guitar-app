@@ -518,18 +518,18 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
       {/* ── Sub-tab selector ───────────────────────────────────────── */}
       <div style={{
         display: 'flex', borderRadius: 10, overflow: 'hidden',
-        border: `1px solid ${T.border}`, background: T.bgDeep,
+        border: `1px solid ${T.border}`,
       }}>
         {([
           { id: 'paths',        label: 'Paths'         },
           { id: 'voiceleading', label: 'Voice Leading' },
         ] as { id: SubTab; label: string }[]).map(tab => (
           <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
-            flex: 1, padding: '10px 0', border: 'none',
-            background: subTab === tab.id ? T.secondary : 'transparent',
+            flex: 1, padding: '11px 0', border: 'none',
+            background: subTab === tab.id ? T.secondary : T.bgInput,
             color: subTab === tab.id ? '#fff' : T.textMuted,
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            transition: 'all 0.15s',
+            fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            transition: 'background 0.15s',
           }}>{tab.label}</button>
         ))}
       </div>
