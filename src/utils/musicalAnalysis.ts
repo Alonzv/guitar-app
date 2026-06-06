@@ -43,13 +43,13 @@ Genre/vibe: ${genre}
 Available voicing paths (index: label — smoothness — description):
 ${pathLines}
 
-Reply with valid JSON only, no markdown. Write "character", "advice", and "recommendedReason" in Hebrew:
+Reply with valid JSON only, no markdown. Write "character", "advice", and "recommendedReason" in fluent, natural Israeli Hebrew — no English loanwords, no transliterations, no slang. Use clear, musical language a Hebrew-speaking guitarist would naturally say.
 {
   "key": "the musical key in English e.g. A minor",
-  "character": "2 sentences in Hebrew describing the emotional/musical character of this progression",
-  "advice": "1 sentence in Hebrew with a specific technique tip for this genre and progression",
+  "character": "2 sentences in natural Hebrew describing the emotional and musical feeling of this progression",
+  "advice": "1 sentence in natural Hebrew with a practical playing tip suited to this genre and progression",
   "recommendedPath": <index 0-${paths.length - 1} of the path that best fits the genre/vibe>,
-  "recommendedReason": "1 sentence in Hebrew explaining why this path fits best"
+  "recommendedReason": "1 sentence in natural Hebrew explaining why this path fits the style best"
 }`,
       }],
     });
