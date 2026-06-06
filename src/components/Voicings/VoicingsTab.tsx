@@ -303,14 +303,20 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
     setChords(prev => [...prev, chordName]);
   };
 
-  const moveChord = (i: number, dir: -1 | 1) => {
+  const dragIndex = useRef<number | null>(null);
+
+  const onDragStart = (i: number) => { dragIndex.current = i; };
+
+  const onDrop = (i: number) => {
+    const from = dragIndex.current;
+    if (from == null || from === i) return;
     setChords(prev => {
       const next = [...prev];
-      const j = i + dir;
-      if (j < 0 || j >= next.length) return prev;
-      [next[i], next[j]] = [next[j], next[i]];
+      const [item] = next.splice(from, 1);
+      next.splice(i, 0, item);
       return next;
     });
+    dragIndex.current = null;
   };
 
   const importProgression = () => {
@@ -430,30 +436,24 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           {chords.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
               {chords.map((c, i) => (
-                <span key={i} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 3,
-                  padding: '4px 8px', borderRadius: 20,
-                  background: T.bgDeep, border: `1px solid ${T.border}`,
-                  fontSize: 13, fontWeight: 700, color: T.text,
-                }}>
-                  {i > 0 && (
-                    <button
-                      onClick={() => moveChord(i, -1)}
-                      title="Move left"
-                      style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', color: T.textDim, fontSize: 11, lineHeight: 1 }}
-                    >◀</button>
-                  )}
+                <span
+                  key={i}
+                  draggable
+                  onDragStart={() => onDragStart(i)}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={() => onDrop(i)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '5px 11px', borderRadius: 20,
+                    background: T.bgDeep, border: `1px solid ${T.border}`,
+                    fontSize: 13, fontWeight: 700, color: T.text,
+                    cursor: 'grab', userSelect: 'none',
+                  }}
+                >
                   {c}
-                  {i < chords.length - 1 && (
-                    <button
-                      onClick={() => moveChord(i, 1)}
-                      title="Move right"
-                      style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', color: T.textDim, fontSize: 11, lineHeight: 1 }}
-                    >▶</button>
-                  )}
                   <button
                     onClick={() => setChords(prev => prev.filter((_, j) => j !== i))}
-                    style={{ background: 'none', border: 'none', padding: '0 0 0 2px', cursor: 'pointer', color: T.textMuted, fontSize: 15, lineHeight: 1 }}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: T.textMuted, fontSize: 15, lineHeight: 1 }}
                   >×</button>
                 </span>
               ))}
