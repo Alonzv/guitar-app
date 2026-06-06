@@ -14,6 +14,7 @@ import {
 import { analyzeProgression, type MusicalAnalysis } from '../../utils/musicalAnalysis';
 import { TUNINGS } from '../../utils/musicTheory';
 import { T, card } from '../../theme';
+import { ReharmonizeTab } from './ReharmonizeTab';
 
 interface Props {
   globalProgression?: ChordInProgression[];
@@ -411,7 +412,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   const [isolate, setIsolate] = useState<IsolateGroup>(null);
 
   // Sub-tab
-  const [subTab, setSubTab] = useState<'paths' | 'voiceleading'>('paths');
+  const [subTab, setSubTab] = useState<'paths' | 'voiceleading' | 'reharmonize'>('paths');
 
   // Derived chord name
   const suffix    = SUFFIX_MAP[triad]?.[ext] ?? '';
@@ -523,7 +524,8 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
         {([
           { id: 'paths',        label: 'Paths'         },
           { id: 'voiceleading', label: 'Voice Leading' },
-        ] as { id: SubTab; label: string }[]).map(tab => (
+          { id: 'reharmonize',  label: 'Re-Harmonize'  },
+        ] as { id: 'paths' | 'voiceleading' | 'reharmonize'; label: string }[]).map(tab => (
           <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
             flex: 1, padding: '11px 0', border: 'none',
             background: subTab === tab.id ? T.secondary : T.bgInput,
@@ -1098,6 +1100,17 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
         )}
 
       </> /* end subTab === 'voiceleading' */}
+
+      {subTab === 'reharmonize' && (
+        <ReharmonizeTab
+          chords={chords}
+          mode={mode}
+          setMode={setMode}
+          stringGroup={stringGroup}
+          setStringGroup={setStringGroup}
+          tuning={tuning}
+        />
+      )}
 
       {/* ── Modal ────────────────────────────────────────────────────── */}
       {modal && (
