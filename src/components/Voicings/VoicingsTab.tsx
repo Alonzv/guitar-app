@@ -116,19 +116,43 @@ function FretBadge({ voicing, color }: { voicing: FretPosition[]; color: string 
 // ── Modal ─────────────────────────────────────────────────────────────────
 
 interface ModalProps {
-  voicing: FretPosition[];
-  chordName: string;
+  voicings: FretPosition[][];
+  chordNames: string[];
+  index: number;
   color: string;
   tuning: string[];
   onClose: () => void;
 }
 
-function ChordModal({ voicing, chordName, color, tuning, onClose }: ModalProps) {
+function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, onClose }: ModalProps) {
+  const [idx, setIdx] = useState(initialIndex);
+  const total    = voicings.length;
+  const voicing  = voicings[idx];
+  const name     = chordNames[idx];
+
+  const prev = () => setIdx(i => Math.max(0, i - 1));
+  const next = () => setIdx(i => Math.min(total - 1, i + 1));
+
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape')      onClose();
+      else if (e.key === 'ArrowLeft')  setIdx(i => Math.max(0, i - 1));
+      else if (e.key === 'ArrowRight') setIdx(i => Math.min(total - 1, i + 1));
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [onClose, total]);
+
+  const navBtn = (onClick: () => void, label: string, disabled: boolean): React.CSSProperties => ({
+    background: disabled ? T.bgDeep : T.bgInput,
+    border: `1px solid ${T.border}`,
+    borderRadius: 10, padding: '10px 16px',
+    cursor: disabled ? 'default' : 'pointer',
+    color: disabled ? T.textDim : T.text,
+    fontSize: 18, fontWeight: 700, lineHeight: 1,
+    opacity: disabled ? 0.35 : 1,
+    transition: 'opacity 0.15s',
+  });
 
   return (
     <div
@@ -145,21 +169,26 @@ function ChordModal({ voicing, chordName, color, tuning, onClose }: ModalProps) 
         style={{
           background: T.bgCard, borderRadius: 18,
           border: `1px solid ${T.border}`,
-          padding: 24, maxWidth: 320, width: '100%',
+          padding: 24, maxWidth: 340, width: '100%',
           display: 'flex', flexDirection: 'column', gap: 14,
           boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
         }}
       >
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 22, fontWeight: 800, color }}>{chordName}</span>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none', border: 'none', color: T.textMuted,
-              fontSize: 22, cursor: 'pointer', lineHeight: 1, padding: '2px 6px',
-            }}
-          >×</button>
+          <span style={{ fontSize: 22, fontWeight: 800, color }}>{name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, color: T.textDim, fontWeight: 600 }}>
+              {idx + 1} / {total}
+            </span>
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 22, cursor: 'pointer', lineHeight: 1, padding: '2px 6px' }}
+            >×</button>
+          </div>
         </div>
+
+        {/* Fretboard */}
         <div style={{
           background: T.bgInput, borderRadius: 12,
           border: `1px solid ${color}44`, padding: '8px 8px 4px',
@@ -173,9 +202,19 @@ function ChordModal({ voicing, chordName, color, tuning, onClose }: ModalProps) 
             hideFretLabel
           />
         </div>
+
         <FretBadge voicing={voicing} color={color} />
-        <p style={{ margin: 0, fontSize: 11, color: T.textDim, textAlign: 'center' }}>
-          Tap outside or press Esc to close
+
+        {/* Navigation arrows */}
+        {total > 1 && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={prev} disabled={idx === 0}          style={{ ...navBtn(prev, '‹', idx === 0),          flex: 1 }}>‹</button>
+            <button onClick={next} disabled={idx === total - 1}  style={{ ...navBtn(next, '›', idx === total - 1),  flex: 1 }}>›</button>
+          </div>
+        )}
+
+        <p style={{ margin: 0, fontSize: 10, color: T.textDim, textAlign: 'center' }}>
+          ← → keys to navigate · Esc to close
         </p>
       </div>
     </div>
@@ -249,7 +288,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   const playTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Modal
-  const [modal, setModal] = useState<{ voicing: FretPosition[]; chordName: string; color: string } | null>(null);
+  const [modal, setModal] = useState<{ voicings: FretPosition[][]; chordNames: string[]; index: number; color: string } | null>(null);
 
   // AI analysis
   const [analysis,        setAnalysis]        = useState<MusicalAnalysis | null>(null);
@@ -342,8 +381,8 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
     });
   };
 
-  const openModal = useCallback((voicing: FretPosition[], name: string, color: string) => {
-    setModal({ voicing, chordName: name, color });
+  const openModal = useCallback((index: number, voicings: FretPosition[][], names: string[], color: string) => {
+    setModal({ voicings, chordNames: names, index, color });
   }, []);
 
   const currentPath: VoicingPath | undefined = paths[selectedIdx];
@@ -642,7 +681,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 {currentPath.voicings.map((voicing, ci) => (
                   <button
                     key={ci}
-                    onClick={() => openModal(voicing, chords[ci], currentColor)}
+                    onClick={() => openModal(ci, currentPath.voicings, chords, currentColor)}
                     style={{
                       flexShrink: 0, width: 120,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
@@ -696,8 +735,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
       {/* ── Modal ────────────────────────────────────────────────────── */}
       {modal && (
         <ChordModal
-          voicing={modal.voicing}
-          chordName={modal.chordName}
+          voicings={modal.voicings}
+          chordNames={modal.chordNames}
+          index={modal.index}
           color={modal.color}
           tuning={tuning.notes}
           onClose={() => setModal(null)}
