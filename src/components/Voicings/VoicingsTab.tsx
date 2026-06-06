@@ -303,6 +303,16 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
     setChords(prev => [...prev, chordName]);
   };
 
+  const moveChord = (i: number, dir: -1 | 1) => {
+    setChords(prev => {
+      const next = [...prev];
+      const j = i + dir;
+      if (j < 0 || j >= next.length) return prev;
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  };
+
   const importProgression = () => {
     if (!globalProgression?.length) return;
     setChords(globalProgression.slice(0, 8).map(c => c.chord.name));
@@ -421,16 +431,29 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
               {chords.map((c, i) => (
                 <span key={i} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '5px 11px', borderRadius: 20,
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  padding: '4px 8px', borderRadius: 20,
                   background: T.bgDeep, border: `1px solid ${T.border}`,
                   fontSize: 13, fontWeight: 700, color: T.text,
                 }}>
-                  {i > 0 && <span style={{ color: T.textDim, fontSize: 10, marginRight: 2 }}>→</span>}
+                  {i > 0 && (
+                    <button
+                      onClick={() => moveChord(i, -1)}
+                      title="Move left"
+                      style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', color: T.textDim, fontSize: 11, lineHeight: 1 }}
+                    >◀</button>
+                  )}
                   {c}
+                  {i < chords.length - 1 && (
+                    <button
+                      onClick={() => moveChord(i, 1)}
+                      title="Move right"
+                      style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', color: T.textDim, fontSize: 11, lineHeight: 1 }}
+                    >▶</button>
+                  )}
                   <button
                     onClick={() => setChords(prev => prev.filter((_, j) => j !== i))}
-                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: T.textMuted, fontSize: 15, lineHeight: 1 }}
+                    style={{ background: 'none', border: 'none', padding: '0 0 0 2px', cursor: 'pointer', color: T.textMuted, fontSize: 15, lineHeight: 1 }}
                   >×</button>
                 </span>
               ))}
@@ -584,12 +607,12 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             </div>
           </div>
 
-          {/* Selected path detail */}
+          {/* Selected path detail — minHeight prevents layout jump when switching paths */}
           {currentPath && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
               {/* Description + smoothness */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minHeight: 54 }}>
                 <p style={{ margin: 0, fontSize: 12, color: T.textMuted, fontStyle: 'italic', lineHeight: 1.5 }}>
                   {currentPath.description}
                 </p>
@@ -613,9 +636,8 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               </p>
               <div style={{
                 display: 'flex', gap: 8, overflowX: 'auto',
-                paddingBottom: 4,
-                /* On wider screens, allow wrapping instead of scroll */
-                flexWrap: 'nowrap',
+                paddingBottom: 4, flexWrap: 'nowrap',
+                minHeight: 148,
               }}>
                 {currentPath.voicings.map((voicing, ci) => (
                   <button
