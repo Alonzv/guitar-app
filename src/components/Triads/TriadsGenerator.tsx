@@ -111,7 +111,7 @@ function findShape(
       for (const mf of mids) {
         for (const tf of tops) {
           const span = Math.max(bassFret, mf, tf) - Math.min(bassFret, mf, tf);
-          if (span <= 4) {
+          if (span <= 3) {
             const minF = Math.min(bassFret, mf, tf);
             if (minF < bestMin) {
               bestMin = minF;

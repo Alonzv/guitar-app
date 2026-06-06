@@ -22,18 +22,43 @@ function isPlayable(voicing: FretPosition[]): boolean {
   if (voicing.length < 4) return false;
 
   const nonOpen = voicing.filter(p => p.fret > 0);
-  if (nonOpen.length > 1) {
-    const frets = nonOpen.map(p => p.fret);
-    if (Math.max(...frets) - Math.min(...frets) > 3) return false;
+  if (nonOpen.length === 0) return true;
+
+  const frets   = nonOpen.map(p => p.fret);
+  const minFret = Math.min(...frets);
+  const maxFret = Math.max(...frets);
+
+  // Index barre covers minFret; everything above needs separate fingers.
+  if (maxFret - minFret > 3) return false;
+
+  // Count fingers needed above the barre fret.
+  // Consecutive strings at the same fret share one finger (barre/barre-fragment).
+  const aboveMin = nonOpen.filter(p => p.fret > minFret);
+  const byFret = new Map<number, number[]>();
+  for (const p of aboveMin) {
+    if (!byFret.has(p.fret)) byFret.set(p.fret, []);
+    byFret.get(p.fret)!.push(p.string);
   }
 
-  const usedStrings = new Set(voicing.map(p => p.string));
-  const minS = Math.min(...usedStrings);
-  const maxS = Math.max(...usedStrings);
-  let gap = 0;
-  for (let s = minS; s <= maxS; s++) {
-    if (!usedStrings.has(s)) { gap++; if (gap >= 3) return false; }
-    else gap = 0;
+  let extraFingers = 0;
+  for (const strings of byFret.values()) {
+    const sorted = [...strings].sort((a, b) => a - b);
+    let j = 0;
+    while (j < sorted.length) {
+      let end = j;
+      while (end + 1 < sorted.length && sorted[end + 1] === sorted[end] + 1) end++;
+      extraFingers++;
+      j = end + 1;
+    }
+  }
+  if (extraFingers > 3) return false;
+
+  // Above-barre notes at different frets spanning >3 strings is physically unreachable.
+  if (aboveMin.length >= 2) {
+    const minStr    = Math.min(...aboveMin.map(p => p.string));
+    const maxStr    = Math.max(...aboveMin.map(p => p.string));
+    const multiFret = new Set(aboveMin.map(p => p.fret)).size > 1;
+    if (maxStr - minStr > 3 && multiFret) return false;
   }
 
   return true;
