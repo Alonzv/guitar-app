@@ -231,12 +231,10 @@ function AnalysisCard({ analysis, loading }: { analysis: MusicalAnalysis | null;
       borderLeft: `3px solid ${T.primary}`,
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: T.primary }}>AI Analysis</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: T.primary }}>ניתוח AI</span>
         {loading && (
-          <span style={{ fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>
-            analyzing…
-          </span>
+          <span style={{ fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>מנתח…</span>
         )}
         {analysis && (
           <span style={{
@@ -250,16 +248,22 @@ function AnalysisCard({ analysis, loading }: { analysis: MusicalAnalysis | null;
       </div>
       {analysis && (
         <>
-          <p style={{ margin: 0, fontSize: 12, color: T.text, lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: 12, color: T.text, lineHeight: 1.7, direction: 'rtl', textAlign: 'right' }}>
             {analysis.character}
           </p>
-          <p style={{
-            margin: 0, fontSize: 11, color: T.textMuted,
-            fontStyle: 'italic', paddingTop: 2,
-            borderTop: `1px solid ${T.border}`,
+          <div style={{
+            paddingTop: 8, borderTop: `1px solid ${T.border}`,
+            display: 'flex', flexDirection: 'column', gap: 5,
           }}>
-            Tip: {analysis.advice}
-          </p>
+            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, fontStyle: 'italic', direction: 'rtl', textAlign: 'right' }}>
+              💡 {analysis.advice}
+            </p>
+            {analysis.recommendedReason && (
+              <p style={{ margin: 0, fontSize: 11, color: T.primary, direction: 'rtl', textAlign: 'right' }}>
+                ✦ {analysis.recommendedReason}
+              </p>
+            )}
+          </div>
         </>
       )}
     </div>
@@ -325,13 +329,16 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
       return;
     }
     const genreLabel = GENRES.find(g => g.id === genre)?.label ?? genre;
+    const pathInfos  = paths.map(p => ({ label: p.label, description: p.description, smoothness: p.smoothness }));
     setAnalysis(null);
     setAnalysisLoading(true);
     let cancelled = false;
-    analyzeProgression(chords, genreLabel).then(result => {
+    analyzeProgression(chords, genreLabel, pathInfos).then(result => {
       if (!cancelled) {
         setAnalysis(result);
         setAnalysisLoading(false);
+        // Auto-select the AI-recommended path
+        if (result) setSelectedIdx(result.recommendedPath);
       }
     });
     return () => { cancelled = true; };
@@ -614,8 +621,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             <p style={LABEL_STYLE}>Paths Found</p>
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
               {paths.map((path, pi) => {
-                const c      = PATH_COLOR[path.label] ?? T.primary;
-                const active = pi === selectedIdx;
+                const c         = PATH_COLOR[path.label] ?? T.primary;
+                const active    = pi === selectedIdx;
+                const isAIPick  = analysis && analysis.recommendedPath === pi;
                 return (
                   <button
                     key={path.id}
@@ -624,7 +632,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                       flexShrink: 0,
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: '6px 12px', borderRadius: 20,
-                      border: active ? 'none' : `1px solid ${T.border}`,
+                      border: active ? 'none' : isAIPick ? `1px solid ${c}` : `1px solid ${T.border}`,
                       background: active ? c : T.bgDeep,
                       color: active ? '#fff' : T.textMuted,
                       fontSize: 12, fontWeight: active ? 700 : 400,
@@ -640,6 +648,15 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                       fontSize: 9, fontWeight: 800, flexShrink: 0,
                     }}>{pi + 1}</span>
                     {path.label}
+                    {isAIPick && (
+                      <span style={{
+                        fontSize: 8, fontWeight: 800,
+                        background: active ? 'rgba(255,255,255,0.25)' : c + '22',
+                        color: active ? '#fff' : c,
+                        border: active ? 'none' : `1px solid ${c}66`,
+                        padding: '1px 5px', borderRadius: 6,
+                      }}>✦ AI</span>
+                    )}
                   </button>
                 );
               })}
