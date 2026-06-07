@@ -747,7 +747,6 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
       {/* ── Empty state ──────────────────────────────────────────────── */}
       {chords.length === 0 && (
         <div style={{ ...card(), textAlign: 'center', padding: '40px 16px' }}>
-          <div style={{ fontSize: 30, marginBottom: 10 }}>🎸</div>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
             Build chords above and add them to the progression.<br />
             The engine will find intelligent voicing paths across the neck.
