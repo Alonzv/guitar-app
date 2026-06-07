@@ -413,9 +413,7 @@ export function findVoicingPaths(
   const usedZones = new Set<string>();
 
   const push = (p: typeof full[number]) => {
-    const baseLabel = pathLabel(p.pathAvg, p.openCount);
-    const dupes = result.filter(r => r.label === baseLabel || r.label.startsWith(baseLabel + ' ')).length;
-    const label = dupes > 0 ? `${baseLabel} ${dupes + 1}` : baseLabel;
+    const label = pathLabel(p.pathAvg, p.openCount);
     const desc  = generateDescription(options.genre, p.pathAvg, p.openCount, p.ct, chordNames.length);
     result.push({ id: `path-${result.length}`, voicings: p.voicings, label, avgFret: p.pathAvg, description: desc, smoothness: p.smooth });
   };
@@ -426,15 +424,19 @@ export function findVoicingPaths(
     if (!usedZones.has(z)) { usedZones.add(z); push(p); }
   }
 
+  const usedLabels = new Set(result.map(r => r.label));
+
   for (const p of full) {
     if (result.length >= pathCount) break;
+    const baseLabel = pathLabel(p.pathAvg, p.openCount);
+    if (usedLabels.has(baseLabel)) continue;
     const dup = result.some(r =>
       r.voicings.every((v, ci) =>
         v.length === p.voicings[ci].length &&
         v.every((pos, pi) => pos.fret === p.voicings[ci][pi]?.fret && pos.string === p.voicings[ci][pi]?.string)
       )
     );
-    if (!dup) push(p);
+    if (!dup) { usedLabels.add(baseLabel); push(p); }
   }
 
   return result;
