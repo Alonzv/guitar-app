@@ -413,7 +413,9 @@ export function findVoicingPaths(
   const usedZones = new Set<string>();
 
   const push = (p: typeof full[number]) => {
-    const label = pathLabel(p.pathAvg, p.openCount);
+    const baseLabel = pathLabel(p.pathAvg, p.openCount);
+    const dupes = result.filter(r => r.label === baseLabel || r.label.startsWith(baseLabel + ' ')).length;
+    const label = dupes > 0 ? `${baseLabel} ${dupes + 1}` : baseLabel;
     const desc  = generateDescription(options.genre, p.pathAvg, p.openCount, p.ct, chordNames.length);
     result.push({ id: `path-${result.length}`, voicings: p.voicings, label, avgFret: p.pathAvg, description: desc, smoothness: p.smooth });
   };

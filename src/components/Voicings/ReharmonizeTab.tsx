@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import type { FretPosition, Tuning } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
@@ -51,6 +51,83 @@ function FretBadge({ voicing, color }: { voicing: FretPosition[]; color: string 
           ? `${lowestFret}fr + open`
           : `${lowestFret}fr`}
     </span>
+  );
+}
+
+// ── Enlarged chord modal ──────────────────────────────────────────────────────
+function ReharmModal({
+  voicings, chordNames, index: initial, color, tuning, onClose,
+}: {
+  voicings: FretPosition[][];
+  chordNames: string[];
+  index: number;
+  color: string;
+  tuning: string[];
+  onClose: () => void;
+}) {
+  const [idx, setIdx] = useState(initial);
+  const total = voicings.length;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowLeft')  setIdx(i => Math.max(0, i - 1));
+      else if (e.key === 'ArrowRight') setIdx(i => Math.min(total - 1, i + 1));
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose, total]);
+
+  const navStyle = (disabled: boolean): React.CSSProperties => ({
+    flex: 1, padding: '10px 16px', borderRadius: 10,
+    border: `1px solid ${T.border}`,
+    background: disabled ? T.bgDeep : T.bgInput,
+    color: disabled ? T.textDim : T.text,
+    cursor: disabled ? 'default' : 'pointer',
+    fontSize: 18, fontWeight: 700, opacity: disabled ? 0.35 : 1,
+    transition: 'opacity 0.15s',
+  });
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.72)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: T.bgCard, borderRadius: 18,
+          border: `1px solid ${T.border}`,
+          padding: 24, maxWidth: 340, width: '100%',
+          display: 'flex', flexDirection: 'column', gap: 14,
+          boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color }}>{chordNames[idx]}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, color: T.textDim, fontWeight: 600 }}>{idx + 1} / {total}</span>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 22, cursor: 'pointer', lineHeight: 1, padding: '2px 6px' }}>×</button>
+          </div>
+        </div>
+        <div style={{ background: T.bgInput, borderRadius: 12, border: `1px solid ${color}44`, padding: '8px 8px 4px' }}>
+          <MiniFretboard voicing={voicings[idx]} dotColor={color} tuning={tuning} showStringLabels showFretNumbers hideFretLabel />
+        </div>
+        <FretBadge voicing={voicings[idx]} color={color} />
+        {total > 1 && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setIdx(i => Math.max(0, i - 1))}          disabled={idx === 0}          style={navStyle(idx === 0)}>‹</button>
+            <button onClick={() => setIdx(i => Math.min(total - 1, i + 1))}  disabled={idx === total - 1}  style={navStyle(idx === total - 1)}>›</button>
+          </div>
+        )}
+        <p style={{ margin: 0, fontSize: 10, color: T.textDim, textAlign: 'center' }}>← → keys to navigate · Esc to close</p>
+      </div>
+    </div>
   );
 }
 
@@ -135,6 +212,7 @@ export function ReharmonizeTab({
   const [reharmPaths, setReharmPaths] = useState<VoicingPath[]>([]);
   const [selectedPathIdx, setSelectedPathIdx] = useState(0);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [modalIdx, setModalIdx] = useState<number | null>(null);
   const playTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Key root = first chord's root
@@ -510,8 +588,9 @@ export function ReharmonizeTab({
                         {currentPath.voicings.map((voicing, ci) => (
                           <div
                             key={ci}
+                            onClick={() => setModalIdx(ci)}
                             style={{
-                              flexShrink: 0, width: 120,
+                              flexShrink: 0, width: 120, cursor: 'pointer',
                               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                             }}
                           >
@@ -552,9 +631,9 @@ export function ReharmonizeTab({
                 style={{
                   width: '100%',
                   padding: '11px 0', borderRadius: 10,
-                  border: `1px solid ${T.border}`,
-                  cursor: 'pointer', fontWeight: 500, fontSize: 14,
-                  background: T.bgInput, color: T.textMuted,
+                  border: `1.5px solid ${T.secondary}`,
+                  cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                  background: 'transparent', color: T.secondary,
                   transition: 'background 0.15s',
                 }}
               >
@@ -563,6 +642,18 @@ export function ReharmonizeTab({
             </>
           )}
         </>
+      )}
+
+      {/* Enlarged diagram modal */}
+      {modalIdx !== null && currentPath && result && (
+        <ReharmModal
+          voicings={currentPath.voicings}
+          chordNames={result.chords}
+          index={modalIdx}
+          color={currentColor}
+          tuning={tuning.notes}
+          onClose={() => setModalIdx(null)}
+        />
       )}
     </div>
   );
