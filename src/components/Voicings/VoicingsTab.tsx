@@ -945,9 +945,54 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               </div>
             </div>
 
+            {/* ── Path selector ────────────────────────────────────── */}
+            {paths.length > 0 && (
+              <div style={{ ...card({ padding: '12px 14px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <p style={LABEL_STYLE}>Path</p>
+                <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                  {paths.map((path, pi) => {
+                    const c      = PATH_COLOR[path.label] ?? T.primary;
+                    const active = pi === selectedIdx;
+                    return (
+                      <button
+                        key={path.id}
+                        onClick={() => setSelectedIdx(pi)}
+                        style={{
+                          flexShrink: 0,
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          padding: '5px 11px', borderRadius: 20,
+                          border: active ? 'none' : `1px solid ${T.border}`,
+                          background: active ? c : T.bgDeep,
+                          color: active ? '#fff' : T.textMuted,
+                          fontSize: 12, fontWeight: active ? 700 : 400,
+                          cursor: 'pointer', transition: 'all 0.15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <span style={{
+                          width: 14, height: 14, borderRadius: '50%',
+                          background: active ? 'rgba(255,255,255,0.3)' : c,
+                          color: '#fff', display: 'inline-flex', alignItems: 'center',
+                          justifyContent: 'center', fontSize: 8, fontWeight: 800, flexShrink: 0,
+                        }}>{pi + 1}</span>
+                        {path.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* ── Filter buttons ───────────────────────────────────── */}
             <div style={{ ...card({ padding: '14px 16px' }), display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={LABEL_STYLE}>Isolate interval</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <p style={LABEL_STYLE}>Isolate interval</p>
+                {!isolate && (
+                  <span style={{ fontSize: 11, color: T.textMuted, fontStyle: 'italic' }}>
+                    ↑ בחר interval לראות ניתוח
+                  </span>
+                )}
+              </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {([
                   { id: 'root', label: 'Root',  sub: '1',  color: INTERVAL_COLOR['1P'] },

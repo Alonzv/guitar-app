@@ -209,6 +209,7 @@ export function ReharmonizeTab({
   const [showNashville, setShowNashville] = useState(false);
   const [result, setResult] = useState<ReharmonizeResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [reharmPaths, setReharmPaths] = useState<VoicingPath[]>([]);
   const [selectedPathIdx, setSelectedPathIdx] = useState(0);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -224,6 +225,7 @@ export function ReharmonizeTab({
     if (chords.length === 0 || loading) return;
     setLoading(true);
     setResult(null);
+    setError(null);
     setReharmPaths([]);
     setSelectedPathIdx(0);
     setPlayingId(null);
@@ -244,7 +246,12 @@ export function ReharmonizeTab({
         });
         setReharmPaths(paths);
         setSelectedPathIdx(0);
+      } else {
+        setError('לא ניתן לבצע הרמוניזציה מחדש. בדוק שמפתח ה-API מוגדר.');
       }
+    }).catch(() => {
+      setLoading(false);
+      setError('שגיאת רשת — נסה שוב.');
     });
   };
 
@@ -460,6 +467,20 @@ export function ReharmonizeTab({
 
           {/* Spinner animation */}
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+          {/* Error message */}
+          {error && !loading && (
+            <div style={{
+              ...card({ padding: '12px 16px' }),
+              borderLeft: `3px solid ${T.error ?? '#c0392b'}`,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <span style={{ fontSize: 16 }}>⚠️</span>
+              <p style={{ margin: 0, fontSize: 13, color: T.text, direction: 'rtl', textAlign: 'right' }}>
+                {error}
+              </p>
+            </div>
+          )}
 
           {/* Results section */}
           {result && (
