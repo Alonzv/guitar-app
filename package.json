@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@spotify/basic-pitch": "^1.0.1",
     "@tailwindcss/vite": "^4.2.1",
     "@tonaljs/tonal": "^4.10.0",
     "autoprefixer": "^10.4.27",

@@ -1,4 +1,9 @@
-import { PitchDetector } from 'pitchy';
+import {
+  BasicPitch,
+  noteFramesToTime,
+  outputToNotesPoly,
+  addPitchBendsToNoteEvents,
+} from '@spotify/basic-pitch';
 import Anthropic from '@anthropic-ai/sdk';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -37,16 +42,19 @@ export const DISPLAY_ORDER = [5, 4, 3, 2, 1, 0] as const;
 
 const MAX_FRET = 22;
 
-// Detection parameters — significantly more permissive than defaults
-// to catch the full range of guitar timbres
-const FRAME = 4096;   // larger frame → better low-freq resolution
-const HOP   = 512;
-const MIN_VOLUME_DB     = -30;    // was -22 — catch quieter passages
-const MIN_FREQ          = 72;     // just below guitar low E (82 Hz)
-const MAX_FREQ          = 1050;   // high e 19th fret ~988 Hz
-const MIN_RMS           = 0.003;  // skip near-silent frames (noise gate)
-const MIN_NOTE_DURATION = 0.06;   // 60 ms minimum note length
-const MERGE_GAP_S       = 0.08;   // merge same-pitch gaps under 80 ms
+// Basic Pitch model path (served from public/)
+const MODEL_URL = '/basic-pitch/model.json';
+
+// Singleton — model loads once, reused across calls
+let _bp: BasicPitch | null = null;
+function getBasicPitch(): BasicPitch {
+  if (!_bp) _bp = new BasicPitch(MODEL_URL);
+  return _bp;
+}
+
+// Guitar MIDI range for post-filtering
+const MIN_MIDI = 40;  // low E2
+const MAX_MIDI = 88;  // high e, 22nd fret
 
 // ── Frequency helpers ─────────────────────────────────────────────────────────
 
@@ -117,11 +125,11 @@ export function optimizeFingeringPath(
   return path;
 }
 
-// ── Mono downmix + normalise ──────────────────────────────────────────────────
+// ── Mono downmix (for waveform display) ──────────────────────────────────────
 
 function downmixToMono(buf: AudioBuffer): Float32Array {
-  const len = buf.length;
-  const ch  = buf.numberOfChannels;
+  const len  = buf.length;
+  const ch   = buf.numberOfChannels;
   const mono = new Float32Array(len);
   if (ch === 1) {
     mono.set(buf.getChannelData(0));
@@ -131,7 +139,6 @@ function downmixToMono(buf: AudioBuffer): Float32Array {
       for (let i = 0; i < len; i++) mono[i] += data[i] / ch;
     }
   }
-  // Normalise to peak 1.0 — ensures consistent input regardless of recording level
   let peak = 0;
   for (let i = 0; i < len; i++) { const a = Math.abs(mono[i]); if (a > peak) peak = a; }
   if (peak > 1e-6) for (let i = 0; i < len; i++) mono[i] /= peak;
@@ -145,7 +152,6 @@ export function buildWaveform(buf: AudioBuffer, points = 200): Float32Array {
   const step   = Math.floor(mono.length / points);
   const result = new Float32Array(points);
   let maxAmp   = 1e-6;
-
   for (let i = 0; i < points; i++) {
     let sum = 0;
     for (let j = 0; j < step; j++) sum += Math.abs(mono[i * step + j] || 0);
@@ -156,102 +162,49 @@ export function buildWaveform(buf: AudioBuffer, points = 200): Float32Array {
   return result;
 }
 
-// ── Main transcription ────────────────────────────────────────────────────────
+// ── Main transcription (Basic Pitch neural network) ───────────────────────────
 
-/**
- * Improved pitch detection:
- * - FRAME=4096 for better frequency resolution on low guitar notes
- * - CLARITY_THRESHOLD=0.65 (was 0.82) to catch guitar's complex harmonic timbres
- * - RMS energy gate eliminates silent-frame noise
- * - Median-filter pass removes single-hop spikes before note grouping
- */
 export async function transcribeAudioBuffer(
   audioBuffer: AudioBuffer,
   onProgress?: (pct: number) => void,
 ): Promise<DetectedNote[]> {
-  const mono      = downmixToMono(audioBuffer);
-  const sr        = audioBuffer.sampleRate;
-  const numFrames = Math.max(0, Math.floor((mono.length - FRAME) / HOP));
-  const frame     = new Float32Array(FRAME);
-  const detector  = PitchDetector.forFloat32Array(FRAME);
-  detector.minVolumeDecibels = MIN_VOLUME_DB;
+  const bp = getBasicPitch();
 
-  const raw: Array<{ time: number; midi: number; clarity: number; freq: number }> = [];
+  const frames:   number[][] = [];
+  const onsets:   number[][] = [];
+  const contours: number[][] = [];
 
-  for (let i = 0; i < numFrames; i++) {
-    frame.set(mono.subarray(i * HOP, i * HOP + FRAME));
+  await bp.evaluateModel(
+    audioBuffer,
+    (f, o, c) => { frames.push(...f); onsets.push(...o); contours.push(...c); },
+    (pct) => onProgress?.(Math.round(pct * 72)),
+  );
 
-    // RMS noise gate — skip frames with negligible energy
-    let rms = 0;
-    for (let j = 0; j < FRAME; j++) rms += frame[j] * frame[j];
-    rms = Math.sqrt(rms / FRAME);
+  const noteEvents = outputToNotesPoly(
+    frames,
+    onsets,
+    0.5,   // onsetThreshold
+    0.3,   // frameThreshold — lower = more sensitive
+    5,     // minNoteLen in frames (~56 ms at 22050 Hz / 256 hop)
+    true,  // inferOnsets
+    null,  // maxFreq — no upper limit (we filter by MIDI below)
+    null,  // minFreq
+    true,  // melodiaTrick — suppresses non-melodic background noise
+  );
 
-    const time = (i * HOP) / sr;
-    if (rms < MIN_RMS) {
-      raw.push({ time, midi: -1, clarity: 0, freq: 0 });
-    } else {
-      const [freq, clarity] = detector.findPitch(frame, sr);
-      // Adaptive clarity — guitar fundamentals 200-450 Hz have weaker autocorrelation
-      const clarityMin = freq < 200 ? 0.55 : freq < 450 ? 0.58 : 0.70;
-      const valid = freq > MIN_FREQ && freq < MAX_FREQ && clarity >= clarityMin;
-      raw.push({
-        time,
-        midi:    valid ? freqToMidi(freq) : -1,
-        clarity: valid ? clarity : 0,
-        freq:    valid ? freq : 0,
-      });
-    }
-
-    if (i % 80 === 0) {
-      onProgress?.(Math.round((i / numFrames) * 75));
-      await new Promise(r => setTimeout(r, 0));
-    }
-  }
-
-  // Median filter over 3 frames to remove single-hop spikes
-  for (let i = 1; i < raw.length - 1; i++) {
-    if (raw[i].midi > 0 && raw[i - 1].midi < 0 && raw[i + 1].midi < 0) {
-      raw[i].midi = -1; // lone spike
-    }
-  }
-
-  // Group frames → note events
-  const hopS  = HOP / sr;
-  const notes: DetectedNote[] = [];
-  let start   = -1, end = -1, midi = -1, freqAcc = 0, clarAcc = 0, count = 0;
-
-  const flush = () => {
-    if (start >= 0 && end - start >= MIN_NOTE_DURATION) {
-      notes.push({
-        startTime: start, endTime: end,
-        midiNote: midi, confidence: clarAcc / count, frequency: freqAcc / count,
-      });
-    }
-    start = -1; count = 0; freqAcc = 0; clarAcc = 0;
-  };
-
-  for (const f of raw) {
-    if (f.midi > 0) {
-      if (start < 0) {
-        start = f.time; end = f.time + hopS;
-        midi = f.midi; freqAcc = f.freq; clarAcc = f.clarity; count = 1;
-      } else if (Math.abs(f.midi - midi) <= 1) {
-        end = f.time + hopS;
-        freqAcc += f.freq; clarAcc += f.clarity; count++;
-        if (f.clarity > clarAcc / count) midi = f.midi;
-      } else {
-        flush();
-        start = f.time; end = f.time + hopS;
-        midi = f.midi; freqAcc = f.freq; clarAcc = f.clarity; count = 1;
-      }
-    } else if (start >= 0 && f.time - end > MERGE_GAP_S) {
-      flush();
-    }
-  }
-  flush();
+  const timedNotes = noteFramesToTime(addPitchBendsToNoteEvents(contours, noteEvents));
 
   onProgress?.(75);
-  return notes;
+
+  return timedNotes
+    .filter(n => n.pitchMidi >= MIN_MIDI && n.pitchMidi <= MAX_MIDI)
+    .map(n => ({
+      startTime:  n.startTimeSeconds,
+      endTime:    n.startTimeSeconds + n.durationSeconds,
+      midiNote:   n.pitchMidi,
+      confidence: n.amplitude,
+      frequency:  midiToFreq(n.pitchMidi),
+    }));
 }
 
 // ── AI note refinement ────────────────────────────────────────────────────────
@@ -523,7 +476,7 @@ export function exportTabToPDF(tabData: TabData): void {
           const displayLine = 5 - stringIdx;
           const sy    = y0 + displayLine * PDF_STR_GAP;
           const label = String(fret);
-          doc.setFillColor(255);
+          doc.setFillColor(255, 255, 255);
           const tw = label.length * 2;
           doc.rect(cx - tw - 0.5, sy - 2.5, tw * 2 + 1, 3.5, 'F');
           doc.setTextColor(0);
