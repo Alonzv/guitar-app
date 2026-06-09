@@ -246,59 +246,126 @@ function RecordingBars() {
 
 // ── Instrument SVG icons ──────────────────────────────────────────────────────
 
+// Acoustic Guitar: classic figure-8 body, 6 tuning pegs (3+3), prominent round soundhole
 function IcoAcoustic({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 40 64" width={38} height={58} fill={c}>
-      <rect x="14" y="1" width="12" height="6" rx="3" />
-      <circle cx="10" cy="2.5" r="2.2" /><circle cx="10" cy="5.5" r="2.2" />
-      <circle cx="30" cy="2.5" r="2.2" /><circle cx="30" cy="5.5" r="2.2" />
-      <rect x="16" y="7" width="8" height="2" rx="0.5" opacity={0.55} />
-      <rect x="16.5" y="9" width="7" height="16" rx="1" />
-      <path d="M16,25 C5,25 3,30 3,35 C3,41 7,44 12,45 C8,46 5,49 5,54 C5,61 11,64 20,64 C29,64 35,61 35,54 C35,49 32,46 28,45 C33,44 37,41 37,35 C37,30 35,25 24,25 Z" />
-      <circle cx="20" cy="53" r="5.5" fill={bg} />
+    <svg viewBox="0 0 44 72" width={38} height={62} fill="none">
+      {/* Headstock — wide 3+3 with slight taper */}
+      <path d="M16,2 L28,2 Q30,2 30,4 L30,10 Q30,12 28,12 L16,12 Q14,12 14,10 L14,4 Q14,2 16,2 Z" fill={c} />
+      {/* 3 pegs on left side */}
+      <circle cx="11" cy="4"  r="2.4" fill={c} /><circle cx="11" cy="4"  r="1" fill={bg} opacity={0.6} />
+      <circle cx="11" cy="7"  r="2.4" fill={c} /><circle cx="11" cy="7"  r="1" fill={bg} opacity={0.6} />
+      <circle cx="11" cy="10" r="2.4" fill={c} /><circle cx="11" cy="10" r="1" fill={bg} opacity={0.6} />
+      {/* 3 pegs on right side */}
+      <circle cx="33" cy="4"  r="2.4" fill={c} /><circle cx="33" cy="4"  r="1" fill={bg} opacity={0.6} />
+      <circle cx="33" cy="7"  r="2.4" fill={c} /><circle cx="33" cy="7"  r="1" fill={bg} opacity={0.6} />
+      <circle cx="33" cy="10" r="2.4" fill={c} /><circle cx="33" cy="10" r="1" fill={bg} opacity={0.6} />
+      {/* Nut */}
+      <rect x="16" y="12" width="12" height="2.5" rx="0.5" fill={c} opacity={0.7} />
+      {/* Neck */}
+      <rect x="17.5" y="14.5" width="9" height="22" rx="1.5" fill={c} />
+      {/* Upper bout — smaller ellipse */}
+      <ellipse cx="22" cy="44" rx="10" ry="9" fill={c} />
+      {/* Waist */}
+      <rect x="19" y="49" width="6" height="6" fill={c} />
+      {/* Lower bout — larger ellipse */}
+      <ellipse cx="22" cy="60" rx="13" ry="11" fill={c} />
+      {/* Soundhole */}
+      <circle cx="22" cy="60" r="5" fill={bg} />
+      <circle cx="22" cy="60" r="3.5" fill={c} opacity={0.25} />
     </svg>
   );
 }
 
+// Electric Guitar: SG-style double cutaway horns, no soundhole, 2 pickups, 6 tuning pegs (3+3)
 function IcoElectric({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 40 64" width={38} height={58} fill={c}>
-      <rect x="15" y="1" width="10" height="6" rx="3" />
-      <circle cx="11" cy="2.5" r="2.2" /><circle cx="11" cy="5.5" r="2.2" />
-      <circle cx="29" cy="2.5" r="2.2" /><circle cx="29" cy="5.5" r="2.2" />
-      <rect x="16.5" y="7" width="7" height="18" rx="1" />
-      {/* Offset body — upper horn left, cutaway right */}
-      <path d="M16,25 C6,25 2,27 2,32 C2,35 5,37 9,38 C6,39 4,41 4,46 C4,55 10,62 20,62 C30,62 36,55 36,46 C36,41 34,38 30,37 C34,35 37,33 37,29 C37,25 34,25 24,25 Z" />
-      <rect x="13" y="47" width="14" height="3.5" rx="1.5" fill={bg} opacity={0.55} />
-      <rect x="13" y="53" width="14" height="3.5" rx="1.5" fill={bg} opacity={0.55} />
+    <svg viewBox="0 0 52 68" width={42} height={58} fill="none">
+      {/* Headstock — angled 3+3 */}
+      <path d="M18,2 L34,2 Q36,2 36,4 L36,10 Q36,12 34,12 L18,12 Q16,12 16,10 L16,4 Q16,2 18,2 Z" fill={c} />
+      {/* 3 pegs left */}
+      <circle cx="13" cy="4"  r="2.4" fill={c} /><circle cx="13" cy="4"  r="1" fill={bg} opacity={0.6} />
+      <circle cx="13" cy="7"  r="2.4" fill={c} /><circle cx="13" cy="7"  r="1" fill={bg} opacity={0.6} />
+      <circle cx="13" cy="10" r="2.4" fill={c} /><circle cx="13" cy="10" r="1" fill={bg} opacity={0.6} />
+      {/* 3 pegs right */}
+      <circle cx="39" cy="4"  r="2.4" fill={c} /><circle cx="39" cy="4"  r="1" fill={bg} opacity={0.6} />
+      <circle cx="39" cy="7"  r="2.4" fill={c} /><circle cx="39" cy="7"  r="1" fill={bg} opacity={0.6} />
+      <circle cx="39" cy="10" r="2.4" fill={c} /><circle cx="39" cy="10" r="1" fill={bg} opacity={0.6} />
+      {/* Nut */}
+      <rect x="18" y="12" width="16" height="2.5" rx="0.5" fill={c} opacity={0.7} />
+      {/* Neck */}
+      <rect x="20.5" y="14.5" width="11" height="18" rx="1.5" fill={c} />
+      {/* SG double-horn body — left horn + right horn + lower body */}
+      <path d="
+        M22,33
+        C22,33 6,30 4,36 C2,40 6,44 10,44
+        C7,45 5,47 5,51 C5,59 12,67 26,67 C40,67 47,59 47,51 C47,47 45,45 42,44
+        C46,44 50,40 48,36 C46,30 30,33 30,33
+        Z
+      " fill={c} />
+      {/* Pickup 1 */}
+      <rect x="17" y="48" width="18" height="5" rx="2" fill={bg} opacity={0.65} />
+      {/* Pickup 2 */}
+      <rect x="17" y="57" width="18" height="5" rx="2" fill={bg} opacity={0.65} />
     </svg>
   );
 }
 
+// Bass Guitar: very long neck (dominant feature), compact body, 4 tuning pegs (2+2)
 function IcoBass({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 40 70" width={36} height={58} fill={c}>
-      <rect x="15" y="1" width="10" height="6" rx="3" />
-      <circle cx="11" cy="2.5" r="2.2" /><circle cx="11" cy="5.5" r="2.2" />
-      <circle cx="29" cy="2.5" r="2.2" /><circle cx="29" cy="5.5" r="2.2" />
-      <rect x="16.5" y="7" width="7" height="24" rx="1" />
-      {/* Narrower body — P-bass silhouette */}
-      <path d="M16,31 C6,31 3,34 2,39 C1,44 4,47 8,49 C5,50 3,52 3,57 C3,65 10,70 20,70 C30,70 37,65 37,57 C37,52 35,50 32,49 C36,47 39,44 38,39 C37,34 34,31 24,31 Z" />
-      <rect x="14" y="57" width="12" height="4" rx="1.5" fill={bg} opacity={0.55} />
+    <svg viewBox="0 0 40 78" width={34} height={64} fill="none">
+      {/* Headstock — wider, asymmetric 2+2 */}
+      <path d="M14,2 L26,2 Q28,2 28,4 L28,11 Q28,13 26,13 L14,13 Q12,13 12,11 L12,4 Q12,2 14,2 Z" fill={c} />
+      {/* 2 pegs left */}
+      <circle cx="9"  cy="5"  r="2.6" fill={c} /><circle cx="9"  cy="5"  r="1.1" fill={bg} opacity={0.6} />
+      <circle cx="9"  cy="10" r="2.6" fill={c} /><circle cx="9"  cy="10" r="1.1" fill={bg} opacity={0.6} />
+      {/* 2 pegs right */}
+      <circle cx="31" cy="5"  r="2.6" fill={c} /><circle cx="31" cy="5"  r="1.1" fill={bg} opacity={0.6} />
+      <circle cx="31" cy="10" r="2.6" fill={c} /><circle cx="31" cy="10" r="1.1" fill={bg} opacity={0.6} />
+      {/* Nut */}
+      <rect x="14" y="13" width="12" height="2.5" rx="0.5" fill={c} opacity={0.7} />
+      {/* Long neck — takes up ~55% of height */}
+      <rect x="16.5" y="15.5" width="7" height="34" rx="1.5" fill={c} />
+      {/* Compact P-bass body */}
+      <path d="
+        M17,50
+        C8,50 5,53 4,57 C3,61 6,64 10,65
+        C7,66 5,68 5,72 C5,77 11,80 20,80 C29,80 35,77 35,72 C35,68 33,66 30,65
+        C34,64 37,61 36,57 C35,53 32,50 23,50
+        Z
+      " fill={c} />
+      {/* Bass pickup — long single coil style */}
+      <rect x="12" y="63" width="16" height="6" rx="2" fill={bg} opacity={0.65} />
     </svg>
   );
 }
 
+// Ukulele: small compact body, very short neck, 4 pegs (2+2), round soundhole — clearly smaller overall
 function IcoUkulele({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 36 54" width={32} height={52} fill={c}>
-      <rect x="13" y="1" width="10" height="5" rx="2.5" />
-      <circle cx="9" cy="2.5" r="1.9" /><circle cx="9" cy="5" r="1.9" />
-      <circle cx="27" cy="2.5" r="1.9" /><circle cx="27" cy="5" r="1.9" />
-      <rect x="15" y="6" width="6" height="12" rx="1" />
-      {/* Smaller rounder body */}
-      <path d="M15,18 C7,18 5,22 5,26 C5,30 8,32 11,33 C8,34 6,36 6,40 C6,47 10,52 18,52 C26,52 30,47 30,40 C30,36 28,34 25,33 C28,32 31,30 31,26 C31,22 29,18 21,18 Z" />
-      <circle cx="18" cy="39" r="4.5" fill={bg} />
+    <svg viewBox="0 0 36 56" width={30} height={50} fill="none">
+      {/* Headstock — small 2+2 */}
+      <path d="M13,2 L23,2 Q25,2 25,4 L25,9 Q25,11 23,11 L13,11 Q11,11 11,9 L11,4 Q11,2 13,2 Z" fill={c} />
+      {/* 2 pegs left */}
+      <circle cx="8"  cy="5"  r="2.1" fill={c} /><circle cx="8"  cy="5"  r="0.9" fill={bg} opacity={0.6} />
+      <circle cx="8"  cy="9"  r="2.1" fill={c} /><circle cx="8"  cy="9"  r="0.9" fill={bg} opacity={0.6} />
+      {/* 2 pegs right */}
+      <circle cx="28" cy="5"  r="2.1" fill={c} /><circle cx="28" cy="5"  r="0.9" fill={bg} opacity={0.6} />
+      <circle cx="28" cy="9"  r="2.1" fill={c} /><circle cx="28" cy="9"  r="0.9" fill={bg} opacity={0.6} />
+      {/* Nut */}
+      <rect x="13" y="11" width="10" height="2" rx="0.5" fill={c} opacity={0.7} />
+      {/* Short neck */}
+      <rect x="14.5" y="13" width="7" height="13" rx="1.2" fill={c} />
+      {/* Upper bout */}
+      <ellipse cx="18" cy="33" rx="8"  ry="7"  fill={c} />
+      {/* Waist */}
+      <rect x="15.5" y="37" width="5" height="5" fill={c} />
+      {/* Lower bout — rounder and proportionally larger vs neck */}
+      <ellipse cx="18" cy="47" rx="10" ry="9"  fill={c} />
+      {/* Soundhole */}
+      <circle cx="18" cy="47" r="4" fill={bg} />
+      <circle cx="18" cy="47" r="2.8" fill={c} opacity={0.25} />
     </svg>
   );
 }
