@@ -687,6 +687,54 @@ export function exportTabToPDF(tabData: TabData): void {
   });
 }
 
+// ── MT3 server transcription ──────────────────────────────────────────────────
+
+/**
+ * Sends audio blob to a remote MT3 FastAPI server (e.g. Google Colab + ngrok)
+ * and returns DetectedNote[].  Falls back gracefully — caller must handle throws.
+ *
+ * Expected response: { notes: [{startTime, endTime, midiNote, confidence, frequency?}] }
+ */
+export async function transcribeWithMT3Server(
+  blob: Blob,
+  serverUrl: string,
+  onProgress?: (pct: number) => void,
+): Promise<DetectedNote[]> {
+  onProgress?.(5);
+
+  const form = new FormData();
+  // Give the file a proper name so the server can detect format
+  const ext  = blob.type.includes('mp3') ? 'mp3' : blob.type.includes('ogg') ? 'ogg' : 'wav';
+  form.append('audio', blob, `audio.${ext}`);
+
+  const base = serverUrl.replace(/\/+$/, '');
+  const res  = await fetch(`${base}/transcribe`, { method: 'POST', body: form });
+
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.statusText);
+    throw new Error(`MT3 server ${res.status}: ${msg}`);
+  }
+
+  onProgress?.(72);
+
+  const data = await res.json() as {
+    notes: Array<{ startTime: number; endTime: number; midiNote: number; confidence: number; frequency?: number }>;
+  };
+
+  onProgress?.(80);
+
+  const notes: DetectedNote[] = data.notes.map(n => ({
+    startTime:  n.startTime,
+    endTime:    n.endTime,
+    midiNote:   Math.round(n.midiNote),
+    confidence: n.confidence,
+    frequency:  n.frequency ?? midiToFreq(Math.round(n.midiNote)),
+  }));
+
+  // Same cleanup + octave correction pipeline as Basic Pitch path
+  return constrainOctaves(cleanupNotes(notes));
+}
+
 // ── MIDI synth playback ───────────────────────────────────────────────────────
 
 let synthNodes: AudioNode[] = [];

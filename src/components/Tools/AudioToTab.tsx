@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { T, card } from '../../theme';
 import {
-  transcribeAudioBuffer, refineNotesWithAI, notesToTab, buildWaveform,
+  transcribeAudioBuffer, transcribeWithMT3Server, refineNotesWithAI, notesToTab, buildWaveform,
   exportTabToPDF, findPositions,
   type TabData, type TabEvent, type DetectedNote, type TranscribeConfig,
   type InstrumentType, type MixType,
@@ -379,13 +379,18 @@ function OnboardingScreen({
   fileName,
   onStart,
   onClear,
+  mt3Url,
+  onMt3UrlChange,
 }: {
   fileName: string;
   onStart: (cfg: TranscribeConfig) => void;
   onClear: () => void;
+  mt3Url: string;
+  onMt3UrlChange: (url: string) => void;
 }) {
-  const [instrument, setInstrument] = useState<InstrumentType>('acoustic');
-  const [mixType,    setMixType]    = useState<MixType>('solo');
+  const [instrument,    setInstrument]    = useState<InstrumentType>('acoustic');
+  const [mixType,       setMixType]       = useState<MixType>('solo');
+  const [showAdvanced,  setShowAdvanced]  = useState(!!mt3Url);
 
   const stepHdr: React.CSSProperties = {
     fontSize: 11, fontWeight: 800, letterSpacing: '0.12em',
@@ -481,6 +486,65 @@ function OnboardingScreen({
         </div>
       </div>
 
+      {/* Advanced settings — MT3 server URL */}
+      <div>
+        <button
+          onClick={() => setShowAdvanced(v => !v)}
+          style={{
+            width: '100%', padding: '9px 14px', borderRadius: 10, cursor: 'pointer',
+            background: 'transparent', border: `1px solid ${T.border}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            color: T.textMuted, fontSize: 12, fontWeight: 700,
+          }}
+        >
+          <span>⚙️ Advanced (MT3 Server)</span>
+          <span style={{ fontSize: 10, transition: 'transform 0.2s', display: 'inline-block',
+            transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+        </button>
+
+        {showAdvanced && (
+          <div style={{
+            marginTop: 8, padding: '14px 14px', borderRadius: 10,
+            background: T.bgInput, border: `1px solid ${T.border}`,
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              MT3 Server URL (Google Colab + ngrok)
+            </p>
+            <input
+              type="url"
+              value={mt3Url}
+              onChange={e => onMt3UrlChange(e.target.value)}
+              placeholder="https://xxxx-xx-xx.ngrok-free.app"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '9px 12px', borderRadius: 8, fontSize: 13,
+                border: `1px solid ${mt3Url ? T.primary : T.border}`,
+                background: T.bgCard, color: T.text, outline: 'none',
+                fontFamily: 'monospace',
+              }}
+            />
+            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>
+              {mt3Url
+                ? '✅ MT3 server configured — will use Google\'s model instead of Basic Pitch.'
+                : 'Leave empty to use Basic Pitch (in-browser). Set a URL to use the higher-accuracy MT3 model running in Google Colab.'}
+            </p>
+            {mt3Url && (
+              <button
+                onClick={() => onMt3UrlChange('')}
+                style={{
+                  alignSelf: 'flex-start', padding: '5px 12px', borderRadius: 7,
+                  border: `1px solid ${T.border}`, background: T.bgCard,
+                  color: T.textMuted, fontSize: 11, cursor: 'pointer',
+                }}
+              >
+                נקה URL
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Start button */}
       <button onClick={() => onStart({ instrument, mixType })} style={{
         padding: '14px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
@@ -528,6 +592,13 @@ export const AudioToTab: React.FC = () => {
   const [fileName, setFileName]       = useState('');
   const [recSecs, setRecSecs]         = useState(0);
   const [selNote, setSelNote]         = useState<TabEvent | null>(null);
+  const [mt3Url, setMt3Url]           = useState<string>(() => localStorage.getItem('mt3ServerUrl') ?? '');
+
+  const handleMt3UrlChange = useCallback((url: string) => {
+    setMt3Url(url);
+    if (url) localStorage.setItem('mt3ServerUrl', url);
+    else localStorage.removeItem('mt3ServerUrl');
+  }, []);
 
   const pendingBlobRef = useRef<{ blob: Blob; name: string } | null>(null);
 
@@ -581,8 +652,19 @@ export const AudioToTab: React.FC = () => {
 
       setWaveform(buildWaveform(audioBuf, 100));
 
-      setPhaseLabel('מזהה תדרים…');
-      const rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
+      let rawNotes: DetectedNote[];
+      const serverUrl = mt3Url.trim();
+
+      if (serverUrl) {
+        // ── MT3 server path ───────────────────────────────────────────────
+        setPhaseLabel('שולח לשרת MT3…');
+        setProgress(5);
+        rawNotes = await transcribeWithMT3Server(blob, serverUrl, p => setProgress(p));
+      } else {
+        // ── Basic Pitch in-browser path ───────────────────────────────────
+        setPhaseLabel('מזהה תדרים…');
+        rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
+      }
 
       setPhaseLabel('מנקה עם AI…');
       setProgress(74);
@@ -600,7 +682,7 @@ export const AudioToTab: React.FC = () => {
       setError('שגיאה בעיבוד השמע — ודא שהקובץ תקין ונסה שוב.');
       setStage('error');
     }
-  }, []);
+  }, [mt3Url]);
 
   // ── File handling ─────────────────────────────────────────────────────────
 
@@ -746,6 +828,8 @@ export const AudioToTab: React.FC = () => {
         if (p) processBlob(p.blob, p.name, cfg);
       }}
       onClear={reset}
+      mt3Url={mt3Url}
+      onMt3UrlChange={handleMt3UrlChange}
     />
   );
 
