@@ -68,7 +68,8 @@ export function findPositions(midiNote: number): Array<{ string: number; fret: n
 
 /**
  * Choose the best (string, fret) for a note given the previous hand position.
- * Minimises position jump while preferring higher strings for melody.
+ * Uses a 4-fret hand-span window to enforce playability, then minimises
+ * position jump while preferring treble strings for single-note melody.
  */
 function bestPosition(
   midiNote: number,
@@ -78,12 +79,17 @@ function bestPosition(
   const candidates = findPositions(midiNote);
   if (candidates.length === 0) return { string: 5, fret: Math.max(0, midiNote - OPEN_MIDI[5]) };
 
-  return candidates.reduce((best, cand) => {
-    const bestDist = Math.abs(best.fret - prevFret) * 2 + Math.abs(best.string - prevString);
-    const candDist = Math.abs(cand.fret - prevFret) * 2 + Math.abs(cand.string - prevString);
-    // slight treble preference for single-note melody
-    const treblePenalty = (5 - cand.string) * 0.2;
-    return candDist + treblePenalty < bestDist ? cand : best;
+  // Prefer positions reachable within a 4-fret hand span (open strings always ok)
+  const SPAN = 4;
+  const lo = prevFret > 0 ? Math.max(1, prevFret - SPAN) : 0;
+  const hi = prevFret + SPAN;
+  const inSpan = candidates.filter(c => c.fret === 0 || (c.fret >= lo && c.fret <= hi));
+  const pool = inSpan.length > 0 ? inSpan : candidates;
+
+  return pool.reduce((best, cand) => {
+    const cost = (f: number, s: number) =>
+      Math.abs(f - prevFret) * 2 + Math.abs(s - prevString) + (5 - s) * 0.3;
+    return cost(cand.fret, cand.string) < cost(best.fret, best.string) ? cand : best;
   });
 }
 
@@ -218,12 +224,16 @@ export async function transcribeAudioBuffer(
 // ── Notes → tab events ────────────────────────────────────────────────────────
 
 /**
- * Convert detected notes to tab events (string + fret) with grid quantization.
- * gridMs: column resolution in milliseconds (default 120 ms ≈ 16th @ 125 BPM).
+ * Convert detected notes to tab events (string + fret) with compressed grid quantization.
+ *
+ * Key design: columns are NOTE-RELATIVE, not time-absolute.
+ * Notes within 80 ms → same column (chord).
+ * Gaps between groups → 1–4 columns (proportional but capped at MAX_GAP_COLS).
+ * This eliminates the "infinite empty scroll" from long silences.
  */
 export function notesToTab(
   notes: DetectedNote[],
-  gridMs = 120,
+  gridMs = 200,
   title = 'Untitled',
   duration = 0,
 ): TabData {
@@ -231,27 +241,57 @@ export function notesToTab(
     return { events: [], totalColumns: 0, gridMs, title, duration, waveform: new Float32Array(0) };
   }
 
-  const totalDuration = duration || notes[notes.length - 1].endTime;
-  const totalColumns  = Math.ceil((totalDuration * 1000) / gridMs) + 1;
+  const CHORD_MERGE_S = 0.08;  // 80 ms — notes this close → same column
+  const MIN_GAP       = 1;     // minimum columns between groups
+  const MAX_GAP       = 4;     // silence longer than 4×gridMs still only 4 columns
 
-  // Greedy fingering: maintain hand position state
+  // Sort by start time
+  const sorted = [...notes].sort((a, b) => a.startTime - b.startTime);
+
+  // Group simultaneous / near-simultaneous notes into chords
+  interface Group { time: number; notes: DetectedNote[] }
+  const groups: Group[] = [];
+  for (const note of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && note.startTime - last.time <= CHORD_MERGE_S) {
+      last.notes.push(note);
+    } else {
+      groups.push({ time: note.startTime, notes: [note] });
+    }
+  }
+
+  // Assign sequential columns; spacing is proportional to real gap but capped
+  let col = 0;
+  const events: TabEvent[] = [];
   let prevFret   = 5;
   let prevString = 4;
 
-  const events: TabEvent[] = notes.map(note => {
-    const col = Math.round((note.startTime * 1000) / gridMs);
-    const pos = bestPosition(note.midiNote, prevFret, prevString);
-    prevFret   = pos.fret;
-    prevString = pos.string;
-    return {
-      column:    col,
-      string:    pos.string,
-      fret:      pos.fret,
-      midiNote:  note.midiNote,
-      startTime: note.startTime,
-      duration:  note.endTime - note.startTime,
-    };
-  });
+  for (let gi = 0; gi < groups.length; gi++) {
+    if (gi > 0) {
+      const gapMs  = (groups[gi].time - groups[gi - 1].time) * 1000;
+      col += Math.max(MIN_GAP, Math.min(MAX_GAP, Math.round(gapMs / gridMs)));
+    }
+
+    // Sort chord members by string (low → high) so finger order is consistent
+    const chord = [...groups[gi].notes].sort((a, b) => freqToMidi(a.frequency) - freqToMidi(b.frequency));
+
+    for (const note of chord) {
+      const pos = bestPosition(note.midiNote, prevFret, prevString);
+      prevFret   = pos.fret;
+      prevString = pos.string;
+      events.push({
+        column:    col,
+        string:    pos.string,
+        fret:      pos.fret,
+        midiNote:  note.midiNote,
+        startTime: note.startTime,
+        duration:  note.endTime - note.startTime,
+      });
+    }
+  }
+
+  const totalDuration = duration || sorted[sorted.length - 1].endTime;
+  const totalColumns  = col + MAX_GAP; // small tail so last notes aren't cut off
 
   return { events, totalColumns, gridMs, title, duration: totalDuration, waveform: new Float32Array(0) };
 }

@@ -12,12 +12,23 @@ import type { FretPosition } from '../../types/music';
 
 type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'error';
 
-// ── Constants for tab SVG layout ──────────────────────────────────────────────
+// ── Tab visual constants ──────────────────────────────────────────────────────
 
-const COL_W      = 20;   // px per column
-const STR_GAP    = 18;   // px between strings
-const LEFT_PAD   = 28;   // left margin (string labels)
-const COLS_PER_ROW = 16;
+// Sheet-music parchment look — always light regardless of app theme
+const TAB_BG   = '#f7f4ed';   // warm cream paper
+const TAB_LINE = '#9a8c78';   // warm gray string lines
+const TAB_BAR  = '#6e6252';   // darker bar lines
+const TAB_NUM  = '#1a1512';   // near-black fret numbers
+const TAB_LBL  = '#7a6e5c';   // string name labels
+const TAB_SEL  = '#c96219';   // selected note (app orange)
+const TAB_SELA = '#fff';      // selected note text
+
+// SVG layout — viewBox units, scaled to fill container width
+const COL_W        = 22;   // units per column
+const STR_GAP      = 16;   // units between string lines
+const LEFT_PAD     = 28;   // units for string labels
+const COLS_PER_ROW = 14;   // columns per staff row
+const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;  // viewBox width = 342
 
 // ── Tab SVG row renderer ──────────────────────────────────────────────────────
 
@@ -28,52 +39,71 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   selectedCol: number | null;
   onTap: (col: number, stringIdx: number, e: React.MouseEvent) => void;
 }) {
-  const lineW = (colEnd - colStart) * COL_W;
-  const svgW  = LEFT_PAD + lineW + 6;
+  const cols  = colEnd - colStart;
+  // Always fill the full VB_W even if last row is shorter — keeps all rows same width
+  const lineW = COLS_PER_ROW * COL_W;
   const svgH  = 5 * STR_GAP + 2;
   const els: React.ReactNode[] = [];
+
+  // Parchment background
+  els.push(<rect key="bg" x={0} y={-5} width={VB_W} height={svgH + 10} fill={TAB_BG} />);
 
   // String lines + labels
   for (let di = 0; di < 6; di++) {
     const sy = di * STR_GAP;
     els.push(
-      <line key={`l${di}`} x1={LEFT_PAD} y1={sy} x2={LEFT_PAD + lineW} y2={sy}
-        stroke="var(--gc-border)" strokeWidth={0.8} />,
-      <text key={`n${di}`} x={LEFT_PAD - 5} y={sy + 4} fontSize={9}
-        fill="var(--gc-text-muted)" textAnchor="end" fontFamily="monospace" fontWeight="bold">
+      <line key={`l${di}`} x1={LEFT_PAD - 2} y1={sy} x2={LEFT_PAD + lineW} y2={sy}
+        stroke={TAB_LINE} strokeWidth={0.8} />,
+      <text key={`n${di}`} x={LEFT_PAD - 5} y={sy + 4.5}
+        fontSize={9} fill={TAB_LBL} textAnchor="end"
+        fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
         {STRING_NAMES[di]}
       </text>,
     );
   }
 
-  // Vertical bar lines every 4 cols
-  for (let c = 0; c <= colEnd - colStart; c += 4) {
+  // Bar lines every 4 cols + opening and closing verticals
+  els.push(
+    <line key="open" x1={LEFT_PAD - 2} y1={0} x2={LEFT_PAD - 2} y2={5 * STR_GAP}
+      stroke={TAB_BAR} strokeWidth={1.4} />,
+    <line key="close" x1={LEFT_PAD + lineW} y1={0} x2={LEFT_PAD + lineW} y2={5 * STR_GAP}
+      stroke={TAB_BAR} strokeWidth={1.4} />,
+  );
+  for (let c = 4; c < COLS_PER_ROW; c += 4) {
     const bx = LEFT_PAD + c * COL_W;
     els.push(
       <line key={`b${c}`} x1={bx} y1={0} x2={bx} y2={5 * STR_GAP}
-        stroke="var(--gc-border)" strokeWidth={c === 0 ? 2 : 0.8} opacity={0.55} />,
+        stroke={TAB_BAR} strokeWidth={0.7} opacity={0.5} />,
     );
   }
 
-  // Fret numbers
+  // Fret numbers (only for columns that exist in this row)
   for (let c = colStart; c < colEnd; c++) {
     const strMap = colMap.get(c);
     if (!strMap) continue;
-    const cx = LEFT_PAD + (c - colStart) * COL_W + COL_W / 2;
+    const localC = c - colStart;
+    const cx = LEFT_PAD + localC * COL_W + COL_W / 2;
     for (const [si, fret] of strMap.entries()) {
-      const di    = 5 - si;   // string 5 (high e) → top row 0
+      const di    = 5 - si;          // string 5 (high e) → display row 0 (top)
       const sy    = di * STR_GAP;
       const lbl   = String(fret);
       const wide  = lbl.length > 1;
       const sel   = selectedCol === c;
+
       els.push(
         <g key={`${c}-${si}`} onClick={e => onTap(c, si, e)} style={{ cursor: 'pointer' }}>
-          <rect x={cx - (wide ? 9 : 6)} y={sy - 6} width={wide ? 18 : 12} height={12} rx={2.5}
-            fill={sel ? 'var(--gc-primary)' : 'var(--gc-bg-card)'}
-            stroke={sel ? 'var(--gc-primary)' : 'var(--gc-border)'} strokeWidth={0.5} />
-          <text x={cx} y={sy + 4} fontSize={9}
-            fill={sel ? '#fff' : 'var(--gc-text)'}
-            textAnchor="middle" fontFamily="monospace" fontWeight="bold">
+          {/* Clear the string line so number is readable */}
+          <rect
+            x={cx - (wide ? 8.5 : 5.5)} y={sy - 6}
+            width={wide ? 17 : 11} height={12}
+            fill={sel ? TAB_SEL : TAB_BG}
+            rx={1.5}
+          />
+          <text x={cx} y={sy + 4.5} fontSize={9.5}
+            fill={sel ? TAB_SELA : TAB_NUM}
+            textAnchor="middle"
+            fontFamily="monospace, 'Courier New', monospace"
+            fontWeight="700">
             {lbl}
           </text>
         </g>,
@@ -82,15 +112,16 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   }
 
   return (
-    <svg width={svgW} height={svgH}
-      viewBox={`0 0 ${svgW} ${svgH}`}
-      style={{ display: 'block', overflow: 'visible' }}>
+    // width="100%" scales SVG to fill its container; viewBox keeps proportions
+    <svg width="100%" viewBox={`0 0 ${VB_W} ${svgH}`}
+      preserveAspectRatio="xMinYMid meet"
+      style={{ display: 'block' }}>
       {els}
     </svg>
   );
 }
 
-// ── Tab display (multiple rows) ───────────────────────────────────────────────
+// ── Tab display (multiple staff rows) ────────────────────────────────────────
 
 function TabDisplay({ tabData, onSelectNote }: {
   tabData: TabData;
@@ -101,9 +132,9 @@ function TabDisplay({ tabData, onSelectNote }: {
 
   if (totalColumns === 0) {
     return (
-      <p style={{ textAlign: 'center', color: T.textMuted, fontSize: 13, padding: '20px 0', margin: 0 }}>
-        לא זוהו תווים בקטע השמע
-      </p>
+      <div style={{ background: TAB_BG, borderRadius: 8, padding: '20px', textAlign: 'center' }}>
+        <p style={{ margin: 0, fontSize: 13, color: TAB_LBL }}>לא זוהו תווים בקטע השמע</p>
+      </div>
     );
   }
 
@@ -116,6 +147,7 @@ function TabDisplay({ tabData, onSelectNote }: {
   const numRows = Math.ceil(totalColumns / COLS_PER_ROW);
 
   const handleTap = (col: number, si: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (selectedCol === col) {
       setSelectedCol(null);
       onSelectNote(null);
@@ -123,21 +155,27 @@ function TabDisplay({ tabData, onSelectNote }: {
       setSelectedCol(col);
       onSelectNote(events.find(ev => ev.column === col && ev.string === si) ?? null);
     }
-    e.stopPropagation();
   };
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    // Outer wrapper: parchment-colored score sheet, no horizontal scroll needed
+    <div style={{
+      background: TAB_BG,
+      borderRadius: 8,
+      padding: '10px 8px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6,
+    }}>
       {Array.from({ length: numRows }, (_, r) => {
         const colStart = r * COLS_PER_ROW;
         const colEnd   = Math.min(colStart + COLS_PER_ROW, totalColumns);
         return (
-          <div key={r} style={{ marginBottom: 18 }}>
-            <TabSVGRow
-              colStart={colStart} colEnd={colEnd}
-              colMap={colMap} selectedCol={selectedCol} onTap={handleTap}
-            />
-          </div>
+          <TabSVGRow
+            key={r}
+            colStart={colStart} colEnd={colEnd}
+            colMap={colMap} selectedCol={selectedCol} onTap={handleTap}
+          />
         );
       })}
     </div>
@@ -246,7 +284,7 @@ export const AudioToTab: React.FC = () => {
       setNotes(detected);
 
       const tab = notesToTab(
-        detected, 120,
+        detected, 200,
         name.replace(/\.[^.]+$/, ''),
         audioBuf.duration,
       );
@@ -548,8 +586,11 @@ export const AudioToTab: React.FC = () => {
       </div>
 
       {/* Tab display */}
-      <div style={card({ padding: '14px 12px' })}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 8, paddingLeft: 2,
+        }}>
           <p style={{ ...LABEL, margin: 0 }}>טאב</p>
           <span style={{ fontSize: 11, color: T.textMuted }}>לחץ על תו לאפשרויות</span>
         </div>
