@@ -177,23 +177,94 @@ function TabDisplay({ tabData, onSelectNote }: {
   );
 }
 
-// ── Waveform bars ─────────────────────────────────────────────────────────────
+// ── Waveform — flowing gradient ribbon ───────────────────────────────────────
 
-function Waveform({ data, height = 48, color }: { data: Float32Array; height?: number; color?: string }) {
+function buildSmoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 1; i < pts.length; i++) {
+    const cpx = ((pts[i - 1].x + pts[i].x) / 2).toFixed(1);
+    d += ` C ${cpx} ${pts[i-1].y.toFixed(1)} ${cpx} ${pts[i].y.toFixed(1)} ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`;
+  }
+  return d;
+}
+
+function Waveform({ data, height = 72 }: { data: Float32Array; height?: number }) {
   if (data.length === 0) return null;
-  const w = 320;
-  const bw = w / data.length;
+
+  const W   = 400;
+  const mid = height / 2;
+  const N   = Math.min(90, data.length);
+  const step = data.length / N;
+
+  const sampled = Array.from({ length: N }, (_, i) => data[Math.floor(i * step)]);
+
+  const upperPts = sampled.map((v, i) => ({ x: (i / (N - 1)) * W, y: mid - v * mid * 0.82 }));
+  const lowerPts = sampled.map((v, i) => ({ x: ((N - 1 - i) / (N - 1)) * W, y: mid + v * mid * 0.82 }));
+
+  const fillPath  = buildSmoothPath(upperPts) + ' ' + buildSmoothPath(lowerPts) + ' Z';
+  const topStroke = buildSmoothPath(upperPts);
+  // Offset second ribbon for depth
+  const upperPts2 = sampled.map((v, i) => ({ x: (i / (N - 1)) * W, y: mid - v * mid * 0.52 - 2 }));
+  const lowerPts2 = sampled.map((v, i) => ({ x: ((N - 1 - i) / (N - 1)) * W, y: mid + v * mid * 0.38 + 1 }));
+  const fillPath2 = buildSmoothPath(upperPts2) + ' ' + buildSmoothPath(lowerPts2) + ' Z';
+
   return (
-    <svg width="100%" viewBox={`0 0 ${w} ${height}`} preserveAspectRatio="none" style={{ display: 'block' }}>
-      {Array.from(data, (v, i) => {
-        const h = Math.max(1.5, v * height);
-        return (
-          <rect key={i} x={i * bw} y={(height - h) / 2}
-            width={Math.max(1, bw - 0.8)} height={h}
-            fill={color ?? T.primary} opacity={0.75} rx={1} />
-        );
-      })}
-    </svg>
+    <>
+      <style>{`
+        @keyframes wv-breathe {
+          0%,100% { transform:scaleY(1);   opacity:.82; }
+          50%      { transform:scaleY(1.07); opacity:1;  }
+        }
+        @keyframes wv-ribbon {
+          0%,100% { transform:scaleY(.88) translateY(2px); opacity:.55; }
+          50%      { transform:scaleY(.96) translateY(-1px); opacity:.72; }
+        }
+        @keyframes wv-glow {
+          0%,100% { opacity:.22; }
+          50%      { opacity:.42; }
+        }
+        .wv-fill   { animation: wv-breathe 3.6s ease-in-out infinite; transform-origin:50% 50%; }
+        .wv-ribbon { animation: wv-ribbon  4.1s ease-in-out infinite; transform-origin:50% 50%; }
+        .wv-glow   { animation: wv-glow    3.6s ease-in-out infinite; transform-origin:50% 50%; }
+      `}</style>
+      <svg width="100%" viewBox={`0 0 ${W} ${height}`}
+        preserveAspectRatio="none" style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="wv-grad-main" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="#ff6b35" />
+            <stop offset="28%"  stopColor="#e040fb" />
+            <stop offset="58%"  stopColor="#3d5afe" />
+            <stop offset="100%" stopColor="#00e5ff" />
+          </linearGradient>
+          <linearGradient id="wv-grad-ribbon" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="#ff4081" stopOpacity="0.7" />
+            <stop offset="50%"  stopColor="#7c4dff" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#18ffff" stopOpacity="0.5" />
+          </linearGradient>
+          <filter id="wv-blur">
+            <feGaussianBlur stdDeviation="5" />
+          </filter>
+        </defs>
+
+        {/* Glow halo */}
+        <path className="wv-glow" d={fillPath}
+          fill="url(#wv-grad-main)" filter="url(#wv-blur)" />
+
+        {/* Main fill */}
+        <path className="wv-fill" d={fillPath}
+          fill="url(#wv-grad-main)" opacity={0.78} />
+
+        {/* Second ribbon for depth */}
+        <path className="wv-ribbon" d={fillPath2}
+          fill="url(#wv-grad-ribbon)" />
+
+        {/* Highlight edge */}
+        <path d={topStroke}
+          fill="none" stroke="url(#wv-grad-main)"
+          strokeWidth={1.4} opacity={0.9} />
+      </svg>
+    </>
   );
 }
 
@@ -481,8 +552,8 @@ export const AudioToTab: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={card({ padding: '22px 18px' })}>
         {waveform && waveform.length > 0 && (
-          <div style={{ marginBottom: 16, borderRadius: 8, overflow: 'hidden', background: T.bgInput, padding: '8px 4px' }}>
-            <Waveform data={waveform} height={52} />
+          <div style={{ marginBottom: 16, borderRadius: 10, overflow: 'hidden', background: '#0d0d14', padding: '6px 4px' }}>
+            <Waveform data={waveform} height={64} />
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -548,8 +619,8 @@ export const AudioToTab: React.FC = () => {
 
       {/* Waveform */}
       {waveform && waveform.length > 0 && (
-        <div style={{ ...card({ padding: '10px 12px' }) }}>
-          <Waveform data={waveform} height={38} color={T.secondary} />
+        <div style={{ borderRadius: 12, overflow: 'hidden', background: '#0d0d14', padding: '6px 4px' }}>
+          <Waveform data={waveform} height={72} />
         </div>
       )}
 
