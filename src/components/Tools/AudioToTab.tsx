@@ -593,8 +593,8 @@ export const AudioToTab: React.FC = () => {
       const rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
 
       setPhaseLabel('מנקה עם AI…');
-      setProgress(78);
-      const refined = await refineNotesWithAI(rawNotes, p => setProgress(75 + Math.round(p * 0.2)));
+      setProgress(74);
+      const refined = await refineNotesWithAI(rawNotes, p => setProgress(74 + Math.round(p * 0.22)));
 
       setPhaseLabel('בונה טאב…');
       setProgress(97);

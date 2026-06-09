@@ -291,10 +291,16 @@ export async function transcribeAudioBuffer(
 
 // ── AI note refinement ────────────────────────────────────────────────────────
 
+const MIDI_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const;
+function midiName(midi: number): string {
+  return MIDI_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
+}
+
 /**
- * Uses Claude haiku to clean up raw pitch-detected notes.
- * Removes noise spikes, fixes octave errors, merges closely-held sustains.
- * Falls back to raw notes if the API key is absent or the call fails.
+ * Uses Claude Sonnet to correct Basic Pitch systematic errors:
+ * octave shifts, harmonic phantoms, ghost notes, sustain re-triggers.
+ * Input includes note names + confidence so Claude has richer context.
+ * Falls back to raw notes if API key absent or call fails.
  */
 export async function refineNotesWithAI(
   notes: DetectedNote[],
@@ -306,59 +312,86 @@ export async function refineNotesWithAI(
     return notes;
   }
 
+  // Process in slices so very long recordings don't exceed context
+  const SLICE = 200;
+  const allCleaned: DetectedNote[] = [];
+
   try {
     const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
 
-    // Compact representation: [startTime, midiNote, duration]
-    const input = notes.slice(0, 120).map(n => [
-      Math.round(n.startTime * 100) / 100,
-      n.midiNote,
-      Math.round((n.endTime - n.startTime) * 100) / 100,
-    ]);
+    for (let offset = 0; offset < notes.length; offset += SLICE) {
+      const slice = notes.slice(offset, offset + SLICE);
 
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 2000,
-      messages: [{
-        role: 'user',
-        content: `You are a guitar transcription expert cleaning up pitch-detector output.
-Guitar MIDI range: 40 (low E2) to 88 (high e, 22nd fret).
-Input format: [startTime_s, midiNote, duration_s]
+      // [startTime, noteName, midiNote, duration, confidence]
+      const input = slice.map(n => [
+        Math.round(n.startTime * 100) / 100,
+        midiName(n.midiNote),
+        n.midiNote,
+        Math.round((n.endTime - n.startTime) * 100) / 100,
+        Math.round(n.confidence * 100) / 100,
+      ]);
 
-Raw detected notes:
+      const msg = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        messages: [{
+          role: 'user',
+          content: `You are an expert guitar transcription editor. A neural pitch detector (Basic Pitch) scanned a solo guitar recording and produced the note sequence below. Your task is to correct its systematic errors and return a clean, musically accurate note list.
+
+GUITAR STANDARD TUNING: E2(40) A2(45) D3(50) G3(55) B3(59) E4(64)
+PRACTICAL MELODY RANGE: MIDI 47–84 (frets 0–13 on typical strings). Notes outside this range are suspicious.
+
+BASIC PITCH SYSTEMATIC ERRORS TO FIX:
+1. OCTAVE ERRORS (most common): the detector shifts a note by exactly ±12 semitones.
+   Signature: one note jumps ±12 from both its predecessor and successor.
+   Fix: move it ±12 to restore the stepwise melodic line.
+2. HARMONIC PHANTOMS: a ghost note appears at exactly +12 or +24 above a real note
+   and starts within 60 ms of it. Remove the phantom, keep the lower real note.
+3. GHOST NOTES: duration < 0.08 s, confidence < 0.45, and no note within 0.40 s.
+   Remove completely.
+4. SUSTAIN RE-TRIGGERS: same pitch appears again within 90 ms of the previous note
+   ending. Merge into one note (extend first note's duration).
+5. MELODIC OUTLIERS: a single isolated note jumps > 14 semitones from BOTH its
+   predecessor AND successor and has confidence < 0.55. Remove it.
+
+INPUT FORMAT: [startTime_s, noteName, midiNote, duration_s, confidence_0-1]
 ${JSON.stringify(input)}
 
-Clean up by applying these rules IN ORDER:
-1. REMOVE notes with midiNote outside 40–88
-2. REMOVE notes with duration < 0.05 s that are isolated (no adjacent note within 0.3 s)
-3. FIX octave errors: if a note is 12 semitones away from its neighbours and the neighbour pitch fits the guitar context better, move it by ±12
-4. MERGE consecutive identical pitches separated by gap < 0.1 s → extend the first note's duration and drop the second
-5. KEEP everything else — do not add or invent notes
+Rules:
+- Do NOT invent or add notes that were not in the input
+- Do NOT change a note's pitch unless fixing an octave error (rule 1)
+- Apply rules 1–5 strictly; otherwise preserve all notes unchanged
+- Return ONLY valid JSON, no markdown, no explanation
 
-Return ONLY a JSON array, no markdown, no explanation:
+Output format — JSON array only:
 [[startTime, midiNote, duration], ...]`,
-      }],
-    });
+        }],
+      });
 
-    const text = (msg.content[0] as { type: string; text: string }).text.trim();
-    const s = text.indexOf('[');
-    const e = text.lastIndexOf(']');
-    if (s === -1 || e === -1) throw new Error('no JSON array in response');
+      const text = (msg.content[0] as { type: string; text: string }).text.trim();
+      const s = text.indexOf('[');
+      const e = text.lastIndexOf(']');
+      if (s === -1 || e === -1) throw new Error('no JSON array in response');
 
-    const cleaned = JSON.parse(text.slice(s, e + 1)) as [number, number, number][];
+      const cleaned = JSON.parse(text.slice(s, e + 1)) as [number, number, number][];
+      allCleaned.push(
+        ...cleaned
+          .filter(([, m]) => m >= 40 && m <= 88)
+          .map(([t, m, d]) => ({
+            startTime:  t,
+            endTime:    t + Math.max(0.06, d),
+            midiNote:   m,
+            confidence: 0.9,
+            frequency:  midiToFreq(m),
+          })),
+      );
 
-    onProgress?.(100);
-    return cleaned
-      .filter(([, m]) => m >= 40 && m <= 88)
-      .map(([t, m, d]) => ({
-        startTime:  t,
-        endTime:    t + Math.max(0.05, d),
-        midiNote:   m,
-        confidence: 0.9,
-        frequency:  midiToFreq(m),
-      }));
+      onProgress?.(Math.round(((offset + slice.length) / notes.length) * 100));
+    }
+
+    return allCleaned;
   } catch (err) {
-    console.warn('[refineNotesWithAI] API call failed, using raw notes:', err);
+    console.warn('[refineNotesWithAI] failed, using raw notes:', err);
     onProgress?.(100);
     return notes;
   }
