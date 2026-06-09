@@ -178,92 +178,47 @@ function TabDisplay({ tabData, onSelectNote }: {
   );
 }
 
-// ── Waveform — flowing gradient ribbon ───────────────────────────────────────
+// ── Waveform — gradient bars ──────────────────────────────────────────────────
 
-function buildSmoothPath(pts: { x: number; y: number }[]): string {
-  if (pts.length < 2) return '';
-  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
-  for (let i = 1; i < pts.length; i++) {
-    const cpx = ((pts[i - 1].x + pts[i].x) / 2).toFixed(1);
-    d += ` C ${cpx} ${pts[i-1].y.toFixed(1)} ${cpx} ${pts[i].y.toFixed(1)} ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`;
-  }
-  return d;
-}
-
-function Waveform({ data, height = 72 }: { data: Float32Array; height?: number }) {
+function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }) {
   if (data.length === 0) return null;
 
-  const W   = 400;
-  const mid = height / 2;
-  const N   = Math.min(90, data.length);
+  const W    = 500;
+  const mid  = height / 2;
+  const N    = Math.min(110, data.length);
   const step = data.length / N;
-
   const sampled = Array.from({ length: N }, (_, i) => data[Math.floor(i * step)]);
-
-  const upperPts = sampled.map((v, i) => ({ x: (i / (N - 1)) * W, y: mid - v * mid * 0.82 }));
-  const lowerPts = sampled.map((v, i) => ({ x: ((N - 1 - i) / (N - 1)) * W, y: mid + v * mid * 0.82 }));
-
-  const fillPath  = buildSmoothPath(upperPts) + ' ' + buildSmoothPath(lowerPts) + ' Z';
-  const topStroke = buildSmoothPath(upperPts);
-  // Offset second ribbon for depth
-  const upperPts2 = sampled.map((v, i) => ({ x: (i / (N - 1)) * W, y: mid - v * mid * 0.52 - 2 }));
-  const lowerPts2 = sampled.map((v, i) => ({ x: ((N - 1 - i) / (N - 1)) * W, y: mid + v * mid * 0.38 + 1 }));
-  const fillPath2 = buildSmoothPath(upperPts2) + ' ' + buildSmoothPath(lowerPts2) + ' Z';
+  const barW = W / N;
+  const gap  = Math.max(1, barW * 0.22);
+  const bw   = barW - gap;
 
   return (
     <>
       <style>{`
-        @keyframes wv-breathe {
-          0%,100% { transform:scaleY(1);   opacity:.82; }
-          50%      { transform:scaleY(1.07); opacity:1;  }
-        }
-        @keyframes wv-ribbon {
-          0%,100% { transform:scaleY(.88) translateY(2px); opacity:.55; }
-          50%      { transform:scaleY(.96) translateY(-1px); opacity:.72; }
-        }
-        @keyframes wv-glow {
-          0%,100% { opacity:.22; }
-          50%      { opacity:.42; }
-        }
-        .wv-fill   { animation: wv-breathe 3.6s ease-in-out infinite; transform-origin:50% 50%; }
-        .wv-ribbon { animation: wv-ribbon  4.1s ease-in-out infinite; transform-origin:50% 50%; }
-        .wv-glow   { animation: wv-glow    3.6s ease-in-out infinite; transform-origin:50% 50%; }
+        @keyframes wv-pulse { 0%,100%{opacity:.82} 50%{opacity:1} }
+        .wv-bars { animation: wv-pulse 3.2s ease-in-out infinite; }
       `}</style>
       <svg width="100%" viewBox={`0 0 ${W} ${height}`}
-        preserveAspectRatio="none" style={{ display: 'block' }}>
+        preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
         <defs>
-          <linearGradient id="wv-grad-main" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id="wv-grad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%"   stopColor="#ff6b35" />
             <stop offset="28%"  stopColor="#e040fb" />
-            <stop offset="58%"  stopColor="#3d5afe" />
+            <stop offset="62%"  stopColor="#3d5afe" />
             <stop offset="100%" stopColor="#00e5ff" />
           </linearGradient>
-          <linearGradient id="wv-grad-ribbon" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="#ff4081" stopOpacity="0.7" />
-            <stop offset="50%"  stopColor="#7c4dff" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#18ffff" stopOpacity="0.5" />
-          </linearGradient>
-          <filter id="wv-blur">
-            <feGaussianBlur stdDeviation="5" />
-          </filter>
         </defs>
-
-        {/* Glow halo */}
-        <path className="wv-glow" d={fillPath}
-          fill="url(#wv-grad-main)" filter="url(#wv-blur)" />
-
-        {/* Main fill */}
-        <path className="wv-fill" d={fillPath}
-          fill="url(#wv-grad-main)" opacity={0.78} />
-
-        {/* Second ribbon for depth */}
-        <path className="wv-ribbon" d={fillPath2}
-          fill="url(#wv-grad-ribbon)" />
-
-        {/* Highlight edge */}
-        <path d={topStroke}
-          fill="none" stroke="url(#wv-grad-main)"
-          strokeWidth={1.4} opacity={0.9} />
+        <g className="wv-bars">
+          {sampled.map((v, i) => {
+            const h = Math.max(3, v * mid * 0.92);
+            return (
+              <rect key={i}
+                x={i * barW + gap / 2} y={mid - h}
+                width={Math.max(1.5, bw)} height={h * 2}
+                fill="url(#wv-grad)" rx={Math.min(2, bw / 2)} />
+            );
+          })}
+        </g>
       </svg>
     </>
   );
@@ -378,7 +333,8 @@ function OnboardingScreen({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <style>{RESPONSIVE_CSS}</style>
 
       {/* File name */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -392,7 +348,7 @@ function OnboardingScreen({
       {/* Step 1 — Instrument */}
       <div style={card({ padding: '16px 14px' })}>
         <p style={stepHdr}><span style={stepNum}>01</span>WHICH INSTRUMENT?</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div className="at-instrument-grid">
           {INSTRUMENTS.map(({ id, label, Icon }) => {
             const active = instrument === id;
             return (
@@ -420,7 +376,7 @@ function OnboardingScreen({
       {/* Step 2 — Transcription mode */}
       <div style={card({ padding: '16px 14px' })}>
         <p style={stepHdr}><span style={stepNum}>02</span>HOW SHOULD WE TRANSCRIBE IT?</p>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="at-mix-row">
           {([
             {
               id: 'solo' as MixType,
@@ -472,6 +428,21 @@ function OnboardingScreen({
     </div>
   );
 }
+
+// ── Responsive styles ─────────────────────────────────────────────────────────
+
+const RESPONSIVE_CSS = `
+  .at-root { max-width: 640px; margin: 0 auto; }
+  .at-instrument-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .at-mix-row { display: flex; gap: 10px; }
+  .at-player-row { display: flex; gap: 10px; }
+  @media (min-width: 600px) {
+    .at-instrument-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 400px) {
+    .at-mix-row { flex-direction: column; }
+  }
+`;
 
 // ── Label style ───────────────────────────────────────────────────────────────
 
@@ -633,25 +604,33 @@ export const AudioToTab: React.FC = () => {
   const toggleOriginal = useCallback(() => {
     if (!originalUrl) return;
     unlockAudio();
-    if (isPlayOrig) { audioRef.current?.pause(); setIsPlayOrig(false); return; }
+    if (isPlayOrig) {
+      audioRef.current?.pause();
+      setIsPlayOrig(false);
+      return;
+    }
     stopSynth(); setIsPlaySynth(false);
-    if (!audioRef.current) audioRef.current = new Audio();
-    audioRef.current.src = originalUrl;
-    audioRef.current.onended = () => setIsPlayOrig(false);
-    audioRef.current.play().catch(() => setIsPlayOrig(false));
-    setIsPlayOrig(true);
+    const el = audioRef.current ?? new Audio();
+    audioRef.current = el;
+    el.src = originalUrl;
+    el.onended  = () => setIsPlayOrig(false);
+    el.onerror  = () => setIsPlayOrig(false);
+    el.play()
+      .then(() => setIsPlayOrig(true))
+      .catch(err => { console.warn('[AudioToTab] original play failed:', err); setIsPlayOrig(false); });
   }, [originalUrl, isPlayOrig]);
 
-  const toggleSynth = useCallback(() => {
+  const toggleSynth = useCallback(async () => {
     if (!audioBufRef.current || notes.length === 0) return;
     unlockAudio();
     if (isPlaySynth) { stopSynth(); setIsPlaySynth(false); return; }
     audioRef.current?.pause(); setIsPlayOrig(false);
     const ctx = getSharedContext();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') await ctx.resume();
     playSynth(notes, ctx);
     setIsPlaySynth(true);
-    setTimeout(() => setIsPlaySynth(false), (audioBufRef.current.duration + 1.5) * 1000);
+    const dur = audioBufRef.current.duration;
+    setTimeout(() => setIsPlaySynth(false), (dur + 1.5) * 1000);
   }, [notes, isPlaySynth]);
 
   const strName = (s: number) => ['E','A','D','G','B','e'][s] ?? '?';
@@ -663,7 +642,8 @@ export const AudioToTab: React.FC = () => {
   // ── Idle ──────────────────────────────────────────────────────────────────
 
   if (stage === 'idle') return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <style>{RESPONSIVE_CSS}</style>
       <div
         onDragOver={e => e.preventDefault()}
         onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
@@ -716,7 +696,7 @@ export const AudioToTab: React.FC = () => {
   // ── Recording ─────────────────────────────────────────────────────────────
 
   if (stage === 'recording') return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card({ padding: '28px 20px' }), textAlign: 'center' }}>
         <RecordingBars />
         <p style={{ margin: '16px 0 4px', fontSize: 26, fontWeight: 800, color: T.primary, fontVariantNumeric: 'tabular-nums' }}>
@@ -752,10 +732,10 @@ export const AudioToTab: React.FC = () => {
   // ── Processing ────────────────────────────────────────────────────────────
 
   if (stage === 'processing') return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={card({ padding: '22px 18px' })}>
         {waveform && waveform.length > 0 && (
-          <div style={{ marginBottom: 16, borderRadius: 10, overflow: 'hidden', background: '#0d0d14', padding: '6px 4px' }}>
+          <div style={{ marginBottom: 16, borderRadius: 10, overflow: 'hidden', background: 'transparent', padding: '4px 0' }}>
             <Waveform data={waveform} height={64} />
           </div>
         )}
@@ -781,7 +761,7 @@ export const AudioToTab: React.FC = () => {
   // ── Error ─────────────────────────────────────────────────────────────────
 
   if (stage === 'error') return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card({ padding: '18px 16px' }), borderLeft: `3px solid ${T.coral}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <span style={{ fontSize: 18, lineHeight: 1.4 }}>⚠️</span>
@@ -804,7 +784,8 @@ export const AudioToTab: React.FC = () => {
   const selPositions: FretPosition[] = selNote ? findPositions(selNote.midiNote) : [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <style>{RESPONSIVE_CSS}</style>
 
       {/* Header: file info + Clear */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -822,7 +803,7 @@ export const AudioToTab: React.FC = () => {
 
       {/* Waveform */}
       {waveform && waveform.length > 0 && (
-        <div style={{ borderRadius: 12, overflow: 'hidden', background: '#0d0d14', padding: '6px 4px' }}>
+        <div style={{ borderRadius: 12, overflow: 'hidden', background: 'transparent', padding: '4px 0' }}>
           <Waveform data={waveform} height={72} />
         </div>
       )}
@@ -830,7 +811,7 @@ export const AudioToTab: React.FC = () => {
       {/* Comparison player */}
       <div style={card({ padding: '14px 16px' })}>
         <p style={LABEL}>נגן השוואה</p>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="at-player-row">
           {[
             { label: 'מקורי', active: isPlayOrig,  onToggle: toggleOriginal, bg: T.primary   },
             { label: 'סינטזייזר', active: isPlaySynth, onToggle: toggleSynth,   bg: T.secondary },
