@@ -61,14 +61,15 @@ function getBasicPitch(): BasicPitch {
 }
 
 // Per-instrument Basic Pitch params
+// minNoteLen is in frames at 86 fps (22050/256): 8 ≈ 93 ms, avoids glitch notes
 const INSTRUMENT_PARAMS: Record<InstrumentType, {
   minFreq: number; maxFreq: number; minMidi: number; maxMidi: number;
-  onsetThresh: number; frameThresh: number; minNoteLen: number;
+  onsetThresh: number; frameThresh: number; minNoteLen: number; minAmp: number;
 }> = {
-  acoustic: { minFreq: 70,  maxFreq: 1400, minMidi: 40, maxMidi: 88, onsetThresh: 0.42, frameThresh: 0.26, minNoteLen: 4 },
-  electric: { minFreq: 70,  maxFreq: 1400, minMidi: 40, maxMidi: 88, onsetThresh: 0.38, frameThresh: 0.22, minNoteLen: 3 },
-  bass:     { minFreq: 30,  maxFreq: 430,  minMidi: 28, maxMidi: 67, onsetThresh: 0.34, frameThresh: 0.18, minNoteLen: 4 },
-  ukulele:  { minFreq: 240, maxFreq: 1000, minMidi: 48, maxMidi: 84, onsetThresh: 0.48, frameThresh: 0.30, minNoteLen: 3 },
+  acoustic: { minFreq: 70,  maxFreq: 1400, minMidi: 40, maxMidi: 88, onsetThresh: 0.58, frameThresh: 0.38, minNoteLen: 8,  minAmp: 0.42 },
+  electric: { minFreq: 70,  maxFreq: 1400, minMidi: 40, maxMidi: 88, onsetThresh: 0.52, frameThresh: 0.32, minNoteLen: 7,  minAmp: 0.38 },
+  bass:     { minFreq: 30,  maxFreq: 430,  minMidi: 28, maxMidi: 67, onsetThresh: 0.46, frameThresh: 0.28, minNoteLen: 8,  minAmp: 0.32 },
+  ukulele:  { minFreq: 240, maxFreq: 1000, minMidi: 48, maxMidi: 84, onsetThresh: 0.62, frameThresh: 0.40, minNoteLen: 6,  minAmp: 0.45 },
 };
 
 // ── Frequency helpers ─────────────────────────────────────────────────────────
@@ -93,6 +94,47 @@ export function findPositions(midiNote: number): Array<{ string: number; fret: n
 }
 
 /**
+ * Heuristic note cleanup applied before fingering:
+ *  1. Merge consecutive same-pitch notes separated by < 80 ms (sustain re-triggers)
+ *  2. Deduplicate notes at the same pitch within a 100 ms window (phantom detections)
+ */
+export function cleanupNotes(notes: DetectedNote[]): DetectedNote[] {
+  if (notes.length === 0) return notes;
+
+  const MERGE_GAP_S = 0.08;
+  const DEDUP_WIN_S = 0.10;
+
+  const sorted = [...notes].sort((a, b) => a.startTime - b.startTime);
+
+  // Pass 1 — merge consecutive same-pitch notes with tiny gaps
+  const merged: DetectedNote[] = [];
+  for (const note of sorted) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.midiNote === note.midiNote && note.startTime - prev.endTime < MERGE_GAP_S) {
+      prev.endTime = Math.max(prev.endTime, note.endTime);
+    } else {
+      merged.push({ ...note });
+    }
+  }
+
+  // Pass 2 — deduplicate: same MIDI within 100 ms window → keep higher confidence
+  const out: DetectedNote[] = [];
+  for (const note of merged) {
+    const idx = out.findIndex(n =>
+      n.midiNote === note.midiNote &&
+      Math.abs(n.startTime - note.startTime) < DEDUP_WIN_S,
+    );
+    if (idx === -1) {
+      out.push(note);
+    } else if (note.confidence > out[idx].confidence) {
+      out[idx] = note;
+    }
+  }
+
+  return out;
+}
+
+/**
  * Beam-search fingering optimiser.
  * Evaluates all possible (string, fret) sequences for a note sequence and
  * returns the path with minimum total hand-movement cost.
@@ -103,10 +145,11 @@ export function optimizeFingeringPath(
 ): Array<{ string: number; fret: number }> {
   if (notes.length === 0) return [];
 
-  const BEAM       = 4;
-  const SPAN       = 4;
-  const SHIFT_PEN  = 5;   // per-fret penalty for moves beyond SPAN
-  const TREBLE_W   = 0.3; // prefer higher strings for single-note melody
+  const BEAM         = 4;
+  const SPAN         = 4;
+  const SHIFT_PEN    = 5;    // per-fret penalty for moves beyond SPAN
+  const TREBLE_W     = 0.3;  // prefer higher strings for single-note melody
+  const HIGH_FRET_PEN = 0.4; // prefer positions with fret ≤ 12 (avoid spurious high frets)
 
   type State = { pos: { string: number; fret: number }; cost: number; prev: State | null };
 
@@ -115,8 +158,11 @@ export function optimizeFingeringPath(
     return p.length > 0 ? p : [{ string: 5, fret: Math.max(0, n.midiNote - OPEN_MIDI[5]) }];
   });
 
+  const posCost = (pos: { string: number; fret: number }) =>
+    (5 - pos.string) * TREBLE_W + Math.max(0, pos.fret - 12) * HIGH_FRET_PEN;
+
   let beam: State[] = allCands[0]
-    .map(pos => ({ pos, cost: (5 - pos.string) * TREBLE_W, prev: null }))
+    .map(pos => ({ pos, cost: posCost(pos), prev: null }))
     .sort((a, b) => a.cost - b.cost)
     .slice(0, BEAM);
 
@@ -127,7 +173,7 @@ export function optimizeFingeringPath(
         const fd    = Math.abs(pos.fret - s.pos.fret);
         const sd    = Math.abs(pos.string - s.pos.string);
         const extra = Math.max(0, fd - SPAN) * SHIFT_PEN;
-        next.push({ pos, cost: s.cost + fd * 2 + sd + extra + (5 - pos.string) * TREBLE_W, prev: s });
+        next.push({ pos, cost: s.cost + fd * 2 + sd + extra + posCost(pos), prev: s });
       }
     }
     beam = next.sort((a, b) => a.cost - b.cost).slice(0, BEAM);
@@ -226,8 +272,12 @@ export async function transcribeAudioBuffer(
 
   onProgress?.(75);
 
-  return timedNotes
-    .filter(n => n.pitchMidi >= p.minMidi && n.pitchMidi <= p.maxMidi)
+  const raw = timedNotes
+    .filter(n =>
+      n.pitchMidi >= p.minMidi && n.pitchMidi <= p.maxMidi &&
+      n.amplitude >= p.minAmp &&        // reject weak phantom detections
+      n.durationSeconds >= 0.06,        // reject sub-60 ms glitch notes
+    )
     .map(n => ({
       startTime:  n.startTimeSeconds,
       endTime:    n.startTimeSeconds + n.durationSeconds,
@@ -235,6 +285,8 @@ export async function transcribeAudioBuffer(
       confidence: n.amplitude,
       frequency:  midiToFreq(n.pitchMidi),
     }));
+
+  return cleanupNotes(raw);
 }
 
 // ── AI note refinement ────────────────────────────────────────────────────────
@@ -338,7 +390,7 @@ export function notesToTab(
   const MIN_GAP       = 1;
   const MAX_GAP       = 2;
 
-  const sorted = [...notes].sort((a, b) => a.startTime - b.startTime);
+  const sorted = cleanupNotes([...notes].sort((a, b) => a.startTime - b.startTime));
 
   // Group into simultaneous "chords"
   interface Group { time: number; notes: DetectedNote[] }
