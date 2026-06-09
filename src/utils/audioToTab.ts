@@ -507,6 +507,48 @@ export function notesToTab(
   return { events, totalColumns, gridMs, title, duration: totalDuration, waveform: new Float32Array(0) };
 }
 
+// ── AlphaTex export ──────────────────────────────────────────────────────────
+
+/**
+ * Converts TabData to alphaTab's alphaTex format.
+ * 1 grid column = 1 sixteenth note; BPM derived from gridMs.
+ * String mapping: our 0=low E → alphaTab 6; our 5=high e → alphaTab 1.
+ */
+export function tabDataToAlphaTex(tabData: TabData): string {
+  const { events, totalColumns, gridMs, title } = tabData;
+
+  // 1 column = 1 sixteenth note → BPM for quarter = 60000 / (gridMs * 4)
+  const bpm = Math.max(40, Math.min(280, Math.round(60000 / (gridMs * 4))));
+
+  const colMap = new Map<number, Array<{ string: number; fret: number }>>();
+  for (const ev of events) {
+    if (!colMap.has(ev.column)) colMap.set(ev.column, []);
+    colMap.get(ev.column)!.push({ string: ev.string, fret: ev.fret });
+  }
+
+  const atStr = (s: number) => 6 - s; // our 0→6(low E), our 5→1(high e)
+
+  const parts: string[] = [':16']; // duration set once; inherited by all notes
+  for (let col = 0; col < totalColumns; col++) {
+    if (col > 0 && col % 16 === 0) parts.push('|');
+    const notes = colMap.get(col);
+    if (!notes || notes.length === 0) {
+      parts.push('r');
+    } else if (notes.length === 1) {
+      parts.push(`${notes[0].fret}.${atStr(notes[0].string)}`);
+    } else {
+      parts.push(`(${notes.map(n => `${n.fret}.${atStr(n.string)}`).join(' ')})`);
+    }
+  }
+
+  return [
+    `\\title "${(title || 'Guitar Tab').replace(/"/g, "'")}"`,
+    `\\tempo ${bpm}`,
+    '.',
+    parts.join(' '),
+  ].join('\n');
+}
+
 // ── PDF export ────────────────────────────────────────────────────────────────
 
 export type { jsPDF } from 'jspdf';

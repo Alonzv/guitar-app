@@ -2,12 +2,13 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { T, card } from '../../theme';
 import {
   transcribeAudioBuffer, refineNotesWithAI, notesToTab, buildWaveform,
-  exportTabToPDF, playSynth, stopSynth, findPositions,
+  exportTabToPDF, findPositions,
   type TabData, type TabEvent, type DetectedNote, type TranscribeConfig,
   type InstrumentType, type MixType,
   STRING_NAMES,
 } from '../../utils/audioToTab';
-import { getSharedContext, unlockAudio } from '../../utils/audioPlayback';
+import { unlockAudio } from '../../utils/audioPlayback';
+import { AlphaTabViewer } from './AlphaTabViewer';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import type { FretPosition } from '../../types/music';
 
@@ -526,8 +527,6 @@ export const AudioToTab: React.FC = () => {
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [fileName, setFileName]       = useState('');
   const [recSecs, setRecSecs]         = useState(0);
-  const [isPlayOrig, setIsPlayOrig]   = useState(false);
-  const [isPlaySynth, setIsPlaySynth] = useState(false);
   const [selNote, setSelNote]         = useState<TabEvent | null>(null);
 
   const pendingBlobRef = useRef<{ blob: Blob; name: string } | null>(null);
@@ -535,14 +534,11 @@ export const AudioToTab: React.FC = () => {
   const mediaRecRef  = useRef<MediaRecorder | null>(null);
   const chunksRef    = useRef<Blob[]>([]);
   const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioRef     = useRef<HTMLAudioElement | null>(null);
   const audioBufRef  = useRef<AudioBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => {
-    stopSynth();
     if (timerRef.current) clearInterval(timerRef.current);
-    audioRef.current?.pause();
     if (originalUrl) URL.revokeObjectURL(originalUrl);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -550,8 +546,6 @@ export const AudioToTab: React.FC = () => {
   // ── Reset to idle ─────────────────────────────────────────────────────────
 
   const reset = useCallback(() => {
-    stopSynth();
-    audioRef.current?.pause();
     if (originalUrl) URL.revokeObjectURL(originalUrl);
     setStage('idle');
     setTabData(null);
@@ -559,8 +553,6 @@ export const AudioToTab: React.FC = () => {
     setNotes([]);
     setOriginalUrl(null);
     setSelNote(null);
-    setIsPlayOrig(false);
-    setIsPlaySynth(false);
     setError('');
     setProgress(0);
     setPhaseLabel('');
@@ -582,7 +574,7 @@ export const AudioToTab: React.FC = () => {
 
     try {
       unlockAudio();
-      const ctx      = getSharedContext();
+      const ctx      = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       const arrBuf   = await blob.arrayBuffer();
       const audioBuf = await ctx.decodeAudioData(arrBuf);
       audioBufRef.current = audioBuf;
@@ -660,43 +652,6 @@ export const AudioToTab: React.FC = () => {
     mediaRecRef.current?.stop();
     mediaRecRef.current = null;
   }, []);
-
-  // ── Playback ──────────────────────────────────────────────────────────────
-
-  const toggleOriginal = useCallback(() => {
-    if (!originalUrl) return;
-    if (isPlayOrig) {
-      audioRef.current?.pause();
-      setIsPlayOrig(false);
-      return;
-    }
-    stopSynth(); setIsPlaySynth(false);
-    // Always create a fresh element so browser doesn't reuse a stale one
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-    const el = new Audio();
-    audioRef.current = el;
-    el.src = originalUrl;
-    el.onended = () => setIsPlayOrig(false);
-    el.onerror = () => setIsPlayOrig(false);
-    el.load();
-    el.play()
-      .then(() => setIsPlayOrig(true))
-      .catch(err => { console.warn('[AudioToTab] original play failed:', err); setIsPlayOrig(false); });
-  }, [originalUrl, isPlayOrig]);
-
-  const toggleSynth = useCallback(async () => {
-    if (notes.length === 0) return;
-    if (isPlaySynth) { stopSynth(); setIsPlaySynth(false); return; }
-    audioRef.current?.pause(); setIsPlayOrig(false);
-    const ctx = getSharedContext();
-    try {
-      if (ctx.state !== 'running') await ctx.resume();
-    } catch { /* ignore — still try to play */ }
-    playSynth(notes, ctx);
-    setIsPlaySynth(true);
-    const dur = audioBufRef.current?.duration ?? 10;
-    setTimeout(() => setIsPlaySynth(false), (dur + 1.5) * 1000);
-  }, [notes, isPlaySynth]);
 
   const strName = (s: number) => ['E','A','D','G','B','e'][s] ?? '?';
 
@@ -873,29 +828,12 @@ export const AudioToTab: React.FC = () => {
         </div>
       )}
 
-      {/* Comparison player */}
-      <div style={card({ padding: '14px 16px' })}>
-        <p style={LABEL}>נגן השוואה</p>
-        <div className="at-player-row">
-          {[
-            { label: 'מקורי', active: isPlayOrig,  onToggle: toggleOriginal, bg: T.primary   },
-            { label: 'סינטזייזר', active: isPlaySynth, onToggle: toggleSynth,   bg: T.secondary },
-          ].map(({ label, active, onToggle, bg }) => (
-            <button key={label} onClick={onToggle} style={{
-              flex: 1, padding: '10px 6px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              border: active ? 'none' : `1px solid ${T.border}`,
-              background: active ? bg : T.bgInput,
-              color: active ? '#fff' : T.textMuted,
-            }}>
-              <span style={{ fontSize: 11 }}>{active ? '⏹' : '▶'}</span>
-              {label}
-            </button>
-          ))}
-        </div>
+      {/* AlphaTab viewer — rendering + playback */}
+      <div style={card({ padding: '14px 14px' })}>
+        <AlphaTabViewer tabData={tabData} originalUrl={originalUrl} />
       </div>
 
-      {/* Tab display */}
+      {/* Classic SVG tab — click for fingering alternatives */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
           <p style={{ ...LABEL, margin: 0 }}>טאב</p>
