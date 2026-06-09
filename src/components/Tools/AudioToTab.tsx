@@ -23,11 +23,10 @@ const TAB_LBL  = '#7a6e5c';
 const TAB_SEL  = '#c96219';
 
 // SVG layout — viewBox units, width="100%" scales to container
-// COL_W/STR_GAP/LEFT_PAD scaled 1.5× for better readability on screen
-const COL_W        = 24;
-const STR_GAP      = 24;
-const LEFT_PAD     = 36;
-const COLS_PER_ROW = 13;
+const COL_W        = 16;
+const STR_GAP      = 16;
+const LEFT_PAD     = 28;
+const COLS_PER_ROW = 20;
 const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;   // 352 viewBox units
 
 // ── Clear button (used in multiple stages) ────────────────────────────────────
@@ -71,8 +70,8 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     els.push(
       <line key={`l${di}`} x1={LEFT_PAD - 2} y1={sy} x2={LEFT_PAD + lineW} y2={sy}
         stroke={TAB_LINE} strokeWidth={1.2} />,
-      <text key={`n${di}`} x={LEFT_PAD - 6} y={sy + 5}
-        fontSize={13} fill={TAB_LBL} textAnchor="end"
+      <text key={`n${di}`} x={LEFT_PAD - 6} y={sy + 3.5}
+        fontSize={9} fill={TAB_LBL} textAnchor="end"
         fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
         {STRING_NAMES[di]}
       </text>,
@@ -105,9 +104,9 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
       const sel  = selectedCol === c;
       els.push(
         <g key={`${c}-${si}`} onClick={e => onTap(c, si, e)} style={{ cursor: 'pointer' }}>
-          <rect x={cx - (wide ? 10 : 7)} y={sy - 9} width={wide ? 20 : 14} height={18}
-            fill={sel ? TAB_SEL : TAB_BG} rx={2.5} />
-          <text x={cx} y={sy + 6} fontSize={13}
+          <rect x={cx - (wide ? 7 : 5)} y={sy - 6} width={wide ? 14 : 10} height={12}
+            fill={sel ? TAB_SEL : TAB_BG} rx={2} />
+          <text x={cx} y={sy + 4.5} fontSize={8.5}
             fill={sel ? '#fff' : TAB_NUM}
             textAnchor="middle"
             fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
@@ -495,7 +494,7 @@ function OnboardingScreen({
 // ── Responsive styles ─────────────────────────────────────────────────────────
 
 const RESPONSIVE_CSS = `
-  .at-root { max-width: 640px; margin: 0 auto; }
+  .at-root { width: 100%; box-sizing: border-box; }
   .at-instrument-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .at-mix-row { display: flex; gap: 10px; }
   .at-player-row { display: flex; gap: 10px; }
