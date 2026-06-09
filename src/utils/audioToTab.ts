@@ -9,11 +9,19 @@ import Anthropic from '@anthropic-ai/sdk';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface DetectedNote {
-  startTime: number;    // seconds
+  startTime: number;
   endTime: number;
-  midiNote: number;     // 40–88 (guitar range)
-  confidence: number;   // 0–1
-  frequency: number;    // Hz
+  midiNote: number;
+  confidence: number;
+  frequency: number;
+}
+
+export type InstrumentType = 'acoustic' | 'electric' | 'bass' | 'ukulele';
+export type MixType        = 'solo' | 'full_mix';
+
+export interface TranscribeConfig {
+  instrument: InstrumentType;
+  mixType:    MixType;
 }
 
 export interface TabEvent {
@@ -52,9 +60,16 @@ function getBasicPitch(): BasicPitch {
   return _bp;
 }
 
-// Guitar MIDI range for post-filtering
-const MIN_MIDI = 40;  // low E2
-const MAX_MIDI = 88;  // high e, 22nd fret
+// Per-instrument Basic Pitch params
+const INSTRUMENT_PARAMS: Record<InstrumentType, {
+  minFreq: number; maxFreq: number; minMidi: number; maxMidi: number;
+  onsetThresh: number; frameThresh: number; minNoteLen: number;
+}> = {
+  acoustic: { minFreq: 70,  maxFreq: 1400, minMidi: 40, maxMidi: 88, onsetThresh: 0.42, frameThresh: 0.26, minNoteLen: 4 },
+  electric: { minFreq: 70,  maxFreq: 1400, minMidi: 40, maxMidi: 88, onsetThresh: 0.38, frameThresh: 0.22, minNoteLen: 3 },
+  bass:     { minFreq: 30,  maxFreq: 430,  minMidi: 28, maxMidi: 67, onsetThresh: 0.34, frameThresh: 0.18, minNoteLen: 4 },
+  ukulele:  { minFreq: 240, maxFreq: 1000, minMidi: 48, maxMidi: 84, onsetThresh: 0.48, frameThresh: 0.30, minNoteLen: 3 },
+};
 
 // ── Frequency helpers ─────────────────────────────────────────────────────────
 
@@ -167,6 +182,7 @@ export function buildWaveform(buf: AudioBuffer, points = 200): Float32Array {
 export async function transcribeAudioBuffer(
   audioBuffer: AudioBuffer,
   onProgress?: (pct: number) => void,
+  config: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' },
 ): Promise<DetectedNote[]> {
   const TARGET_SR    = 22050;
   const targetLength = Math.ceil(audioBuffer.duration * TARGET_SR);
@@ -192,16 +208,18 @@ export async function transcribeAudioBuffer(
     (pct) => onProgress?.(Math.round(pct * 72)),
   );
 
+  const p = INSTRUMENT_PARAMS[config.instrument];
+
   const noteEvents = outputToNotesPoly(
     frames,
     onsets,
-    0.5,   // onsetThreshold
-    0.3,   // frameThreshold — lower = more sensitive
-    5,     // minNoteLen in frames (~56 ms at 22050 Hz / 256 hop)
-    true,  // inferOnsets
-    null,  // maxFreq — no upper limit (we filter by MIDI below)
-    null,  // minFreq
-    true,  // melodiaTrick — suppresses non-melodic background noise
+    p.onsetThresh,
+    p.frameThresh,
+    p.minNoteLen,
+    true,                          // inferOnsets
+    p.maxFreq,
+    p.minFreq,
+    config.mixType === 'solo',     // melodiaTrick — on for solo, off for full mix
   );
 
   const timedNotes = noteFramesToTime(addPitchBendsToNoteEvents(contours, noteEvents));
@@ -209,7 +227,7 @@ export async function transcribeAudioBuffer(
   onProgress?.(75);
 
   return timedNotes
-    .filter(n => n.pitchMidi >= MIN_MIDI && n.pitchMidi <= MAX_MIDI)
+    .filter(n => n.pitchMidi >= p.minMidi && n.pitchMidi <= p.maxMidi)
     .map(n => ({
       startTime:  n.startTimeSeconds,
       endTime:    n.startTimeSeconds + n.durationSeconds,

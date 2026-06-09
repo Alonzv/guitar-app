@@ -3,14 +3,15 @@ import { T, card } from '../../theme';
 import {
   transcribeAudioBuffer, refineNotesWithAI, notesToTab, buildWaveform,
   exportTabToPDF, playSynth, stopSynth, findPositions,
-  type TabData, type TabEvent, type DetectedNote,
+  type TabData, type TabEvent, type DetectedNote, type TranscribeConfig,
+  type InstrumentType, type MixType,
   STRING_NAMES,
 } from '../../utils/audioToTab';
 import { getSharedContext, unlockAudio } from '../../utils/audioPlayback';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import type { FretPosition } from '../../types/music';
 
-type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'error';
+type Stage = 'idle' | 'recording' | 'onboarding' | 'processing' | 'result' | 'error';
 
 // ── Tab visual constants (parchment / sheet-music look) ───────────────────────
 
@@ -288,6 +289,190 @@ function RecordingBars() {
   );
 }
 
+// ── Instrument SVG icons ──────────────────────────────────────────────────────
+
+function IcoAcoustic({ c, bg }: { c: string; bg: string }) {
+  return (
+    <svg viewBox="0 0 40 64" width={38} height={58} fill={c}>
+      <rect x="14" y="1" width="12" height="6" rx="3" />
+      <circle cx="10" cy="2.5" r="2.2" /><circle cx="10" cy="5.5" r="2.2" />
+      <circle cx="30" cy="2.5" r="2.2" /><circle cx="30" cy="5.5" r="2.2" />
+      <rect x="16" y="7" width="8" height="2" rx="0.5" opacity={0.55} />
+      <rect x="16.5" y="9" width="7" height="16" rx="1" />
+      <path d="M16,25 C5,25 3,30 3,35 C3,41 7,44 12,45 C8,46 5,49 5,54 C5,61 11,64 20,64 C29,64 35,61 35,54 C35,49 32,46 28,45 C33,44 37,41 37,35 C37,30 35,25 24,25 Z" />
+      <circle cx="20" cy="53" r="5.5" fill={bg} />
+    </svg>
+  );
+}
+
+function IcoElectric({ c, bg }: { c: string; bg: string }) {
+  return (
+    <svg viewBox="0 0 40 64" width={38} height={58} fill={c}>
+      <rect x="15" y="1" width="10" height="6" rx="3" />
+      <circle cx="11" cy="2.5" r="2.2" /><circle cx="11" cy="5.5" r="2.2" />
+      <circle cx="29" cy="2.5" r="2.2" /><circle cx="29" cy="5.5" r="2.2" />
+      <rect x="16.5" y="7" width="7" height="18" rx="1" />
+      {/* Offset body — upper horn left, cutaway right */}
+      <path d="M16,25 C6,25 2,27 2,32 C2,35 5,37 9,38 C6,39 4,41 4,46 C4,55 10,62 20,62 C30,62 36,55 36,46 C36,41 34,38 30,37 C34,35 37,33 37,29 C37,25 34,25 24,25 Z" />
+      <rect x="13" y="47" width="14" height="3.5" rx="1.5" fill={bg} opacity={0.55} />
+      <rect x="13" y="53" width="14" height="3.5" rx="1.5" fill={bg} opacity={0.55} />
+    </svg>
+  );
+}
+
+function IcoBass({ c, bg }: { c: string; bg: string }) {
+  return (
+    <svg viewBox="0 0 40 70" width={36} height={58} fill={c}>
+      <rect x="15" y="1" width="10" height="6" rx="3" />
+      <circle cx="11" cy="2.5" r="2.2" /><circle cx="11" cy="5.5" r="2.2" />
+      <circle cx="29" cy="2.5" r="2.2" /><circle cx="29" cy="5.5" r="2.2" />
+      <rect x="16.5" y="7" width="7" height="24" rx="1" />
+      {/* Narrower body — P-bass silhouette */}
+      <path d="M16,31 C6,31 3,34 2,39 C1,44 4,47 8,49 C5,50 3,52 3,57 C3,65 10,70 20,70 C30,70 37,65 37,57 C37,52 35,50 32,49 C36,47 39,44 38,39 C37,34 34,31 24,31 Z" />
+      <rect x="14" y="57" width="12" height="4" rx="1.5" fill={bg} opacity={0.55} />
+    </svg>
+  );
+}
+
+function IcoUkulele({ c, bg }: { c: string; bg: string }) {
+  return (
+    <svg viewBox="0 0 36 54" width={32} height={52} fill={c}>
+      <rect x="13" y="1" width="10" height="5" rx="2.5" />
+      <circle cx="9" cy="2.5" r="1.9" /><circle cx="9" cy="5" r="1.9" />
+      <circle cx="27" cy="2.5" r="1.9" /><circle cx="27" cy="5" r="1.9" />
+      <rect x="15" y="6" width="6" height="12" rx="1" />
+      {/* Smaller rounder body */}
+      <path d="M15,18 C7,18 5,22 5,26 C5,30 8,32 11,33 C8,34 6,36 6,40 C6,47 10,52 18,52 C26,52 30,47 30,40 C30,36 28,34 25,33 C28,32 31,30 31,26 C31,22 29,18 21,18 Z" />
+      <circle cx="18" cy="39" r="4.5" fill={bg} />
+    </svg>
+  );
+}
+
+// ── Onboarding screen ─────────────────────────────────────────────────────────
+
+const INSTRUMENTS: { id: InstrumentType; label: string; Icon: React.FC<{ c: string; bg: string }> }[] = [
+  { id: 'acoustic', label: 'Acoustic Guitar', Icon: IcoAcoustic },
+  { id: 'electric', label: 'Electric Guitar', Icon: IcoElectric },
+  { id: 'bass',     label: 'Bass Guitar',     Icon: IcoBass     },
+  { id: 'ukulele',  label: 'Ukulele',         Icon: IcoUkulele  },
+];
+
+function OnboardingScreen({
+  fileName,
+  onStart,
+  onClear,
+}: {
+  fileName: string;
+  onStart: (cfg: TranscribeConfig) => void;
+  onClear: () => void;
+}) {
+  const [instrument, setInstrument] = useState<InstrumentType>('acoustic');
+  const [mixType,    setMixType]    = useState<MixType>('solo');
+
+  const stepHdr: React.CSSProperties = {
+    fontSize: 11, fontWeight: 800, letterSpacing: '0.12em',
+    textTransform: 'uppercase', color: T.textMuted, margin: '0 0 12px',
+  };
+  const stepNum: React.CSSProperties = {
+    fontSize: 11, fontWeight: 700, color: T.primary, marginRight: 6,
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+      {/* File name */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={{ margin: 0, fontSize: 12, color: T.textMuted,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
+          {fileName}
+        </p>
+        <ClearBtn onClear={onClear} />
+      </div>
+
+      {/* Step 1 — Instrument */}
+      <div style={card({ padding: '16px 14px' })}>
+        <p style={stepHdr}><span style={stepNum}>01</span>WHICH INSTRUMENT?</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {INSTRUMENTS.map(({ id, label, Icon }) => {
+            const active = instrument === id;
+            return (
+              <button key={id} onClick={() => setInstrument(id)} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: 8, padding: '14px 8px 10px', borderRadius: 12, cursor: 'pointer',
+                border: `2px solid ${active ? T.primary : T.border}`,
+                background: active ? T.primaryBg : T.bgInput,
+                transition: 'border-color 0.15s, background 0.15s',
+              }}>
+                <Icon
+                  c={active ? T.primary : T.textMuted}
+                  bg={active ? T.primaryBg : T.bgInput}
+                />
+                <span style={{ fontSize: 11, fontWeight: 700,
+                  color: active ? T.primary : T.text, textAlign: 'center', lineHeight: 1.2 }}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Step 2 — Transcription mode */}
+      <div style={card({ padding: '16px 14px' })}>
+        <p style={stepHdr}><span style={stepNum}>02</span>HOW SHOULD WE TRANSCRIBE IT?</p>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {([
+            {
+              id: 'solo' as MixType,
+              title: 'Direct',
+              desc: 'The instrument is clearly audible. We\'ll isolate and transcribe exactly what it plays.',
+              tip: 'Best for recordings where the instrument is the main focus.',
+            },
+            {
+              id: 'full_mix' as MixType,
+              title: 'Full Mix',
+              desc: 'A full song or band recording. We\'ll detect the instrument\'s part in the mix.',
+              tip: 'Use when other instruments or vocals are present.',
+            },
+          ] as const).map(opt => {
+            const active = mixType === opt.id;
+            return (
+              <button key={opt.id} onClick={() => setMixType(opt.id)} style={{
+                flex: 1, textAlign: 'left', padding: '12px 12px 10px', borderRadius: 12,
+                cursor: 'pointer', border: `2px solid ${active ? T.primary : T.border}`,
+                background: active ? T.primaryBg : T.bgInput,
+                transition: 'border-color 0.15s, background 0.15s',
+                display: 'flex', flexDirection: 'column', gap: 6,
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 800,
+                  color: active ? T.primary : T.text }}>{opt.title}</span>
+                <span style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.4 }}>{opt.desc}</span>
+                <div style={{
+                  marginTop: 4, padding: '6px 8px', borderRadius: 8,
+                  background: active ? 'rgba(var(--gc-primary-rgb, 99,102,241),.10)' : T.bgCard,
+                  border: `1px solid ${active ? T.primary : T.border}`,
+                }}>
+                  <span style={{ fontSize: 10, color: active ? T.primary : T.textMuted, lineHeight: 1.3 }}>
+                    {opt.tip}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Start button */}
+      <button onClick={() => onStart({ instrument, mixType })} style={{
+        padding: '14px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
+        background: T.primary, color: '#fff', fontWeight: 800, fontSize: 15,
+      }}>
+        Start Analysis
+      </button>
+    </div>
+  );
+}
+
 // ── Label style ───────────────────────────────────────────────────────────────
 
 const LABEL: React.CSSProperties = {
@@ -311,6 +496,8 @@ export const AudioToTab: React.FC = () => {
   const [isPlayOrig, setIsPlayOrig]   = useState(false);
   const [isPlaySynth, setIsPlaySynth] = useState(false);
   const [selNote, setSelNote]         = useState<TabEvent | null>(null);
+
+  const pendingBlobRef = useRef<{ blob: Blob; name: string } | null>(null);
 
   const mediaRecRef  = useRef<MediaRecorder | null>(null);
   const chunksRef    = useRef<Blob[]>([]);
@@ -344,13 +531,14 @@ export const AudioToTab: React.FC = () => {
     setError('');
     setProgress(0);
     setPhaseLabel('');
-    audioBufRef.current = null;
+    audioBufRef.current  = null;
+    pendingBlobRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [originalUrl]);
 
   // ── Process Blob → tab ────────────────────────────────────────────────────
 
-  const processBlob = useCallback(async (blob: Blob, name: string) => {
+  const processBlob = useCallback(async (blob: Blob, name: string, cfg: TranscribeConfig) => {
     setStage('processing');
     setProgress(0);
     setFileName(name);
@@ -368,16 +556,13 @@ export const AudioToTab: React.FC = () => {
 
       setWaveform(buildWaveform(audioBuf, 100));
 
-      // Stage 1: pitch detection (0 → 75%)
       setPhaseLabel('מזהה תדרים…');
-      const rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p));
+      const rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
 
-      // Stage 2: AI refinement (75 → 95%)
       setPhaseLabel('מנקה עם AI…');
       setProgress(78);
       const refined = await refineNotesWithAI(rawNotes, p => setProgress(75 + Math.round(p * 0.2)));
 
-      // Stage 3: build tab (95 → 100%)
       setPhaseLabel('בונה טאב…');
       setProgress(97);
       setNotes(refined);
@@ -401,8 +586,10 @@ export const AudioToTab: React.FC = () => {
       setStage('error');
       return;
     }
-    processBlob(file, file.name);
-  }, [processBlob]);
+    pendingBlobRef.current = { blob: file, name: file.name };
+    setFileName(file.name);
+    setStage('onboarding');
+  }, []);
 
   // ── Mic recording ─────────────────────────────────────────────────────────
 
@@ -419,7 +606,10 @@ export const AudioToTab: React.FC = () => {
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
-        processBlob(new Blob(chunksRef.current, { type: mime || 'audio/webm' }), 'recording.webm');
+        const blob = new Blob(chunksRef.current, { type: mime || 'audio/webm' });
+        pendingBlobRef.current = { blob, name: 'recording.webm' };
+        setFileName('recording.webm');
+        setStage('onboarding');
       };
       mr.start(100);
       mediaRecRef.current = mr;
@@ -544,6 +734,19 @@ export const AudioToTab: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+
+  // ── Onboarding ───────────────────────────────────────────────────────────
+
+  if (stage === 'onboarding') return (
+    <OnboardingScreen
+      fileName={fileName}
+      onStart={cfg => {
+        const p = pendingBlobRef.current;
+        if (p) processBlob(p.blob, p.name, cfg);
+      }}
+      onClear={reset}
+    />
   );
 
   // ── Processing ────────────────────────────────────────────────────────────
