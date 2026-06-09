@@ -62,12 +62,13 @@ function getBasicPitch(): BasicPitch {
 
 // Per-instrument Basic Pitch params
 // minNoteLen is in frames at 86 fps (22050/256): 8 ≈ 93 ms, avoids glitch notes
+// maxMidi = 81 (A5, fret 17 on high e) — notes above this are almost always octave errors
 const INSTRUMENT_PARAMS: Record<InstrumentType, {
   minFreq: number; maxFreq: number; minMidi: number; maxMidi: number;
   onsetThresh: number; frameThresh: number; minNoteLen: number; minAmp: number;
 }> = {
-  acoustic: { minFreq: 70,  maxFreq: 1400, minMidi: 40, maxMidi: 88, onsetThresh: 0.58, frameThresh: 0.38, minNoteLen: 8,  minAmp: 0.42 },
-  electric: { minFreq: 70,  maxFreq: 1400, minMidi: 40, maxMidi: 88, onsetThresh: 0.52, frameThresh: 0.32, minNoteLen: 7,  minAmp: 0.38 },
+  acoustic: { minFreq: 70,  maxFreq: 1109, minMidi: 40, maxMidi: 81, onsetThresh: 0.58, frameThresh: 0.38, minNoteLen: 8,  minAmp: 0.42 },
+  electric: { minFreq: 70,  maxFreq: 1109, minMidi: 40, maxMidi: 81, onsetThresh: 0.52, frameThresh: 0.32, minNoteLen: 7,  minAmp: 0.38 },
   bass:     { minFreq: 30,  maxFreq: 430,  minMidi: 28, maxMidi: 67, onsetThresh: 0.46, frameThresh: 0.28, minNoteLen: 8,  minAmp: 0.32 },
   ukulele:  { minFreq: 240, maxFreq: 1000, minMidi: 48, maxMidi: 84, onsetThresh: 0.62, frameThresh: 0.40, minNoteLen: 6,  minAmp: 0.45 },
 };
@@ -135,6 +136,35 @@ export function cleanupNotes(notes: DetectedNote[]): DetectedNote[] {
 }
 
 /**
+ * Octave-constrain: if a note can only be played above fret 12 on every string,
+ * drop it one octave (−12 semitones). This catches Basic Pitch octave errors
+ * before they reach the fingering engine.
+ * Notes that still can't land on fret ≤ 15 after the shift are removed entirely.
+ */
+export function constrainOctaves(notes: DetectedNote[]): DetectedNote[] {
+  const MAX_OK_FRET = 12;
+  const out: DetectedNote[] = [];
+  for (const note of notes) {
+    const positions = findPositions(note.midiNote);
+    if (positions.some(p => p.fret <= MAX_OK_FRET)) {
+      out.push(note);
+      continue;
+    }
+    // All positions require fret > 12 → try one octave down
+    const lower = note.midiNote - 12;
+    if (lower >= 40) {
+      const lowerPos = findPositions(lower);
+      if (lowerPos.some(p => p.fret <= MAX_OK_FRET)) {
+        out.push({ ...note, midiNote: lower, frequency: midiToFreq(lower) });
+        continue;
+      }
+    }
+    // Can't be played reasonably — discard
+  }
+  return out;
+}
+
+/**
  * Beam-search fingering optimiser.
  * Evaluates all possible (string, fret) sequences for a note sequence and
  * returns the path with minimum total hand-movement cost.
@@ -149,7 +179,7 @@ export function optimizeFingeringPath(
   const SPAN         = 4;
   const SHIFT_PEN    = 5;    // per-fret penalty for moves beyond SPAN
   const TREBLE_W     = 0.3;  // prefer higher strings for single-note melody
-  const HIGH_FRET_PEN = 0.4; // prefer positions with fret ≤ 12 (avoid spurious high frets)
+  const HIGH_FRET_PEN = 3.0; // strongly prefer positions with fret ≤ 12 (octave errors land high)
 
   type State = { pos: { string: number; fret: number }; cost: number; prev: State | null };
 
@@ -286,7 +316,7 @@ export async function transcribeAudioBuffer(
       frequency:  midiToFreq(n.pitchMidi),
     }));
 
-  return cleanupNotes(raw);
+  return constrainOctaves(cleanupNotes(raw));
 }
 
 // ── AI note refinement ────────────────────────────────────────────────────────
@@ -342,17 +372,20 @@ GUITAR STANDARD TUNING: E2(40) A2(45) D3(50) G3(55) B3(59) E4(64)
 PRACTICAL MELODY RANGE: MIDI 47–84 (frets 0–13 on typical strings). Notes outside this range are suspicious.
 
 BASIC PITCH SYSTEMATIC ERRORS TO FIX:
-1. OCTAVE ERRORS (most common): the detector shifts a note by exactly ±12 semitones.
-   Signature: one note jumps ±12 from both its predecessor and successor.
+1. HIGH-FRET OCTAVE ERRORS (most critical): notes with midiNote > 76 (E5) almost
+   always represent real notes detected one octave too high. If midiNote > 76,
+   subtract 12 unless the result would be < 40. Apply unconditionally — these
+   are never correct for standard guitar melodic playing.
+2. OCTAVE ERRORS (general): a note jumps ±12 from both its predecessor AND successor.
    Fix: move it ±12 to restore the stepwise melodic line.
-2. HARMONIC PHANTOMS: a ghost note appears at exactly +12 or +24 above a real note
+3. HARMONIC PHANTOMS: a ghost note appears at exactly +12 or +24 above a real note
    and starts within 60 ms of it. Remove the phantom, keep the lower real note.
-3. GHOST NOTES: duration < 0.08 s, confidence < 0.45, and no note within 0.40 s.
+4. GHOST NOTES: duration < 0.08 s, confidence < 0.45, and no note within 0.40 s.
    Remove completely.
-4. SUSTAIN RE-TRIGGERS: same pitch appears again within 90 ms of the previous note
-   ending. Merge into one note (extend first note's duration).
-5. MELODIC OUTLIERS: a single isolated note jumps > 14 semitones from BOTH its
-   predecessor AND successor and has confidence < 0.55. Remove it.
+5. SUSTAIN RE-TRIGGERS: same pitch again within 90 ms of previous note ending.
+   Merge (extend first, remove second).
+6. MELODIC OUTLIERS: single isolated note jumps > 14 semitones from BOTH neighbours,
+   confidence < 0.55. Remove it.
 
 INPUT FORMAT: [startTime_s, noteName, midiNote, duration_s, confidence_0-1]
 ${JSON.stringify(input)}
@@ -423,7 +456,7 @@ export function notesToTab(
   const MIN_GAP       = 1;
   const MAX_GAP       = 2;
 
-  const sorted = cleanupNotes([...notes].sort((a, b) => a.startTime - b.startTime));
+  const sorted = constrainOctaves(cleanupNotes([...notes].sort((a, b) => a.startTime - b.startTime)));
 
   // Group into simultaneous "chords"
   interface Group { time: number; notes: DetectedNote[] }
