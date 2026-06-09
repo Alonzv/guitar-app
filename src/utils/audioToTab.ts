@@ -1,4 +1,5 @@
 import { PitchDetector } from 'pitchy';
+import Anthropic from '@anthropic-ai/sdk';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -22,29 +23,33 @@ export interface TabEvent {
 export interface TabData {
   events: TabEvent[];
   totalColumns: number;
-  gridMs: number;       // ms per column
+  gridMs: number;
   title: string;
-  duration: number;     // seconds
-  waveform: Float32Array; // normalized amplitude envelope for display
+  duration: number;
+  waveform: Float32Array;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-// Standard tuning open-string MIDI notes: E2 A2 D3 G3 B3 e4
-export const OPEN_MIDI = [40, 45, 50, 55, 59, 64] as const;
-// Display string names, top-to-bottom (high e first)
+export const OPEN_MIDI    = [40, 45, 50, 55, 59, 64] as const;
 export const STRING_NAMES = ['e', 'B', 'G', 'D', 'A', 'E'] as const;
-// Display order: string 5 (high e) at top → string 0 (low E) at bottom
 export const DISPLAY_ORDER = [5, 4, 3, 2, 1, 0] as const;
 
 const MAX_FRET = 22;
-const MIN_FREQ  = 70;   // below guitar low E (82 Hz) to catch slightly de-tuned
-const MAX_FREQ  = 1500; // ~G6 — well above highest guitar fret
-const CLARITY_THRESHOLD = 0.82;
-const MIN_NOTE_DURATION = 0.04; // 40 ms — filter out clicks/noise
-const MERGE_GAP_S = 0.06;       // merge same-pitch gaps under 60 ms
 
-// ── Frequency ↔ MIDI ──────────────────────────────────────────────────────────
+// Detection parameters — significantly more permissive than defaults
+// to catch the full range of guitar timbres
+const FRAME             = 4096;   // larger frame → better low-freq resolution
+const HOP               = 512;
+const CLARITY_THRESHOLD = 0.65;   // was 0.82 — guitar harmonics need lower threshold
+const MIN_VOLUME_DB     = -30;    // was -22 — catch quieter passages
+const MIN_FREQ          = 72;     // just below guitar low E (82 Hz)
+const MAX_FREQ          = 1050;   // high e 19th fret ~988 Hz
+const MIN_RMS           = 0.003;  // skip near-silent frames (noise gate)
+const MIN_NOTE_DURATION = 0.06;   // 60 ms minimum note length
+const MERGE_GAP_S       = 0.08;   // merge same-pitch gaps under 80 ms
+
+// ── Frequency helpers ─────────────────────────────────────────────────────────
 
 export function freqToMidi(freq: number): number {
   return Math.round(69 + 12 * Math.log2(freq / 440));
@@ -56,7 +61,6 @@ export function midiToFreq(midi: number): number {
 
 // ── Fingering helpers ─────────────────────────────────────────────────────────
 
-/** All valid (string, fret) positions for a MIDI note in standard tuning. */
 export function findPositions(midiNote: number): Array<{ string: number; fret: number }> {
   const result: Array<{ string: number; fret: number }> = [];
   for (let s = 0; s < 6; s++) {
@@ -67,63 +71,88 @@ export function findPositions(midiNote: number): Array<{ string: number; fret: n
 }
 
 /**
- * Choose the best (string, fret) for a note given the previous hand position.
- * Uses a 4-fret hand-span window to enforce playability, then minimises
- * position jump while preferring treble strings for single-note melody.
+ * Beam-search fingering optimiser.
+ * Evaluates all possible (string, fret) sequences for a note sequence and
+ * returns the path with minimum total hand-movement cost.
+ * Penalises position shifts > 4 frets (hand repositioning).
  */
-function bestPosition(
-  midiNote: number,
-  prevFret: number,
-  prevString: number,
-): { string: number; fret: number } {
-  const candidates = findPositions(midiNote);
-  if (candidates.length === 0) return { string: 5, fret: Math.max(0, midiNote - OPEN_MIDI[5]) };
+export function optimizeFingeringPath(
+  notes: DetectedNote[],
+): Array<{ string: number; fret: number }> {
+  if (notes.length === 0) return [];
 
-  // Prefer positions reachable within a 4-fret hand span (open strings always ok)
-  const SPAN = 4;
-  const lo = prevFret > 0 ? Math.max(1, prevFret - SPAN) : 0;
-  const hi = prevFret + SPAN;
-  const inSpan = candidates.filter(c => c.fret === 0 || (c.fret >= lo && c.fret <= hi));
-  const pool = inSpan.length > 0 ? inSpan : candidates;
+  const BEAM       = 4;
+  const SPAN       = 4;
+  const SHIFT_PEN  = 5;   // per-fret penalty for moves beyond SPAN
+  const TREBLE_W   = 0.3; // prefer higher strings for single-note melody
 
-  return pool.reduce((best, cand) => {
-    const cost = (f: number, s: number) =>
-      Math.abs(f - prevFret) * 2 + Math.abs(s - prevString) + (5 - s) * 0.3;
-    return cost(cand.fret, cand.string) < cost(best.fret, best.string) ? cand : best;
+  type State = { pos: { string: number; fret: number }; cost: number; prev: State | null };
+
+  const allCands = notes.map(n => {
+    const p = findPositions(n.midiNote);
+    return p.length > 0 ? p : [{ string: 5, fret: Math.max(0, n.midiNote - OPEN_MIDI[5]) }];
   });
+
+  let beam: State[] = allCands[0]
+    .map(pos => ({ pos, cost: (5 - pos.string) * TREBLE_W, prev: null }))
+    .sort((a, b) => a.cost - b.cost)
+    .slice(0, BEAM);
+
+  for (let i = 1; i < allCands.length; i++) {
+    const next: State[] = [];
+    for (const s of beam) {
+      for (const pos of allCands[i]) {
+        const fd    = Math.abs(pos.fret - s.pos.fret);
+        const sd    = Math.abs(pos.string - s.pos.string);
+        const extra = Math.max(0, fd - SPAN) * SHIFT_PEN;
+        next.push({ pos, cost: s.cost + fd * 2 + sd + extra + (5 - pos.string) * TREBLE_W, prev: s });
+      }
+    }
+    beam = next.sort((a, b) => a.cost - b.cost).slice(0, BEAM);
+  }
+
+  // Reconstruct best path
+  const path: Array<{ string: number; fret: number }> = [];
+  let cur: State | null = beam[0] ?? null;
+  while (cur) { path.unshift(cur.pos); cur = cur.prev; }
+  return path;
 }
 
-// ── Mono downmix ──────────────────────────────────────────────────────────────
+// ── Mono downmix + normalise ──────────────────────────────────────────────────
 
 function downmixToMono(buf: AudioBuffer): Float32Array {
   const len = buf.length;
   const ch  = buf.numberOfChannels;
-  if (ch === 1) return buf.getChannelData(0).slice();
   const mono = new Float32Array(len);
-  for (let c = 0; c < ch; c++) {
-    const data = buf.getChannelData(c);
-    for (let i = 0; i < len; i++) mono[i] += data[i] / ch;
+  if (ch === 1) {
+    mono.set(buf.getChannelData(0));
+  } else {
+    for (let c = 0; c < ch; c++) {
+      const data = buf.getChannelData(c);
+      for (let i = 0; i < len; i++) mono[i] += data[i] / ch;
+    }
   }
+  // Normalise to peak 1.0 — ensures consistent input regardless of recording level
+  let peak = 0;
+  for (let i = 0; i < len; i++) { const a = Math.abs(mono[i]); if (a > peak) peak = a; }
+  if (peak > 1e-6) for (let i = 0; i < len; i++) mono[i] /= peak;
   return mono;
 }
 
 // ── Waveform envelope (for display) ──────────────────────────────────────────
 
 export function buildWaveform(buf: AudioBuffer, points = 200): Float32Array {
-  const mono    = downmixToMono(buf);
-  const step    = Math.floor(mono.length / points);
-  const result  = new Float32Array(points);
-  let maxAmp    = 1e-6;
+  const mono   = downmixToMono(buf);
+  const step   = Math.floor(mono.length / points);
+  const result = new Float32Array(points);
+  let maxAmp   = 1e-6;
 
   for (let i = 0; i < points; i++) {
     let sum = 0;
-    for (let j = 0; j < step; j++) {
-      sum += Math.abs(mono[i * step + j] || 0);
-    }
+    for (let j = 0; j < step; j++) sum += Math.abs(mono[i * step + j] || 0);
     result[i] = sum / step;
     if (result[i] > maxAmp) maxAmp = result[i];
   }
-  // Normalise
   for (let i = 0; i < points; i++) result[i] /= maxAmp;
   return result;
 }
@@ -131,67 +160,70 @@ export function buildWaveform(buf: AudioBuffer, points = 200): Float32Array {
 // ── Main transcription ────────────────────────────────────────────────────────
 
 /**
- * Transcribes an AudioBuffer to a list of detected notes.
- *
- * Engine: McLeod Pitch Method (pitchy) via autocorrelation.
- * Best for clean monophonic / single-note guitar lines.
- *
- * Architectural hook: swap `detector.findPitch(frame, sr)` with
- * Basic Pitch (ONNX), Magenta.js, or Essentia.js output for polyphonic
- * accuracy. The rest of the pipeline (note grouping → tab layout →
- * fingering) remains unchanged.
+ * Improved pitch detection:
+ * - FRAME=4096 for better frequency resolution on low guitar notes
+ * - CLARITY_THRESHOLD=0.65 (was 0.82) to catch guitar's complex harmonic timbres
+ * - RMS energy gate eliminates silent-frame noise
+ * - Median-filter pass removes single-hop spikes before note grouping
  */
 export async function transcribeAudioBuffer(
   audioBuffer: AudioBuffer,
   onProgress?: (pct: number) => void,
 ): Promise<DetectedNote[]> {
-  const mono       = downmixToMono(audioBuffer);
-  const sr         = audioBuffer.sampleRate;
-  const FRAME      = 2048;
-  const HOP        = 512;
-  const numFrames  = Math.max(0, Math.floor((mono.length - FRAME) / HOP));
-  const frame      = new Float32Array(FRAME);
-  const detector   = PitchDetector.forFloat32Array(FRAME);
-  detector.minVolumeDecibels = -22;
+  const mono      = downmixToMono(audioBuffer);
+  const sr        = audioBuffer.sampleRate;
+  const numFrames = Math.max(0, Math.floor((mono.length - FRAME) / HOP));
+  const frame     = new Float32Array(FRAME);
+  const detector  = PitchDetector.forFloat32Array(FRAME);
+  detector.minVolumeDecibels = MIN_VOLUME_DB;
 
-  // Per-frame raw results
   const raw: Array<{ time: number; midi: number; clarity: number; freq: number }> = [];
 
   for (let i = 0; i < numFrames; i++) {
     frame.set(mono.subarray(i * HOP, i * HOP + FRAME));
-    const [freq, clarity] = detector.findPitch(frame, sr);
-    const time  = (i * HOP) / sr;
-    const valid = freq > MIN_FREQ && freq < MAX_FREQ && clarity >= CLARITY_THRESHOLD;
-    raw.push({
-      time,
-      midi:    valid ? freqToMidi(freq) : -1,
-      clarity: valid ? clarity : 0,
-      freq:    valid ? freq : 0,
-    });
+
+    // RMS noise gate — skip frames with negligible energy
+    let rms = 0;
+    for (let j = 0; j < FRAME; j++) rms += frame[j] * frame[j];
+    rms = Math.sqrt(rms / FRAME);
+
+    const time = (i * HOP) / sr;
+    if (rms < MIN_RMS) {
+      raw.push({ time, midi: -1, clarity: 0, freq: 0 });
+    } else {
+      const [freq, clarity] = detector.findPitch(frame, sr);
+      const valid = freq > MIN_FREQ && freq < MAX_FREQ && clarity >= CLARITY_THRESHOLD;
+      raw.push({
+        time,
+        midi:    valid ? freqToMidi(freq) : -1,
+        clarity: valid ? clarity : 0,
+        freq:    valid ? freq : 0,
+      });
+    }
 
     if (i % 80 === 0) {
-      onProgress?.(Math.round((i / numFrames) * 90));
+      onProgress?.(Math.round((i / numFrames) * 75));
       await new Promise(r => setTimeout(r, 0));
     }
   }
 
+  // Median filter over 3 frames to remove single-hop spikes
+  for (let i = 1; i < raw.length - 1; i++) {
+    if (raw[i].midi > 0 && raw[i - 1].midi < 0 && raw[i + 1].midi < 0) {
+      raw[i].midi = -1; // lone spike
+    }
+  }
+
   // Group frames → note events
-  const hopS    = HOP / sr;
+  const hopS  = HOP / sr;
   const notes: DetectedNote[] = [];
-  let start    = -1;
-  let end      = -1;
-  let midi     = -1;
-  let freqAcc  = 0;
-  let clarAcc  = 0;
-  let count    = 0;
+  let start   = -1, end = -1, midi = -1, freqAcc = 0, clarAcc = 0, count = 0;
 
   const flush = () => {
     if (start >= 0 && end - start >= MIN_NOTE_DURATION) {
       notes.push({
         startTime: start, endTime: end,
-        midiNote: midi,
-        confidence: clarAcc / count,
-        frequency: freqAcc / count,
+        midiNote: midi, confidence: clarAcc / count, frequency: freqAcc / count,
       });
     }
     start = -1; count = 0; freqAcc = 0; clarAcc = 0;
@@ -205,7 +237,7 @@ export async function transcribeAudioBuffer(
       } else if (Math.abs(f.midi - midi) <= 1) {
         end = f.time + hopS;
         freqAcc += f.freq; clarAcc += f.clarity; count++;
-        midi = Math.abs(f.midi - midi) <= 1 ? f.midi : midi;
+        if (f.clarity > clarAcc / count) midi = f.midi;
       } else {
         flush();
         start = f.time; end = f.time + hopS;
@@ -217,19 +249,96 @@ export async function transcribeAudioBuffer(
   }
   flush();
 
-  onProgress?.(100);
+  onProgress?.(75);
   return notes;
+}
+
+// ── AI note refinement ────────────────────────────────────────────────────────
+
+/**
+ * Uses Claude haiku to clean up raw pitch-detected notes.
+ * Removes noise spikes, fixes octave errors, merges closely-held sustains.
+ * Falls back to raw notes if the API key is absent or the call fails.
+ */
+export async function refineNotesWithAI(
+  notes: DetectedNote[],
+  onProgress?: (pct: number) => void,
+): Promise<DetectedNote[]> {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  if (!apiKey || notes.length === 0) {
+    onProgress?.(100);
+    return notes;
+  }
+
+  try {
+    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+
+    // Compact representation: [startTime, midiNote, duration]
+    const input = notes.slice(0, 120).map(n => [
+      Math.round(n.startTime * 100) / 100,
+      n.midiNote,
+      Math.round((n.endTime - n.startTime) * 100) / 100,
+    ]);
+
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: `You are a guitar transcription expert cleaning up pitch-detector output.
+Guitar MIDI range: 40 (low E2) to 88 (high e, 22nd fret).
+Input format: [startTime_s, midiNote, duration_s]
+
+Raw detected notes:
+${JSON.stringify(input)}
+
+Clean up by applying these rules IN ORDER:
+1. REMOVE notes with midiNote outside 40–88
+2. REMOVE notes with duration < 0.05 s that are isolated (no adjacent note within 0.3 s)
+3. FIX octave errors: if a note is 12 semitones away from its neighbours and the neighbour pitch fits the guitar context better, move it by ±12
+4. MERGE consecutive identical pitches separated by gap < 0.1 s → extend the first note's duration and drop the second
+5. KEEP everything else — do not add or invent notes
+
+Return ONLY a JSON array, no markdown, no explanation:
+[[startTime, midiNote, duration], ...]`,
+      }],
+    });
+
+    const text = (msg.content[0] as { type: string; text: string }).text.trim();
+    const s = text.indexOf('[');
+    const e = text.lastIndexOf(']');
+    if (s === -1 || e === -1) throw new Error('no JSON array in response');
+
+    const cleaned = JSON.parse(text.slice(s, e + 1)) as [number, number, number][];
+
+    onProgress?.(100);
+    return cleaned
+      .filter(([, m]) => m >= 40 && m <= 88)
+      .map(([t, m, d]) => ({
+        startTime:  t,
+        endTime:    t + Math.max(0.05, d),
+        midiNote:   m,
+        confidence: 0.9,
+        frequency:  midiToFreq(m),
+      }));
+  } catch (err) {
+    console.warn('[refineNotesWithAI] API call failed, using raw notes:', err);
+    onProgress?.(100);
+    return notes;
+  }
 }
 
 // ── Notes → tab events ────────────────────────────────────────────────────────
 
 /**
- * Convert detected notes to tab events (string + fret) with compressed grid quantization.
+ * Converts detected notes to a compact, playable guitar tab.
  *
- * Key design: columns are NOTE-RELATIVE, not time-absolute.
- * Notes within 80 ms → same column (chord).
- * Gaps between groups → 1–4 columns (proportional but capped at MAX_GAP_COLS).
- * This eliminates the "infinite empty scroll" from long silences.
+ * Column mapping is NOTE-RELATIVE (not time-absolute):
+ *   - Notes within 80 ms → same column (chord)
+ *   - Gaps → proportional but capped at 4 columns max
+ *
+ * Fingering uses beam-search optimisation for single-note runs and
+ * conflict-free greedy assignment for chords.
  */
 export function notesToTab(
   notes: DetectedNote[],
@@ -241,14 +350,13 @@ export function notesToTab(
     return { events: [], totalColumns: 0, gridMs, title, duration, waveform: new Float32Array(0) };
   }
 
-  const CHORD_MERGE_S = 0.08;  // 80 ms — notes this close → same column
-  const MIN_GAP       = 1;     // minimum columns between groups
-  const MAX_GAP       = 4;     // silence longer than 4×gridMs still only 4 columns
+  const CHORD_MERGE_S = 0.08;
+  const MIN_GAP       = 1;
+  const MAX_GAP       = 4;
 
-  // Sort by start time
   const sorted = [...notes].sort((a, b) => a.startTime - b.startTime);
 
-  // Group simultaneous / near-simultaneous notes into chords
+  // Group into simultaneous "chords"
   interface Group { time: number; notes: DetectedNote[] }
   const groups: Group[] = [];
   for (const note of sorted) {
@@ -260,38 +368,72 @@ export function notesToTab(
     }
   }
 
-  // Assign sequential columns; spacing is proportional to real gap but capped
+  // Assign sequential columns
   let col = 0;
-  const events: TabEvent[] = [];
-  let prevFret   = 5;
-  let prevString = 4;
-
+  const colByGroup: number[] = [];
   for (let gi = 0; gi < groups.length; gi++) {
     if (gi > 0) {
-      const gapMs  = (groups[gi].time - groups[gi - 1].time) * 1000;
+      const gapMs = (groups[gi].time - groups[gi - 1].time) * 1000;
       col += Math.max(MIN_GAP, Math.min(MAX_GAP, Math.round(gapMs / gridMs)));
     }
+    colByGroup.push(col);
+  }
 
-    // Sort chord members by string (low → high) so finger order is consistent
-    const chord = [...groups[gi].notes].sort((a, b) => freqToMidi(a.frequency) - freqToMidi(b.frequency));
+  // Run beam-search on single-note melody groups
+  const melodyIdxs = groups.map((g, i) => g.notes.length === 1 ? i : -1).filter(i => i >= 0);
+  const melodyNotes = melodyIdxs.map(i => groups[i].notes[0]);
+  const melodyPath  = optimizeFingeringPath(melodyNotes);
 
-    for (const note of chord) {
-      const pos = bestPosition(note.midiNote, prevFret, prevString);
+  // Build events
+  const events: TabEvent[] = [];
+  let prevFret = 5, prevString = 4;
+
+  for (let gi = 0; gi < groups.length; gi++) {
+    const c     = colByGroup[gi];
+    const group = groups[gi];
+
+    if (group.notes.length === 1) {
+      const mi  = melodyIdxs.indexOf(gi);
+      const pos = melodyPath[mi] ?? { string: prevString, fret: prevFret };
       prevFret   = pos.fret;
       prevString = pos.string;
       events.push({
-        column:    col,
-        string:    pos.string,
-        fret:      pos.fret,
-        midiNote:  note.midiNote,
-        startTime: note.startTime,
-        duration:  note.endTime - note.startTime,
+        column: c, string: pos.string, fret: pos.fret,
+        midiNote: group.notes[0].midiNote,
+        startTime: group.notes[0].startTime,
+        duration:  group.notes[0].endTime - group.notes[0].startTime,
       });
+    } else {
+      // Chord: assign each note to a different string
+      const usedStrings = new Set<number>();
+      const chordNotes = [...group.notes].sort((a, b) => a.midiNote - b.midiNote);
+
+      for (const note of chordNotes) {
+        const cands = findPositions(note.midiNote)
+          .filter(p => !usedStrings.has(p.string))
+          .sort((a, b) => {
+            const cost = (p: typeof a) =>
+              Math.abs(p.fret - prevFret) * 2 + Math.abs(p.string - prevString);
+            return cost(a) - cost(b);
+          });
+
+        const pos = cands[0];
+        if (!pos) continue;
+        usedStrings.add(pos.string);
+        prevFret   = pos.fret;
+        prevString = pos.string;
+        events.push({
+          column: c, string: pos.string, fret: pos.fret,
+          midiNote: note.midiNote,
+          startTime: note.startTime,
+          duration:  note.endTime - note.startTime,
+        });
+      }
     }
   }
 
   const totalDuration = duration || sorted[sorted.length - 1].endTime;
-  const totalColumns  = col + MAX_GAP; // small tail so last notes aren't cut off
+  const totalColumns  = col + MAX_GAP;
 
   return { events, totalColumns, gridMs, title, duration: totalDuration, waveform: new Float32Array(0) };
 }
@@ -300,40 +442,33 @@ export function notesToTab(
 
 export type { jsPDF } from 'jspdf';
 
-/** Columns per tab row in the PDF layout. */
 const PDF_COLS_PER_ROW = 20;
-const PDF_COL_W   = 8.5;   // mm per column
-const PDF_ROW_H   = 32;    // mm per tab row (6 strings + gap)
-const PDF_STR_GAP = 4;     // mm between strings
-const PDF_MARGIN  = 14;    // page margin mm
-const PDF_FONT    = 7;     // fret number font size (pt)
+const PDF_COL_W   = 8.5;
+const PDF_ROW_H   = 32;
+const PDF_STR_GAP = 4;
+const PDF_MARGIN  = 14;
+const PDF_FONT    = 7;
 
 export function exportTabToPDF(tabData: TabData): void {
-  // Dynamic import at call-time to avoid loading jspdf at startup
   import('jspdf').then(({ jsPDF }) => {
     const { events, totalColumns, title } = tabData;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    const pageW  = 210;
-    const usableW = pageW - PDF_MARGIN * 2;
+    const pageW       = 210;
     const rowsPerPage = Math.floor((297 - PDF_MARGIN * 2 - 20) / PDF_ROW_H);
+    const numRows     = Math.ceil(totalColumns / PDF_COLS_PER_ROW);
+    const totalPages  = Math.ceil(numRows / rowsPerPage);
 
-    const numRows = Math.ceil(totalColumns / PDF_COLS_PER_ROW);
-    const totalPages = Math.ceil(numRows / rowsPerPage);
-
-    // Build lookup: column → {string → fret}
     const colMap = new Map<number, Map<number, number>>();
     for (const ev of events) {
       if (!colMap.has(ev.column)) colMap.set(ev.column, new Map());
       colMap.get(ev.column)!.set(ev.string, ev.fret);
     }
 
-    let row = 0;
-    let page = 0;
+    let row = 0, page = 0;
 
     const ensurePage = () => {
       if (row === 0 && page === 0) {
-        // Header
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(16);
         doc.text(title || 'Guitar Tab', pageW / 2, PDF_MARGIN - 2, { align: 'center' });
@@ -349,26 +484,19 @@ export function exportTabToPDF(tabData: TabData): void {
     const getRowY = () => PDF_MARGIN + 20 + (row % rowsPerPage) * PDF_ROW_H;
 
     for (let r = 0; r < numRows; r++) {
-      if (r > 0 && r % rowsPerPage === 0) {
-        doc.addPage();
-        page++;
-        row = 0;
-      }
-
+      if (r > 0 && r % rowsPerPage === 0) { doc.addPage(); page++; row = 0; }
       ensurePage();
-      const y0 = getRowY();
+      const y0       = getRowY();
       const colStart = r * PDF_COLS_PER_ROW;
       const colEnd   = Math.min(colStart + PDF_COLS_PER_ROW, totalColumns);
       const rowCols  = colEnd - colStart;
       const lineW    = rowCols * PDF_COL_W;
 
-      // String lines + labels
       doc.setDrawColor(160);
       doc.setLineWidth(0.25);
       for (let si = 0; si < 6; si++) {
         const sy = y0 + si * PDF_STR_GAP;
         doc.line(PDF_MARGIN + 12, sy, PDF_MARGIN + 12 + lineW, sy);
-        // String name label
         doc.setFont('courier', 'bold');
         doc.setFontSize(7);
         doc.setTextColor(100);
@@ -376,7 +504,6 @@ export function exportTabToPDF(tabData: TabData): void {
         doc.setTextColor(0);
       }
 
-      // Bar lines every 4 columns
       doc.setDrawColor(120);
       doc.setLineWidth(0.4);
       for (let c = 0; c <= rowCols; c += 4) {
@@ -384,7 +511,6 @@ export function exportTabToPDF(tabData: TabData): void {
         doc.line(bx, y0, bx, y0 + 5 * PDF_STR_GAP);
       }
 
-      // Fret numbers
       doc.setFont('courier', 'bold');
       doc.setFontSize(PDF_FONT);
       doc.setTextColor(0);
@@ -393,12 +519,9 @@ export function exportTabToPDF(tabData: TabData): void {
         if (!strMap) continue;
         const cx = PDF_MARGIN + 12 + (c - colStart) * PDF_COL_W + PDF_COL_W / 2;
         for (const [stringIdx, fret] of strMap.entries()) {
-          // Display order: string 5 (e) = line 0 (top)
           const displayLine = 5 - stringIdx;
-          const sy = y0 + displayLine * PDF_STR_GAP;
+          const sy    = y0 + displayLine * PDF_STR_GAP;
           const label = String(fret);
-          // Clear string behind number
-          doc.setDrawColor(255);
           doc.setFillColor(255);
           const tw = label.length * 2;
           doc.rect(cx - tw - 0.5, sy - 2.5, tw * 2 + 1, 3.5, 'F');
@@ -406,11 +529,9 @@ export function exportTabToPDF(tabData: TabData): void {
           doc.text(label, cx, sy + 1, { align: 'center' });
         }
       }
-
       row++;
     }
 
-    // Footer
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(160);
@@ -418,7 +539,6 @@ export function exportTabToPDF(tabData: TabData): void {
       doc.setPage(p);
       doc.text(`Page ${p} / ${totalPages}`, pageW / 2, 290, { align: 'center' });
     }
-
     doc.save(`${(title || 'tab').replace(/\s+/g, '-')}.pdf`);
   });
 }
@@ -427,7 +547,6 @@ export function exportTabToPDF(tabData: TabData): void {
 
 let synthNodes: AudioNode[] = [];
 
-/** Stop any currently playing synthesized notes. */
 export function stopSynth(): void {
   synthNodes.forEach(n => {
     try { (n as OscillatorNode).stop?.(); n.disconnect(); } catch { /* ignore */ }
@@ -435,7 +554,6 @@ export function stopSynth(): void {
   synthNodes = [];
 }
 
-/** Play back detected notes through Web Audio API as a guitar-like sound. */
 export function playSynth(notes: DetectedNote[], audioCtx: AudioContext): void {
   stopSynth();
   const now = audioCtx.currentTime;
@@ -445,7 +563,6 @@ export function playSynth(notes: DetectedNote[], audioCtx: AudioContext): void {
     const t0   = now + note.startTime;
     const dur  = Math.max(0.08, note.endTime - note.startTime);
 
-    // Master gain (envelope)
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0, t0);
     gain.gain.linearRampToValueAtTime(0.28, t0 + 0.006);
@@ -453,15 +570,13 @@ export function playSynth(notes: DetectedNote[], audioCtx: AudioContext): void {
     gain.gain.setValueAtTime(0.18, t0 + dur - 0.04);
     gain.gain.linearRampToValueAtTime(0, t0 + dur);
 
-    // Low-pass filter — guitar-like timbre
     const lpf = audioCtx.createBiquadFilter();
     lpf.type = 'lowpass';
     lpf.frequency.value = freq * 6;
     lpf.Q.value = 0.7;
 
-    // Fundamental + harmonics (sawtooth decomposed)
     [1, 2, 3, 4].forEach((harmonic, i) => {
-      const osc = audioCtx.createOscillator();
+      const osc   = audioCtx.createOscillator();
       const hGain = audioCtx.createGain();
       osc.type = 'sine';
       osc.frequency.value = freq * harmonic;

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { T, card } from '../../theme';
 import {
-  transcribeAudioBuffer, notesToTab, buildWaveform,
+  transcribeAudioBuffer, refineNotesWithAI, notesToTab, buildWaveform,
   exportTabToPDF, playSynth, stopSynth, findPositions,
   type TabData, type TabEvent, type DetectedNote,
   STRING_NAMES,
@@ -12,23 +12,39 @@ import type { FretPosition } from '../../types/music';
 
 type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'error';
 
-// ── Tab visual constants ──────────────────────────────────────────────────────
+// ── Tab visual constants (parchment / sheet-music look) ───────────────────────
 
-// Sheet-music parchment look — always light regardless of app theme
-const TAB_BG   = '#f7f4ed';   // warm cream paper
-const TAB_LINE = '#9a8c78';   // warm gray string lines
-const TAB_BAR  = '#6e6252';   // darker bar lines
-const TAB_NUM  = '#1a1512';   // near-black fret numbers
-const TAB_LBL  = '#7a6e5c';   // string name labels
-const TAB_SEL  = '#c96219';   // selected note (app orange)
-const TAB_SELA = '#fff';      // selected note text
+const TAB_BG   = '#f7f4ed';
+const TAB_LINE = '#9a8c78';
+const TAB_BAR  = '#6e6252';
+const TAB_NUM  = '#1a1512';
+const TAB_LBL  = '#7a6e5c';
+const TAB_SEL  = '#c96219';
 
-// SVG layout — viewBox units, scaled to fill container width
-const COL_W        = 22;   // units per column
-const STR_GAP      = 16;   // units between string lines
-const LEFT_PAD     = 28;   // units for string labels
-const COLS_PER_ROW = 14;   // columns per staff row
-const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;  // viewBox width = 342
+// SVG layout — viewBox units, width="100%" scales to container
+const COL_W        = 22;
+const STR_GAP      = 16;
+const LEFT_PAD     = 28;
+const COLS_PER_ROW = 14;
+const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;   // 342 viewBox units
+
+// ── Clear button (used in multiple stages) ────────────────────────────────────
+
+function ClearBtn({ onClear }: { onClear: () => void }) {
+  return (
+    <button
+      onClick={onClear}
+      title="איפוס — חזור לתחילה"
+      style={{
+        padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700,
+        fontSize: 12, border: `1px solid ${T.border}`,
+        background: T.bgInput, color: T.textMuted, flexShrink: 0,
+      }}
+    >
+      Clear
+    </button>
+  );
+}
 
 // ── Tab SVG row renderer ──────────────────────────────────────────────────────
 
@@ -39,8 +55,6 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   selectedCol: number | null;
   onTap: (col: number, stringIdx: number, e: React.MouseEvent) => void;
 }) {
-  const cols  = colEnd - colStart;
-  // Always fill the full VB_W even if last row is shorter — keeps all rows same width
   const lineW = COLS_PER_ROW * COL_W;
   const svgH  = 5 * STR_GAP + 2;
   const els: React.ReactNode[] = [];
@@ -62,12 +76,10 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     );
   }
 
-  // Bar lines every 4 cols + opening and closing verticals
+  // Opening + closing verticals, bar lines every 4 cols
   els.push(
-    <line key="open" x1={LEFT_PAD - 2} y1={0} x2={LEFT_PAD - 2} y2={5 * STR_GAP}
-      stroke={TAB_BAR} strokeWidth={1.4} />,
-    <line key="close" x1={LEFT_PAD + lineW} y1={0} x2={LEFT_PAD + lineW} y2={5 * STR_GAP}
-      stroke={TAB_BAR} strokeWidth={1.4} />,
+    <line key="open"  x1={LEFT_PAD - 2}       y1={0} x2={LEFT_PAD - 2}       y2={5 * STR_GAP} stroke={TAB_BAR} strokeWidth={1.4} />,
+    <line key="close" x1={LEFT_PAD + lineW}    y1={0} x2={LEFT_PAD + lineW}   y2={5 * STR_GAP} stroke={TAB_BAR} strokeWidth={1.4} />,
   );
   for (let c = 4; c < COLS_PER_ROW; c += 4) {
     const bx = LEFT_PAD + c * COL_W;
@@ -77,33 +89,25 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     );
   }
 
-  // Fret numbers (only for columns that exist in this row)
+  // Fret numbers
   for (let c = colStart; c < colEnd; c++) {
     const strMap = colMap.get(c);
     if (!strMap) continue;
-    const localC = c - colStart;
-    const cx = LEFT_PAD + localC * COL_W + COL_W / 2;
+    const cx = LEFT_PAD + (c - colStart) * COL_W + COL_W / 2;
     for (const [si, fret] of strMap.entries()) {
-      const di    = 5 - si;          // string 5 (high e) → display row 0 (top)
-      const sy    = di * STR_GAP;
-      const lbl   = String(fret);
-      const wide  = lbl.length > 1;
-      const sel   = selectedCol === c;
-
+      const di   = 5 - si;
+      const sy   = di * STR_GAP;
+      const lbl  = String(fret);
+      const wide = lbl.length > 1;
+      const sel  = selectedCol === c;
       els.push(
         <g key={`${c}-${si}`} onClick={e => onTap(c, si, e)} style={{ cursor: 'pointer' }}>
-          {/* Clear the string line so number is readable */}
-          <rect
-            x={cx - (wide ? 8.5 : 5.5)} y={sy - 6}
-            width={wide ? 17 : 11} height={12}
-            fill={sel ? TAB_SEL : TAB_BG}
-            rx={1.5}
-          />
+          <rect x={cx - (wide ? 8.5 : 5.5)} y={sy - 6} width={wide ? 17 : 11} height={12}
+            fill={sel ? TAB_SEL : TAB_BG} rx={1.5} />
           <text x={cx} y={sy + 4.5} fontSize={9.5}
-            fill={sel ? TAB_SELA : TAB_NUM}
+            fill={sel ? '#fff' : TAB_NUM}
             textAnchor="middle"
-            fontFamily="monospace, 'Courier New', monospace"
-            fontWeight="700">
+            fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
             {lbl}
           </text>
         </g>,
@@ -112,7 +116,6 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   }
 
   return (
-    // width="100%" scales SVG to fill its container; viewBox keeps proportions
     <svg width="100%" viewBox={`0 0 ${VB_W} ${svgH}`}
       preserveAspectRatio="xMinYMid meet"
       style={{ display: 'block' }}>
@@ -121,7 +124,7 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   );
 }
 
-// ── Tab display (multiple staff rows) ────────────────────────────────────────
+// ── Tab display (staff rows) ──────────────────────────────────────────────────
 
 function TabDisplay({ tabData, onSelectNote }: {
   tabData: TabData;
@@ -148,41 +151,32 @@ function TabDisplay({ tabData, onSelectNote }: {
 
   const handleTap = (col: number, si: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (selectedCol === col) {
-      setSelectedCol(null);
-      onSelectNote(null);
-    } else {
+    if (selectedCol === col) { setSelectedCol(null); onSelectNote(null); }
+    else {
       setSelectedCol(col);
       onSelectNote(events.find(ev => ev.column === col && ev.string === si) ?? null);
     }
   };
 
   return (
-    // Outer wrapper: parchment-colored score sheet, no horizontal scroll needed
     <div style={{
-      background: TAB_BG,
-      borderRadius: 8,
-      padding: '10px 8px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 6,
+      background: TAB_BG, borderRadius: 8, padding: '10px 8px',
+      display: 'flex', flexDirection: 'column', gap: 6,
     }}>
       {Array.from({ length: numRows }, (_, r) => {
         const colStart = r * COLS_PER_ROW;
         const colEnd   = Math.min(colStart + COLS_PER_ROW, totalColumns);
         return (
-          <TabSVGRow
-            key={r}
+          <TabSVGRow key={r}
             colStart={colStart} colEnd={colEnd}
-            colMap={colMap} selectedCol={selectedCol} onTap={handleTap}
-          />
+            colMap={colMap} selectedCol={selectedCol} onTap={handleTap} />
         );
       })}
     </div>
   );
 }
 
-// ── Waveform bars display ─────────────────────────────────────────────────────
+// ── Waveform bars ─────────────────────────────────────────────────────────────
 
 function Waveform({ data, height = 48, color }: { data: Float32Array; height?: number; color?: string }) {
   if (data.length === 0) return null;
@@ -222,7 +216,7 @@ function RecordingBars() {
   );
 }
 
-// ── LABEL style ───────────────────────────────────────────────────────────────
+// ── Label style ───────────────────────────────────────────────────────────────
 
 const LABEL: React.CSSProperties = {
   margin: '0 0 10px', fontSize: 11, fontWeight: 700,
@@ -234,6 +228,7 @@ const LABEL: React.CSSProperties = {
 export const AudioToTab: React.FC = () => {
   const [stage, setStage]             = useState<Stage>('idle');
   const [progress, setProgress]       = useState(0);
+  const [phaseLabel, setPhaseLabel]   = useState('');
   const [error, setError]             = useState('');
   const [tabData, setTabData]         = useState<TabData | null>(null);
   const [waveform, setWaveform]       = useState<Float32Array | null>(null);
@@ -260,7 +255,28 @@ export const AudioToTab: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Process an audio Blob (file or recording) ────────────────────────────
+  // ── Reset to idle ─────────────────────────────────────────────────────────
+
+  const reset = useCallback(() => {
+    stopSynth();
+    audioRef.current?.pause();
+    if (originalUrl) URL.revokeObjectURL(originalUrl);
+    setStage('idle');
+    setTabData(null);
+    setWaveform(null);
+    setNotes([]);
+    setOriginalUrl(null);
+    setSelNote(null);
+    setIsPlayOrig(false);
+    setIsPlaySynth(false);
+    setError('');
+    setProgress(0);
+    setPhaseLabel('');
+    audioBufRef.current = null;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [originalUrl]);
+
+  // ── Process Blob → tab ────────────────────────────────────────────────────
 
   const processBlob = useCallback(async (blob: Blob, name: string) => {
     setStage('processing');
@@ -280,15 +296,22 @@ export const AudioToTab: React.FC = () => {
 
       setWaveform(buildWaveform(audioBuf, 100));
 
-      const detected = await transcribeAudioBuffer(audioBuf, setProgress);
-      setNotes(detected);
+      // Stage 1: pitch detection (0 → 75%)
+      setPhaseLabel('מזהה תדרים…');
+      const rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p));
 
-      const tab = notesToTab(
-        detected, 200,
-        name.replace(/\.[^.]+$/, ''),
-        audioBuf.duration,
-      );
+      // Stage 2: AI refinement (75 → 95%)
+      setPhaseLabel('מנקה עם AI…');
+      setProgress(78);
+      const refined = await refineNotesWithAI(rawNotes, p => setProgress(75 + Math.round(p * 0.2)));
+
+      // Stage 3: build tab (95 → 100%)
+      setPhaseLabel('בונה טאב…');
+      setProgress(97);
+      setNotes(refined);
+      const tab = notesToTab(refined, 200, name.replace(/\.[^.]+$/, ''), audioBuf.duration);
       setTabData(tab);
+      setProgress(100);
       setStage('result');
     } catch (e) {
       console.error('[AudioToTab]', e);
@@ -324,8 +347,7 @@ export const AudioToTab: React.FC = () => {
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunksRef.current, { type: mime || 'audio/webm' });
-        processBlob(blob, 'recording.webm');
+        processBlob(new Blob(chunksRef.current, { type: mime || 'audio/webm' }), 'recording.webm');
       };
       mr.start(100);
       mediaRecRef.current = mr;
@@ -349,13 +371,8 @@ export const AudioToTab: React.FC = () => {
   const toggleOriginal = useCallback(() => {
     if (!originalUrl) return;
     unlockAudio();
-    if (isPlayOrig) {
-      audioRef.current?.pause();
-      setIsPlayOrig(false);
-      return;
-    }
-    stopSynth();
-    setIsPlaySynth(false);
+    if (isPlayOrig) { audioRef.current?.pause(); setIsPlayOrig(false); return; }
+    stopSynth(); setIsPlaySynth(false);
     if (!audioRef.current) audioRef.current = new Audio();
     audioRef.current.src = originalUrl;
     audioRef.current.onended = () => setIsPlayOrig(false);
@@ -366,52 +383,25 @@ export const AudioToTab: React.FC = () => {
   const toggleSynth = useCallback(() => {
     if (!audioBufRef.current || notes.length === 0) return;
     unlockAudio();
-    if (isPlaySynth) {
-      stopSynth();
-      setIsPlaySynth(false);
-      return;
-    }
-    audioRef.current?.pause();
-    setIsPlayOrig(false);
+    if (isPlaySynth) { stopSynth(); setIsPlaySynth(false); return; }
+    audioRef.current?.pause(); setIsPlayOrig(false);
     const ctx = getSharedContext();
     if (ctx.state === 'suspended') ctx.resume();
     playSynth(notes, ctx);
     setIsPlaySynth(true);
-    const dur = audioBufRef.current.duration;
-    setTimeout(() => setIsPlaySynth(false), (dur + 1.5) * 1000);
+    setTimeout(() => setIsPlaySynth(false), (audioBufRef.current.duration + 1.5) * 1000);
   }, [notes, isPlaySynth]);
 
-  // ── Reset ─────────────────────────────────────────────────────────────────
-
-  const reset = useCallback(() => {
-    stopSynth();
-    audioRef.current?.pause();
-    if (originalUrl) URL.revokeObjectURL(originalUrl);
-    setStage('idle');
-    setTabData(null);
-    setWaveform(null);
-    setNotes([]);
-    setOriginalUrl(null);
-    setSelNote(null);
-    setIsPlayOrig(false);
-    setIsPlaySynth(false);
-    setError('');
-    setProgress(0);
-    audioBufRef.current = null;
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [originalUrl]);
-
-  // ── String label helper (internal index → name) ───────────────────────────
   const strName = (s: number) => ['E','A','D','G','B','e'][s] ?? '?';
 
   // ────────────────────────────────────────────────────────────────────────────
   // Render
   // ────────────────────────────────────────────────────────────────────────────
 
+  // ── Idle ──────────────────────────────────────────────────────────────────
+
   if (stage === 'idle') return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-      {/* Drop zone */}
       <div
         onDragOver={e => e.preventDefault()}
         onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
@@ -434,7 +424,6 @@ export const AudioToTab: React.FC = () => {
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
       </div>
 
-      {/* Mic button */}
       <button
         onClick={startRecording}
         style={{
@@ -459,9 +448,10 @@ export const AudioToTab: React.FC = () => {
           <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>נגן ציר יחיד ישירות לאפליקציה</p>
         </div>
       </button>
-
     </div>
   );
+
+  // ── Recording ─────────────────────────────────────────────────────────────
 
   if (stage === 'recording') return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -471,15 +461,20 @@ export const AudioToTab: React.FC = () => {
           {String(Math.floor(recSecs / 60)).padStart(2, '0')}:{String(recSecs % 60).padStart(2, '0')}
         </p>
         <p style={{ margin: '0 0 20px', fontSize: 12, color: T.textMuted }}>מקליט…</p>
-        <button onClick={stopRecording} style={{
-          padding: '12px 32px', borderRadius: 10, border: 'none', cursor: 'pointer',
-          background: T.coral, color: '#fff', fontWeight: 700, fontSize: 14,
-        }}>
-          עצור ועבד
-        </button>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <button onClick={stopRecording} style={{
+            padding: '12px 32px', borderRadius: 10, border: 'none', cursor: 'pointer',
+            background: T.coral, color: '#fff', fontWeight: 700, fontSize: 14,
+          }}>
+            עצור ועבד
+          </button>
+          <ClearBtn onClear={reset} />
+        </div>
       </div>
     </div>
   );
+
+  // ── Processing ────────────────────────────────────────────────────────────
 
   if (stage === 'processing') return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -489,28 +484,33 @@ export const AudioToTab: React.FC = () => {
             <Waveform data={waveform} height={52} />
           </div>
         )}
-        <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: T.text }}>
-          מנתח גלי קול…
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: T.text }}>
+            {phaseLabel || 'מעבד…'}
+          </p>
+          <span style={{ fontSize: 12, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{progress}%</span>
+        </div>
         <div style={{ background: T.bgInput, borderRadius: 10, height: 8, overflow: 'hidden' }}>
           <div style={{
             height: '100%', borderRadius: 10, background: T.primary,
-            width: `${progress}%`, transition: 'width 0.2s',
+            width: `${progress}%`, transition: 'width 0.3s',
           }} />
         </div>
-        <p style={{ margin: '6px 0 0', fontSize: 12, color: T.textMuted }}>{progress}%</p>
+        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
+          <ClearBtn onClear={reset} />
+        </div>
       </div>
     </div>
   );
+
+  // ── Error ─────────────────────────────────────────────────────────────────
 
   if (stage === 'error') return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card({ padding: '18px 16px' }), borderLeft: `3px solid ${T.coral}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <span style={{ fontSize: 18, lineHeight: 1.4 }}>⚠️</span>
-          <p style={{ margin: 0, fontSize: 13, color: T.text, direction: 'rtl', textAlign: 'right' }}>
-            {error}
-          </p>
+          <p style={{ margin: 0, fontSize: 13, color: T.text, direction: 'rtl', textAlign: 'right' }}>{error}</p>
         </div>
       </div>
       <button onClick={reset} style={{
@@ -531,7 +531,7 @@ export const AudioToTab: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* File info + reset */}
+      {/* Header: file info + Clear */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.text,
@@ -539,16 +539,10 @@ export const AudioToTab: React.FC = () => {
             {fileName}
           </p>
           <p style={{ margin: 0, fontSize: 11, color: T.textMuted }}>
-            {notes.length} תווים · {tabData.duration.toFixed(1)} שניות
+            {notes.length} תווים זוהו · {tabData.duration.toFixed(1)}s
           </p>
         </div>
-        <button onClick={reset} style={{
-          padding: '7px 13px', borderRadius: 8, border: `1px solid ${T.border}`,
-          background: T.bgInput, color: T.textMuted, fontSize: 12, cursor: 'pointer', fontWeight: 600,
-          flexShrink: 0,
-        }}>
-          קובץ חדש
-        </button>
+        <ClearBtn onClear={reset} />
       </div>
 
       {/* Waveform */}
@@ -558,41 +552,33 @@ export const AudioToTab: React.FC = () => {
         </div>
       )}
 
-      {/* Playback comparison */}
+      {/* Comparison player */}
       <div style={card({ padding: '14px 16px' })}>
         <p style={LABEL}>נגן השוואה</p>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={toggleOriginal} style={{
-            flex: 1, padding: '10px 6px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            border: isPlayOrig ? 'none' : `1px solid ${T.border}`,
-            background: isPlayOrig ? T.primary : T.bgInput,
-            color: isPlayOrig ? '#fff' : T.textMuted,
-          }}>
-            <span style={{ fontSize: 11 }}>{isPlayOrig ? '⏹' : '▶'}</span>
-            מקורי
-          </button>
-          <button onClick={toggleSynth} style={{
-            flex: 1, padding: '10px 6px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            border: isPlaySynth ? 'none' : `1px solid ${T.border}`,
-            background: isPlaySynth ? T.secondary : T.bgInput,
-            color: isPlaySynth ? '#fff' : T.textMuted,
-          }}>
-            <span style={{ fontSize: 11 }}>{isPlaySynth ? '⏹' : '▶'}</span>
-            סינטזייזר
-          </button>
+          {[
+            { label: 'מקורי', active: isPlayOrig,  onToggle: toggleOriginal, bg: T.primary   },
+            { label: 'סינטזייזר', active: isPlaySynth, onToggle: toggleSynth,   bg: T.secondary },
+          ].map(({ label, active, onToggle, bg }) => (
+            <button key={label} onClick={onToggle} style={{
+              flex: 1, padding: '10px 6px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              border: active ? 'none' : `1px solid ${T.border}`,
+              background: active ? bg : T.bgInput,
+              color: active ? '#fff' : T.textMuted,
+            }}>
+              <span style={{ fontSize: 11 }}>{active ? '⏹' : '▶'}</span>
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Tab display */}
       <div>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 8, paddingLeft: 2,
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
           <p style={{ ...LABEL, margin: 0 }}>טאב</p>
-          <span style={{ fontSize: 11, color: T.textMuted }}>לחץ על תו לאפשרויות</span>
+          <span style={{ fontSize: 11, color: T.textMuted }}>לחץ על תו לאפשרויות אצבוע</span>
         </div>
         <TabDisplay tabData={tabData} onSelectNote={setSelNote} />
       </div>
@@ -612,11 +598,7 @@ export const AudioToTab: React.FC = () => {
                   border: `1.5px solid ${active ? T.primary : T.border}`,
                   background: active ? T.primaryBg : T.bgInput,
                 }}>
-                  <MiniFretboard
-                    voicing={[pos]}
-                    dotColor={active ? T.primary : T.secondary}
-                    showStringLabels
-                  />
+                  <MiniFretboard voicing={[pos]} dotColor={active ? T.primary : T.secondary} showStringLabels />
                   <p style={{ margin: '5px 0 0', fontSize: 11, color: active ? T.primary : T.textMuted, fontWeight: 700 }}>
                     {strName(pos.string)} · {pos.fret === 0 ? 'פתוח' : `פרט ${pos.fret}`}
                   </p>
@@ -627,7 +609,7 @@ export const AudioToTab: React.FC = () => {
         </div>
       )}
 
-      {/* PDF Export */}
+      {/* PDF export */}
       <button
         onClick={() => exportTabToPDF(tabData)}
         style={{
