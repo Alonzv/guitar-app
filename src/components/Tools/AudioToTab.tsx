@@ -23,10 +23,11 @@ const TAB_LBL  = '#7a6e5c';
 const TAB_SEL  = '#c96219';
 
 // SVG layout — viewBox units, width="100%" scales to container
-const COL_W        = 16;
-const STR_GAP      = 16;
-const LEFT_PAD     = 28;
-const COLS_PER_ROW = 20;
+// COL_W/STR_GAP/LEFT_PAD scaled 1.5× for better readability on screen
+const COL_W        = 24;
+const STR_GAP      = 24;
+const LEFT_PAD     = 36;
+const COLS_PER_ROW = 13;
 const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;   // 352 viewBox units
 
 // ── Clear button (used in multiple stages) ────────────────────────────────────
@@ -69,9 +70,9 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     const sy = TOP + di * STR_GAP;
     els.push(
       <line key={`l${di}`} x1={LEFT_PAD - 2} y1={sy} x2={LEFT_PAD + lineW} y2={sy}
-        stroke={TAB_LINE} strokeWidth={0.8} />,
-      <text key={`n${di}`} x={LEFT_PAD - 5} y={sy + 4.5}
-        fontSize={9} fill={TAB_LBL} textAnchor="end"
+        stroke={TAB_LINE} strokeWidth={1.2} />,
+      <text key={`n${di}`} x={LEFT_PAD - 6} y={sy + 5}
+        fontSize={13} fill={TAB_LBL} textAnchor="end"
         fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
         {STRING_NAMES[di]}
       </text>,
@@ -80,14 +81,14 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
 
   // Opening + closing verticals, bar lines every 4 cols
   els.push(
-    <line key="open"  x1={LEFT_PAD - 2}    y1={TOP} x2={LEFT_PAD - 2}    y2={TOP + 5 * STR_GAP} stroke={TAB_BAR} strokeWidth={1.4} />,
-    <line key="close" x1={LEFT_PAD + lineW} y1={TOP} x2={LEFT_PAD + lineW} y2={TOP + 5 * STR_GAP} stroke={TAB_BAR} strokeWidth={1.4} />,
+    <line key="open"  x1={LEFT_PAD - 2}    y1={TOP} x2={LEFT_PAD - 2}    y2={TOP + 5 * STR_GAP} stroke={TAB_BAR} strokeWidth={2} />,
+    <line key="close" x1={LEFT_PAD + lineW} y1={TOP} x2={LEFT_PAD + lineW} y2={TOP + 5 * STR_GAP} stroke={TAB_BAR} strokeWidth={2} />,
   );
   for (let c = 4; c < COLS_PER_ROW; c += 4) {
     const bx = LEFT_PAD + c * COL_W;
     els.push(
       <line key={`b${c}`} x1={bx} y1={TOP} x2={bx} y2={TOP + 5 * STR_GAP}
-        stroke={TAB_BAR} strokeWidth={0.7} opacity={0.5} />,
+        stroke={TAB_BAR} strokeWidth={1} opacity={0.5} />,
     );
   }
 
@@ -104,9 +105,9 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
       const sel  = selectedCol === c;
       els.push(
         <g key={`${c}-${si}`} onClick={e => onTap(c, si, e)} style={{ cursor: 'pointer' }}>
-          <rect x={cx - (wide ? 7 : 4.5)} y={sy - 6} width={wide ? 14 : 9} height={12}
-            fill={sel ? TAB_SEL : TAB_BG} rx={1.5} />
-          <text x={cx} y={sy + 4.5} fontSize={8.5}
+          <rect x={cx - (wide ? 10 : 7)} y={sy - 9} width={wide ? 20 : 14} height={18}
+            fill={sel ? TAB_SEL : TAB_BG} rx={2.5} />
+          <text x={cx} y={sy + 6} fontSize={13}
             fill={sel ? '#fff' : TAB_NUM}
             textAnchor="middle"
             fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
@@ -251,119 +252,116 @@ function RecordingBars() {
 }
 
 // ── Instrument SVG icons ──────────────────────────────────────────────────────
+// Large viewBox (100-unit scale) for precise proportions, rendered small via width/height
 
-// Acoustic Guitar — dreadnought figure-8 body, 6 pegs (3+3), round soundhole
+// Acoustic — dreadnought hourglass body, 6 pegs (3+3), round soundhole
 function IcoAcoustic({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 44 78" width={40} height={70} fill="none">
+    <svg viewBox="0 0 100 220" width={36} height={80} fill="none">
       {/* Headstock */}
-      <path d="M15,2 L29,2 Q31,4 31,6 L31,12 Q31,14 29,14 L15,14 Q13,14 13,12 L13,6 Q13,4 15,2Z" fill={c}/>
+      <rect x="28" y="1" width="44" height="24" rx="5" fill={c}/>
       {/* 3 pegs — left */}
-      <circle cx="10" cy="5"   r="2.5" fill={c}/><circle cx="10" cy="5"   r="1" fill={bg} opacity={0.65}/>
-      <circle cx="10" cy="9"   r="2.5" fill={c}/><circle cx="10" cy="9"   r="1" fill={bg} opacity={0.65}/>
-      <circle cx="10" cy="13"  r="2.5" fill={c}/><circle cx="10" cy="13"  r="1" fill={bg} opacity={0.65}/>
+      <circle cx="21" cy="6"  r="6" fill={c}/><circle cx="21" cy="6"  r="2.4" fill={bg} opacity="0.7"/>
+      <circle cx="21" cy="14" r="6" fill={c}/><circle cx="21" cy="14" r="2.4" fill={bg} opacity="0.7"/>
+      <circle cx="21" cy="22" r="6" fill={c}/><circle cx="21" cy="22" r="2.4" fill={bg} opacity="0.7"/>
       {/* 3 pegs — right */}
-      <circle cx="34" cy="5"   r="2.5" fill={c}/><circle cx="34" cy="5"   r="1" fill={bg} opacity={0.65}/>
-      <circle cx="34" cy="9"   r="2.5" fill={c}/><circle cx="34" cy="9"   r="1" fill={bg} opacity={0.65}/>
-      <circle cx="34" cy="13"  r="2.5" fill={c}/><circle cx="34" cy="13"  r="1" fill={bg} opacity={0.65}/>
+      <circle cx="79" cy="6"  r="6" fill={c}/><circle cx="79" cy="6"  r="2.4" fill={bg} opacity="0.7"/>
+      <circle cx="79" cy="14" r="6" fill={c}/><circle cx="79" cy="14" r="2.4" fill={bg} opacity="0.7"/>
+      <circle cx="79" cy="22" r="6" fill={c}/><circle cx="79" cy="22" r="2.4" fill={bg} opacity="0.7"/>
       {/* Nut */}
-      <rect x="15" y="14" width="14" height="2.5" rx="0.5" fill={c} opacity={0.6}/>
+      <rect x="33" y="25" width="34" height="5" rx="1.5" fill={c} opacity="0.6"/>
       {/* Neck */}
-      <rect x="18.5" y="16.5" width="7" height="28" rx="1.5" fill={c}/>
-      {/* Upper bout — smaller */}
-      <ellipse cx="22" cy="53" rx="10" ry="9" fill={c}/>
-      {/* Lower bout — larger, overlaps upper to create hourglass */}
-      <ellipse cx="22" cy="68" rx="13" ry="10" fill={c}/>
+      <rect x="43" y="30" width="14" height="58" rx="3" fill={c}/>
+      {/* Body — dreadnought hourglass path */}
+      <path d="M50,86 C65,86 90,94 90,114 C90,130 76,135 68,137 C80,140 94,150 94,172 C94,198 74,218 50,218 C26,218 6,198 6,172 C6,150 20,140 32,137 C24,135 10,130 10,114 C10,94 35,86 50,86Z" fill={c}/>
       {/* Soundhole */}
-      <circle cx="22" cy="68" r="5" fill={bg}/>
-      <circle cx="22" cy="68" r="3.5" fill={c} opacity={0.2}/>
+      <circle cx="50" cy="170" r="18" fill={bg}/>
+      <circle cx="50" cy="170" r="12" fill={c} opacity="0.18"/>
     </svg>
   );
 }
 
-// Electric Guitar — SG double-horn body, 6 pegs (3+3), 2 pickups, no soundhole
+// Electric — SG double-horn body, 6 pegs (3+3), 2 pickups visible
 function IcoElectric({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 50 74" width={44} height={68} fill="none">
+    <svg viewBox="0 0 110 214" width={40} height={78} fill="none">
       {/* Headstock */}
-      <path d="M16,2 L34,2 Q36,4 36,6 L36,13 Q36,15 34,15 L16,15 Q14,15 14,13 L14,6 Q14,4 16,2Z" fill={c}/>
+      <rect x="30" y="1" width="50" height="25" rx="5" fill={c}/>
       {/* 3 pegs — left */}
-      <circle cx="11" cy="5"   r="2.5" fill={c}/><circle cx="11" cy="5"   r="1" fill={bg} opacity={0.65}/>
-      <circle cx="11" cy="9.5" r="2.5" fill={c}/><circle cx="11" cy="9.5" r="1" fill={bg} opacity={0.65}/>
-      <circle cx="11" cy="14"  r="2.5" fill={c}/><circle cx="11" cy="14"  r="1" fill={bg} opacity={0.65}/>
+      <circle cx="23" cy="7"  r="6" fill={c}/><circle cx="23" cy="7"  r="2.4" fill={bg} opacity="0.7"/>
+      <circle cx="23" cy="16" r="6" fill={c}/><circle cx="23" cy="16" r="2.4" fill={bg} opacity="0.7"/>
+      <circle cx="23" cy="24" r="6" fill={c}/><circle cx="23" cy="24" r="2.4" fill={bg} opacity="0.7"/>
       {/* 3 pegs — right */}
-      <circle cx="39" cy="5"   r="2.5" fill={c}/><circle cx="39" cy="5"   r="1" fill={bg} opacity={0.65}/>
-      <circle cx="39" cy="9.5" r="2.5" fill={c}/><circle cx="39" cy="9.5" r="1" fill={bg} opacity={0.65}/>
-      <circle cx="39" cy="14"  r="2.5" fill={c}/><circle cx="39" cy="14"  r="1" fill={bg} opacity={0.65}/>
+      <circle cx="87" cy="7"  r="6" fill={c}/><circle cx="87" cy="7"  r="2.4" fill={bg} opacity="0.7"/>
+      <circle cx="87" cy="16" r="6" fill={c}/><circle cx="87" cy="16" r="2.4" fill={bg} opacity="0.7"/>
+      <circle cx="87" cy="24" r="6" fill={c}/><circle cx="87" cy="24" r="2.4" fill={bg} opacity="0.7"/>
       {/* Nut */}
-      <rect x="16" y="15" width="18" height="2.5" rx="0.5" fill={c} opacity={0.6}/>
+      <rect x="36" y="26" width="38" height="5" rx="1.5" fill={c} opacity="0.6"/>
       {/* Neck */}
-      <rect x="20" y="17.5" width="10" height="22" rx="1.5" fill={c}/>
-      {/* Left horn — points up-left from neck junction */}
-      <path d="M20,40 C16,38 8,32 7,27 C6,23 10,21 13,25 C15,28 17,36 20,40Z" fill={c}/>
+      <rect x="47" y="31" width="16" height="58" rx="3" fill={c}/>
+      {/* Left horn — sharp upward cutaway */}
+      <path d="M47,92 C40,90 20,78 13,69 C7,61 13,53 20,60 C26,66 38,84 47,92Z" fill={c}/>
       {/* Right horn — mirror */}
-      <path d="M30,40 C34,38 42,32 43,27 C44,23 40,21 37,25 C35,28 33,36 30,40Z" fill={c}/>
-      {/* Neck-to-body bridge */}
-      <rect x="20" y="38" width="10" height="6" fill={c}/>
+      <path d="M63,92 C70,90 90,78 97,69 C103,61 97,53 90,60 C84,66 72,84 63,92Z" fill={c}/>
+      {/* Body bridge */}
+      <rect x="47" y="88" width="16" height="10" fill={c}/>
       {/* Lower body */}
-      <path d="M14,42 C6,44 3,52 3,59 C3,67 10,72 25,72 C40,72 47,67 47,59 C47,52 44,44 36,42Z" fill={c}/>
+      <path d="M38,98 C18,102 4,118 4,144 C4,176 22,212 55,212 C88,212 106,176 106,144 C106,118 92,102 72,98Z" fill={c}/>
       {/* Pickup 1 */}
-      <rect x="14" y="50" width="22" height="5.5" rx="2" fill={bg} opacity={0.65}/>
+      <rect x="28" y="128" width="54" height="14" rx="4" fill={bg} opacity="0.65"/>
       {/* Pickup 2 */}
-      <rect x="14" y="60" width="22" height="5.5" rx="2" fill={bg} opacity={0.65}/>
+      <rect x="28" y="158" width="54" height="14" rx="4" fill={bg} opacity="0.65"/>
     </svg>
   );
 }
 
-// Bass Guitar — neck takes >50% of height (key differentiator), compact body, 4 pegs (2+2)
+// Bass — very long neck is the dominant visual (>50% of height), compact body, 4 pegs (2+2)
 function IcoBass({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 40 84" width={36} height={74} fill="none">
-      {/* Headstock — compact 2+2 */}
-      <path d="M13,2 L27,2 Q29,4 29,6 L29,12 Q29,14 27,14 L13,14 Q11,14 11,12 L11,6 Q11,4 13,2Z" fill={c}/>
+    <svg viewBox="0 0 90 210" width={30} height={76} fill="none">
+      {/* Headstock — compact */}
+      <rect x="26" y="1" width="38" height="22" rx="4" fill={c}/>
       {/* 2 pegs — left */}
-      <circle cx="8"  cy="6"  r="2.6" fill={c}/><circle cx="8"  cy="6"  r="1.1" fill={bg} opacity={0.65}/>
-      <circle cx="8"  cy="11" r="2.6" fill={c}/><circle cx="8"  cy="11" r="1.1" fill={bg} opacity={0.65}/>
+      <circle cx="19" cy="7"  r="5.5" fill={c}/><circle cx="19" cy="7"  r="2.2" fill={bg} opacity="0.7"/>
+      <circle cx="19" cy="16" r="5.5" fill={c}/><circle cx="19" cy="16" r="2.2" fill={bg} opacity="0.7"/>
       {/* 2 pegs — right */}
-      <circle cx="32" cy="6"  r="2.6" fill={c}/><circle cx="32" cy="6"  r="1.1" fill={bg} opacity={0.65}/>
-      <circle cx="32" cy="11" r="2.6" fill={c}/><circle cx="32" cy="11" r="1.1" fill={bg} opacity={0.65}/>
+      <circle cx="71" cy="7"  r="5.5" fill={c}/><circle cx="71" cy="7"  r="2.2" fill={bg} opacity="0.7"/>
+      <circle cx="71" cy="16" r="5.5" fill={c}/><circle cx="71" cy="16" r="2.2" fill={bg} opacity="0.7"/>
       {/* Nut */}
-      <rect x="13" y="14" width="14" height="2.5" rx="0.5" fill={c} opacity={0.6}/>
-      {/* Long neck — 44px, takes ~52% of 84px viewBox */}
-      <rect x="17" y="16.5" width="6" height="44" rx="1.5" fill={c}/>
+      <rect x="28" y="23" width="34" height="5" rx="1.5" fill={c} opacity="0.6"/>
+      {/* Long neck — 108px of 210px viewBox height = 51% */}
+      <rect x="39" y="28" width="12" height="108" rx="3" fill={c}/>
       {/* Upper bout */}
-      <ellipse cx="20" cy="68" rx="11" ry="8" fill={c}/>
+      <ellipse cx="45" cy="152" rx="24" ry="18" fill={c}/>
       {/* Lower bout */}
-      <ellipse cx="20" cy="78" rx="13" ry="8" fill={c}/>
-      {/* Pickup — long single-coil style */}
-      <rect x="10" y="69" width="20" height="6" rx="2" fill={bg} opacity={0.65}/>
+      <ellipse cx="45" cy="186" rx="30" ry="22" fill={c}/>
+      {/* Pickup — wide single coil */}
+      <rect x="26" y="158" width="38" height="16" rx="4" fill={bg} opacity="0.65"/>
     </svg>
   );
 }
 
-// Ukulele — compact/short, clearly smaller instrument, 4 pegs (2+2), round soundhole
+// Ukulele — short neck, round compact body, clearly the smallest instrument
 function IcoUkulele({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 36 58" width={32} height={52} fill="none">
-      {/* Headstock — small */}
-      <path d="M12,2 L24,2 Q26,4 26,6 L26,10 Q26,12 24,12 L12,12 Q10,12 10,10 L10,6 Q10,4 12,2Z" fill={c}/>
+    <svg viewBox="0 0 86 160" width={28} height={52} fill="none">
+      {/* Headstock */}
+      <rect x="26" y="1" width="34" height="20" rx="4" fill={c}/>
       {/* 2 pegs — left */}
-      <circle cx="7"  cy="5.5" r="2.2" fill={c}/><circle cx="7"  cy="5.5" r="0.9" fill={bg} opacity={0.65}/>
-      <circle cx="7"  cy="10"  r="2.2" fill={c}/><circle cx="7"  cy="10"  r="0.9" fill={bg} opacity={0.65}/>
+      <circle cx="19" cy="6"  r="5" fill={c}/><circle cx="19" cy="6"  r="2" fill={bg} opacity="0.7"/>
+      <circle cx="19" cy="15" r="5" fill={c}/><circle cx="19" cy="15" r="2" fill={bg} opacity="0.7"/>
       {/* 2 pegs — right */}
-      <circle cx="29" cy="5.5" r="2.2" fill={c}/><circle cx="29" cy="5.5" r="0.9" fill={bg} opacity={0.65}/>
-      <circle cx="29" cy="10"  r="2.2" fill={c}/><circle cx="29" cy="10"  r="0.9" fill={bg} opacity={0.65}/>
+      <circle cx="67" cy="6"  r="5" fill={c}/><circle cx="67" cy="6"  r="2" fill={bg} opacity="0.7"/>
+      <circle cx="67" cy="15" r="5" fill={c}/><circle cx="67" cy="15" r="2" fill={bg} opacity="0.7"/>
       {/* Nut */}
-      <rect x="12" y="12" width="12" height="2" rx="0.5" fill={c} opacity={0.6}/>
-      {/* Short neck */}
-      <rect x="14.5" y="14" width="7" height="16" rx="1.2" fill={c}/>
-      {/* Upper bout — small */}
-      <ellipse cx="18" cy="37" rx="9" ry="8" fill={c}/>
-      {/* Lower bout — larger, hourglass waist with upper */}
-      <ellipse cx="18" cy="50" rx="11" ry="9" fill={c}/>
+      <rect x="28" y="21" width="30" height="4" rx="1" fill={c} opacity="0.6"/>
+      {/* Short neck — 46px of 160px = 29% height only */}
+      <rect x="37" y="25" width="12" height="46" rx="2.5" fill={c}/>
+      {/* Body — dreadnought hourglass (smaller proportions) */}
+      <path d="M43,68 C52,68 68,74 68,86 C68,96 60,100 55,102 C62,104 72,110 72,122 C72,140 60,158 43,158 C26,158 14,140 14,122 C14,110 24,104 31,102 C26,100 18,96 18,86 C18,74 34,68 43,68Z" fill={c}/>
       {/* Soundhole */}
-      <circle cx="18" cy="50" r="4.5" fill={bg}/>
-      <circle cx="18" cy="50" r="3"   fill={c} opacity={0.2}/>
+      <circle cx="43" cy="122" r="14" fill={bg}/>
+      <circle cx="43" cy="122" r="9"  fill={c} opacity="0.18"/>
     </svg>
   );
 }
