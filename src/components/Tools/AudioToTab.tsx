@@ -56,15 +56,16 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   onTap: (col: number, stringIdx: number, e: React.MouseEvent) => void;
 }) {
   const lineW = COLS_PER_ROW * COL_W;
-  const svgH  = 5 * STR_GAP + 2;
+  const TOP   = 10;  // extra headroom so top-string number boxes aren't clipped
+  const svgH  = TOP + 5 * STR_GAP + 6;
   const els: React.ReactNode[] = [];
 
   // Parchment background
-  els.push(<rect key="bg" x={0} y={-5} width={VB_W} height={svgH + 10} fill={TAB_BG} />);
+  els.push(<rect key="bg" x={0} y={0} width={VB_W} height={svgH} fill={TAB_BG} />);
 
   // String lines + labels
   for (let di = 0; di < 6; di++) {
-    const sy = di * STR_GAP;
+    const sy = TOP + di * STR_GAP;
     els.push(
       <line key={`l${di}`} x1={LEFT_PAD - 2} y1={sy} x2={LEFT_PAD + lineW} y2={sy}
         stroke={TAB_LINE} strokeWidth={0.8} />,
@@ -78,13 +79,13 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
 
   // Opening + closing verticals, bar lines every 4 cols
   els.push(
-    <line key="open"  x1={LEFT_PAD - 2}       y1={0} x2={LEFT_PAD - 2}       y2={5 * STR_GAP} stroke={TAB_BAR} strokeWidth={1.4} />,
-    <line key="close" x1={LEFT_PAD + lineW}    y1={0} x2={LEFT_PAD + lineW}   y2={5 * STR_GAP} stroke={TAB_BAR} strokeWidth={1.4} />,
+    <line key="open"  x1={LEFT_PAD - 2}    y1={TOP} x2={LEFT_PAD - 2}    y2={TOP + 5 * STR_GAP} stroke={TAB_BAR} strokeWidth={1.4} />,
+    <line key="close" x1={LEFT_PAD + lineW} y1={TOP} x2={LEFT_PAD + lineW} y2={TOP + 5 * STR_GAP} stroke={TAB_BAR} strokeWidth={1.4} />,
   );
   for (let c = 4; c < COLS_PER_ROW; c += 4) {
     const bx = LEFT_PAD + c * COL_W;
     els.push(
-      <line key={`b${c}`} x1={bx} y1={0} x2={bx} y2={5 * STR_GAP}
+      <line key={`b${c}`} x1={bx} y1={TOP} x2={bx} y2={TOP + 5 * STR_GAP}
         stroke={TAB_BAR} strokeWidth={0.7} opacity={0.5} />,
     );
   }
@@ -96,7 +97,7 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     const cx = LEFT_PAD + (c - colStart) * COL_W + COL_W / 2;
     for (const [si, fret] of strMap.entries()) {
       const di   = 5 - si;
-      const sy   = di * STR_GAP;
+      const sy   = TOP + di * STR_GAP;
       const lbl  = String(fret);
       const wide = lbl.length > 1;
       const sel  = selectedCol === c;
@@ -117,7 +118,7 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
 
   return (
     <svg width="100%" viewBox={`0 0 ${VB_W} ${svgH}`}
-      preserveAspectRatio="xMinYMid meet"
+      preserveAspectRatio="xMinYMin meet"
       style={{ display: 'block' }}>
       {els}
     </svg>
