@@ -734,7 +734,7 @@ export async function transcribeWithMT3Server(
   // Verify we got JSON and not an interstitial
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('application/json')) {
-    const body = await res.text().catch(() => '');
+    await res.text().catch(() => '');
     throw new Error(
       `שרת ה-MT3 החזיר ${contentType || 'תוכן לא ידוע'} במקום JSON.\n` +
       `פתח ${base}/health בדפדפן — אם מופיע עמוד אזהרה, לחץ "Accept" ואז נסה שוב.`,
