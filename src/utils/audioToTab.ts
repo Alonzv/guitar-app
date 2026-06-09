@@ -39,9 +39,8 @@ const MAX_FRET = 22;
 
 // Detection parameters — significantly more permissive than defaults
 // to catch the full range of guitar timbres
-const FRAME             = 4096;   // larger frame → better low-freq resolution
-const HOP               = 512;
-const CLARITY_THRESHOLD = 0.65;   // was 0.82 — guitar harmonics need lower threshold
+const FRAME = 4096;   // larger frame → better low-freq resolution
+const HOP   = 512;
 const MIN_VOLUME_DB     = -30;    // was -22 — catch quieter passages
 const MIN_FREQ          = 72;     // just below guitar low E (82 Hz)
 const MAX_FREQ          = 1050;   // high e 19th fret ~988 Hz
@@ -192,7 +191,9 @@ export async function transcribeAudioBuffer(
       raw.push({ time, midi: -1, clarity: 0, freq: 0 });
     } else {
       const [freq, clarity] = detector.findPitch(frame, sr);
-      const valid = freq > MIN_FREQ && freq < MAX_FREQ && clarity >= CLARITY_THRESHOLD;
+      // Adaptive clarity — guitar fundamentals 200-450 Hz have weaker autocorrelation
+      const clarityMin = freq < 200 ? 0.55 : freq < 450 ? 0.58 : 0.70;
+      const valid = freq > MIN_FREQ && freq < MAX_FREQ && clarity >= clarityMin;
       raw.push({
         time,
         midi:    valid ? freqToMidi(freq) : -1,
@@ -352,7 +353,7 @@ export function notesToTab(
 
   const CHORD_MERGE_S = 0.08;
   const MIN_GAP       = 1;
-  const MAX_GAP       = 4;
+  const MAX_GAP       = 2;
 
   const sorted = [...notes].sort((a, b) => a.startTime - b.startTime);
 

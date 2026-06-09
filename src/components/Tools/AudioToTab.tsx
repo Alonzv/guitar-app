@@ -22,11 +22,11 @@ const TAB_LBL  = '#7a6e5c';
 const TAB_SEL  = '#c96219';
 
 // SVG layout — viewBox units, width="100%" scales to container
-const COL_W        = 22;
+const COL_W        = 16;
 const STR_GAP      = 16;
 const LEFT_PAD     = 28;
-const COLS_PER_ROW = 14;
-const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;   // 342 viewBox units
+const COLS_PER_ROW = 20;
+const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;   // 352 viewBox units
 
 // ── Clear button (used in multiple stages) ────────────────────────────────────
 
@@ -102,9 +102,9 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
       const sel  = selectedCol === c;
       els.push(
         <g key={`${c}-${si}`} onClick={e => onTap(c, si, e)} style={{ cursor: 'pointer' }}>
-          <rect x={cx - (wide ? 8.5 : 5.5)} y={sy - 6} width={wide ? 17 : 11} height={12}
+          <rect x={cx - (wide ? 7 : 4.5)} y={sy - 6} width={wide ? 14 : 9} height={12}
             fill={sel ? TAB_SEL : TAB_BG} rx={1.5} />
-          <text x={cx} y={sy + 4.5} fontSize={9.5}
+          <text x={cx} y={sy + 4.5} fontSize={8.5}
             fill={sel ? '#fff' : TAB_NUM}
             textAnchor="middle"
             fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
