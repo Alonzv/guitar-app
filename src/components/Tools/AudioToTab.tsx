@@ -178,47 +178,53 @@ function TabDisplay({ tabData, onSelectNote }: {
   );
 }
 
-// ── Waveform — gradient bars ──────────────────────────────────────────────────
+// ── Waveform — green flowing bars ────────────────────────────────────────────
 
 function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }) {
   if (data.length === 0) return null;
 
   const W    = 500;
   const mid  = height / 2;
-  const N    = Math.min(110, data.length);
+  const N    = 80;
   const step = data.length / N;
-  const sampled = Array.from({ length: N }, (_, i) => data[Math.floor(i * step)]);
+  const sampled = Array.from({ length: N }, (_, i) => Math.abs(data[Math.floor(i * step)]));
   const barW = W / N;
-  const gap  = Math.max(1, barW * 0.22);
+  const gap  = Math.max(1.5, barW * 0.28);
   const bw   = barW - gap;
 
   return (
     <>
       <style>{`
-        @keyframes wv-pulse { 0%,100%{opacity:.82} 50%{opacity:1} }
-        .wv-bars { animation: wv-pulse 3.2s ease-in-out infinite; }
+        @keyframes wv-flow {
+          0%,100% { transform: scaleY(0.7); opacity: 0.75; }
+          50%      { transform: scaleY(1);   opacity: 1;    }
+        }
       `}</style>
       <svg width="100%" viewBox={`0 0 ${W} ${height}`}
         preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
         <defs>
-          <linearGradient id="wv-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="#ff6b35" />
-            <stop offset="28%"  stopColor="#e040fb" />
-            <stop offset="62%"  stopColor="#3d5afe" />
-            <stop offset="100%" stopColor="#00e5ff" />
+          <linearGradient id="wv-green" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"   stopColor="#69f0ae" />
+            <stop offset="50%"  stopColor="#00e676" />
+            <stop offset="100%" stopColor="#00c853" />
           </linearGradient>
         </defs>
-        <g className="wv-bars">
-          {sampled.map((v, i) => {
-            const h = Math.max(3, v * mid * 0.92);
-            return (
-              <rect key={i}
-                x={i * barW + gap / 2} y={mid - h}
-                width={Math.max(1.5, bw)} height={h * 2}
-                fill="url(#wv-grad)" rx={Math.min(2, bw / 2)} />
-            );
-          })}
-        </g>
+        {sampled.map((v, i) => {
+          const h     = Math.max(2, v * mid * 0.94);
+          const cx    = i * barW + barW / 2;
+          const delay = `${((i / N) * 2.0).toFixed(2)}s`;
+          return (
+            <rect key={i}
+              x={i * barW + gap / 2} y={mid - h}
+              width={Math.max(1.5, bw)} height={h * 2}
+              fill="url(#wv-green)" rx={Math.min(3, bw / 2)}
+              style={{
+                transformOrigin: `${cx}px ${mid}px`,
+                animation: `wv-flow 2.4s ease-in-out ${delay} infinite`,
+              }}
+            />
+          );
+        })}
       </svg>
     </>
   );
@@ -246,126 +252,118 @@ function RecordingBars() {
 
 // ── Instrument SVG icons ──────────────────────────────────────────────────────
 
-// Acoustic Guitar: classic figure-8 body, 6 tuning pegs (3+3), prominent round soundhole
+// Acoustic Guitar — dreadnought figure-8 body, 6 pegs (3+3), round soundhole
 function IcoAcoustic({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 44 72" width={38} height={62} fill="none">
-      {/* Headstock — wide 3+3 with slight taper */}
-      <path d="M16,2 L28,2 Q30,2 30,4 L30,10 Q30,12 28,12 L16,12 Q14,12 14,10 L14,4 Q14,2 16,2 Z" fill={c} />
-      {/* 3 pegs on left side */}
-      <circle cx="11" cy="4"  r="2.4" fill={c} /><circle cx="11" cy="4"  r="1" fill={bg} opacity={0.6} />
-      <circle cx="11" cy="7"  r="2.4" fill={c} /><circle cx="11" cy="7"  r="1" fill={bg} opacity={0.6} />
-      <circle cx="11" cy="10" r="2.4" fill={c} /><circle cx="11" cy="10" r="1" fill={bg} opacity={0.6} />
-      {/* 3 pegs on right side */}
-      <circle cx="33" cy="4"  r="2.4" fill={c} /><circle cx="33" cy="4"  r="1" fill={bg} opacity={0.6} />
-      <circle cx="33" cy="7"  r="2.4" fill={c} /><circle cx="33" cy="7"  r="1" fill={bg} opacity={0.6} />
-      <circle cx="33" cy="10" r="2.4" fill={c} /><circle cx="33" cy="10" r="1" fill={bg} opacity={0.6} />
+    <svg viewBox="0 0 44 78" width={40} height={70} fill="none">
+      {/* Headstock */}
+      <path d="M15,2 L29,2 Q31,4 31,6 L31,12 Q31,14 29,14 L15,14 Q13,14 13,12 L13,6 Q13,4 15,2Z" fill={c}/>
+      {/* 3 pegs — left */}
+      <circle cx="10" cy="5"   r="2.5" fill={c}/><circle cx="10" cy="5"   r="1" fill={bg} opacity={0.65}/>
+      <circle cx="10" cy="9"   r="2.5" fill={c}/><circle cx="10" cy="9"   r="1" fill={bg} opacity={0.65}/>
+      <circle cx="10" cy="13"  r="2.5" fill={c}/><circle cx="10" cy="13"  r="1" fill={bg} opacity={0.65}/>
+      {/* 3 pegs — right */}
+      <circle cx="34" cy="5"   r="2.5" fill={c}/><circle cx="34" cy="5"   r="1" fill={bg} opacity={0.65}/>
+      <circle cx="34" cy="9"   r="2.5" fill={c}/><circle cx="34" cy="9"   r="1" fill={bg} opacity={0.65}/>
+      <circle cx="34" cy="13"  r="2.5" fill={c}/><circle cx="34" cy="13"  r="1" fill={bg} opacity={0.65}/>
       {/* Nut */}
-      <rect x="16" y="12" width="12" height="2.5" rx="0.5" fill={c} opacity={0.7} />
+      <rect x="15" y="14" width="14" height="2.5" rx="0.5" fill={c} opacity={0.6}/>
       {/* Neck */}
-      <rect x="17.5" y="14.5" width="9" height="22" rx="1.5" fill={c} />
-      {/* Upper bout — smaller ellipse */}
-      <ellipse cx="22" cy="44" rx="10" ry="9" fill={c} />
-      {/* Waist */}
-      <rect x="19" y="49" width="6" height="6" fill={c} />
-      {/* Lower bout — larger ellipse */}
-      <ellipse cx="22" cy="60" rx="13" ry="11" fill={c} />
+      <rect x="18.5" y="16.5" width="7" height="28" rx="1.5" fill={c}/>
+      {/* Upper bout — smaller */}
+      <ellipse cx="22" cy="53" rx="10" ry="9" fill={c}/>
+      {/* Lower bout — larger, overlaps upper to create hourglass */}
+      <ellipse cx="22" cy="68" rx="13" ry="10" fill={c}/>
       {/* Soundhole */}
-      <circle cx="22" cy="60" r="5" fill={bg} />
-      <circle cx="22" cy="60" r="3.5" fill={c} opacity={0.25} />
+      <circle cx="22" cy="68" r="5" fill={bg}/>
+      <circle cx="22" cy="68" r="3.5" fill={c} opacity={0.2}/>
     </svg>
   );
 }
 
-// Electric Guitar: SG-style double cutaway horns, no soundhole, 2 pickups, 6 tuning pegs (3+3)
+// Electric Guitar — SG double-horn body, 6 pegs (3+3), 2 pickups, no soundhole
 function IcoElectric({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 52 68" width={42} height={58} fill="none">
-      {/* Headstock — angled 3+3 */}
-      <path d="M18,2 L34,2 Q36,2 36,4 L36,10 Q36,12 34,12 L18,12 Q16,12 16,10 L16,4 Q16,2 18,2 Z" fill={c} />
-      {/* 3 pegs left */}
-      <circle cx="13" cy="4"  r="2.4" fill={c} /><circle cx="13" cy="4"  r="1" fill={bg} opacity={0.6} />
-      <circle cx="13" cy="7"  r="2.4" fill={c} /><circle cx="13" cy="7"  r="1" fill={bg} opacity={0.6} />
-      <circle cx="13" cy="10" r="2.4" fill={c} /><circle cx="13" cy="10" r="1" fill={bg} opacity={0.6} />
-      {/* 3 pegs right */}
-      <circle cx="39" cy="4"  r="2.4" fill={c} /><circle cx="39" cy="4"  r="1" fill={bg} opacity={0.6} />
-      <circle cx="39" cy="7"  r="2.4" fill={c} /><circle cx="39" cy="7"  r="1" fill={bg} opacity={0.6} />
-      <circle cx="39" cy="10" r="2.4" fill={c} /><circle cx="39" cy="10" r="1" fill={bg} opacity={0.6} />
+    <svg viewBox="0 0 50 74" width={44} height={68} fill="none">
+      {/* Headstock */}
+      <path d="M16,2 L34,2 Q36,4 36,6 L36,13 Q36,15 34,15 L16,15 Q14,15 14,13 L14,6 Q14,4 16,2Z" fill={c}/>
+      {/* 3 pegs — left */}
+      <circle cx="11" cy="5"   r="2.5" fill={c}/><circle cx="11" cy="5"   r="1" fill={bg} opacity={0.65}/>
+      <circle cx="11" cy="9.5" r="2.5" fill={c}/><circle cx="11" cy="9.5" r="1" fill={bg} opacity={0.65}/>
+      <circle cx="11" cy="14"  r="2.5" fill={c}/><circle cx="11" cy="14"  r="1" fill={bg} opacity={0.65}/>
+      {/* 3 pegs — right */}
+      <circle cx="39" cy="5"   r="2.5" fill={c}/><circle cx="39" cy="5"   r="1" fill={bg} opacity={0.65}/>
+      <circle cx="39" cy="9.5" r="2.5" fill={c}/><circle cx="39" cy="9.5" r="1" fill={bg} opacity={0.65}/>
+      <circle cx="39" cy="14"  r="2.5" fill={c}/><circle cx="39" cy="14"  r="1" fill={bg} opacity={0.65}/>
       {/* Nut */}
-      <rect x="18" y="12" width="16" height="2.5" rx="0.5" fill={c} opacity={0.7} />
+      <rect x="16" y="15" width="18" height="2.5" rx="0.5" fill={c} opacity={0.6}/>
       {/* Neck */}
-      <rect x="20.5" y="14.5" width="11" height="18" rx="1.5" fill={c} />
-      {/* SG double-horn body — left horn + right horn + lower body */}
-      <path d="
-        M22,33
-        C22,33 6,30 4,36 C2,40 6,44 10,44
-        C7,45 5,47 5,51 C5,59 12,67 26,67 C40,67 47,59 47,51 C47,47 45,45 42,44
-        C46,44 50,40 48,36 C46,30 30,33 30,33
-        Z
-      " fill={c} />
+      <rect x="20" y="17.5" width="10" height="22" rx="1.5" fill={c}/>
+      {/* Left horn — points up-left from neck junction */}
+      <path d="M20,40 C16,38 8,32 7,27 C6,23 10,21 13,25 C15,28 17,36 20,40Z" fill={c}/>
+      {/* Right horn — mirror */}
+      <path d="M30,40 C34,38 42,32 43,27 C44,23 40,21 37,25 C35,28 33,36 30,40Z" fill={c}/>
+      {/* Neck-to-body bridge */}
+      <rect x="20" y="38" width="10" height="6" fill={c}/>
+      {/* Lower body */}
+      <path d="M14,42 C6,44 3,52 3,59 C3,67 10,72 25,72 C40,72 47,67 47,59 C47,52 44,44 36,42Z" fill={c}/>
       {/* Pickup 1 */}
-      <rect x="17" y="48" width="18" height="5" rx="2" fill={bg} opacity={0.65} />
+      <rect x="14" y="50" width="22" height="5.5" rx="2" fill={bg} opacity={0.65}/>
       {/* Pickup 2 */}
-      <rect x="17" y="57" width="18" height="5" rx="2" fill={bg} opacity={0.65} />
+      <rect x="14" y="60" width="22" height="5.5" rx="2" fill={bg} opacity={0.65}/>
     </svg>
   );
 }
 
-// Bass Guitar: very long neck (dominant feature), compact body, 4 tuning pegs (2+2)
+// Bass Guitar — neck takes >50% of height (key differentiator), compact body, 4 pegs (2+2)
 function IcoBass({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 40 78" width={34} height={64} fill="none">
-      {/* Headstock — wider, asymmetric 2+2 */}
-      <path d="M14,2 L26,2 Q28,2 28,4 L28,11 Q28,13 26,13 L14,13 Q12,13 12,11 L12,4 Q12,2 14,2 Z" fill={c} />
-      {/* 2 pegs left */}
-      <circle cx="9"  cy="5"  r="2.6" fill={c} /><circle cx="9"  cy="5"  r="1.1" fill={bg} opacity={0.6} />
-      <circle cx="9"  cy="10" r="2.6" fill={c} /><circle cx="9"  cy="10" r="1.1" fill={bg} opacity={0.6} />
-      {/* 2 pegs right */}
-      <circle cx="31" cy="5"  r="2.6" fill={c} /><circle cx="31" cy="5"  r="1.1" fill={bg} opacity={0.6} />
-      <circle cx="31" cy="10" r="2.6" fill={c} /><circle cx="31" cy="10" r="1.1" fill={bg} opacity={0.6} />
+    <svg viewBox="0 0 40 84" width={36} height={74} fill="none">
+      {/* Headstock — compact 2+2 */}
+      <path d="M13,2 L27,2 Q29,4 29,6 L29,12 Q29,14 27,14 L13,14 Q11,14 11,12 L11,6 Q11,4 13,2Z" fill={c}/>
+      {/* 2 pegs — left */}
+      <circle cx="8"  cy="6"  r="2.6" fill={c}/><circle cx="8"  cy="6"  r="1.1" fill={bg} opacity={0.65}/>
+      <circle cx="8"  cy="11" r="2.6" fill={c}/><circle cx="8"  cy="11" r="1.1" fill={bg} opacity={0.65}/>
+      {/* 2 pegs — right */}
+      <circle cx="32" cy="6"  r="2.6" fill={c}/><circle cx="32" cy="6"  r="1.1" fill={bg} opacity={0.65}/>
+      <circle cx="32" cy="11" r="2.6" fill={c}/><circle cx="32" cy="11" r="1.1" fill={bg} opacity={0.65}/>
       {/* Nut */}
-      <rect x="14" y="13" width="12" height="2.5" rx="0.5" fill={c} opacity={0.7} />
-      {/* Long neck — takes up ~55% of height */}
-      <rect x="16.5" y="15.5" width="7" height="34" rx="1.5" fill={c} />
-      {/* Compact P-bass body */}
-      <path d="
-        M17,50
-        C8,50 5,53 4,57 C3,61 6,64 10,65
-        C7,66 5,68 5,72 C5,77 11,80 20,80 C29,80 35,77 35,72 C35,68 33,66 30,65
-        C34,64 37,61 36,57 C35,53 32,50 23,50
-        Z
-      " fill={c} />
-      {/* Bass pickup — long single coil style */}
-      <rect x="12" y="63" width="16" height="6" rx="2" fill={bg} opacity={0.65} />
+      <rect x="13" y="14" width="14" height="2.5" rx="0.5" fill={c} opacity={0.6}/>
+      {/* Long neck — 44px, takes ~52% of 84px viewBox */}
+      <rect x="17" y="16.5" width="6" height="44" rx="1.5" fill={c}/>
+      {/* Upper bout */}
+      <ellipse cx="20" cy="68" rx="11" ry="8" fill={c}/>
+      {/* Lower bout */}
+      <ellipse cx="20" cy="78" rx="13" ry="8" fill={c}/>
+      {/* Pickup — long single-coil style */}
+      <rect x="10" y="69" width="20" height="6" rx="2" fill={bg} opacity={0.65}/>
     </svg>
   );
 }
 
-// Ukulele: small compact body, very short neck, 4 pegs (2+2), round soundhole — clearly smaller overall
+// Ukulele — compact/short, clearly smaller instrument, 4 pegs (2+2), round soundhole
 function IcoUkulele({ c, bg }: { c: string; bg: string }) {
   return (
-    <svg viewBox="0 0 36 56" width={30} height={50} fill="none">
-      {/* Headstock — small 2+2 */}
-      <path d="M13,2 L23,2 Q25,2 25,4 L25,9 Q25,11 23,11 L13,11 Q11,11 11,9 L11,4 Q11,2 13,2 Z" fill={c} />
-      {/* 2 pegs left */}
-      <circle cx="8"  cy="5"  r="2.1" fill={c} /><circle cx="8"  cy="5"  r="0.9" fill={bg} opacity={0.6} />
-      <circle cx="8"  cy="9"  r="2.1" fill={c} /><circle cx="8"  cy="9"  r="0.9" fill={bg} opacity={0.6} />
-      {/* 2 pegs right */}
-      <circle cx="28" cy="5"  r="2.1" fill={c} /><circle cx="28" cy="5"  r="0.9" fill={bg} opacity={0.6} />
-      <circle cx="28" cy="9"  r="2.1" fill={c} /><circle cx="28" cy="9"  r="0.9" fill={bg} opacity={0.6} />
+    <svg viewBox="0 0 36 58" width={32} height={52} fill="none">
+      {/* Headstock — small */}
+      <path d="M12,2 L24,2 Q26,4 26,6 L26,10 Q26,12 24,12 L12,12 Q10,12 10,10 L10,6 Q10,4 12,2Z" fill={c}/>
+      {/* 2 pegs — left */}
+      <circle cx="7"  cy="5.5" r="2.2" fill={c}/><circle cx="7"  cy="5.5" r="0.9" fill={bg} opacity={0.65}/>
+      <circle cx="7"  cy="10"  r="2.2" fill={c}/><circle cx="7"  cy="10"  r="0.9" fill={bg} opacity={0.65}/>
+      {/* 2 pegs — right */}
+      <circle cx="29" cy="5.5" r="2.2" fill={c}/><circle cx="29" cy="5.5" r="0.9" fill={bg} opacity={0.65}/>
+      <circle cx="29" cy="10"  r="2.2" fill={c}/><circle cx="29" cy="10"  r="0.9" fill={bg} opacity={0.65}/>
       {/* Nut */}
-      <rect x="13" y="11" width="10" height="2" rx="0.5" fill={c} opacity={0.7} />
+      <rect x="12" y="12" width="12" height="2" rx="0.5" fill={c} opacity={0.6}/>
       {/* Short neck */}
-      <rect x="14.5" y="13" width="7" height="13" rx="1.2" fill={c} />
-      {/* Upper bout */}
-      <ellipse cx="18" cy="33" rx="8"  ry="7"  fill={c} />
-      {/* Waist */}
-      <rect x="15.5" y="37" width="5" height="5" fill={c} />
-      {/* Lower bout — rounder and proportionally larger vs neck */}
-      <ellipse cx="18" cy="47" rx="10" ry="9"  fill={c} />
+      <rect x="14.5" y="14" width="7" height="16" rx="1.2" fill={c}/>
+      {/* Upper bout — small */}
+      <ellipse cx="18" cy="37" rx="9" ry="8" fill={c}/>
+      {/* Lower bout — larger, hourglass waist with upper */}
+      <ellipse cx="18" cy="50" rx="11" ry="9" fill={c}/>
       {/* Soundhole */}
-      <circle cx="18" cy="47" r="4" fill={bg} />
-      <circle cx="18" cy="47" r="2.8" fill={c} opacity={0.25} />
+      <circle cx="18" cy="50" r="4.5" fill={bg}/>
+      <circle cx="18" cy="50" r="3"   fill={c} opacity={0.2}/>
     </svg>
   );
 }
@@ -670,33 +668,36 @@ export const AudioToTab: React.FC = () => {
 
   const toggleOriginal = useCallback(() => {
     if (!originalUrl) return;
-    unlockAudio();
     if (isPlayOrig) {
       audioRef.current?.pause();
       setIsPlayOrig(false);
       return;
     }
     stopSynth(); setIsPlaySynth(false);
-    const el = audioRef.current ?? new Audio();
+    // Always create a fresh element so browser doesn't reuse a stale one
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
+    const el = new Audio();
     audioRef.current = el;
     el.src = originalUrl;
-    el.onended  = () => setIsPlayOrig(false);
-    el.onerror  = () => setIsPlayOrig(false);
+    el.onended = () => setIsPlayOrig(false);
+    el.onerror = () => setIsPlayOrig(false);
+    el.load();
     el.play()
       .then(() => setIsPlayOrig(true))
       .catch(err => { console.warn('[AudioToTab] original play failed:', err); setIsPlayOrig(false); });
   }, [originalUrl, isPlayOrig]);
 
   const toggleSynth = useCallback(async () => {
-    if (!audioBufRef.current || notes.length === 0) return;
-    unlockAudio();
+    if (notes.length === 0) return;
     if (isPlaySynth) { stopSynth(); setIsPlaySynth(false); return; }
     audioRef.current?.pause(); setIsPlayOrig(false);
     const ctx = getSharedContext();
-    if (ctx.state === 'suspended') await ctx.resume();
+    try {
+      if (ctx.state !== 'running') await ctx.resume();
+    } catch { /* ignore — still try to play */ }
     playSynth(notes, ctx);
     setIsPlaySynth(true);
-    const dur = audioBufRef.current.duration;
+    const dur = audioBufRef.current?.duration ?? 10;
     setTimeout(() => setIsPlaySynth(false), (dur + 1.5) * 1000);
   }, [notes, isPlaySynth]);
 
