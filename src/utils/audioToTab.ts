@@ -168,6 +168,18 @@ export async function transcribeAudioBuffer(
   audioBuffer: AudioBuffer,
   onProgress?: (pct: number) => void,
 ): Promise<DetectedNote[]> {
+  const TARGET_SR    = 22050;
+  const targetLength = Math.ceil(audioBuffer.duration * TARGET_SR);
+
+  // Basic Pitch requires mono Float32Array at exactly 22050 Hz
+  const offlineCtx = new OfflineAudioContext(1, targetLength, TARGET_SR);
+  const source     = offlineCtx.createBufferSource();
+  source.buffer    = audioBuffer;
+  source.connect(offlineCtx.destination);
+  source.start();
+  const resampled = await offlineCtx.startRendering();
+  const mono      = resampled.getChannelData(0);
+
   const bp = getBasicPitch();
 
   const frames:   number[][] = [];
@@ -175,7 +187,7 @@ export async function transcribeAudioBuffer(
   const contours: number[][] = [];
 
   await bp.evaluateModel(
-    audioBuffer,
+    mono,
     (f, o, c) => { frames.push(...f); onsets.push(...o); contours.push(...c); },
     (pct) => onProgress?.(Math.round(pct * 72)),
   );
