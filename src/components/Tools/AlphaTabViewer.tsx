@@ -1,29 +1,36 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { T } from '../../theme';
-import { tabDataToAlphaTex, type TabData } from '../../utils/audioToTab';
+import {
+  tabDataToAlphaTex, playSynth, stopSynth,
+  type TabData, type DetectedNote,
+} from '../../utils/audioToTab';
+import { getSharedContext, unlockAudio } from '../../utils/audioPlayback';
 
 interface Props {
-  tabData: TabData;
-  originalUrl: string | null;
+  tabData:      TabData;
+  notes:        DetectedNote[];
+  originalUrl:  string | null;
+  audioDuration: number;
 }
 
 const BTN: React.CSSProperties = {
-  flex: 1, padding: '11px 6px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-  border: 'none', transition: 'background 0.15s, color 0.15s',
+  flex: 1, padding: '11px 8px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+  transition: 'background 0.15s, color 0.15s',
 };
 
-export const AlphaTabViewer: React.FC<Props> = ({ tabData, originalUrl }) => {
-  const containerRef  = useRef<HTMLDivElement>(null);
-  const apiRef        = useRef<unknown>(null);
-  const origRef       = useRef<HTMLAudioElement | null>(null);
-  const [synthPlay,   setSynthPlay]   = useState(false);
-  const [origPlay,    setOrigPlay]    = useState(false);
-  const [sfReady,     setSfReady]     = useState(false);
-  const [atReady,     setAtReady]     = useState(false);
-  const [mode,        setMode]        = useState<'synth' | 'original'>('synth');
+function PlayIcon()  { return <svg viewBox="0 0 16 16" width={12} height={12} fill="currentColor"><path d="M3 2l11 6-11 6V2z"/></svg>; }
+function PauseIcon() { return <svg viewBox="0 0 16 16" width={12} height={12} fill="currentColor"><rect x="3" y="2" width="3" height="12" rx="1"/><rect x="10" y="2" width="3" height="12" rx="1"/></svg>; }
 
-  // ── Init alphaTab ────────────────────────────────────────────────────────
+export const AlphaTabViewer: React.FC<Props> = ({ tabData, notes, originalUrl, audioDuration }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const origRef      = useRef<HTMLAudioElement | null>(null);
+  const synthTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [rendered,   setRendered]   = useState(false);
+  const [synthPlay,  setSynthPlay]  = useState(false);
+  const [origPlay,   setOrigPlay]   = useState(false);
+
+  // ── alphaTab — rendering ONLY (no soundfont / no built-in player) ─────────
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -33,75 +40,48 @@ export const AlphaTabViewer: React.FC<Props> = ({ tabData, originalUrl }) => {
       if (dead || !containerRef.current) return;
 
       const s = new at.Settings();
-      s.core.engine                 = 'svg';
-      s.core.logLevel               = 0; // Error only
-      s.player.enablePlayer         = true;
-      s.player.enableUserInteraction = false;
-      s.player.soundFont            = '/sonivox.sf2';
-      s.display.layoutMode          = at.LayoutMode.Page;
-      s.display.staveProfile        = at.StaveProfile.Tab;
+      s.core.engine               = 'svg';
+      s.core.logLevel             = 0;
+      s.player.enablePlayer       = false;   // ← rendering only, no soundfont needed
+      s.display.layoutMode        = at.LayoutMode.Page;
+      s.display.staveProfile      = at.StaveProfile.Tab;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const api = new at.AlphaTabApi(containerRef.current as HTMLElement, s) as any;
-      apiRef.current = api;
-
-      api.soundFontLoaded.on(() => setSfReady(true));
-      api.renderStarted.on(() => setAtReady(false));
-      api.renderFinished.on(() => setAtReady(true));
-      api.playerStateChanged.on((args: { state: number }) => {
-        setSynthPlay(args.state === 1);
-      });
-      api.playerFinished.on(() => setSynthPlay(false));
-
+      api.renderFinished.on(() => { if (!dead) setRendered(true); });
       api.load(tabDataToAlphaTex(tabData));
-    });
+    }).catch(e => console.error('[AlphaTabViewer] init failed:', e));
 
-    return () => {
-      dead = true;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (apiRef.current as any)?.destroy?.();
-      apiRef.current = null;
-    };
-  // Run only once per tabData instance
+    return () => { dead = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabData]);
 
-  // ── Original audio element ───────────────────────────────────────────────
+  // ── Original audio element (pre-loaded) ──────────────────────────────────
 
   useEffect(() => {
     if (!originalUrl) return;
     const el = new Audio(originalUrl);
     el.preload = 'auto';
-    el.onended  = () => setOrigPlay(false);
-    el.onerror  = () => setOrigPlay(false);
+    el.onended = () => setOrigPlay(false);
+    el.onerror = () => setOrigPlay(false);
     origRef.current = el;
     return () => { el.pause(); el.src = ''; origRef.current = null; };
   }, [originalUrl]);
 
-  // ── Controls ─────────────────────────────────────────────────────────────
+  // ── Synth stop helper ─────────────────────────────────────────────────────
 
-  const stopAll = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const api = apiRef.current as any;
-    if (synthPlay) { api?.stop?.(); setSynthPlay(false); }
-    if (origPlay)  { origRef.current?.pause(); setOrigPlay(false); }
-  }, [synthPlay, origPlay]);
+  const stopSynthPlay = useCallback(() => {
+    stopSynth();
+    if (synthTimerRef.current) { clearTimeout(synthTimerRef.current); synthTimerRef.current = null; }
+    setSynthPlay(false);
+  }, []);
 
-  const handleSynth = useCallback(() => {
-    if (!sfReady || !atReady) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const api = apiRef.current as any;
-    if (origPlay) { origRef.current?.pause(); setOrigPlay(false); }
-    setMode('synth');
-    api?.playPause?.();
-  }, [sfReady, atReady, origPlay]);
+  // ── Controls ──────────────────────────────────────────────────────────────
 
   const handleOriginal = useCallback(() => {
     if (!originalUrl || !origRef.current) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const api = apiRef.current as any;
-    if (synthPlay) { api?.stop?.(); setSynthPlay(false); }
-    setMode('original');
+    unlockAudio();
+    if (synthPlay) stopSynthPlay();
     if (origPlay) {
       origRef.current.pause();
       setOrigPlay(false);
@@ -109,87 +89,76 @@ export const AlphaTabViewer: React.FC<Props> = ({ tabData, originalUrl }) => {
       origRef.current.currentTime = 0;
       origRef.current.play()
         .then(() => setOrigPlay(true))
-        .catch(e => console.error('[AlphaTabViewer] orig play:', e));
+        .catch(e => console.error('[AlphaTabViewer] orig:', e));
     }
-  }, [originalUrl, synthPlay, origPlay]);
+  }, [originalUrl, origPlay, synthPlay, stopSynthPlay]);
+
+  const handleSynth = useCallback(() => {
+    unlockAudio();
+    if (origPlay) { origRef.current?.pause(); setOrigPlay(false); }
+    if (synthPlay) { stopSynthPlay(); return; }
+    if (notes.length === 0) return;
+
+    const ctx = getSharedContext();
+    const doPlay = () => {
+      playSynth(notes, ctx);
+      setSynthPlay(true);
+      const dur = (audioDuration || 10) + 1.5;
+      synthTimerRef.current = setTimeout(stopSynthPlay, dur * 1000);
+    };
+
+    if (ctx.state === 'running') doPlay();
+    else ctx.resume().then(doPlay).catch(e => console.error('[AlphaTabViewer] ctx resume:', e));
+  }, [notes, origPlay, synthPlay, audioDuration, stopSynthPlay]);
 
   // ── Render ────────────────────────────────────────────────────────────────
-
-  const synthActive = mode === 'synth' && synthPlay;
-  const origActive  = mode === 'original' && origPlay;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-      {/* Playback bar */}
+      {/* Playback controls */}
       <div style={{ display: 'flex', gap: 10 }}>
+
         {/* Original */}
         {originalUrl && (
           <button onClick={handleOriginal} style={{
             ...BTN,
-            background: origActive ? T.primary : T.bgInput,
-            color: origActive ? '#fff' : T.textMuted,
-            border: origActive ? 'none' : `1px solid ${T.border}`,
+            background: origPlay ? T.primary : T.bgInput,
+            color:      origPlay ? '#fff'    : T.textMuted,
+            border:     origPlay ? 'none'    : `1px solid ${T.border}`,
           }}>
-            <svg viewBox="0 0 16 16" width={13} height={13} fill="currentColor">
-              {origActive
-                ? <><rect x="3" y="2" width="3" height="12" rx="1"/><rect x="10" y="2" width="3" height="12" rx="1"/></>
-                : <path d="M3 2l11 6-11 6V2z"/>}
-            </svg>
+            {origPlay ? <PauseIcon /> : <PlayIcon />}
             מקורי
           </button>
         )}
 
         {/* Synth */}
-        <button
-          onClick={handleSynth}
-          disabled={!sfReady || !atReady}
-          title={!sfReady ? 'טוען SoundFont…' : !atReady ? 'מרנדר…' : undefined}
-          style={{
-            ...BTN,
-            background: synthActive ? T.secondary : T.bgInput,
-            color: synthActive ? '#fff' : (!sfReady || !atReady) ? T.textDim : T.textMuted,
-            border: synthActive ? 'none' : `1px solid ${T.border}`,
-            cursor: (!sfReady || !atReady) ? 'wait' : 'pointer',
-            opacity: (!sfReady || !atReady) ? 0.7 : 1,
-          }}
-        >
-          {(!sfReady || !atReady)
-            ? <span style={{ fontSize: 11 }}>⏳</span>
-            : (
-              <svg viewBox="0 0 16 16" width={13} height={13} fill="currentColor">
-                {synthActive
-                  ? <><rect x="3" y="2" width="3" height="12" rx="1"/><rect x="10" y="2" width="3" height="12" rx="1"/></>
-                  : <path d="M3 2l11 6-11 6V2z"/>}
-              </svg>
-            )
-          }
-          {!sfReady ? 'טוען…' : !atReady ? 'מכין…' : synthActive ? 'עצור' : 'נגן טאב'}
+        <button onClick={handleSynth} style={{
+          ...BTN,
+          background: synthPlay ? T.secondary : T.bgInput,
+          color:      synthPlay ? '#fff'      : T.textMuted,
+          border:     synthPlay ? 'none'      : `1px solid ${T.border}`,
+        }}>
+          {synthPlay ? <PauseIcon /> : <PlayIcon />}
+          סינטיסייזר
         </button>
-
-        {/* Stop all */}
-        {(synthPlay || origPlay) && (
-          <button onClick={stopAll} style={{
-            ...BTN, flex: 'none', padding: '11px 14px',
-            background: T.bgInput, color: T.textMuted,
-            border: `1px solid ${T.border}`,
-          }}>
-            <svg viewBox="0 0 16 16" width={13} height={13} fill="currentColor">
-              <rect x="2" y="2" width="12" height="12" rx="2"/>
-            </svg>
-          </button>
-        )}
       </div>
 
-      {/* AlphaTab render target */}
+      {/* alphaTab render container */}
       <div
         ref={containerRef}
         style={{
-          borderRadius: 10, overflow: 'hidden',
-          background: '#fff',
-          minHeight: 120,
+          borderRadius: 10, overflow: 'hidden', background: '#fff',
+          minHeight: rendered ? undefined : 80,
+          opacity: rendered ? 1 : 0.4,
+          transition: 'opacity 0.3s',
         }}
       />
+      {!rendered && (
+        <p style={{ margin: 0, fontSize: 11, color: T.textMuted, textAlign: 'center' }}>
+          מרנדר טאב…
+        </p>
+      )}
     </div>
   );
 };

@@ -830,7 +830,12 @@ export const AudioToTab: React.FC = () => {
 
       {/* AlphaTab viewer — rendering + playback */}
       <div style={card({ padding: '14px 14px' })}>
-        <AlphaTabViewer tabData={tabData} originalUrl={originalUrl} />
+        <AlphaTabViewer
+          tabData={tabData}
+          notes={notes}
+          originalUrl={originalUrl}
+          audioDuration={audioBufRef.current?.duration ?? tabData.duration}
+        />
       </div>
 
       {/* Classic SVG tab — click for fingering alternatives */}
