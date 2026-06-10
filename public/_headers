@@ -14,5 +14,5 @@
   # Restrict which browser features this site can use
   Permissions-Policy: geolocation=(), camera=(), payment=(), microphone=(self)
 
-  # Content Security Policy — only allow resources from our own origin
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  # Content Security Policy — own origin + Anthropic API + transcription-server tunnels
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com https://*.trycloudflare.com https://*.lhr.life https://*.ngrok-free.app; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
