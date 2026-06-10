@@ -136,6 +136,31 @@ export function cleanupNotes(notes: DetectedNote[]): DetectedNote[] {
 }
 
 /**
+ * Harmonic-phantom suppression for piano_transcription server output.
+ *
+ * A plucked guitar string rings with strong overtones (2nd/3rd/4th/5th
+ * harmonics = +12/+19/+24/+28 semitones). The piano model often transcribes
+ * these as separate simultaneous notes. A note is considered a phantom when
+ * a lower note exists at one of those exact offsets, starting within 80 ms,
+ * and the upper note is not clearly louder than its fundamental.
+ */
+export function suppressHarmonics(notes: DetectedNote[]): DetectedNote[] {
+  const HARMONIC_OFFSETS = [12, 19, 24, 28];
+  const ONSET_WIN_S = 0.08;
+
+  const sorted = [...notes].sort((a, b) => a.startTime - b.startTime);
+  return sorted.filter(n => {
+    const isPhantom = sorted.some(base =>
+      base !== n &&
+      HARMONIC_OFFSETS.includes(n.midiNote - base.midiNote) &&
+      Math.abs(base.startTime - n.startTime) < ONSET_WIN_S &&
+      base.confidence >= n.confidence * 0.9,
+    );
+    return !isPhantom;
+  });
+}
+
+/**
  * Octave-constrain: if a note can only be played above fret 12 on every string,
  * drop it one octave (−12 semitones). This catches Basic Pitch octave errors
  * before they reach the fingering engine.
@@ -763,8 +788,10 @@ export async function transcribeWithMT3Server(
     frequency:  n.frequency ?? midiToFreq(Math.round(n.midiNote)),
   }));
 
-  // Same cleanup + octave correction pipeline as Basic Pitch path
-  return constrainOctaves(cleanupNotes(notes));
+  // Harmonic suppression must run BEFORE constrainOctaves — otherwise
+  // out-of-range harmonics get folded down an octave and masquerade as
+  // real notes inside the melody.
+  return constrainOctaves(cleanupNotes(suppressHarmonics(notes)));
 }
 
 // ── MIDI synth playback ───────────────────────────────────────────────────────
