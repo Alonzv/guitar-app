@@ -786,10 +786,8 @@ export async function transcribeWithMT3Server(
   // Raw model output in console — essential for diagnosing quality issues
   console.log('[MT3 raw notes]', JSON.stringify(data.notes));
 
-  const MAX_MELODY_MIDI = 81; // A5 — above this is almost always a guitar overtone
-
   const notes: DetectedNote[] = data.notes
-    .filter(n => Math.round(n.midiNote) <= MAX_MELODY_MIDI)
+    .filter(n => n.endTime - n.startTime >= 0.06)   // sub-60ms blips are noise
     .map(n => ({
       startTime:  n.startTime,
       endTime:    n.endTime,
@@ -798,10 +796,19 @@ export async function transcribeWithMT3Server(
       frequency:  n.frequency ?? midiToFreq(Math.round(n.midiNote)),
     }));
 
-  // Harmonic suppression must run BEFORE constrainOctaves — otherwise
-  // out-of-range harmonics get folded down an octave and masquerade as
-  // real notes inside the melody.
-  return constrainOctaves(cleanupNotes(suppressHarmonics(notes)));
+  // Phone recordings attenuate fundamentals, so the model often reports a
+  // note one octave up (D5 played -> D6 transcribed), sometimes with the
+  // real fundamental missing entirely. After removing co-sounding harmonics,
+  // fold anything above E5 down into guitar melody range — dropping these
+  // notes instead loses the only trace of the actual melody.
+  const MELODY_CEIL_MIDI = 76; // E5
+  const folded = suppressHarmonics(notes).map(n => {
+    let m = n.midiNote;
+    while (m > MELODY_CEIL_MIDI) m -= 12;
+    return m === n.midiNote ? n : { ...n, midiNote: m, frequency: midiToFreq(m) };
+  });
+
+  return constrainOctaves(cleanupNotes(folded));
 }
 
 // ── MIDI synth playback ───────────────────────────────────────────────────────
