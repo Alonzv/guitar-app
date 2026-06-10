@@ -703,16 +703,48 @@ export async function transcribeWithMT3Server(
   onProgress?.(5);
 
   const form = new FormData();
-  // Give the file a proper name so the server can detect format
-  const ext  = blob.type.includes('mp3') ? 'mp3' : blob.type.includes('ogg') ? 'ogg' : 'wav';
+  const ext  = blob.type.includes('mp3') ? 'mp3'
+             : blob.type.includes('mpeg') ? 'mp3'
+             : blob.type.includes('ogg') ? 'ogg'
+             : blob.type.includes('webm') ? 'webm'
+             : blob.type.includes('flac') ? 'flac'
+             : blob.type.includes('m4a') || blob.type.includes('mp4') ? 'm4a'
+             : 'wav';
   form.append('audio', blob, `audio.${ext}`);
 
   const base = serverUrl.replace(/\/+$/, '');
-  const res  = await fetch(`${base}/transcribe`, { method: 'POST', body: form });
+
+  // Bypass Cloudflare/ngrok browser-interstitial pages that block API calls
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+    'bypass-tunnel-reminder': 'true',
+    'User-Agent': 'ScaleUpGuitarApp/1.0',
+  };
+
+  const res = await fetch(`${base}/transcribe`, { method: 'POST', body: form, headers });
 
   if (!res.ok) {
-    const msg = await res.text().catch(() => res.statusText);
-    throw new Error(`MT3 server ${res.status}: ${msg}`);
+    const body = await res.text().catch(() => res.statusText);
+    // Detect HTML interstitial pages (Cloudflare / ngrok warning pages)
+    if (body.includes('<!DOCTYPE') || body.includes('<html')) {
+      throw new Error(
+        `שרת ה-MT3 החזיר דף HTML (${res.status}) במקום JSON.\n` +
+        `פתח את ה-URL בדפדפן וודא שאין עמוד אזהרה של Cloudflare/ngrok,\n` +
+        `ואז נסה שוב. URL: ${base}`,
+      );
+    }
+    throw new Error(`MT3 server ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  // Verify we got JSON and not an interstitial
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    await res.text().catch(() => '');
+    throw new Error(
+      `שרת ה-MT3 החזיר ${contentType || 'תוכן לא ידוע'} במקום JSON.\n` +
+      `פתח ${base}/health בדפדפן — אם מופיע עמוד אזהרה, לחץ "Accept" ואז נסה שוב.`,
+    );
   }
 
   onProgress?.(72);
