@@ -472,7 +472,7 @@ export function ReharmonizeTab({
           {error && !loading && (
             <div style={{
               ...card({ padding: '12px 16px' }),
-              borderLeft: `3px solid ${T.error ?? '#c0392b'}`,
+              borderLeft: `3px solid ${'#c0392b'}`,
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
               <span style={{ fontSize: 16 }}>⚠️</span>
@@ -492,7 +492,7 @@ export function ReharmonizeTab({
                   <button
                     onClick={handlePlay}
                     style={{
-                      padding: '5px 14px', borderRadius: 8, border: 'none',
+                      padding: '5px 14px', borderRadius: 8,
                       cursor: 'pointer', fontSize: 12, fontWeight: 700,
                       background: isPlaying ? T.bgDeep : T.primary,
                       color: isPlaying ? T.primary : '#fff',

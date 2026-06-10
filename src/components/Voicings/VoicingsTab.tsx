@@ -235,7 +235,7 @@ function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, 
     return () => document.removeEventListener('keydown', handler);
   }, [onClose, total]);
 
-  const navBtn = (onClick: () => void, label: string, disabled: boolean): React.CSSProperties => ({
+  const navBtn = (_onClick: () => void, _label: string, disabled: boolean): React.CSSProperties => ({
     background: disabled ? T.bgDeep : T.bgInput,
     border: `1px solid ${T.border}`,
     borderRadius: 10, padding: '10px 16px',
@@ -1079,7 +1079,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                     <p style={LABEL_STYLE}>On the neck — {currentPath.label}</p>
                     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, flexWrap: 'nowrap', minHeight: 120 }}>
                       {perChord.map(({ chordName, filtered }, ci) => {
-                        const allDotColors = perChord.map(({ filtered: fv }, fi) =>
+                        const allDotColors = perChord.map(({ filtered: _fv }, fi) =>
                           computeDotColors(currentPath.voicings[fi], chords[fi], isolate, tuning.notes, ivColor)
                         );
                         return (

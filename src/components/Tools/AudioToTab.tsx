@@ -679,7 +679,8 @@ export const AudioToTab: React.FC = () => {
       setStage('result');
     } catch (e) {
       console.error('[AudioToTab]', e);
-      setError('שגיאה בעיבוד השמע — ודא שהקובץ תקין ונסה שוב.');
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg || 'שגיאה בעיבוד השמע — ודא שהקובץ תקין ונסה שוב.');
       setStage('error');
     }
   }, [mt3Url]);
@@ -869,7 +870,7 @@ export const AudioToTab: React.FC = () => {
       <div style={{ ...card({ padding: '18px 16px' }), borderLeft: `3px solid ${T.coral}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <span style={{ fontSize: 18, lineHeight: 1.4 }}>⚠️</span>
-          <p style={{ margin: 0, fontSize: 13, color: T.text, direction: 'rtl', textAlign: 'right' }}>{error}</p>
+          <p style={{ margin: 0, fontSize: 13, color: T.text, direction: 'rtl', textAlign: 'right', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{error}</p>
         </div>
       </div>
       <button onClick={reset} style={{
