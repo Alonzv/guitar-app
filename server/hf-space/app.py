@@ -48,14 +48,16 @@ def transcribe_audio(audio_path: str):
 
 
 def note_events_to_json(events) -> list:
+    """est_note_events is a list of dicts: onset_time, offset_time, midi_note, velocity."""
     results = []
-    for onset, offset, pitch, velocity in events:
-        freq = 440.0 * (2 ** ((int(pitch) - 69) / 12.0))
+    for ev in events:
+        pitch = int(ev['midi_note'])
+        freq = 440.0 * (2 ** ((pitch - 69) / 12.0))
         results.append({
-            'startTime':  round(float(onset), 4),
-            'endTime':    round(float(offset), 4),
-            'midiNote':   int(pitch),
-            'confidence': round(float(velocity) / 127.0, 3),
+            'startTime':  round(float(ev['onset_time']), 4),
+            'endTime':    round(float(ev['offset_time']), 4),
+            'midiNote':   pitch,
+            'confidence': round(float(ev['velocity']) / 127.0, 3),
             'frequency':  round(freq, 3),
         })
     results.sort(key=lambda n: n['startTime'])
