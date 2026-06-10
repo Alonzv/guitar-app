@@ -161,6 +161,52 @@ export function suppressHarmonics(notes: DetectedNote[]): DetectedNote[] {
 }
 
 /**
+ * Harmonic-stack collapse for octave-blind model output.
+ *
+ * Phone mics attenuate guitar fundamentals, so the model often reports a
+ * note's overtones INSTEAD of the note: a co-onset high pair a fourth apart
+ * (5 semitones) is harmonics 3+4 of a fundamental 19 below; a fifth apart
+ * (7 semitones) is harmonics 2+3 of a fundamental 12 below. Verified against
+ * a hand-written ground-truth tab of a real recording.
+ */
+export function collapseHarmonicStacks(notes: DetectedNote[], ceil = 76): DetectedNote[] {
+  const WIN_S = 0.08;
+  const sorted = [...notes].sort((a, b) => a.startTime - b.startTime);
+  const used = new Set<number>();
+  const out: DetectedNote[] = [];
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (used.has(i)) continue;
+    const n = sorted[i];
+    if (n.midiNote > ceil) {
+      const j = sorted.findIndex((m, k) =>
+        k !== i && !used.has(k) && m.midiNote > ceil &&
+        Math.abs(m.startTime - n.startTime) < WIN_S &&
+        [5, 7].includes(Math.abs(m.midiNote - n.midiNote)),
+      );
+      if (j !== -1) {
+        const m = sorted[j];
+        const lo  = Math.min(n.midiNote, m.midiNote);
+        const gap = Math.abs(n.midiNote - m.midiNote);
+        const fund = lo - (gap === 5 ? 19 : 12);
+        out.push({
+          startTime:  Math.min(n.startTime, m.startTime),
+          endTime:    Math.max(n.endTime, m.endTime),
+          midiNote:   fund,
+          confidence: Math.max(n.confidence, m.confidence),
+          frequency:  midiToFreq(fund),
+        });
+        used.add(i); used.add(j);
+        continue;
+      }
+    }
+    out.push(n);
+    used.add(i);
+  }
+  return out;
+}
+
+/**
  * Octave-constrain: if a note can only be played above fret 12 on every string,
  * drop it one octave (−12 semitones). This catches Basic Pitch octave errors
  * before they reach the fingering engine.
@@ -786,23 +832,26 @@ export async function transcribeWithMT3Server(
   // Raw model output in console — essential for diagnosing quality issues
   console.log('[MT3 raw notes]', JSON.stringify(data.notes));
 
-  const notes: DetectedNote[] = data.notes
-    .filter(n => n.endTime - n.startTime >= 0.06)   // sub-60ms blips are noise
-    .map(n => ({
-      startTime:  n.startTime,
-      endTime:    n.endTime,
-      midiNote:   Math.round(n.midiNote),
-      confidence: n.confidence,
-      frequency:  n.frequency ?? midiToFreq(Math.round(n.midiNote)),
-    }));
+  const rawNotes: DetectedNote[] = data.notes.map(n => ({
+    startTime:  n.startTime,
+    endTime:    n.endTime,
+    midiNote:   Math.round(n.midiNote),
+    confidence: n.confidence,
+    frequency:  n.frequency ?? midiToFreq(Math.round(n.midiNote)),
+  }));
 
-  // Phone recordings attenuate fundamentals, so the model often reports a
-  // note one octave up (D5 played -> D6 transcribed), sometimes with the
-  // real fundamental missing entirely. After removing co-sounding harmonics,
-  // fold anything above E5 down into guitar melody range — dropping these
-  // notes instead loses the only trace of the actual melody.
   const MELODY_CEIL_MIDI = 76; // E5
-  const folded = suppressHarmonics(notes).map(n => {
+
+  // Order matters (validated against a hand-written ground-truth tab):
+  // 1. collapse co-onset overtone pairs BEFORE the duration filter — one of
+  //    the pair is often a sub-60ms blip that still identifies the fundamental
+  // 2. drop remaining sub-60ms noise blips
+  // 3. remove overtones whose fundamental was also detected
+  // 4. octave-fold any remaining lone high note into melody range
+  const collapsed = collapseHarmonicStacks(rawNotes, MELODY_CEIL_MIDI)
+    .filter(n => n.endTime - n.startTime >= 0.06);
+
+  const folded = suppressHarmonics(collapsed).map(n => {
     let m = n.midiNote;
     while (m > MELODY_CEIL_MIDI) m -= 12;
     return m === n.midiNote ? n : { ...n, midiNote: m, frequency: midiToFreq(m) };
