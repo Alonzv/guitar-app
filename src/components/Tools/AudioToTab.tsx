@@ -14,6 +14,10 @@ import type { FretPosition } from '../../types/music';
 
 type Stage = 'idle' | 'recording' | 'onboarding' | 'processing' | 'result' | 'error';
 
+// Permanent transcription server (Hugging Face Space) — used by default for
+// every visitor; the Advanced panel can override or clear it per-browser.
+const DEFAULT_MT3_URL = 'https://vipapito-scaleup-transcribe.hf.space';
+
 // ── Tab visual constants (parchment / sheet-music look) ───────────────────────
 
 const TAB_BG   = '#f7f4ed';
@@ -592,12 +596,12 @@ export const AudioToTab: React.FC = () => {
   const [fileName, setFileName]       = useState('');
   const [recSecs, setRecSecs]         = useState(0);
   const [selNote, setSelNote]         = useState<TabEvent | null>(null);
-  const [mt3Url, setMt3Url]           = useState<string>(() => localStorage.getItem('mt3ServerUrl') ?? '');
+  const [mt3Url, setMt3Url]           = useState<string>(() => localStorage.getItem('mt3ServerUrl') ?? DEFAULT_MT3_URL);
 
   const handleMt3UrlChange = useCallback((url: string) => {
     setMt3Url(url);
-    if (url) localStorage.setItem('mt3ServerUrl', url);
-    else localStorage.removeItem('mt3ServerUrl');
+    // Empty string is stored too — it means "explicitly use in-browser Basic Pitch"
+    localStorage.setItem('mt3ServerUrl', url);
   }, []);
 
   const pendingBlobRef = useRef<{ blob: Blob; name: string } | null>(null);
@@ -656,10 +660,18 @@ export const AudioToTab: React.FC = () => {
       const serverUrl = mt3Url.trim();
 
       if (serverUrl) {
-        // ── MT3 server path ───────────────────────────────────────────────
-        setPhaseLabel('שולח לשרת MT3…');
+        // ── Server path, with automatic in-browser fallback ───────────────
+        setPhaseLabel('שולח לשרת תמלול…');
         setProgress(5);
-        rawNotes = await transcribeWithMT3Server(blob, serverUrl, p => setProgress(p));
+        try {
+          rawNotes = await transcribeWithMT3Server(blob, serverUrl, p => setProgress(p));
+        } catch (serverErr) {
+          // Server asleep/unreachable — fall back to Basic Pitch locally
+          console.warn('[AudioToTab] server failed, falling back to Basic Pitch:', serverErr);
+          setPhaseLabel('השרת לא זמין — מנתח בדפדפן…');
+          setProgress(0);
+          rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
+        }
       } else {
         // ── Basic Pitch in-browser path ───────────────────────────────────
         setPhaseLabel('מזהה תדרים…');
