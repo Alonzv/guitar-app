@@ -703,7 +703,13 @@ export async function transcribeWithMT3Server(
   onProgress?.(5);
 
   const form = new FormData();
-  const ext  = blob.type.includes('mp3') ? 'mp3' : blob.type.includes('ogg') ? 'ogg' : 'wav';
+  const ext  = blob.type.includes('mp3') ? 'mp3'
+             : blob.type.includes('mpeg') ? 'mp3'
+             : blob.type.includes('ogg') ? 'ogg'
+             : blob.type.includes('webm') ? 'webm'
+             : blob.type.includes('flac') ? 'flac'
+             : blob.type.includes('m4a') || blob.type.includes('mp4') ? 'm4a'
+             : 'wav';
   form.append('audio', blob, `audio.${ext}`);
 
   const base = serverUrl.replace(/\/+$/, '');
