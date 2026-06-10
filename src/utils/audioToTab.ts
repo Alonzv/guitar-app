@@ -531,16 +531,19 @@ export function notesToTab(
         duration:  group.notes[0].endTime - group.notes[0].startTime,
       });
     } else {
-      // Chord: assign each note to a different string
+      // Chord: assign each note to a different string.
+      // Highest pitch first → it claims the highest string (natural guitar
+      // voicing); ascending order starves the top note of low-fret options.
       const usedStrings = new Set<number>();
-      const chordNotes = [...group.notes].sort((a, b) => a.midiNote - b.midiNote);
+      const chordNotes = [...group.notes].sort((a, b) => b.midiNote - a.midiNote);
 
       for (const note of chordNotes) {
         const cands = findPositions(note.midiNote)
           .filter(p => !usedStrings.has(p.string))
           .sort((a, b) => {
             const cost = (p: typeof a) =>
-              Math.abs(p.fret - prevFret) * 2 + Math.abs(p.string - prevString);
+              Math.abs(p.fret - prevFret) * 2 + Math.abs(p.string - prevString) +
+              Math.max(0, p.fret - 12) * 6;   // keep chord shapes out of the high frets
             return cost(a) - cost(b);
           });
 
@@ -780,13 +783,20 @@ export async function transcribeWithMT3Server(
 
   onProgress?.(80);
 
-  const notes: DetectedNote[] = data.notes.map(n => ({
-    startTime:  n.startTime,
-    endTime:    n.endTime,
-    midiNote:   Math.round(n.midiNote),
-    confidence: n.confidence,
-    frequency:  n.frequency ?? midiToFreq(Math.round(n.midiNote)),
-  }));
+  // Raw model output in console — essential for diagnosing quality issues
+  console.log('[MT3 raw notes]', JSON.stringify(data.notes));
+
+  const MAX_MELODY_MIDI = 81; // A5 — above this is almost always a guitar overtone
+
+  const notes: DetectedNote[] = data.notes
+    .filter(n => Math.round(n.midiNote) <= MAX_MELODY_MIDI)
+    .map(n => ({
+      startTime:  n.startTime,
+      endTime:    n.endTime,
+      midiNote:   Math.round(n.midiNote),
+      confidence: n.confidence,
+      frequency:  n.frequency ?? midiToFreq(Math.round(n.midiNote)),
+    }));
 
   // Harmonic suppression must run BEFORE constrainOctaves — otherwise
   // out-of-range harmonics get folded down an octave and masquerade as
