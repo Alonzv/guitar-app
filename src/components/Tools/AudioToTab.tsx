@@ -657,6 +657,7 @@ export const AudioToTab: React.FC = () => {
       setWaveform(buildWaveform(audioBuf, 100));
 
       let rawNotes: DetectedNote[];
+      let viaServer = false;
       const serverUrl = mt3Url.trim();
 
       if (serverUrl) {
@@ -665,6 +666,7 @@ export const AudioToTab: React.FC = () => {
         setProgress(5);
         try {
           rawNotes = await transcribeWithMT3Server(blob, serverUrl, p => setProgress(p));
+          viaServer = true;
         } catch (serverErr) {
           // Server asleep/unreachable — fall back to Basic Pitch locally
           console.warn('[AudioToTab] server failed, falling back to Basic Pitch:', serverErr);
@@ -678,9 +680,18 @@ export const AudioToTab: React.FC = () => {
         rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
       }
 
-      setPhaseLabel('מנקה עם AI…');
-      setProgress(74);
-      const refined = await refineNotesWithAI(rawNotes, p => setProgress(74 + Math.round(p * 0.22)));
+      // AI refinement targets Basic Pitch's systematic errors (octave jumps,
+      // phantoms, low-confidence ghosts). Server notes are already accurate —
+      // applying those aggressive rules to them degrades the result.
+      let refined: DetectedNote[];
+      if (viaServer) {
+        refined = rawNotes;
+        setProgress(96);
+      } else {
+        setPhaseLabel('מנקה עם AI…');
+        setProgress(74);
+        refined = await refineNotesWithAI(rawNotes, p => setProgress(74 + Math.round(p * 0.22)));
+      }
 
       setPhaseLabel('בונה טאב…');
       setProgress(97);
