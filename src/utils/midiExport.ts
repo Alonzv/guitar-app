@@ -136,6 +136,59 @@ function buildTrack(chords: string[], bpm: number): number[] {
   return events;
 }
 
+// ── Timed-notes export (Audio→Tab transcriptions) ────────────────────────────
+
+interface TimedNote { startTime: number; endTime: number; midiNote: number; }
+
+export function exportNotesMidi(notes: TimedNote[], filename = 'transcription.mid', bpm = 120): void {
+  const PPQ = 480;
+  const ticksPerSec = (PPQ * bpm) / 60;
+
+  // Flatten to absolute-tick on/off events, then sort
+  const evts: { tick: number; on: boolean; note: number }[] = [];
+  for (const n of notes) {
+    const t0 = Math.max(0, Math.round(n.startTime * ticksPerSec));
+    const t1 = Math.max(t0 + 1, Math.round(n.endTime * ticksPerSec));
+    evts.push({ tick: t0, on: true, note: n.midiNote });
+    evts.push({ tick: t1, on: false, note: n.midiNote });
+  }
+  // Offs before ons at the same tick so repeated notes re-trigger cleanly
+  evts.sort((a, b) => a.tick - b.tick || Number(a.on) - Number(b.on));
+
+  const trackData: number[] = [];
+  const microsPerBeat = Math.round(60_000_000 / bpm);
+  trackData.push(
+    ...encodeVLQ(0), 0xff, 0x51, 0x03,
+    (microsPerBeat >>> 16) & 0xff, (microsPerBeat >>> 8) & 0xff, microsPerBeat & 0xff,
+  );
+  // Program 25 = acoustic guitar (steel)
+  trackData.push(...encodeVLQ(0), 0xc0, 0x19);
+
+  let prevTick = 0;
+  for (const e of evts) {
+    trackData.push(...encodeVLQ(e.tick - prevTick));
+    trackData.push(e.on ? 0x90 : 0x80, e.note & 0x7f, e.on ? 90 : 0);
+    prevTick = e.tick;
+  }
+  trackData.push(...encodeVLQ(0), 0xff, 0x2f, 0x00);
+
+  const header = [
+    0x4d, 0x54, 0x68, 0x64, ...uint32BE(6),
+    ...uint16BE(0), ...uint16BE(1), ...uint16BE(PPQ),
+  ];
+  const track = [0x4d, 0x54, 0x72, 0x6b, ...uint32BE(trackData.length), ...trackData];
+
+  const blob = new Blob([new Uint8Array([...header, ...track])], { type: 'audio/midi' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function exportMidi(chords: string[], bpm = 120): void {

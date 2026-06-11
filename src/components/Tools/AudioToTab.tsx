@@ -8,7 +8,7 @@ import {
   STRING_NAMES,
 } from '../../utils/audioToTab';
 import { unlockAudio } from '../../utils/audioPlayback';
-import { AlphaTabViewer } from './AlphaTabViewer';
+import { exportNotesMidi } from '../../utils/midiExport';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import type { FretPosition } from '../../types/music';
 
@@ -936,14 +936,38 @@ export const AudioToTab: React.FC = () => {
         </div>
       )}
 
-      {/* AlphaTab viewer — rendering + playback */}
-      <div style={card({ padding: '14px 14px' })}>
-        <AlphaTabViewer
-          tabData={tabData}
-          notes={notes}
-          originalUrl={originalUrl}
-          audioDuration={audioBufRef.current?.duration ?? tabData.duration}
-        />
+      {/* Export buttons — PDF + MIDI side by side */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button
+          onClick={() => exportTabToPDF(tabData)}
+          style={{
+            flex: 1, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+            background: T.secondary, color: '#fff', fontWeight: 700, fontSize: 14,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          ייצא ל-PDF
+        </button>
+        <button
+          onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}
+          style={{
+            flex: 1, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+            background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
+            <path d="M9 18V5l12-2v13" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+          ייצא ל-MIDI
+        </button>
       </div>
 
       {/* Classic SVG tab — click for fingering alternatives */}
@@ -980,23 +1004,6 @@ export const AudioToTab: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* PDF export */}
-      <button
-        onClick={() => exportTabToPDF(tabData)}
-        style={{
-          padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
-          background: T.secondary, color: '#fff', fontWeight: 700, fontSize: 14,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        }}
-      >
-        <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" y1="15" x2="12" y2="3" />
-        </svg>
-        ייצא ל-PDF
-      </button>
 
     </div>
   );
