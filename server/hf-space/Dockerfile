@@ -13,8 +13,8 @@ WORKDIR /home/user/app
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Download the model checkpoint at build time so container restarts are fast
-RUN python -c "from piano_transcription_inference import PianoTranscription; PianoTranscription(device='cpu', checkpoint_path=None)"
+# Pre-download torchcrepe weights at build time so first request is fast
+RUN python -c "import torch, torchcrepe; torchcrepe.predict(torch.zeros(1, 16000), 16000, hop_length=160, model='full', batch_size=512, device='cpu')"
 
 COPY --chown=user app.py .
 
