@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { T } from '../../theme';
 
 type Tech = 'h' | 'p' | '/' | '\\' | 'b' | '~';
@@ -44,15 +44,30 @@ export const TabBuilder: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Fit columns to container width — no horizontal scrolling, ever
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [wrapW, setWrapW] = useState(900);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) setWrapW(e.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const { title, subtitle, grid, bars } = tab;
   const numCols = grid[0]?.length ?? 0;
-  const numSys  = Math.ceil(numCols / COLS_PER_LINE);
   const barsSet = new Set(bars);
   const cw = (BASE_CW * zoom) / 100;
   const ch = (BASE_CH * zoom) / 100;
   const fs = Math.max(9, Math.round((13 * zoom) / 100));
   // Circle fits inside the cell, slightly smaller than cell height
   const circleD = Math.round(ch * 0.72);
+  // 30px reserved for string label + opening/closing bars
+  const colsPerLine = Math.max(8, Math.floor((wrapW - 36) / cw));
+  const numSys = Math.ceil(numCols / colsPerLine);
 
   const setCell = useCallback((s: number, c: number, patch: Partial<Cell>) => {
     setTab(p => {
@@ -121,7 +136,7 @@ export const TabBuilder: React.FC = () => {
       ...p,
       grid: p.grid.map(r => [
         ...r,
-        ...Array.from({ length: COLS_PER_LINE }, () => ({ fret: '' })),
+        ...Array.from({ length: colsPerLine }, () => ({ fret: '' })),
       ]),
     }));
   };
@@ -211,10 +226,10 @@ export const TabBuilder: React.FC = () => {
       </div>
 
       {/* ── Tab grid ────────────────────────────────────── */}
-      <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+      <div ref={wrapRef} style={{ paddingBottom: 8 }}>
         {Array.from({ length: numSys }, (_, sys) => {
-          const s0 = sys * COLS_PER_LINE;
-          const s1 = Math.min(s0 + COLS_PER_LINE, numCols);
+          const s0 = sys * colsPerLine;
+          const s1 = Math.min(s0 + colsPerLine, numCols);
 
           return (
             <div key={sys} style={{ marginBottom: 28 }}
@@ -298,15 +313,54 @@ export const TabBuilder: React.FC = () => {
                             </span>
                           )}
 
-                          {/* ── Technique marker (top-right corner) ── */}
-                          {cell.tech && (
+                          {/* ── Technique marker — standard tab notation ──
+                              slide: big / on the line straddling the gap to the next note
+                              h/p:   letter above the gap (hammer-on / pull-off arc position)
+                              bend:  b right after the number, on the line
+                              vibrato: ~ above the note itself */}
+                          {(cell.tech === '/' || cell.tech === '\\') && (
                             <span style={{
-                              position: 'absolute', top: 1, right: 2,
-                              fontSize: fs * 0.72, fontFamily: 'monospace',
+                              position: 'absolute', top: '50%', right: 0,
+                              transform: 'translate(50%, -50%)',
+                              fontSize: Math.round(fs * 1.5), fontFamily: 'monospace',
                               fontWeight: 700, color: T.coral,
-                              lineHeight: 1, zIndex: 1,
+                              lineHeight: 1, zIndex: 2, pointerEvents: 'none',
                             }}>
                               {cell.tech}
+                            </span>
+                          )}
+                          {(cell.tech === 'h' || cell.tech === 'p') && (
+                            <span style={{
+                              position: 'absolute', top: -2, right: 0,
+                              transform: 'translateX(50%)',
+                              fontSize: Math.round(fs * 1.1), fontFamily: 'monospace',
+                              fontWeight: 700, fontStyle: 'italic', color: T.coral,
+                              lineHeight: 1, zIndex: 2, pointerEvents: 'none',
+                            }}>
+                              {cell.tech}
+                            </span>
+                          )}
+                          {cell.tech === 'b' && (
+                            <span style={{
+                              position: 'absolute', top: '38%', right: 1,
+                              transform: 'translateY(-50%)',
+                              fontSize: Math.round(fs * 1.15), fontFamily: 'monospace',
+                              fontWeight: 700, color: T.coral,
+                              lineHeight: 1, zIndex: 2, pointerEvents: 'none',
+                            }}>
+                              b
+                            </span>
+                          )}
+                          {cell.tech === '~' && (
+                            <span style={{
+                              position: 'absolute', top: -1, left: '50%',
+                              transform: 'translateX(-50%)',
+                              fontSize: Math.round(fs * 1.3), fontFamily: 'monospace',
+                              fontWeight: 700, color: T.coral,
+                              lineHeight: 1, zIndex: 2, pointerEvents: 'none',
+                              letterSpacing: -1,
+                            }}>
+                              ~
                             </span>
                           )}
                         </div>
@@ -342,13 +396,18 @@ export const TabBuilder: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Bottom toolbar ───────────────────────────────── */}
+      {/* ── Bottom toolbar — sticky, always visible ──────── */}
       <div style={{
         display: 'flex',
+        position: 'sticky',
+        bottom: 8,
+        zIndex: 20,
         marginTop: 16,
         borderRadius: 10,
         overflow: 'hidden',
         border: `1px solid ${T.border}`,
+        background: T.bgInput,
+        boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
       }}>
         <button style={{
           flex: 1, padding: '10px 0', border: 'none',
