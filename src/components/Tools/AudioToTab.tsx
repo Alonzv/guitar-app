@@ -10,15 +10,10 @@ import { exportNotesMidi } from '../../utils/midiExport';
 
 type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'error';
 
-// Permanent transcription server (Hugging Face Space). A localStorage override
-// ('mt3ServerUrl') is still honored for power users, but there is no UI for it.
 const DEFAULT_MT3_URL = 'https://vipapito-scaleup-transcribe.hf.space';
-
-// Default transcription config for the in-browser fallback path (the server
-// path ignores it entirely, so there's nothing for the user to choose).
 const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' };
 
-// ── Tab visual constants (parchment / sheet-music look) ───────────────────────
+// ── Tab visual constants ──────────────────────────────────────────────────────
 
 const TAB_BG   = '#f7f4ed';
 const TAB_LINE = '#9a8c78';
@@ -27,14 +22,13 @@ const TAB_NUM  = '#1a1512';
 const TAB_LBL  = '#7a6e5c';
 const TAB_SEL  = '#c96219';
 
-// SVG layout — viewBox units, width="100%" scales to container
 const COL_W        = 16;
 const STR_GAP      = 16;
 const LEFT_PAD     = 28;
 const COLS_PER_ROW = 20;
-const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;   // 352 viewBox units
+const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;
 
-// ── Clear button (used in multiple stages) ────────────────────────────────────
+// ── Clear button ──────────────────────────────────────────────────────────────
 
 function ClearBtn({ onClear }: { onClear: () => void }) {
   return (
@@ -52,7 +46,7 @@ function ClearBtn({ onClear }: { onClear: () => void }) {
   );
 }
 
-// ── Tab SVG row renderer ──────────────────────────────────────────────────────
+// ── Tab SVG row ───────────────────────────────────────────────────────────────
 
 function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   colStart: number;
@@ -62,14 +56,12 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   onTap: (col: number, stringIdx: number, e: React.MouseEvent) => void;
 }) {
   const lineW = COLS_PER_ROW * COL_W;
-  const TOP   = 10;  // extra headroom so top-string number boxes aren't clipped
+  const TOP   = 10;
   const svgH  = TOP + 5 * STR_GAP + 6;
   const els: React.ReactNode[] = [];
 
-  // Parchment background
   els.push(<rect key="bg" x={0} y={0} width={VB_W} height={svgH} fill={TAB_BG} />);
 
-  // String lines + labels
   for (let di = 0; di < 6; di++) {
     const sy = TOP + di * STR_GAP;
     els.push(
@@ -83,7 +75,6 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     );
   }
 
-  // Opening + closing verticals, bar lines every 4 cols
   els.push(
     <line key="open"  x1={LEFT_PAD - 2}    y1={TOP} x2={LEFT_PAD - 2}    y2={TOP + 5 * STR_GAP} stroke={TAB_BAR} strokeWidth={2} />,
     <line key="close" x1={LEFT_PAD + lineW} y1={TOP} x2={LEFT_PAD + lineW} y2={TOP + 5 * STR_GAP} stroke={TAB_BAR} strokeWidth={2} />,
@@ -96,7 +87,6 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     );
   }
 
-  // Fret numbers
   for (let c = colStart; c < colEnd; c++) {
     const strMap = colMap.get(c);
     if (!strMap) continue;
@@ -131,14 +121,18 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   );
 }
 
-// ── Tab display (staff rows) ──────────────────────────────────────────────────
+// ── Tab display ───────────────────────────────────────────────────────────────
 
-function TabDisplay({ tabData, onSelectNote }: {
+function TabDisplay({ tabData, onSelectNote, clearToken }: {
   tabData: TabData;
   onSelectNote: (ev: TabEvent | null) => void;
+  clearToken: number;
 }) {
   const [selectedCol, setSelectedCol] = useState<number | null>(null);
   const { events, totalColumns } = tabData;
+
+  // Clear selection when parent signals (e.g. after keyboard edit commits)
+  useEffect(() => { setSelectedCol(null); }, [clearToken]);
 
   if (totalColumns === 0) {
     return (
@@ -183,7 +177,7 @@ function TabDisplay({ tabData, onSelectNote }: {
   );
 }
 
-// ── Waveform — green flowing bars ────────────────────────────────────────────
+// ── Waveform ──────────────────────────────────────────────────────────────────
 
 function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }) {
   if (data.length === 0) return null;
@@ -255,26 +249,12 @@ function RecordingBars() {
   );
 }
 
-// ── Instrument SVG icons ──────────────────────────────────────────────────────
-// Large viewBox (100-unit scale) for precise proportions, rendered small via width/height
-
-// Acoustic — dreadnought hourglass body, 6 pegs (3+3), round soundhole
 // ── Responsive styles ─────────────────────────────────────────────────────────
 
 const RESPONSIVE_CSS = `
   .at-root { width: 100%; box-sizing: border-box; }
-  .at-instrument-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .at-mix-row { display: flex; gap: 10px; }
   .at-player-row { display: flex; gap: 10px; }
-  @media (min-width: 600px) {
-    .at-instrument-grid { grid-template-columns: repeat(4, 1fr); }
-  }
-  @media (max-width: 400px) {
-    .at-mix-row { flex-direction: column; }
-  }
 `;
-
-// ── Label style ───────────────────────────────────────────────────────────────
 
 const LABEL: React.CSSProperties = {
   margin: '0 0 10px', fontSize: 11, fontWeight: 700,
@@ -295,7 +275,8 @@ export const AudioToTab: React.FC = () => {
   const [fileName, setFileName]       = useState('');
   const [recSecs, setRecSecs]         = useState(0);
   const [selNote, setSelNote]         = useState<TabEvent | null>(null);
-  const [editFret, setEditFret]       = useState(0);
+  const [fretInput, setFretInput]     = useState('');       // live digit(s) being typed
+  const [editClearToken, setEditClearToken] = useState(0); // incremented to deselect in TabDisplay
 
   const mediaRecRef  = useRef<MediaRecorder | null>(null);
   const chunksRef    = useRef<Blob[]>([]);
@@ -303,8 +284,117 @@ export const AudioToTab: React.FC = () => {
   const audioBufRef  = useRef<AudioBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Refs for the stable keyboard handler (avoid stale closures)
+  const kbSelNote   = useRef<TabEvent | null>(null);
+  const kbEditMidi  = useRef<number | null>(null);
+  const kbFretBuf   = useRef('');
+  const kbFretTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const kbNotes     = useRef<DetectedNote[]>([]);
+  const kbFileName  = useRef('');
+  const kbTabData   = useRef<TabData | null>(null);
+
+  // Keep kb data refs in sync
+  useEffect(() => { kbNotes.current = notes; },    [notes]);
+  useEffect(() => { kbFileName.current = fileName; }, [fileName]);
+  useEffect(() => { kbTabData.current = tabData; }, [tabData]);
+
+  // Stable keyboard handler — registered once, reads/writes via refs
+  useEffect(() => {
+    const commitFret = (newFret: number | null) => {
+      const sel  = kbSelNote.current;
+      const midi = kbEditMidi.current;
+      if (!sel || midi === null) return;
+
+      const updated: DetectedNote[] = [];
+      for (const n of kbNotes.current) {
+        const match = Math.abs(n.startTime - sel.startTime) < 0.02 && n.midiNote === midi;
+        if (!match) { updated.push(n); continue; }
+        if (newFret === null) continue; // delete note
+        const newMidi = OPEN_MIDI[sel.string] + newFret;
+        updated.push({ ...n, midiNote: newMidi, frequency: midiToFreq(newMidi) });
+      }
+      setNotes(updated);
+      setTabData(notesToTab(
+        updated, 200,
+        kbFileName.current.replace(/\.[^.]+$/, ''),
+        audioBufRef.current?.duration ?? kbTabData.current?.duration ?? 0,
+      ));
+      // Deselect
+      setSelNote(null);       kbSelNote.current  = null;
+      kbEditMidi.current = null; kbFretBuf.current  = '';
+      setFretInput('');
+      setEditClearToken(t => t + 1);
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (!kbSelNote.current) return;
+      if ((e.target as HTMLElement).tagName === 'INPUT') return;
+
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        if (kbFretTimer.current) { clearTimeout(kbFretTimer.current); kbFretTimer.current = null; }
+
+        const buf = kbFretBuf.current;
+        const two = buf + e.key;
+        const val = parseInt(two);
+
+        if (buf.length === 1 && val <= 22) {
+          // Two digits entered — commit immediately
+          commitFret(val);
+        } else {
+          // First digit — apply live preview, wait for possible second digit
+          const singleVal = parseInt(e.key);
+          kbFretBuf.current = e.key;
+
+          const sel  = kbSelNote.current!;
+          const midi = kbEditMidi.current!;
+          const newMidi = OPEN_MIDI[sel.string] + singleVal;
+          const updated = kbNotes.current.map(n =>
+            (Math.abs(n.startTime - sel.startTime) < 0.02 && n.midiNote === midi)
+              ? { ...n, midiNote: newMidi, frequency: midiToFreq(newMidi) }
+              : n
+          );
+          setNotes(updated);
+          setTabData(notesToTab(
+            updated, 200,
+            kbFileName.current.replace(/\.[^.]+$/, ''),
+            audioBufRef.current?.duration ?? kbTabData.current?.duration ?? 0,
+          ));
+          kbEditMidi.current = newMidi; // track so second digit finds the updated note
+          setFretInput(e.key);
+
+          // Auto-commit after 800 ms if no second digit follows
+          kbFretTimer.current = setTimeout(() => {
+            kbFretBuf.current = '';
+            setFretInput('');
+            setSelNote(null);       kbSelNote.current  = null;
+            kbEditMidi.current = null;
+            setEditClearToken(t => t + 1);
+          }, 800);
+        }
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        if (kbFretTimer.current) { clearTimeout(kbFretTimer.current); kbFretTimer.current = null; }
+        commitFret(null);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        if (kbFretTimer.current) { clearTimeout(kbFretTimer.current); kbFretTimer.current = null; }
+        kbFretBuf.current = '';
+        setFretInput('');
+        setSelNote(null); kbSelNote.current = null;
+        kbEditMidi.current = null;
+        setEditClearToken(t => t + 1);
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // stable — all reads/writes go through refs and stable state setters
+
   useEffect(() => () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (kbFretTimer.current) clearTimeout(kbFretTimer.current);
     if (originalUrl) URL.revokeObjectURL(originalUrl);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -319,12 +409,28 @@ export const AudioToTab: React.FC = () => {
     setNotes([]);
     setOriginalUrl(null);
     setSelNote(null);
+    setFretInput('');
     setError('');
     setProgress(0);
     setPhaseLabel('');
     audioBufRef.current  = null;
+    kbSelNote.current    = null;
+    kbEditMidi.current   = null;
+    kbFretBuf.current    = '';
+    if (kbFretTimer.current) { clearTimeout(kbFretTimer.current); kbFretTimer.current = null; }
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [originalUrl]);
+
+  // ── Called when user clicks a note in the tab display ─────────────────────
+
+  const handleNoteSelect = useCallback((n: TabEvent | null) => {
+    setSelNote(n);
+    kbSelNote.current  = n;
+    kbEditMidi.current = n?.midiNote ?? null;
+    kbFretBuf.current  = '';
+    setFretInput('');
+    if (kbFretTimer.current) { clearTimeout(kbFretTimer.current); kbFretTimer.current = null; }
+  }, []);
 
   // ── Process Blob → tab ────────────────────────────────────────────────────
 
@@ -333,6 +439,7 @@ export const AudioToTab: React.FC = () => {
     setProgress(0);
     setFileName(name);
     setSelNote(null);
+    kbSelNote.current = null; kbEditMidi.current = null;
 
     const url = URL.createObjectURL(blob);
     setOriginalUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
@@ -351,28 +458,22 @@ export const AudioToTab: React.FC = () => {
       const serverUrl = (localStorage.getItem('mt3ServerUrl') ?? DEFAULT_MT3_URL).trim();
 
       if (serverUrl) {
-        // ── Server path, with automatic in-browser fallback ───────────────
         setPhaseLabel('שולח לשרת תמלול…');
         setProgress(5);
         try {
           rawNotes = await transcribeWithMT3Server(blob, serverUrl, p => setProgress(p));
           viaServer = true;
         } catch (serverErr) {
-          // Server asleep/unreachable — fall back to Basic Pitch locally
           console.warn('[AudioToTab] server failed, falling back to Basic Pitch:', serverErr);
           setPhaseLabel('השרת לא זמין — מנתח בדפדפן…');
           setProgress(0);
           rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
         }
       } else {
-        // ── Basic Pitch in-browser path ───────────────────────────────────
         setPhaseLabel('מזהה תדרים…');
         rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
       }
 
-      // AI refinement targets Basic Pitch's systematic errors (octave jumps,
-      // phantoms, low-confidence ghosts). Server notes are already accurate —
-      // applying those aggressive rules to them degrades the result.
       let refined: DetectedNote[];
       if (viaServer) {
         refined = rawNotes;
@@ -447,11 +548,7 @@ export const AudioToTab: React.FC = () => {
 
   const strName = (s: number) => ['E','A','D','G','B','e'][s] ?? '?';
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Render
-  // ────────────────────────────────────────────────────────────────────────────
-
-  // ── Idle ──────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (stage === 'idle') return (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -505,8 +602,6 @@ export const AudioToTab: React.FC = () => {
     </div>
   );
 
-  // ── Recording ─────────────────────────────────────────────────────────────
-
   if (stage === 'recording') return (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card({ padding: '28px 20px' }), textAlign: 'center' }}>
@@ -528,13 +623,11 @@ export const AudioToTab: React.FC = () => {
     </div>
   );
 
-  // ── Processing ────────────────────────────────────────────────────────────
-
   if (stage === 'processing') return (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={card({ padding: '22px 18px' })}>
         {waveform && waveform.length > 0 && (
-          <div style={{ marginBottom: 16, borderRadius: 10, overflow: 'hidden', background: 'transparent', padding: '4px 0' }}>
+          <div style={{ marginBottom: 16, borderRadius: 10, overflow: 'hidden', padding: '4px 0' }}>
             <Waveform data={waveform} height={64} />
           </div>
         )}
@@ -557,8 +650,6 @@ export const AudioToTab: React.FC = () => {
     </div>
   );
 
-  // ── Error ─────────────────────────────────────────────────────────────────
-
   if (stage === 'error') return (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card({ padding: '18px 16px' }), borderLeft: `3px solid ${T.coral}` }}>
@@ -580,28 +671,11 @@ export const AudioToTab: React.FC = () => {
 
   // ── Result ────────────────────────────────────────────────────────────────
 
-  // Rebuild notes + tab after editing/deleting the selected note.
-  // newFret === null → delete the note entirely.
-  const editSelNote = (newFret: number | null) => {
-    if (!selNote) return;
-    const updated: DetectedNote[] = [];
-    for (const n of notes) {
-      const match = Math.abs(n.startTime - selNote.startTime) < 0.02 && n.midiNote === selNote.midiNote;
-      if (!match) { updated.push(n); continue; }
-      if (newFret === null) continue;
-      const midi = OPEN_MIDI[selNote.string] + newFret;
-      updated.push({ ...n, midiNote: midi, frequency: midiToFreq(midi) });
-    }
-    setNotes(updated);
-    setTabData(notesToTab(updated, 200, fileName.replace(/\.[^.]+$/, ''), audioBufRef.current?.duration ?? tabData.duration));
-    setSelNote(null);
-  };
-
   return (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <style>{RESPONSIVE_CSS}</style>
 
-      {/* Header: file info + Clear */}
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.text,
@@ -617,12 +691,12 @@ export const AudioToTab: React.FC = () => {
 
       {/* Waveform */}
       {waveform && waveform.length > 0 && (
-        <div style={{ borderRadius: 12, overflow: 'hidden', background: 'transparent', padding: '4px 0' }}>
+        <div style={{ borderRadius: 12, overflow: 'hidden', padding: '4px 0' }}>
           <Waveform data={waveform} height={72} />
         </div>
       )}
 
-      {/* Export buttons — PDF + MIDI side by side */}
+      {/* Export buttons */}
       <div style={{ display: 'flex', gap: 10 }}>
         <button
           onClick={() => exportTabToPDF(tabData)}
@@ -656,85 +730,33 @@ export const AudioToTab: React.FC = () => {
         </button>
       </div>
 
-      {/* Classic SVG tab — click a note to edit */}
+      {/* Tab — click a note to select, then type to edit */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
           <p style={{ ...LABEL, margin: 0 }}>טאב</p>
-          <span style={{ fontSize: 11, color: T.textMuted }}>לחץ על תו לעריכה</span>
+          {!selNote && (
+            <span style={{ fontSize: 11, color: T.textMuted }}>לחץ על תו לעריכה</span>
+          )}
         </div>
-        <TabDisplay tabData={tabData} onSelectNote={n => { setSelNote(n); if (n) setEditFret(n.fret); }} />
+        <TabDisplay tabData={tabData} onSelectNote={handleNoteSelect} clearToken={editClearToken} />
       </div>
 
-      {/* Note editing */}
+      {/* Keyboard edit hint — shown when a note is selected */}
       {selNote && (
-        <div style={card({ padding: '14px 14px' })}>
-          <p style={LABEL}>
-            עריכת תו — מיתר {strName(selNote.string)} · פרט {selNote.fret}
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            {/* Fret stepper */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 2,
-              background: T.bgInput, borderRadius: 10, padding: '4px 6px',
-            }}>
-              <button onClick={() => setEditFret(f => Math.max(0, f - 1))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 18, lineHeight: 1, padding: '4px 8px' }}>
-                −
-              </button>
-              <span style={{
-                fontSize: 16, fontWeight: 800, color: editFret === selNote.fret ? T.text : T.primary,
-                minWidth: 30, textAlign: 'center', fontVariantNumeric: 'tabular-nums',
-              }}>
-                {editFret}
-              </span>
-              <button onClick={() => setEditFret(f => Math.min(22, f + 1))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 18, lineHeight: 1, padding: '4px 8px' }}>
-                +
-              </button>
-            </div>
-
-            <button
-              onClick={() => editSelNote(editFret)}
-              disabled={editFret === selNote.fret}
-              style={{
-                padding: '9px 20px', borderRadius: 10, border: 'none',
-                cursor: editFret === selNote.fret ? 'default' : 'pointer',
-                background: editFret === selNote.fret ? T.bgInput : T.primary,
-                color: editFret === selNote.fret ? T.textMuted : '#fff',
-                fontWeight: 700, fontSize: 13,
-              }}>
-              עדכן
-            </button>
-
-            <button
-              onClick={() => editSelNote(null)}
-              style={{
-                padding: '9px 20px', borderRadius: 10,
-                border: `1px solid ${T.coral}`, cursor: 'pointer',
-                background: 'transparent', color: T.coral,
-                fontWeight: 700, fontSize: 13,
-                display: 'flex', alignItems: 'center', gap: 6,
-              }}>
-              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2.2}>
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                <line x1="10" y1="11" x2="10" y2="17" />
-                <line x1="14" y1="11" x2="14" y2="17" />
-              </svg>
-              מחק תו
-            </button>
-
-            <button
-              onClick={() => setSelNote(null)}
-              style={{
-                padding: '9px 14px', borderRadius: 10,
-                border: `1px solid ${T.border}`, cursor: 'pointer',
-                background: 'transparent', color: T.textMuted,
-                fontWeight: 600, fontSize: 13, marginLeft: 'auto',
-              }}>
-              ביטול
-            </button>
-          </div>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          padding: '9px 13px', background: T.bgInput, borderRadius: 8,
+          borderLeft: `3px solid ${T.primary}`,
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+            ✎ מיתר {strName(selNote.string)}{' '}
+            <span style={{ color: T.primary, fontVariantNumeric: 'tabular-nums' }}>
+              {fretInput ? `→ ${fretInput}` : `· פרט ${selNote.fret}`}
+            </span>
+          </span>
+          <span style={{ fontSize: 11, color: T.textMuted, marginLeft: 'auto', direction: 'rtl' }}>
+            הקלד פרט חדש · ⌫ מחיקה · Esc ביטול
+          </span>
         </div>
       )}
 

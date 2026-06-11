@@ -36,13 +36,15 @@ export const TabBuilder: React.FC = () => {
     return { title: '', subtitle: '', grid: emptyGrid(COLS_PER_LINE * 3), bars: [] };
   });
 
-  // sel  = keyboard target (click or arrow keys) — persistent
-  // hov  = exact [row, col] under mouse — ephemeral
-  const [sel, setSel]   = useState<[number, number] | null>(null);
-  const [hov, setHov]   = useState<[number, number] | null>(null);
-  const [zoom, setZoom] = useState(100);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [sel, setSel]       = useState<[number, number] | null>(null);
+  const [hov, setHov]       = useState<[number, number] | null>(null);
+  const [zoom, setZoom]     = useState(100);
+  const [busy, setBusy]     = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+
+  // Undo history — ref to avoid stale-closure issues
+  const histRef = useRef<TabState[]>([]);
+  const tabRef  = useRef<TabState>(tab);
 
   // Fit columns to container width — no horizontal scrolling, ever
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -57,20 +59,20 @@ export const TabBuilder: React.FC = () => {
     return () => ro.disconnect();
   }, []);
 
+  // Keep tabRef current so withHistory always captures the latest state
+  useEffect(() => { tabRef.current = tab; }, [tab]);
+
   const { title, subtitle, grid, bars } = tab;
   const numCols = grid[0]?.length ?? 0;
   const barsSet = new Set(bars);
   const cw = (BASE_CW * zoom) / 100;
   const ch = (BASE_CH * zoom) / 100;
   const fs = Math.max(9, Math.round((13 * zoom) / 100));
-  // Circle fits inside the cell, slightly smaller than cell height
   const circleD = Math.round(ch * 0.72);
-  // 30px reserved for string label + opening/closing bars
   const colsPerLine = Math.max(8, Math.floor((wrapW - 36) / cw));
   const numSys = Math.ceil(numCols / colsPerLine);
 
-  // Default = exactly 3 systems, whole tool fits one screen. Trim empty
-  // trailing columns (or extend) whenever the per-line column count changes.
+  // Default = exactly 3 systems. Resize without pushing to undo history.
   useEffect(() => {
     setTab(p => {
       const cols = p.grid[0]?.length ?? 0;
@@ -89,13 +91,28 @@ export const TabBuilder: React.FC = () => {
     });
   }, [colsPerLine]);
 
+  // Push current state to history, then apply updater
+  const withHistory = useCallback((fn: (p: TabState) => TabState) => {
+    histRef.current = [...histRef.current.slice(-30), tabRef.current];
+    setCanUndo(true);
+    setTab(fn);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (!histRef.current.length) return;
+    const prev = histRef.current[histRef.current.length - 1];
+    histRef.current = histRef.current.slice(0, -1);
+    setCanUndo(histRef.current.length > 0);
+    setTab(prev);
+  }, []);
+
   const setCell = useCallback((s: number, c: number, patch: Partial<Cell>) => {
-    setTab(p => {
+    withHistory(p => {
       const g = p.grid.map(r => [...r]);
       g[s][c] = { ...g[s][c], ...patch };
       return { ...p, grid: g };
     });
-  }, []);
+  }, [withHistory]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -127,32 +144,38 @@ export const TabBuilder: React.FC = () => {
         if (s > 0) setSel([s - 1, c]);
       } else if (e.key === 'Escape') {
         setSel(null);
+      } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        undo();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [sel, grid, numCols, setCell]);
+  }, [sel, grid, numCols, setCell, undo]);
 
-  // Apply technique to selected cell and advance cursor so user types destination fret
   const applyTech = (tech: Tech) => {
     if (!sel) return;
     const [s, c] = sel;
     const toggled = grid[s][c].tech === tech ? undefined : tech;
-    setCell(s, c, { tech: toggled });
+    withHistory(p => {
+      const g = p.grid.map(r => [...r]);
+      g[s][c] = { ...g[s][c], tech: toggled };
+      return { ...p, grid: g };
+    });
     if (toggled && c + 1 < numCols) setSel([s, c + 1]);
   };
 
   const toggleBar = () => {
     if (!sel) return;
     const c = sel[1];
-    setTab(p => ({
+    withHistory(p => ({
       ...p,
       bars: p.bars.includes(c) ? p.bars.filter(b => b !== c) : [...p.bars, c],
     }));
   };
 
   const addLine = () => {
-    setTab(p => ({
+    withHistory(p => ({
       ...p,
       grid: p.grid.map(r => [
         ...r,
@@ -161,14 +184,10 @@ export const TabBuilder: React.FC = () => {
     }));
   };
 
-  const handleSave = () => {
-    localStorage.setItem('scaleup_tab', JSON.stringify(tab));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
-  };
-
   const handleExport = async () => {
     setBusy(true);
+    // Auto-save before export
+    localStorage.setItem('scaleup_tab', JSON.stringify(tab));
     try {
       const { exportTabPDF } = await import('../../utils/pdfExport');
       await exportTabPDF(title, subtitle, grid, bars, STRS, COLS_PER_LINE);
@@ -233,14 +252,21 @@ export const TabBuilder: React.FC = () => {
             }}>
             {busy ? '…' : 'PDF'}
           </button>
-          <button onClick={handleSave}
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (Ctrl+Z)"
             style={{
-              background: saved ? '#6bcf7f' : '#F5C842',
-              color: '#1a1a1a', border: 'none', borderRadius: 8,
-              padding: '7px 13px', cursor: 'pointer', fontSize: 13, fontWeight: 800,
-              transition: 'background 0.3s',
+              background: T.bgInput,
+              color: canUndo ? T.text : T.textMuted,
+              border: `1px solid ${T.border}`,
+              borderRadius: 8, padding: '7px 11px',
+              cursor: canUndo ? 'pointer' : 'default',
+              fontSize: 16, lineHeight: 1,
+              opacity: canUndo ? 1 : 0.35,
+              transition: 'opacity 0.2s',
             }}>
-            {saved ? '✓ Saved' : '✓'}
+            ↩
           </button>
         </div>
       </div>
@@ -379,11 +405,6 @@ export const TabBuilder: React.FC = () => {
                             </span>
                           )}
 
-                          {/* ── Technique marker — standard tab notation ──
-                              slide: big / on the line straddling the gap to the next note
-                              h/p:   letter above the gap (hammer-on / pull-off arc position)
-                              bend:  b right after the number, on the line
-                              vibrato: ~ above the note itself */}
                           {(cell.tech === '/' || cell.tech === '\\') && (
                             <span style={{
                               position: 'absolute', top: '50%', right: 0,
