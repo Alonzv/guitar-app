@@ -69,6 +69,26 @@ export const TabBuilder: React.FC = () => {
   const colsPerLine = Math.max(8, Math.floor((wrapW - 36) / cw));
   const numSys = Math.ceil(numCols / colsPerLine);
 
+  // Default = exactly 3 systems, whole tool fits one screen. Trim empty
+  // trailing columns (or extend) whenever the per-line column count changes.
+  useEffect(() => {
+    setTab(p => {
+      const cols = p.grid[0]?.length ?? 0;
+      let lastUsed = -1;
+      for (const row of p.grid)
+        for (let c = cols - 1; c > lastUsed; c--)
+          if (row[c].fret) { lastUsed = c; break; }
+      const want = Math.max(3, Math.ceil((lastUsed + 1) / colsPerLine)) * colsPerLine;
+      if (want === cols) return p;
+      const grid = p.grid.map(row =>
+        want > cols
+          ? [...row, ...Array.from({ length: want - cols }, () => ({ fret: '' }))]
+          : row.slice(0, want)
+      );
+      return { ...p, grid };
+    });
+  }, [colsPerLine]);
+
   const setCell = useCallback((s: number, c: number, patch: Partial<Cell>) => {
     setTab(p => {
       const g = p.grid.map(r => [...r]);
@@ -225,6 +245,52 @@ export const TabBuilder: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Techniques toolbar — top, always visible ─────── */}
+      <div style={{
+        display: 'flex',
+        marginBottom: 18,
+        borderRadius: 10,
+        overflow: 'hidden',
+        border: `1px solid ${T.border}`,
+        background: T.bgInput,
+      }}>
+        {TECH_BTNS.map(({ id, label, sym }) => (
+          <button
+            key={id}
+            onClick={() => applyTech(id)}
+            title={!sel ? 'Select a note first' : label}
+            style={{
+              flex: 1, padding: '8px 4px', border: 'none',
+              borderRight: `1px solid ${T.border}`,
+              background: selTech === id ? T.primaryBg : T.bgInput,
+              cursor: sel ? 'pointer' : 'default',
+              fontSize: 11, fontWeight: 600, color: T.text,
+              opacity: sel ? 1 : 0.5,
+              transition: 'background 0.12s',
+            }}>
+            <div style={{ fontSize: 16, fontFamily: 'monospace', color: T.coral, marginBottom: 3 }}>
+              {sym}
+            </div>
+            {label}
+          </button>
+        ))}
+
+        <button
+          onClick={toggleBar}
+          title={!sel ? 'Select a note first' : 'Toggle bar line after column'}
+          style={{
+            flex: 1, padding: '8px 4px', border: 'none',
+            background: sel && barsSet.has(sel[1]) ? T.primaryBg : T.bgInput,
+            cursor: sel ? 'pointer' : 'default',
+            fontSize: 11, fontWeight: 600, color: T.text,
+            opacity: sel ? 1 : 0.5,
+            transition: 'background 0.12s',
+          }}>
+          <div style={{ fontSize: 16, fontFamily: 'monospace', color: T.coral, marginBottom: 3 }}>|</div>
+          Bar
+        </button>
+      </div>
+
       {/* ── Tab grid ────────────────────────────────────── */}
       <div ref={wrapRef} style={{ paddingBottom: 8 }}>
         {Array.from({ length: numSys }, (_, sys) => {
@@ -341,15 +407,18 @@ export const TabBuilder: React.FC = () => {
                             </span>
                           )}
                           {cell.tech === 'b' && (
-                            <span style={{
-                              position: 'absolute', top: '38%', right: 1,
-                              transform: 'translateY(-50%)',
-                              fontSize: Math.round(fs * 1.15), fontFamily: 'monospace',
-                              fontWeight: 700, color: T.coral,
-                              lineHeight: 1, zIndex: 2, pointerEvents: 'none',
-                            }}>
-                              b
-                            </span>
+                            <svg
+                              width={Math.round(cw * 0.7)} height={Math.round(ch * 0.32)}
+                              viewBox="0 0 20 8"
+                              style={{
+                                position: 'absolute', top: 0, right: 0,
+                                transform: 'translateX(50%)',
+                                zIndex: 2, pointerEvents: 'none',
+                              }}>
+                              <path d="M 1 7 Q 10 -3 19 7" fill="none"
+                                stroke="currentColor" strokeWidth="1.6"
+                                strokeLinecap="round" style={{ color: T.coral }} />
+                            </svg>
                           )}
                           {cell.tech === '~' && (
                             <span style={{
@@ -396,64 +465,6 @@ export const TabBuilder: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Bottom toolbar — sticky, always visible ──────── */}
-      <div style={{
-        display: 'flex',
-        position: 'sticky',
-        bottom: 8,
-        zIndex: 20,
-        marginTop: 16,
-        borderRadius: 10,
-        overflow: 'hidden',
-        border: `1px solid ${T.border}`,
-        background: T.bgInput,
-        boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
-      }}>
-        <button style={{
-          flex: 1, padding: '10px 0', border: 'none',
-          background: T.bgInput, cursor: 'default',
-          fontSize: 16, color: T.textMuted,
-          borderRight: `1px solid ${T.border}`,
-        }}>
-          •••
-        </button>
-
-        {TECH_BTNS.map(({ id, label, sym }) => (
-          <button
-            key={id}
-            onClick={() => applyTech(id)}
-            title={!sel ? 'Select a note first' : label}
-            style={{
-              flex: 2, padding: '8px 4px', border: 'none',
-              borderRight: `1px solid ${T.border}`,
-              background: selTech === id ? T.primaryBg : T.bgInput,
-              cursor: sel ? 'pointer' : 'default',
-              fontSize: 11, fontWeight: 600, color: T.text,
-              opacity: sel ? 1 : 0.5,
-              transition: 'background 0.12s',
-            }}>
-            <div style={{ fontSize: 16, fontFamily: 'monospace', color: T.coral, marginBottom: 3 }}>
-              {sym}
-            </div>
-            {label}
-          </button>
-        ))}
-
-        <button
-          onClick={toggleBar}
-          title={!sel ? 'Select a note first' : 'Toggle bar line after column'}
-          style={{
-            flex: 2, padding: '8px 4px', border: 'none',
-            background: sel && barsSet.has(sel[1]) ? T.primaryBg : T.bgInput,
-            cursor: sel ? 'pointer' : 'default',
-            fontSize: 11, fontWeight: 600, color: T.text,
-            opacity: sel ? 1 : 0.5,
-            transition: 'background 0.12s',
-          }}>
-          <div style={{ fontSize: 16, fontFamily: 'monospace', color: T.coral, marginBottom: 3 }}>|</div>
-          Bar
-        </button>
-      </div>
     </div>
   );
 };

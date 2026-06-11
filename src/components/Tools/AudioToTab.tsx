@@ -2,21 +2,21 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { T, card } from '../../theme';
 import {
   transcribeAudioBuffer, transcribeWithMT3Server, refineNotesWithAI, notesToTab, buildWaveform,
-  exportTabToPDF, findPositions,
+  exportTabToPDF, midiToFreq, OPEN_MIDI, STRING_NAMES,
   type TabData, type TabEvent, type DetectedNote, type TranscribeConfig,
-  type InstrumentType, type MixType,
-  STRING_NAMES,
 } from '../../utils/audioToTab';
 import { unlockAudio } from '../../utils/audioPlayback';
 import { exportNotesMidi } from '../../utils/midiExport';
-import { MiniFretboard } from '../Fretboard/MiniFretboard';
-import type { FretPosition } from '../../types/music';
 
-type Stage = 'idle' | 'recording' | 'onboarding' | 'processing' | 'result' | 'error';
+type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'error';
 
-// Permanent transcription server (Hugging Face Space) — used by default for
-// every visitor; the Advanced panel can override or clear it per-browser.
+// Permanent transcription server (Hugging Face Space). A localStorage override
+// ('mt3ServerUrl') is still honored for power users, but there is no UI for it.
 const DEFAULT_MT3_URL = 'https://vipapito-scaleup-transcribe.hf.space';
+
+// Default transcription config for the in-browser fallback path (the server
+// path ignores it entirely, so there's nothing for the user to choose).
+const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' };
 
 // ── Tab visual constants (parchment / sheet-music look) ───────────────────────
 
@@ -259,307 +259,6 @@ function RecordingBars() {
 // Large viewBox (100-unit scale) for precise proportions, rendered small via width/height
 
 // Acoustic — dreadnought hourglass body, 6 pegs (3+3), round soundhole
-function IcoAcoustic({ c, bg }: { c: string; bg: string }) {
-  return (
-    <svg viewBox="0 0 100 220" width={36} height={80} fill="none">
-      {/* Headstock */}
-      <rect x="28" y="1" width="44" height="24" rx="5" fill={c}/>
-      {/* 3 pegs — left */}
-      <circle cx="21" cy="6"  r="6" fill={c}/><circle cx="21" cy="6"  r="2.4" fill={bg} opacity="0.7"/>
-      <circle cx="21" cy="14" r="6" fill={c}/><circle cx="21" cy="14" r="2.4" fill={bg} opacity="0.7"/>
-      <circle cx="21" cy="22" r="6" fill={c}/><circle cx="21" cy="22" r="2.4" fill={bg} opacity="0.7"/>
-      {/* 3 pegs — right */}
-      <circle cx="79" cy="6"  r="6" fill={c}/><circle cx="79" cy="6"  r="2.4" fill={bg} opacity="0.7"/>
-      <circle cx="79" cy="14" r="6" fill={c}/><circle cx="79" cy="14" r="2.4" fill={bg} opacity="0.7"/>
-      <circle cx="79" cy="22" r="6" fill={c}/><circle cx="79" cy="22" r="2.4" fill={bg} opacity="0.7"/>
-      {/* Nut */}
-      <rect x="33" y="25" width="34" height="5" rx="1.5" fill={c} opacity="0.6"/>
-      {/* Neck */}
-      <rect x="43" y="30" width="14" height="58" rx="3" fill={c}/>
-      {/* Body — dreadnought hourglass path */}
-      <path d="M50,86 C65,86 90,94 90,114 C90,130 76,135 68,137 C80,140 94,150 94,172 C94,198 74,218 50,218 C26,218 6,198 6,172 C6,150 20,140 32,137 C24,135 10,130 10,114 C10,94 35,86 50,86Z" fill={c}/>
-      {/* Soundhole */}
-      <circle cx="50" cy="170" r="18" fill={bg}/>
-      <circle cx="50" cy="170" r="12" fill={c} opacity="0.18"/>
-    </svg>
-  );
-}
-
-// Electric — SG double-horn body, 6 pegs (3+3), 2 pickups visible
-function IcoElectric({ c, bg }: { c: string; bg: string }) {
-  return (
-    <svg viewBox="0 0 110 214" width={40} height={78} fill="none">
-      {/* Headstock */}
-      <rect x="30" y="1" width="50" height="25" rx="5" fill={c}/>
-      {/* 3 pegs — left */}
-      <circle cx="23" cy="7"  r="6" fill={c}/><circle cx="23" cy="7"  r="2.4" fill={bg} opacity="0.7"/>
-      <circle cx="23" cy="16" r="6" fill={c}/><circle cx="23" cy="16" r="2.4" fill={bg} opacity="0.7"/>
-      <circle cx="23" cy="24" r="6" fill={c}/><circle cx="23" cy="24" r="2.4" fill={bg} opacity="0.7"/>
-      {/* 3 pegs — right */}
-      <circle cx="87" cy="7"  r="6" fill={c}/><circle cx="87" cy="7"  r="2.4" fill={bg} opacity="0.7"/>
-      <circle cx="87" cy="16" r="6" fill={c}/><circle cx="87" cy="16" r="2.4" fill={bg} opacity="0.7"/>
-      <circle cx="87" cy="24" r="6" fill={c}/><circle cx="87" cy="24" r="2.4" fill={bg} opacity="0.7"/>
-      {/* Nut */}
-      <rect x="36" y="26" width="38" height="5" rx="1.5" fill={c} opacity="0.6"/>
-      {/* Neck */}
-      <rect x="47" y="31" width="16" height="58" rx="3" fill={c}/>
-      {/* Left horn — sharp upward cutaway */}
-      <path d="M47,92 C40,90 20,78 13,69 C7,61 13,53 20,60 C26,66 38,84 47,92Z" fill={c}/>
-      {/* Right horn — mirror */}
-      <path d="M63,92 C70,90 90,78 97,69 C103,61 97,53 90,60 C84,66 72,84 63,92Z" fill={c}/>
-      {/* Body bridge */}
-      <rect x="47" y="88" width="16" height="10" fill={c}/>
-      {/* Lower body */}
-      <path d="M38,98 C18,102 4,118 4,144 C4,176 22,212 55,212 C88,212 106,176 106,144 C106,118 92,102 72,98Z" fill={c}/>
-      {/* Pickup 1 */}
-      <rect x="28" y="128" width="54" height="14" rx="4" fill={bg} opacity="0.65"/>
-      {/* Pickup 2 */}
-      <rect x="28" y="158" width="54" height="14" rx="4" fill={bg} opacity="0.65"/>
-    </svg>
-  );
-}
-
-// Bass — very long neck is the dominant visual (>50% of height), compact body, 4 pegs (2+2)
-function IcoBass({ c, bg }: { c: string; bg: string }) {
-  return (
-    <svg viewBox="0 0 90 210" width={30} height={76} fill="none">
-      {/* Headstock — compact */}
-      <rect x="26" y="1" width="38" height="22" rx="4" fill={c}/>
-      {/* 2 pegs — left */}
-      <circle cx="19" cy="7"  r="5.5" fill={c}/><circle cx="19" cy="7"  r="2.2" fill={bg} opacity="0.7"/>
-      <circle cx="19" cy="16" r="5.5" fill={c}/><circle cx="19" cy="16" r="2.2" fill={bg} opacity="0.7"/>
-      {/* 2 pegs — right */}
-      <circle cx="71" cy="7"  r="5.5" fill={c}/><circle cx="71" cy="7"  r="2.2" fill={bg} opacity="0.7"/>
-      <circle cx="71" cy="16" r="5.5" fill={c}/><circle cx="71" cy="16" r="2.2" fill={bg} opacity="0.7"/>
-      {/* Nut */}
-      <rect x="28" y="23" width="34" height="5" rx="1.5" fill={c} opacity="0.6"/>
-      {/* Long neck — 108px of 210px viewBox height = 51% */}
-      <rect x="39" y="28" width="12" height="108" rx="3" fill={c}/>
-      {/* Upper bout */}
-      <ellipse cx="45" cy="152" rx="24" ry="18" fill={c}/>
-      {/* Lower bout */}
-      <ellipse cx="45" cy="186" rx="30" ry="22" fill={c}/>
-      {/* Pickup — wide single coil */}
-      <rect x="26" y="158" width="38" height="16" rx="4" fill={bg} opacity="0.65"/>
-    </svg>
-  );
-}
-
-// Ukulele — short neck, round compact body, clearly the smallest instrument
-function IcoUkulele({ c, bg }: { c: string; bg: string }) {
-  return (
-    <svg viewBox="0 0 86 160" width={28} height={52} fill="none">
-      {/* Headstock */}
-      <rect x="26" y="1" width="34" height="20" rx="4" fill={c}/>
-      {/* 2 pegs — left */}
-      <circle cx="19" cy="6"  r="5" fill={c}/><circle cx="19" cy="6"  r="2" fill={bg} opacity="0.7"/>
-      <circle cx="19" cy="15" r="5" fill={c}/><circle cx="19" cy="15" r="2" fill={bg} opacity="0.7"/>
-      {/* 2 pegs — right */}
-      <circle cx="67" cy="6"  r="5" fill={c}/><circle cx="67" cy="6"  r="2" fill={bg} opacity="0.7"/>
-      <circle cx="67" cy="15" r="5" fill={c}/><circle cx="67" cy="15" r="2" fill={bg} opacity="0.7"/>
-      {/* Nut */}
-      <rect x="28" y="21" width="30" height="4" rx="1" fill={c} opacity="0.6"/>
-      {/* Short neck — 46px of 160px = 29% height only */}
-      <rect x="37" y="25" width="12" height="46" rx="2.5" fill={c}/>
-      {/* Body — dreadnought hourglass (smaller proportions) */}
-      <path d="M43,68 C52,68 68,74 68,86 C68,96 60,100 55,102 C62,104 72,110 72,122 C72,140 60,158 43,158 C26,158 14,140 14,122 C14,110 24,104 31,102 C26,100 18,96 18,86 C18,74 34,68 43,68Z" fill={c}/>
-      {/* Soundhole */}
-      <circle cx="43" cy="122" r="14" fill={bg}/>
-      <circle cx="43" cy="122" r="9"  fill={c} opacity="0.18"/>
-    </svg>
-  );
-}
-
-// ── Onboarding screen ─────────────────────────────────────────────────────────
-
-const INSTRUMENTS: { id: InstrumentType; label: string; Icon: React.FC<{ c: string; bg: string }> }[] = [
-  { id: 'acoustic', label: 'Acoustic Guitar', Icon: IcoAcoustic },
-  { id: 'electric', label: 'Electric Guitar', Icon: IcoElectric },
-  { id: 'bass',     label: 'Bass Guitar',     Icon: IcoBass     },
-  { id: 'ukulele',  label: 'Ukulele',         Icon: IcoUkulele  },
-];
-
-function OnboardingScreen({
-  fileName,
-  onStart,
-  onClear,
-  mt3Url,
-  onMt3UrlChange,
-}: {
-  fileName: string;
-  onStart: (cfg: TranscribeConfig) => void;
-  onClear: () => void;
-  mt3Url: string;
-  onMt3UrlChange: (url: string) => void;
-}) {
-  const [instrument,    setInstrument]    = useState<InstrumentType>('acoustic');
-  const [mixType,       setMixType]       = useState<MixType>('solo');
-  const [showAdvanced,  setShowAdvanced]  = useState(!!mt3Url);
-
-  const stepHdr: React.CSSProperties = {
-    fontSize: 11, fontWeight: 800, letterSpacing: '0.12em',
-    textTransform: 'uppercase', color: T.textMuted, margin: '0 0 12px',
-  };
-  const stepNum: React.CSSProperties = {
-    fontSize: 11, fontWeight: 700, color: T.primary, marginRight: 6,
-  };
-
-  return (
-    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <style>{RESPONSIVE_CSS}</style>
-
-      {/* File name */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p style={{ margin: 0, fontSize: 12, color: T.textMuted,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
-          {fileName}
-        </p>
-        <ClearBtn onClear={onClear} />
-      </div>
-
-      {/* Step 1 — Instrument */}
-      <div style={card({ padding: '16px 14px' })}>
-        <p style={stepHdr}><span style={stepNum}>01</span>WHICH INSTRUMENT?</p>
-        <div className="at-instrument-grid">
-          {INSTRUMENTS.map(({ id, label, Icon }) => {
-            const active = instrument === id;
-            return (
-              <button key={id} onClick={() => setInstrument(id)} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: 8, padding: '14px 8px 10px', borderRadius: 12, cursor: 'pointer',
-                border: `2px solid ${active ? T.primary : T.border}`,
-                background: active ? T.primaryBg : T.bgInput,
-                transition: 'border-color 0.15s, background 0.15s',
-              }}>
-                <Icon
-                  c={active ? T.primary : T.textMuted}
-                  bg={active ? T.primaryBg : T.bgInput}
-                />
-                <span style={{ fontSize: 11, fontWeight: 700,
-                  color: active ? T.primary : T.text, textAlign: 'center', lineHeight: 1.2 }}>
-                  {label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Step 2 — Transcription mode */}
-      <div style={card({ padding: '16px 14px' })}>
-        <p style={stepHdr}><span style={stepNum}>02</span>HOW SHOULD WE TRANSCRIBE IT?</p>
-        <div className="at-mix-row">
-          {([
-            {
-              id: 'solo' as MixType,
-              title: 'Direct',
-              desc: 'The instrument is clearly audible. We\'ll isolate and transcribe exactly what it plays.',
-              tip: 'Best for recordings where the instrument is the main focus.',
-            },
-            {
-              id: 'full_mix' as MixType,
-              title: 'Full Mix',
-              desc: 'A full song or band recording. We\'ll detect the instrument\'s part in the mix.',
-              tip: 'Use when other instruments or vocals are present.',
-            },
-          ] as const).map(opt => {
-            const active = mixType === opt.id;
-            return (
-              <button key={opt.id} onClick={() => setMixType(opt.id)} style={{
-                flex: 1, textAlign: 'left', padding: '12px 12px 10px', borderRadius: 12,
-                cursor: 'pointer', border: `2px solid ${active ? T.primary : T.border}`,
-                background: active ? T.primaryBg : T.bgInput,
-                transition: 'border-color 0.15s, background 0.15s',
-                display: 'flex', flexDirection: 'column', gap: 6,
-              }}>
-                <span style={{ fontSize: 13, fontWeight: 800,
-                  color: active ? T.primary : T.text }}>{opt.title}</span>
-                <span style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.4 }}>{opt.desc}</span>
-                <div style={{
-                  marginTop: 4, padding: '6px 8px', borderRadius: 8,
-                  background: active ? 'rgba(var(--gc-primary-rgb, 99,102,241),.10)' : T.bgCard,
-                  border: `1px solid ${active ? T.primary : T.border}`,
-                }}>
-                  <span style={{ fontSize: 10, color: active ? T.primary : T.textMuted, lineHeight: 1.3 }}>
-                    {opt.tip}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Advanced settings — MT3 server URL */}
-      <div>
-        <button
-          onClick={() => setShowAdvanced(v => !v)}
-          style={{
-            width: '100%', padding: '9px 14px', borderRadius: 10, cursor: 'pointer',
-            background: 'transparent', border: `1px solid ${T.border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            color: T.textMuted, fontSize: 12, fontWeight: 700,
-          }}
-        >
-          <span>⚙️ Advanced (MT3 Server)</span>
-          <span style={{ fontSize: 10, transition: 'transform 0.2s', display: 'inline-block',
-            transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-        </button>
-
-        {showAdvanced && (
-          <div style={{
-            marginTop: 8, padding: '14px 14px', borderRadius: 10,
-            background: T.bgInput, border: `1px solid ${T.border}`,
-            display: 'flex', flexDirection: 'column', gap: 8,
-          }}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              MT3 Server URL (Google Colab + ngrok)
-            </p>
-            <input
-              type="url"
-              value={mt3Url}
-              onChange={e => onMt3UrlChange(e.target.value)}
-              placeholder="https://xxxx-xx-xx.ngrok-free.app"
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                padding: '9px 12px', borderRadius: 8, fontSize: 13,
-                border: `1px solid ${mt3Url ? T.primary : T.border}`,
-                background: T.bgCard, color: T.text, outline: 'none',
-                fontFamily: 'monospace',
-              }}
-            />
-            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>
-              {mt3Url
-                ? '✅ MT3 server configured — will use Google\'s model instead of Basic Pitch.'
-                : 'Leave empty to use Basic Pitch (in-browser). Set a URL to use the higher-accuracy MT3 model running in Google Colab.'}
-            </p>
-            {mt3Url && (
-              <button
-                onClick={() => onMt3UrlChange('')}
-                style={{
-                  alignSelf: 'flex-start', padding: '5px 12px', borderRadius: 7,
-                  border: `1px solid ${T.border}`, background: T.bgCard,
-                  color: T.textMuted, fontSize: 11, cursor: 'pointer',
-                }}
-              >
-                נקה URL
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Start button */}
-      <button onClick={() => onStart({ instrument, mixType })} style={{
-        padding: '14px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
-        background: T.primary, color: '#fff', fontWeight: 800, fontSize: 15,
-      }}>
-        Start Analysis
-      </button>
-    </div>
-  );
-}
-
 // ── Responsive styles ─────────────────────────────────────────────────────────
 
 const RESPONSIVE_CSS = `
@@ -596,15 +295,7 @@ export const AudioToTab: React.FC = () => {
   const [fileName, setFileName]       = useState('');
   const [recSecs, setRecSecs]         = useState(0);
   const [selNote, setSelNote]         = useState<TabEvent | null>(null);
-  const [mt3Url, setMt3Url]           = useState<string>(() => localStorage.getItem('mt3ServerUrl') ?? DEFAULT_MT3_URL);
-
-  const handleMt3UrlChange = useCallback((url: string) => {
-    setMt3Url(url);
-    // Empty string is stored too — it means "explicitly use in-browser Basic Pitch"
-    localStorage.setItem('mt3ServerUrl', url);
-  }, []);
-
-  const pendingBlobRef = useRef<{ blob: Blob; name: string } | null>(null);
+  const [editFret, setEditFret]       = useState(0);
 
   const mediaRecRef  = useRef<MediaRecorder | null>(null);
   const chunksRef    = useRef<Blob[]>([]);
@@ -632,13 +323,12 @@ export const AudioToTab: React.FC = () => {
     setProgress(0);
     setPhaseLabel('');
     audioBufRef.current  = null;
-    pendingBlobRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [originalUrl]);
 
   // ── Process Blob → tab ────────────────────────────────────────────────────
 
-  const processBlob = useCallback(async (blob: Blob, name: string, cfg: TranscribeConfig) => {
+  const processBlob = useCallback(async (blob: Blob, name: string, cfg: TranscribeConfig = DEFAULT_CFG) => {
     setStage('processing');
     setProgress(0);
     setFileName(name);
@@ -658,7 +348,7 @@ export const AudioToTab: React.FC = () => {
 
       let rawNotes: DetectedNote[];
       let viaServer = false;
-      const serverUrl = mt3Url.trim();
+      const serverUrl = (localStorage.getItem('mt3ServerUrl') ?? DEFAULT_MT3_URL).trim();
 
       if (serverUrl) {
         // ── Server path, with automatic in-browser fallback ───────────────
@@ -706,7 +396,7 @@ export const AudioToTab: React.FC = () => {
       setError(msg || 'שגיאה בעיבוד השמע — ודא שהקובץ תקין ונסה שוב.');
       setStage('error');
     }
-  }, [mt3Url]);
+  }, []);
 
   // ── File handling ─────────────────────────────────────────────────────────
 
@@ -717,10 +407,8 @@ export const AudioToTab: React.FC = () => {
       setStage('error');
       return;
     }
-    pendingBlobRef.current = { blob: file, name: file.name };
-    setFileName(file.name);
-    setStage('onboarding');
-  }, []);
+    processBlob(file, file.name);
+  }, [processBlob]);
 
   // ── Mic recording ─────────────────────────────────────────────────────────
 
@@ -738,9 +426,7 @@ export const AudioToTab: React.FC = () => {
       mr.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
         const blob = new Blob(chunksRef.current, { type: mime || 'audio/webm' });
-        pendingBlobRef.current = { blob, name: 'recording.webm' };
-        setFileName('recording.webm');
-        setStage('onboarding');
+        processBlob(blob, 'recording.webm');
       };
       mr.start(100);
       mediaRecRef.current = mr;
@@ -842,21 +528,6 @@ export const AudioToTab: React.FC = () => {
     </div>
   );
 
-  // ── Onboarding ───────────────────────────────────────────────────────────
-
-  if (stage === 'onboarding') return (
-    <OnboardingScreen
-      fileName={fileName}
-      onStart={cfg => {
-        const p = pendingBlobRef.current;
-        if (p) processBlob(p.blob, p.name, cfg);
-      }}
-      onClear={reset}
-      mt3Url={mt3Url}
-      onMt3UrlChange={handleMt3UrlChange}
-    />
-  );
-
   // ── Processing ────────────────────────────────────────────────────────────
 
   if (stage === 'processing') return (
@@ -909,7 +580,22 @@ export const AudioToTab: React.FC = () => {
 
   // ── Result ────────────────────────────────────────────────────────────────
 
-  const selPositions: FretPosition[] = selNote ? findPositions(selNote.midiNote) : [];
+  // Rebuild notes + tab after editing/deleting the selected note.
+  // newFret === null → delete the note entirely.
+  const editSelNote = (newFret: number | null) => {
+    if (!selNote) return;
+    const updated: DetectedNote[] = [];
+    for (const n of notes) {
+      const match = Math.abs(n.startTime - selNote.startTime) < 0.02 && n.midiNote === selNote.midiNote;
+      if (!match) { updated.push(n); continue; }
+      if (newFret === null) continue;
+      const midi = OPEN_MIDI[selNote.string] + newFret;
+      updated.push({ ...n, midiNote: midi, frequency: midiToFreq(midi) });
+    }
+    setNotes(updated);
+    setTabData(notesToTab(updated, 200, fileName.replace(/\.[^.]+$/, ''), audioBufRef.current?.duration ?? tabData.duration));
+    setSelNote(null);
+  };
 
   return (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -970,37 +656,84 @@ export const AudioToTab: React.FC = () => {
         </button>
       </div>
 
-      {/* Classic SVG tab — click for fingering alternatives */}
+      {/* Classic SVG tab — click a note to edit */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
           <p style={{ ...LABEL, margin: 0 }}>טאב</p>
-          <span style={{ fontSize: 11, color: T.textMuted }}>לחץ על תו לאפשרויות אצבוע</span>
+          <span style={{ fontSize: 11, color: T.textMuted }}>לחץ על תו לעריכה</span>
         </div>
-        <TabDisplay tabData={tabData} onSelectNote={setSelNote} />
+        <TabDisplay tabData={tabData} onSelectNote={n => { setSelNote(n); if (n) setEditFret(n.fret); }} />
       </div>
 
-      {/* Fingering alternatives */}
-      {selNote && selPositions.length > 0 && (
+      {/* Note editing */}
+      {selNote && (
         <div style={card({ padding: '14px 14px' })}>
           <p style={LABEL}>
-            אפשרויות אצבוע — מיתר {strName(selNote.string)} · פרט {selNote.fret}
+            עריכת תו — מיתר {strName(selNote.string)} · פרט {selNote.fret}
           </p>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-            {selPositions.map((pos, i) => {
-              const active = pos.string === selNote.string && pos.fret === selNote.fret;
-              return (
-                <div key={i} style={{
-                  flexShrink: 0, textAlign: 'center', padding: '8px 10px', borderRadius: 10,
-                  border: `1.5px solid ${active ? T.primary : T.border}`,
-                  background: active ? T.primaryBg : T.bgInput,
-                }}>
-                  <MiniFretboard voicing={[pos]} dotColor={active ? T.primary : T.secondary} showStringLabels />
-                  <p style={{ margin: '5px 0 0', fontSize: 11, color: active ? T.primary : T.textMuted, fontWeight: 700 }}>
-                    {strName(pos.string)} · {pos.fret === 0 ? 'פתוח' : `פרט ${pos.fret}`}
-                  </p>
-                </div>
-              );
-            })}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {/* Fret stepper */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 2,
+              background: T.bgInput, borderRadius: 10, padding: '4px 6px',
+            }}>
+              <button onClick={() => setEditFret(f => Math.max(0, f - 1))}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 18, lineHeight: 1, padding: '4px 8px' }}>
+                −
+              </button>
+              <span style={{
+                fontSize: 16, fontWeight: 800, color: editFret === selNote.fret ? T.text : T.primary,
+                minWidth: 30, textAlign: 'center', fontVariantNumeric: 'tabular-nums',
+              }}>
+                {editFret}
+              </span>
+              <button onClick={() => setEditFret(f => Math.min(22, f + 1))}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 18, lineHeight: 1, padding: '4px 8px' }}>
+                +
+              </button>
+            </div>
+
+            <button
+              onClick={() => editSelNote(editFret)}
+              disabled={editFret === selNote.fret}
+              style={{
+                padding: '9px 20px', borderRadius: 10, border: 'none',
+                cursor: editFret === selNote.fret ? 'default' : 'pointer',
+                background: editFret === selNote.fret ? T.bgInput : T.primary,
+                color: editFret === selNote.fret ? T.textMuted : '#fff',
+                fontWeight: 700, fontSize: 13,
+              }}>
+              עדכן
+            </button>
+
+            <button
+              onClick={() => editSelNote(null)}
+              style={{
+                padding: '9px 20px', borderRadius: 10,
+                border: `1px solid ${T.coral}`, cursor: 'pointer',
+                background: 'transparent', color: T.coral,
+                fontWeight: 700, fontSize: 13,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2.2}>
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+              מחק תו
+            </button>
+
+            <button
+              onClick={() => setSelNote(null)}
+              style={{
+                padding: '9px 14px', borderRadius: 10,
+                border: `1px solid ${T.border}`, cursor: 'pointer',
+                background: 'transparent', color: T.textMuted,
+                fontWeight: 600, fontSize: 13, marginLeft: 'auto',
+              }}>
+              ביטול
+            </button>
           </div>
         </div>
       )}
