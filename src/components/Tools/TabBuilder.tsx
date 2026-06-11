@@ -237,26 +237,30 @@ export const TabBuilder: React.FC = () => {
                   {Array.from({ length: s1 - s0 }, (_, ci) => {
                     const c  = s0 + ci;
                     const cell = grid[si][c];
-                    const isSel = sel?.[0] === si && sel?.[1] === c;
-                    const isHov = hov === c && !isSel;
+                    const isHov = hov === c;
                     const isBar = barsSet.has(c);
+                    // Rounded ends on the hover column band (top of first string, bottom of last)
+                    const hovRadius = !isHov ? 0
+                      : si === 0 ? '10px 10px 0 0'
+                      : si === STRS.length - 1 ? '0 0 10px 10px'
+                      : 0;
 
                     return (
                       <React.Fragment key={c}>
                         <div
                           onClick={() => setSel([si, c])}
-                          onMouseEnter={() => setHov(c)}
+                          onMouseEnter={() => { setHov(c); setSel([si, c]); }}
                           style={{
                             width: cw, height: ch, flexShrink: 0,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             borderBottom: `1px dashed ${T.border}`,
-                            background: isSel ? '#FFE040' : isHov ? '#FFFBD0' : 'transparent',
+                            background: isHov ? 'rgba(255, 235, 130, 0.8)' : 'transparent',
                             cursor: 'pointer',
                             fontSize: fs, fontFamily: 'monospace', fontWeight: 700,
                             color: T.text,
                             position: 'relative',
                             transition: 'background 0.05s',
-                            borderRadius: isSel ? 3 : 0,
+                            borderRadius: hovRadius,
                           }}>
                           {cell.fret}
                           {cell.tech && (
