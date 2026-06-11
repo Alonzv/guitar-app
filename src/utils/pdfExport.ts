@@ -178,6 +178,71 @@ async function renderHTMLToPDF(html: string, filename: string): Promise<void> {
   }
 }
 
+// ── Tab PDF ───────────────────────────────────────────────
+
+type TabCell = { fret: string; tech?: string };
+
+function tabCellText(cell: TabCell): string {
+  if (!cell.fret) return '---';
+  const t = cell.tech ?? '';
+  return cell.fret.length === 1 ? `-${cell.fret}${t || '-'}` : `${cell.fret}${t || '-'}`;
+}
+
+export async function exportTabPDF(
+  title: string,
+  subtitle: string,
+  grid: TabCell[][],
+  bars: number[],
+  strings: string[],
+  colsPerLine: number,
+): Promise<void> {
+  const colCount = grid[0]?.length ?? 0;
+  const numSys   = Math.ceil(colCount / colsPerLine);
+  const barsSet  = new Set(bars);
+
+  let systemsHTML = '';
+  for (let sys = 0; sys < numSys; sys++) {
+    const start = sys * colsPerLine;
+    const end   = Math.min(start + colsPerLine, colCount);
+    const isEmpty = strings.every((_, s) =>
+      Array.from({ length: end - start }, (_, ci) => grid[s][start + ci])
+        .every(c => !c.fret)
+    );
+    if (isEmpty) continue;
+
+    systemsHTML += '<div style="margin-bottom:22px;">';
+    for (let s = 0; s < strings.length; s++) {
+      let line = `${strings[s]}|`;
+      for (let c = start; c < end; c++) {
+        line += tabCellText(grid[s][c]);
+        if (barsSet.has(c)) line += '|';
+      }
+      line += '|';
+      systemsHTML += `<div style="font-family:'Courier New',monospace;font-size:14px;line-height:1.85;white-space:pre;">${escapeHtml(line)}</div>`;
+    }
+    systemsHTML += '</div>';
+  }
+
+  const html = `
+    <div style="
+      font-family:Arial,Helvetica,sans-serif;
+      padding:44px 52px;
+      width:680px;
+      background:#fff;
+      color:#111;
+      box-sizing:border-box;
+    ">
+      ${title ? `<h1 style="font-size:24px;font-weight:800;margin:0 0 6px;">${escapeHtml(title)}</h1>` : ''}
+      ${subtitle ? `<p style="font-size:13px;color:#666;margin:0 0 18px;">${escapeHtml(subtitle)}</p>` : ''}
+      <div style="height:2px;background:#C44900;margin-bottom:30px;"></div>
+      ${systemsHTML || '<p style="color:#999;font-size:13px;">Empty tab</p>'}
+      <div style="margin-top:36px;font-size:10px;color:#bbb;text-align:right;">Created with ScaleUp</div>
+    </div>`;
+
+  const filename = `${(title || 'tab').replace(/[^a-zA-Z0-9 ]/g, '_')}.pdf`;
+  await renderHTMLToPDF(html, filename);
+}
+
 // ── Public API ────────────────────────────────────────────
 
 export async function exportProgressionPDF(
