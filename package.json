@@ -26,11 +26,12 @@
     "mac": {
       "category": "public.app-category.music",
       "icon": "public/icons/icon-512.png",
+      "identity": null,
       "target": [
         {
           "target": "dmg",
           "arch": [
-            "arm64"
+            "universal"
           ]
         }
       ],
