@@ -12,6 +12,7 @@ type TriadType = 'major' | 'minor' | 'diminished' | 'augmented';
 type Degree    = 'root' | 'third' | 'fifth';
 type DisplayMode = 'notes' | 'intervals';
 type FretArea  = 'all' | '1-4' | '5-8' | '9-12';
+type SortMode  = 'strings' | 'position';
 
 interface TriadDef {
   label: string;
@@ -63,6 +64,7 @@ interface ExpandedCard {
   setLabel:     string;
   invLabel:     string;
   fretBadge:    string;
+  minFret:      number;
   fretPositions: { string: number; fret: number }[];
   colors:       string[];
   labels:       string[];
@@ -162,6 +164,8 @@ export function TriadsGenerator() {
   const [selectedArea,       setSelectedArea]       = useState<FretArea>('all');
   const [expandedIdx,        setExpandedIdx]        = useState<number | null>(null);
   const [filtersOpen,        setFiltersOpen]        = useState(false);
+  const [sortMode,           setSortMode]           = useState<SortMode>('strings');
+  const [sortOpen,           setSortOpen]           = useState(false);
 
   const def   = TRIADS[triadType];
   const notes = useMemo(() => getTriadNotes(root, def.intervals), [root, def]);
@@ -205,7 +209,7 @@ export function TriadsGenerator() {
           chordName: `${root}${def.suffix}`,
           setLabel:  ss.label,
           invLabel:  INVERSION_LABELS[inv],
-          fretBadge, fretPositions, colors, labels, shape,
+          fretBadge, minFret, fretPositions, colors, labels, shape,
         });
       });
     });
@@ -235,6 +239,14 @@ export function TriadsGenerator() {
     const midi = [...notes, notes[0]].map(n => TonalNote.midi(`${n}4`) ?? 60);
     playScale(midi);
   };
+
+  // Sorted flat list — used when sortMode === 'position'.
+  const sortedCards = useMemo(() =>
+    sortMode === 'position'
+      ? [...allVisibleCards].sort((a, b) => a.minFret - b.minFret || a.setIdx - b.setIdx)
+      : allVisibleCards,
+    [allVisibleCards, sortMode],
+  );
 
   // Group visible cards by setIdx for rendering.
   const cardsBySet = useMemo(() => {
@@ -320,115 +332,174 @@ export function TriadsGenerator() {
         </div>
       </div>
 
-      {/* ── Filters (collapsible) ────────────────────────────────────────── */}
+      {/* ── Filters + Sort by ────────────────────────────────────────────── */}
       {(() => {
         const activeLabels = [
-          selectedSet       !== null  ? STRING_SETS[selectedSet].label   : null,
+          selectedSet       !== null  ? STRING_SETS[selectedSet].label      : null,
           selectedInversion !== null  ? INV_SHORT_LABELS[selectedInversion] : null,
-          selectedArea      !== 'all' ? selectedArea                      : null,
+          selectedArea      !== 'all' ? selectedArea                        : null,
         ].filter(Boolean) as string[];
         return (
-          <div style={{ ...card({ padding: 0 }), overflow: 'hidden' }}>
-            {/* Toggle header */}
-            <button
-              onClick={() => setFiltersOpen(o => !o)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '9px 12px', border: 'none', background: 'transparent', cursor: 'pointer',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Filters</span>
-                {activeLabels.length > 0 && (
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, color: T.primary,
-                    background: T.primaryBg, border: `1px solid ${T.primary}55`,
-                    padding: '1px 6px', borderRadius: 10,
-                  }}>{activeLabels.join(' · ')}</span>
-                )}
-              </div>
-              <span style={{ fontSize: 12, color: T.textMuted, transform: filtersOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
-            </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
 
-            {/* Filter rows */}
-            {filtersOpen && (
-              <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: `1px solid ${T.border}` }}>
-
-                <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', paddingTop: 10 }}>
-                  <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Strings:</span>
-                  {pill(selectedSet === null, () => setSelectedSet(null), 'All')}
-                  {STRING_SETS.map((ss, i) => pill(
-                    selectedSet === i,
-                    () => setSelectedSet(selectedSet === i ? null : i),
-                    ss.label,
-                  ))}
+            {/* Filters — flex 1 */}
+            <div style={{ flex: 1, ...card({ padding: 0 }), overflow: 'hidden' }}>
+              <button
+                onClick={() => { setFiltersOpen(o => !o); setSortOpen(false); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '9px 12px', border: 'none', background: 'transparent', cursor: 'pointer',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Filters</span>
+                  {activeLabels.length > 0 && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: T.primary,
+                      background: T.primaryBg, border: `1px solid ${T.primary}55`,
+                      padding: '1px 6px', borderRadius: 10,
+                    }}>{activeLabels.join(' · ')}</span>
+                  )}
                 </div>
+                <span style={{ fontSize: 12, color: T.textMuted, transform: filtersOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
+              </button>
 
-                <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Inversion:</span>
-                  {pill(selectedInversion === null, () => setSelectedInversion(null), 'All')}
-                  {([0, 1, 2] as const).map(inv => pill(
-                    selectedInversion === inv,
-                    () => setSelectedInversion(selectedInversion === inv ? null : inv),
-                    INV_SHORT_LABELS[inv],
-                  ))}
+              {filtersOpen && (
+                <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: `1px solid ${T.border}` }}>
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', paddingTop: 10 }}>
+                    <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Strings:</span>
+                    {pill(selectedSet === null, () => setSelectedSet(null), 'All')}
+                    {STRING_SETS.map((ss, i) => pill(
+                      selectedSet === i,
+                      () => setSelectedSet(selectedSet === i ? null : i),
+                      ss.label,
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Inversion:</span>
+                    {pill(selectedInversion === null, () => setSelectedInversion(null), 'All')}
+                    {([0, 1, 2] as const).map(inv => pill(
+                      selectedInversion === inv,
+                      () => setSelectedInversion(selectedInversion === inv ? null : inv),
+                      INV_SHORT_LABELS[inv],
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Position:</span>
+                    {FRET_AREAS.map(a => pill(
+                      selectedArea === a.id,
+                      () => setSelectedArea(a.id),
+                      a.label,
+                    ))}
+                  </div>
                 </div>
+              )}
+            </div>
 
-                <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Position:</span>
-                  {FRET_AREAS.map(a => pill(
-                    selectedArea === a.id,
-                    () => setSelectedArea(a.id),
-                    a.label,
-                  ))}
+            {/* Sort by */}
+            <div style={{ ...card({ padding: 0 }), overflow: 'hidden', flexShrink: 0, minWidth: 100 }}>
+              <button
+                onClick={() => { setSortOpen(o => !o); setFiltersOpen(false); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '9px 12px', border: 'none', background: 'transparent', cursor: 'pointer', gap: 6,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 10, color: T.textMuted, lineHeight: 1, marginBottom: 2 }}>Sort by</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text, lineHeight: 1 }}>
+                    {sortMode === 'strings' ? 'Strings' : 'Position'}
+                  </div>
                 </div>
-              </div>
-            )}
+                <span style={{ fontSize: 12, color: T.textMuted, transform: sortOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
+              </button>
+
+              {sortOpen && (
+                <div style={{ padding: '6px 10px 10px', display: 'flex', flexDirection: 'column', gap: 4, borderTop: `1px solid ${T.border}` }}>
+                  {pill(sortMode === 'strings',   () => { setSortMode('strings');   setSortOpen(false); }, 'Strings'  )}
+                  {pill(sortMode === 'position',  () => { setSortMode('position');  setSortOpen(false); }, 'Position' )}
+                </div>
+              )}
+            </div>
+
           </div>
         );
       })()}
 
       {/* ── Shape grid ───────────────────────────────────────────────────── */}
-      {visibleSets.map(setIdx => {
-        const ss    = STRING_SETS[setIdx];
-        const cards = cardsBySet.get(setIdx) ?? [];
-        if (cards.length === 0) return null;
-
-        return (
-          <div key={setIdx}>
-            <p style={{ margin: '0 0 6px 2px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {ss.label}
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
-              {cards.map(c => (
-                <div key={`${c.setIdx}_${c.inv}`}
-                  onClick={() => setExpandedIdx(c.globalIdx)}
-                  style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {INVERSION_LABELS[c.inv]}
-                    </span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 6 }}>
-                      {c.fretBadge}
-                    </span>
-                  </div>
-                  <MiniFretboard voicing={c.fretPositions} dotColors={c.colors} dotLabels={c.labels} hideFretLabel showStringLabels showFretNumbers />
-                  <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
-                      <span key={j} style={{
-                        fontSize: 8, fontWeight: 700,
-                        color:      DEGREE_COLORS[p.degree],
-                        background: `${DEGREE_COLORS[p.degree]}18`,
-                        padding: '1px 4px', borderRadius: 3,
-                      }}>{fretToNote(p.string, p.fret)}</span>
-                    ))}
-                  </div>
-                </div>
-              ))}
+      {sortMode === 'position' ? (
+        // Flat grid sorted by fret position
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {sortedCards.map(c => (
+            <div key={`${c.setIdx}_${c.inv}`}
+              onClick={() => setExpandedIdx(c.globalIdx)}
+              style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {c.setLabel}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 6 }}>
+                  {c.fretBadge}
+                </span>
+              </div>
+              <span style={{ fontSize: 9, color: T.textMuted, textAlign: 'center', marginTop: -2 }}>{INVERSION_LABELS[c.inv]}</span>
+              <MiniFretboard voicing={c.fretPositions} dotColors={c.colors} dotLabels={c.labels} hideFretLabel showStringLabels showFretNumbers />
+              <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+                {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
+                  <span key={j} style={{
+                    fontSize: 8, fontWeight: 700,
+                    color:      DEGREE_COLORS[p.degree],
+                    background: `${DEGREE_COLORS[p.degree]}18`,
+                    padding: '1px 4px', borderRadius: 3,
+                  }}>{fretToNote(p.string, p.fret)}</span>
+                ))}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          ))}
+        </div>
+      ) : (
+        // Grouped by string set (default)
+        visibleSets.map(setIdx => {
+          const ss    = STRING_SETS[setIdx];
+          const cards = cardsBySet.get(setIdx) ?? [];
+          if (cards.length === 0) return null;
+
+          return (
+            <div key={setIdx}>
+              <p style={{ margin: '0 0 6px 2px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {ss.label}
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
+                {cards.map(c => (
+                  <div key={`${c.setIdx}_${c.inv}`}
+                    onClick={() => setExpandedIdx(c.globalIdx)}
+                    style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {INVERSION_LABELS[c.inv]}
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 6 }}>
+                        {c.fretBadge}
+                      </span>
+                    </div>
+                    <MiniFretboard voicing={c.fretPositions} dotColors={c.colors} dotLabels={c.labels} hideFretLabel showStringLabels showFretNumbers />
+                    <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+                      {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
+                        <span key={j} style={{
+                          fontSize: 8, fontWeight: 700,
+                          color:      DEGREE_COLORS[p.degree],
+                          background: `${DEGREE_COLORS[p.degree]}18`,
+                          padding: '1px 4px', borderRadius: 3,
+                        }}>{fretToNote(p.string, p.fret)}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })
+      )}
 
       {/* Legend */}
       <div style={{ display: 'flex', gap: 14, fontSize: 11, color: T.textMuted, flexWrap: 'wrap', paddingBottom: 4 }}>
