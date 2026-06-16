@@ -399,9 +399,9 @@ const Pill: React.FC<{
 // ── Main component ────────────────────────────────────────────────────────
 export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
   const [targetPos, setTargetPos]             = useState<TargetPos | null>(null);
-  const [selectedIntervals, setSelectedIntervals] = useState<Set<string>>(new Set(['5']));
+  const [selectedIntervals, setSelectedIntervals] = useState<Set<string>>(new Set(['1']));
   const [positionLock, setPositionLock]       = useState<'top' | 'bass' | 'anywhere'>('anywhere');
-  const [complexity, setComplexity]           = useState<'triads' | '7ths' | '9ths' | 'full'>('7ths');
+  const [complexity, setComplexity]           = useState<'triads' | '7ths' | '9ths' | 'full'>('triads');
   const [controlsOpen, setControlsOpen]       = useState(false);
   const [results, setResults]                 = useState<ResultItem[]>([]);
   const [expandedIdx, setExpandedIdx]         = useState<number | null>(null);
