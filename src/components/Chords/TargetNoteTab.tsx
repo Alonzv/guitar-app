@@ -262,14 +262,16 @@ function XORow({ voicing }: { voicing: FretPosition[] }) {
 }
 
 // ── Scrollable input fretboard ────────────────────────────────────────────
-// Same proportions as InteractiveFretboard (680×168) so it looks identical in size.
+// Same proportions as InteractiveFretboard so it looks identical in size.
 // minWidth: 540 ensures frets are always tap-friendly and triggers scroll on narrow screens.
-const FB_SVG_W  = 680;
-const FB_SVG_H  = 168;
-const FB_NUT_X  = 28;
-const FB_FRET_SP = (FB_SVG_W - FB_NUT_X - 8) / 12;  // ≈ 53.7 px per fret
-const FB_STR_SP  = (FB_SVG_H - 32) / (STRING_COUNT - 1); // ≈ 27.2 px
-const FB_TOP_Y   = 8;
+const FB_SVG_W   = 680;
+const FB_SVG_H   = 186;                          // extra height for air around fret numbers
+const FB_NUT_X   = 30;
+const FB_BOARD_R = FB_SVG_W - 12;                // right edge of the fretboard (12px margin)
+const FB_FRET_SP = (FB_BOARD_R - FB_NUT_X) / 12; // ≈ 53.2 px per fret
+const FB_TOP_Y   = 12;
+const FB_STR_SP  = 27;
+const FB_BOARD_B = FB_TOP_Y + 5 * FB_STR_SP;     // bottom string y (147)
 const FB_DOT_R   = 11;
 
 const fretCX = (f: number) =>
@@ -300,10 +302,10 @@ const InputFretboard: React.FC<{
     }}>
       <svg
         viewBox={`0 0 ${FB_SVG_W} ${FB_SVG_H}`}
-        style={{ width: '100%', minWidth: 540, maxHeight: 190, display: 'block' }}
+        style={{ width: '100%', minWidth: 540, maxHeight: 210, display: 'block' }}
       >
         {/* Open-string zone */}
-        <rect x={0} y={0} width={FB_NUT_X} height={FB_SVG_H} fill={T.bgDeep} opacity={0.2} />
+        <rect x={0} y={FB_TOP_Y} width={FB_NUT_X} height={5 * FB_STR_SP} fill={T.bgDeep} opacity={0.2} />
 
         {/* Nut */}
         <rect x={FB_NUT_X - 3} y={FB_TOP_Y} width={3.5} height={5 * FB_STR_SP}
@@ -313,7 +315,7 @@ const InputFretboard: React.FC<{
         {Array.from({ length: 13 }).map((_, i) => (
           <line key={i}
             x1={FB_NUT_X + i * FB_FRET_SP} y1={FB_TOP_Y}
-            x2={FB_NUT_X + i * FB_FRET_SP} y2={FB_TOP_Y + 5 * FB_STR_SP}
+            x2={FB_NUT_X + i * FB_FRET_SP} y2={FB_BOARD_B}
             stroke={T.border} strokeWidth={1.2}
           />
         ))}
@@ -321,7 +323,7 @@ const InputFretboard: React.FC<{
         {/* Strings */}
         {Array.from({ length: STRING_COUNT }).map((_, s) => (
           <line key={s}
-            x1={0} y1={strY(s)} x2={FB_SVG_W} y2={strY(s)}
+            x1={0} y1={strY(s)} x2={FB_BOARD_R} y2={strY(s)}
             stroke={T.secondary} strokeWidth={0.9 + s * 0.22} opacity={0.5}
           />
         ))}
@@ -334,15 +336,15 @@ const InputFretboard: React.FC<{
             r={4} fill={T.border} opacity={0.45}
           />
         ))}
-        <circle cx={FB_NUT_X + 11.35 * FB_FRET_SP} cy={FB_TOP_Y + 1.5 * FB_STR_SP} r={3.5} fill={T.border} opacity={0.45} />
-        <circle cx={FB_NUT_X + 11.35 * FB_FRET_SP} cy={FB_TOP_Y + 3.5 * FB_STR_SP} r={3.5} fill={T.border} opacity={0.45} />
+        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 1.5 * FB_STR_SP} r={3.5} fill={T.border} opacity={0.45} />
+        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 3.5 * FB_STR_SP} r={3.5} fill={T.border} opacity={0.45} />
 
         {/* Fret number labels */}
         {[1,2,3,4,5,6,7,8,9,10,11,12].map(f => (
           <text key={f}
             x={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
-            y={FB_SVG_H - 3}
-            textAnchor="middle" fontSize={9} fill={T.textDim}
+            y={FB_BOARD_B + 22}
+            textAnchor="middle" fontSize={10} fill={T.textDim}
           >{f}</text>
         ))}
 
