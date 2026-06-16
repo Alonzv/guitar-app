@@ -7,7 +7,7 @@ import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
 // ── Constants ─────────────────────────────────────────────────────────────
-const CORE_INTERVALS = ['1', 'b3', '3', 'b5', '5'] as const;
+const CORE_INTERVALS    = ['1', 'b3', '3', 'b5', '5'] as const;
 const TENSION_INTERVALS = ['b7', '7', '9', 'b9', '#9', '11', '#11', '13', 'b13'] as const;
 
 const INTERVAL_SEMITONES: Record<string, number> = {
@@ -22,8 +22,7 @@ const INTERVAL_DISPLAY: Record<string, string> = {
   '11': '11th', '#11': '♯11th', 'b13': '♭13th', '13': '13th',
 };
 
-// Canonical note name for each chroma, plus enharmonic fallback
-const CHROMA_TO_NOTE = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+const CHROMA_TO_NOTE    = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const CHROMA_ENHARMONIC: Record<number, string> = { 1: 'Db', 3: 'D#', 6: 'Gb', 8: 'G#', 10: 'A#' };
 
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
@@ -33,6 +32,21 @@ const CHORD_SUFFIXES_7THS   = [...CHORD_SUFFIXES_TRIADS, '7', 'maj7', 'm7', 'm7b
 const CHORD_SUFFIXES_9THS   = [...CHORD_SUFFIXES_7THS, '9', 'maj9', 'm9', 'add9', '6', 'm6'];
 const CHORD_SUFFIXES_FULL   = [...CHORD_SUFFIXES_9THS, '11', 'm11', '13', 'm13', 'maj13', '69'];
 
+// Lower = shown first in results
+function chordSortPriority(suffix: string): number {
+  if (suffix === 'M' || suffix === '')                        return 0;
+  if (suffix === 'm')                                         return 1;
+  if (suffix === '7')                                         return 2;
+  if (suffix === 'maj7')                                      return 3;
+  if (suffix === 'm7')                                        return 4;
+  if (suffix === 'sus2' || suffix === 'sus4')                 return 5;
+  if (suffix === 'dim' || suffix === 'aug')                   return 6;
+  if (suffix === '9' || suffix === 'maj9' || suffix === 'm9') return 7;
+  if (suffix === 'add9' || suffix === '6' || suffix === 'm6') return 8;
+  if (suffix === 'm7b5' || suffix === 'dim7')                 return 9;
+  return 10;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────
 interface TargetPos { string: number; fret: number; }
 
@@ -41,11 +55,12 @@ interface ResultItem {
   intervalLabel: string;
   voicing: FretPosition[];
   targetVoicingIdx: number;
+  priority: number;
 }
 
 interface Props { tuning: Tuning; capo: number; }
 
-// ── isPlayable (copy from chordVoicings — not exported) ───────────────────
+// ── isPlayable (not exported from chordVoicings) ──────────────────────────
 function isPlayable(voicing: FretPosition[]): boolean {
   if (voicing.length < 3) return false;
   const nonOpen = voicing.filter(p => p.fret > 0);
@@ -108,7 +123,6 @@ function findVoicingsWithPin(
   const results: FretPosition[][] = [];
   const seen = new Set<string>();
 
-  // Scan windows of 3 frets that include the pinned fret
   for (let ws = Math.max(0, pFret - 3); ws <= pFret; ws++) {
     const we = ws + 3;
     const voicing: FretPosition[] = [];
@@ -195,7 +209,6 @@ function searchChords(
           if (seen.has(key)) continue;
           seen.add(key);
 
-          // Build display name: use TonalJS aliases for cleaner name
           const aliases = chordInfo.aliases;
           const displayName = rootName + (aliases[0] ?? suffix);
 
@@ -204,119 +217,162 @@ function searchChords(
             intervalLabel: INTERVAL_DISPLAY[interval],
             voicing,
             targetVoicingIdx,
+            priority: chordSortPriority(suffix),
           });
         }
       }
     }
   }
 
-  results.sort((a, b) => avgFret(a.voicing) - avgFret(b.voicing));
+  // Sort: chord type priority first, then by avg fret position
+  results.sort((a, b) => a.priority - b.priority || avgFret(a.voicing) - avgFret(b.voicing));
   return results;
 }
 
-// ── Input Fretboard ───────────────────────────────────────────────────────
+// ── X/O indicator row ─────────────────────────────────────────────────────
+function XORow({ voicing }: { voicing: FretPosition[] }) {
+  // Displayed high e (s=5) → low E (s=0), matching the SVG top-to-bottom order
+  const symbols = Array.from({ length: STRING_COUNT }, (_, i) => {
+    const s = STRING_COUNT - 1 - i; // s=5 first, s=0 last
+    const pos = voicing.find(p => p.string === s);
+    if (!pos) return { s, label: 'X', muted: true };
+    if (pos.fret === 0) return { s, label: 'O', muted: false };
+    return { s, label: '·', muted: false };
+  });
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: 2 }}>
+      {symbols.map(({ s, label, muted }) => (
+        <span key={s} style={{
+          fontSize: 9, fontWeight: 700, width: 12, textAlign: 'center',
+          color: muted ? T.textDim : label === 'O' ? T.primary : T.textMuted,
+        }}>
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ── Scrollable input fretboard ────────────────────────────────────────────
+const FRET_W  = 44;   // px per fret — wide enough to tap comfortably
+const OPEN_W  = 28;   // open-string column
+const STR_SP  = 17;   // px between strings
+const TOP_PAD = 8;
+const BOT_PAD = 14;   // room for fret number labels
+const FB_H    = TOP_PAD + 5 * STR_SP + BOT_PAD;  // total SVG height
+const FB_W    = OPEN_W + 12 * FRET_W;            // total SVG width
+
 const InputFretboard: React.FC<{
   selected: TargetPos | null;
   tuning: string[];
   onSelect: (pos: TargetPos) => void;
 }> = ({ selected, tuning, onSelect }) => {
-  const W = 320, H = 86;
-  const openW = 18;
-  const nutX = openW;
-  const fretAreaW = W - nutX - 2;
-  const FRETS = 12;
-  const fretW = fretAreaW / FRETS;
-  const strH = (H - 16) / (STRING_COUNT - 1);
-  const topY = 4;
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const strY = (s: number) => topY + (STRING_COUNT - 1 - s) * strH;
-  const fretCenterX = (f: number) =>
-    f === 0 ? nutX / 2 : nutX + (f - 0.5) * fretW;
-
+  const strY = (s: number) => TOP_PAD + (STRING_COUNT - 1 - s) * STR_SP;
+  const fretCX = (f: number) => f === 0 ? OPEN_W / 2 : OPEN_W + (f - 0.5) * FRET_W;
   const DOT_FRETS = [3, 5, 7, 9];
-  const DOUBLE_DOT = 12;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      style={{ width: '100%', display: 'block', borderRadius: 8, background: T.bgInput }}
+    <div
+      ref={scrollRef}
+      style={{
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+        borderRadius: 8,
+        background: T.bgInput,
+        scrollbarWidth: 'none',
+      }}
     >
-      {/* Open string column background */}
-      <rect x={0} y={0} width={nutX} height={H} fill={T.bgDeep} opacity={0.3} rx={4} />
+      <svg
+        width={FB_W}
+        height={FB_H}
+        viewBox={`0 0 ${FB_W} ${FB_H}`}
+        style={{ display: 'block', flexShrink: 0 }}
+      >
+        {/* Open-string zone background */}
+        <rect x={0} y={0} width={OPEN_W} height={FB_H} fill={T.bgDeep} opacity={0.25} />
 
-      {/* Nut */}
-      <rect x={nutX - 2} y={topY} width={3} height={strH * (STRING_COUNT - 1)} fill={T.text} opacity={0.7} rx={1} />
+        {/* Nut */}
+        <rect x={OPEN_W - 2.5} y={TOP_PAD} width={3} height={5 * STR_SP} fill={T.text} opacity={0.7} rx={1} />
 
-      {/* Fret lines */}
-      {Array.from({ length: FRETS + 1 }).map((_, i) => (
-        <line key={i}
-          x1={nutX + i * fretW} y1={topY}
-          x2={nutX + i * fretW} y2={topY + strH * (STRING_COUNT - 1)}
-          stroke={T.border} strokeWidth={1}
-        />
-      ))}
+        {/* Fret lines */}
+        {Array.from({ length: 13 }).map((_, i) => (
+          <line key={i}
+            x1={OPEN_W + i * FRET_W} y1={TOP_PAD}
+            x2={OPEN_W + i * FRET_W} y2={TOP_PAD + 5 * STR_SP}
+            stroke={T.border} strokeWidth={1}
+          />
+        ))}
 
-      {/* Strings */}
-      {Array.from({ length: STRING_COUNT }).map((_, s) => (
-        <line key={s}
-          x1={0} y1={strY(s)}
-          x2={W - 2} y2={strY(s)}
-          stroke={T.secondary} strokeWidth={2.2 - s * 0.2} opacity={0.4}
-        />
-      ))}
+        {/* Strings */}
+        {Array.from({ length: STRING_COUNT }).map((_, s) => (
+          <line key={s}
+            x1={0} y1={strY(s)}
+            x2={FB_W} y2={strY(s)}
+            stroke={T.secondary} strokeWidth={2.2 - s * 0.22} opacity={0.45}
+          />
+        ))}
 
-      {/* Fret markers (bottom dots) */}
-      {DOT_FRETS.map(f => (
-        <circle key={f}
-          cx={nutX + (f - 0.5) * fretW}
-          cy={H - 5}
-          r={2.5} fill={T.textDim} opacity={0.5}
-        />
-      ))}
-      <circle cx={nutX + (DOUBLE_DOT - 0.65) * fretW} cy={H - 5} r={2.5} fill={T.textDim} opacity={0.5} />
-      <circle cx={nutX + (DOUBLE_DOT - 0.35) * fretW} cy={H - 5} r={2.5} fill={T.textDim} opacity={0.5} />
+        {/* Single dot markers */}
+        {DOT_FRETS.map(f => (
+          <circle key={f}
+            cx={OPEN_W + (f - 0.5) * FRET_W}
+            cy={FB_H - 5}
+            r={3} fill={T.textDim} opacity={0.45}
+          />
+        ))}
 
-      {/* Clickable hit areas + selected dots */}
-      {Array.from({ length: STRING_COUNT }).map((_, s) =>
-        Array.from({ length: FRETS + 1 }).map((_, f) => {
-          const isSelected = selected?.string === s && selected?.fret === f;
-          const cx = fretCenterX(f);
-          const cy = strY(s);
-          const hitX = f === 0 ? 0 : nutX + (f - 1) * fretW;
-          const hitW = f === 0 ? nutX : fretW;
-          return (
-            <g key={`${s}-${f}`} onClick={() => onSelect({ string: s, fret: f })} style={{ cursor: 'pointer' }}>
-              <rect x={hitX} y={cy - strH / 2} width={hitW} height={strH} fill="transparent" />
-              {isSelected && (
-                <circle cx={cx} cy={cy} r={6.5} fill={T.coral} opacity={0.95}
-                  style={{ filter: 'drop-shadow(0 0 4px var(--gc-coral))' }} />
-              )}
-            </g>
-          );
-        })
-      )}
-    </svg>
+        {/* Double dot at 12 */}
+        <circle cx={OPEN_W + 11.35 * FRET_W} cy={FB_H - 5} r={3} fill={T.textDim} opacity={0.45} />
+        <circle cx={OPEN_W + 11.65 * FRET_W} cy={FB_H - 5} r={3} fill={T.textDim} opacity={0.45} />
+
+        {/* Fret numbers */}
+        {[1,2,3,4,5,6,7,8,9,10,11,12].map(f => (
+          <text key={f}
+            x={OPEN_W + (f - 0.5) * FRET_W}
+            y={FB_H - 1}
+            textAnchor="middle" fontSize={7} fill={T.textDim} opacity={0.6}
+          >{f}</text>
+        ))}
+
+        {/* Clickable cells + selected dot */}
+        {Array.from({ length: STRING_COUNT }).map((_, s) =>
+          Array.from({ length: 13 }).map((_, f) => {
+            const isSelected = selected?.string === s && selected?.fret === f;
+            const cx = fretCX(f);
+            const cy = strY(s);
+            const hitX = f === 0 ? 0 : OPEN_W + (f - 1) * FRET_W;
+            const hitW = f === 0 ? OPEN_W : FRET_W;
+            return (
+              <g key={`${s}-${f}`} onClick={() => onSelect({ string: s, fret: f })} style={{ cursor: 'pointer' }}>
+                <rect x={hitX} y={cy - STR_SP / 2} width={hitW} height={STR_SP} fill="transparent" />
+                {isSelected && (
+                  <circle cx={cx} cy={cy} r={8} fill={T.coral} opacity={0.92}
+                    style={{ filter: 'drop-shadow(0 0 5px var(--gc-coral))' }}
+                  />
+                )}
+              </g>
+            );
+          })
+        )}
+      </svg>
+    </div>
   );
 };
 
 // ── Pill button ───────────────────────────────────────────────────────────
 const Pill: React.FC<{
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  color?: string;
+  label: string; active: boolean; onClick: () => void; color?: string;
 }> = ({ label, active, onClick, color }) => (
   <button onClick={onClick} style={{
-    padding: '4px 10px',
-    borderRadius: 16,
+    padding: '4px 10px', borderRadius: 16,
     border: active ? 'none' : `1px solid ${T.border}`,
-    cursor: 'pointer',
-    fontSize: 11,
-    fontWeight: active ? 700 : 400,
+    cursor: 'pointer', fontSize: 11, fontWeight: active ? 700 : 400,
     background: active ? (color ?? T.secondary) : T.bgInput,
     color: active ? T.white : T.textMuted,
-    transition: 'all 0.12s',
-    flexShrink: 0,
+    transition: 'all 0.12s', flexShrink: 0,
   }}>
     {label}
   </button>
@@ -324,19 +380,31 @@ const Pill: React.FC<{
 
 // ── Main component ────────────────────────────────────────────────────────
 export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
-  const [targetPos, setTargetPos] = useState<TargetPos | null>(null);
+  const [targetPos, setTargetPos]             = useState<TargetPos | null>(null);
   const [selectedIntervals, setSelectedIntervals] = useState<Set<string>>(new Set(['5']));
-  const [positionLock, setPositionLock] = useState<'top' | 'bass' | 'anywhere'>('anywhere');
-  const [complexity, setComplexity] = useState<'triads' | '7ths' | '9ths' | 'full'>('7ths');
-  const [controlsOpen, setControlsOpen] = useState(false);
-  const [results, setResults] = useState<ResultItem[]>([]);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const [positionLock, setPositionLock]       = useState<'top' | 'bass' | 'anywhere'>('anywhere');
+  const [complexity, setComplexity]           = useState<'triads' | '7ths' | '9ths' | 'full'>('7ths');
+  const [controlsOpen, setControlsOpen]       = useState(false);
+  const [results, setResults]                 = useState<ResultItem[]>([]);
+  const [expandedIdx, setExpandedIdx]         = useState<number | null>(null);
 
   const targetNoteName = targetPos
     ? fretToNote(targetPos.string, targetPos.fret, tuning.notes)
     : null;
+
+  // Auto-search whenever any relevant param changes
+  useEffect(() => {
+    if (!targetPos) { setResults([]); return; }
+    const r = searchChords(
+      targetPos,
+      [...selectedIntervals],
+      positionLock,
+      complexity,
+      tuning.notes,
+    );
+    setResults(r);
+    setExpandedIdx(null);
+  }, [targetPos, selectedIntervals, positionLock, complexity, tuning.notes]);
 
   const toggleInterval = useCallback((iv: string) => {
     setSelectedIntervals(prev => {
@@ -347,27 +415,13 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
     });
   }, []);
 
-  const handleFindChords = useCallback(() => {
-    if (!targetPos) return;
-    const r = searchChords(
-      targetPos,
-      [...selectedIntervals],
-      positionLock,
-      complexity,
-      tuning.notes,
-    );
-    setResults(r);
-    setHasSearched(true);
-    setExpandedIdx(null);
-  }, [targetPos, selectedIntervals, positionLock, complexity, tuning.notes]);
-
   // Keyboard navigation for modal
   useEffect(() => {
     if (expandedIdx === null) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') setExpandedIdx(i => Math.min((i ?? 0) + 1, results.length - 1));
-      if (e.key === 'ArrowLeft') setExpandedIdx(i => Math.max((i ?? 0) - 1, 0));
-      if (e.key === 'Escape') setExpandedIdx(null);
+      if (e.key === 'ArrowLeft')  setExpandedIdx(i => Math.max((i ?? 0) - 1, 0));
+      if (e.key === 'Escape')     setExpandedIdx(null);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -385,12 +439,12 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
       {/* Input fretboard */}
       <div style={{ ...card(), padding: '12px 14px' }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 8 }}>
-          בחר נוטה יעד
+          Select target note
         </div>
         <InputFretboard
           selected={targetPos}
           tuning={tuning.notes}
-          onSelect={pos => { setTargetPos(pos); setHasSearched(false); }}
+          onSelect={pos => setTargetPos(pos)}
         />
         <div style={{
           marginTop: 8, fontSize: 12, minHeight: 22,
@@ -406,11 +460,11 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 {targetNoteName}
               </span>
               <span style={{ color: T.textMuted }}>
-                מיתר {STRING_LABELS[targetPos.string]} · פרט {targetPos.fret === 0 ? 'פתוח' : targetPos.fret}
+                String {STRING_LABELS[targetPos.string]} · {targetPos.fret === 0 ? 'Open' : `Fret ${targetPos.fret}`}
               </span>
             </>
           ) : (
-            <span>לחץ על הגריף לבחירת נוטה יעד</span>
+            <span>Tap the fretboard to select a target note</span>
           )}
         </div>
       </div>
@@ -426,27 +480,27 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
           }}
         >
           <span style={{ fontSize: 12, fontWeight: 700, color: T.textMuted }}>
-            ⚙ הגדרות חיפוש
+            ⚙ Search Settings
           </span>
           <span style={{
             fontSize: 11, color: T.textDim,
             transform: controlsOpen ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.18s',
-            display: 'inline-block',
+            transition: 'transform 0.18s', display: 'inline-block',
           }}>▼</span>
         </button>
 
         {controlsOpen && (
           <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-            {/* Interval chips */}
+            {/* Interval role */}
             <div>
-              <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>תפקיד האינטרוול</div>
+              <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Interval role</div>
               <div style={{ marginBottom: 6 }}>
                 <div style={{ fontSize: 10, color: T.textDim, marginBottom: 4 }}>Core</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                   {CORE_INTERVALS.map(iv => (
-                    <Pill key={iv} label={iv} active={selectedIntervals.has(iv)} onClick={() => toggleInterval(iv)} color={T.secondary} />
+                    <Pill key={iv} label={iv} active={selectedIntervals.has(iv)}
+                      onClick={() => toggleInterval(iv)} color={T.secondary} />
                   ))}
                 </div>
               </div>
@@ -454,7 +508,8 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 <div style={{ fontSize: 10, color: T.textDim, marginBottom: 4 }}>Tensions</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                   {TENSION_INTERVALS.map(iv => (
-                    <Pill key={iv} label={iv} active={selectedIntervals.has(iv)} onClick={() => toggleInterval(iv)} color={T.primary} />
+                    <Pill key={iv} label={iv} active={selectedIntervals.has(iv)}
+                      onClick={() => toggleInterval(iv)} color={T.primary} />
                   ))}
                 </div>
               </div>
@@ -465,8 +520,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
               <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Position Lock</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['anywhere', 'top', 'bass'] as const).map(pl => (
-                  <Pill
-                    key={pl}
+                  <Pill key={pl}
                     label={pl === 'anywhere' ? 'Anywhere' : pl === 'top' ? 'Top Voice' : 'Bass Note'}
                     active={positionLock === pl}
                     onClick={() => setPositionLock(pl)}
@@ -480,8 +534,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
               <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Complexity</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['triads', '7ths', '9ths', 'full'] as const).map(c => (
-                  <Pill
-                    key={c}
+                  <Pill key={c}
                     label={c === 'triads' ? 'Triads' : c === '7ths' ? '7ths' : c === '9ths' ? '9ths' : 'Full'}
                     active={complexity === c}
                     onClick={() => setComplexity(c)}
@@ -493,33 +546,13 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
         )}
       </div>
 
-      {/* Find Chords button */}
-      <button
-        onClick={handleFindChords}
-        disabled={!targetPos}
-        style={{
-          padding: '13px 0',
-          borderRadius: 10,
-          border: 'none',
-          cursor: targetPos ? 'pointer' : 'not-allowed',
-          fontWeight: 700,
-          fontSize: 14,
-          background: targetPos ? T.secondary : T.border,
-          color: targetPos ? T.white : T.textDim,
-          transition: 'background 0.15s',
-          letterSpacing: 0.3,
-        }}
-      >
-        {targetPos ? `מצא אקורדים עם ${targetNoteName}` : 'בחר נוטה יעד תחילה'}
-      </button>
-
       {/* Results */}
-      {hasSearched && (
+      {targetPos && (
         <div>
           <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 8, fontWeight: 600 }}>
             {results.length > 0
-              ? `נמצאו ${results.length} אקורדים`
-              : 'לא נמצאו אקורדים — נסה הגדרות שונות'}
+              ? `${results.length} chord${results.length !== 1 ? 's' : ''} found`
+              : 'No chords found — try different settings'}
           </div>
 
           {results.length > 0 && (
@@ -529,26 +562,21 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                   key={idx}
                   onClick={() => setExpandedIdx(idx)}
                   style={{
-                    ...card(),
-                    padding: '10px 10px 8px',
-                    cursor: 'pointer',
-                    border: `1px solid ${T.border}`,
-                    textAlign: 'left',
-                    display: 'block',
-                    width: '100%',
+                    ...card(), padding: '10px 10px 8px',
+                    cursor: 'pointer', border: `1px solid ${T.border}`,
+                    textAlign: 'left', display: 'block', width: '100%',
                   }}
                 >
+                  <XORow voicing={item.voicing} />
                   <MiniFretboard
                     voicing={item.voicing}
                     dotColors={dotColors(item)}
                     tuning={tuning.notes}
                   />
-                  <div style={{
-                    marginTop: 6, fontWeight: 700, fontSize: 13, color: T.text,
-                  }}>
+                  <div style={{ marginTop: 5, fontWeight: 700, fontSize: 13, color: T.text }}>
                     {item.chordName}
                   </div>
-                  <div style={{ fontSize: 10, color: T.coral, marginTop: 2 }}>
+                  <div style={{ fontSize: 10, color: T.coral, marginTop: 1 }}>
                     {targetNoteName} = {item.intervalLabel}
                   </div>
                 </button>
@@ -561,35 +589,26 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
       {/* Expanded modal */}
       {expandedResult !== null && expandedIdx !== null && (
         <div
-          onClick={(e) => { if (e.target === e.currentTarget) setExpandedIdx(null); }}
+          onClick={e => { if (e.target === e.currentTarget) setExpandedIdx(null); }}
           style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.6)',
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 200,
-            padding: 16,
+            zIndex: 200, padding: 16,
           }}
         >
-          <div
-            ref={modalRef}
-            style={{
-              ...card(),
-              width: '100%', maxWidth: 380,
-              padding: '20px 20px 16px',
-              display: 'flex', flexDirection: 'column', gap: 12,
-              position: 'relative',
-            }}
-          >
+          <div style={{
+            ...card(), width: '100%', maxWidth: 380,
+            padding: '20px 20px 16px',
+            display: 'flex', flexDirection: 'column', gap: 12,
+            position: 'relative',
+          }}>
             {/* Close */}
-            <button
-              onClick={() => setExpandedIdx(null)}
-              style={{
-                position: 'absolute', top: 12, right: 12,
-                background: T.bgInput, border: 'none', borderRadius: 6,
-                cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-                padding: '3px 7px',
-              }}
-            >✕</button>
+            <button onClick={() => setExpandedIdx(null)} style={{
+              position: 'absolute', top: 12, right: 12,
+              background: T.bgInput, border: 'none', borderRadius: 6,
+              cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
+              padding: '3px 7px',
+            }}>✕</button>
 
             {/* Chord name */}
             <div style={{ textAlign: 'center' }}>
@@ -603,6 +622,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
 
             {/* Large diagram */}
             <div style={{ padding: '0 16px' }}>
+              <XORow voicing={expandedResult.voicing} />
               <MiniFretboard
                 voicing={expandedResult.voicing}
                 dotColors={dotColors(expandedResult)}
@@ -612,31 +632,27 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
               />
             </div>
 
-            {/* Play button */}
+            {/* Play */}
             <button
-              onClick={() => {
-                unlockAudio();
-                playChord(expandedResult!.voicing, tuning.openFreqs, capo);
-              }}
+              onClick={() => { unlockAudio(); playChord(expandedResult!.voicing, tuning.openFreqs, capo); }}
               style={{
-                padding: '11px 0',
-                borderRadius: 10, border: 'none',
+                padding: '11px 0', borderRadius: 10, border: 'none',
                 cursor: 'pointer', fontWeight: 700, fontSize: 14,
                 background: T.secondary, color: T.white,
               }}
-            >
-              ▶ נגן
-            </button>
+            >▶ Play</button>
 
-            {/* Carousel controls */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            {/* Carousel */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button
                 onClick={() => setExpandedIdx(i => Math.max((i ?? 0) - 1, 0))}
                 disabled={expandedIdx === 0}
                 style={{
                   flex: 1, padding: '8px 0', borderRadius: 8,
-                  border: `1px solid ${T.border}`, cursor: expandedIdx === 0 ? 'not-allowed' : 'pointer',
-                  background: T.bgInput, color: expandedIdx === 0 ? T.textDim : T.textMuted,
+                  border: `1px solid ${T.border}`,
+                  cursor: expandedIdx === 0 ? 'not-allowed' : 'pointer',
+                  background: T.bgInput,
+                  color: expandedIdx === 0 ? T.textDim : T.textMuted,
                   fontWeight: 700, fontSize: 16,
                 }}
               >‹</button>
