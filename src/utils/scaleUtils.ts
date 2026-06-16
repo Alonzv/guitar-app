@@ -111,7 +111,7 @@ export function detectScales(chords: ChordInProgression[], preferredKey?: string
 }
 
 // Get all fret positions for a scale across the entire fretboard
-export function getScalePositions(root: Note, scaleType: string): FretPosition[] {
+export function getScalePositions(root: Note, scaleType: string, tuning?: string[]): FretPosition[] {
   const scale = Scale.get(`${root} ${scaleType}`);
   if (!scale || scale.empty) return [];
 
@@ -120,7 +120,7 @@ export function getScalePositions(root: Note, scaleType: string): FretPosition[]
 
   for (let s = 0; s < STRING_COUNT; s++) {
     for (let f = 0; f <= FRET_COUNT; f++) {
-      const note = fretToNote(s, f);
+      const note = fretToNote(s, f, tuning);
       const enharmonic = TonalNote.enharmonic(note) ?? note;
       if (scaleNotes.includes(note) || scaleNotes.includes(enharmonic)) {
         positions.push({ string: s, fret: f });
@@ -129,6 +129,61 @@ export function getScalePositions(root: Note, scaleType: string): FretPosition[]
   }
 
   return positions;
+}
+
+// ── Scales that fully contain a given chord ───────────────────────────────
+// Used by Target Note "Fits in" — find the diatonic homes of a chord/note.
+const SCALE_TYPE_PRIORITY: Record<string, number> = {
+  'major': 0, 'minor': 1, 'mixolydian': 2, 'dorian': 3, 'lydian': 4,
+  'major pentatonic': 5, 'minor pentatonic': 6, 'blues': 7,
+  'phrygian': 8, 'locrian': 9, 'harmonic minor': 10, 'melodic minor': 11,
+};
+
+export interface ScaleFit {
+  name: string;   // "C major"
+  root: string;   // "C"
+  type: string;   // "major"
+}
+
+export function scalesContainingNotes(chordNotes: string[], max = 5): ScaleFit[] {
+  const wanted = chordNotes
+    .map(n => TonalNote.chroma(n))
+    .filter((c): c is number => c !== undefined);
+  if (wanted.length === 0) return [];
+
+  const types = Object.keys(SCALE_TYPE_PRIORITY);
+  const matches: ScaleFit[] = [];
+
+  for (const root of CHROMATIC) {
+    for (const type of types) {
+      const scale = Scale.get(`${root} ${type}`);
+      if (!scale || scale.empty) continue;
+      const scaleChromas = new Set(
+        scale.notes.map(n => TonalNote.chroma(n)).filter((c): c is number => c !== undefined)
+      );
+      // Every chord note must be in the scale
+      if (wanted.every(c => scaleChromas.has(c))) {
+        const displayRoot = SHARP_TO_FLAT[root] ?? root;
+        matches.push({ name: `${displayRoot} ${type}`, root: displayRoot, type });
+      }
+    }
+  }
+
+  // Dedupe by identical note set, keep the highest-priority type
+  const byNoteSet = new Map<string, ScaleFit>();
+  for (const m of matches) {
+    const key = Scale.get(m.name).notes
+      .map(n => TonalNote.chroma(n) ?? -1).filter(c => c >= 0)
+      .sort((a, b) => a - b).join(',');
+    const existing = byNoteSet.get(key);
+    if (!existing || SCALE_TYPE_PRIORITY[m.type] < SCALE_TYPE_PRIORITY[existing.type]) {
+      byNoteSet.set(key, m);
+    }
+  }
+
+  return [...byNoteSet.values()]
+    .sort((a, b) => SCALE_TYPE_PRIORITY[a.type] - SCALE_TYPE_PRIORITY[b.type])
+    .slice(0, max);
 }
 
 // Assign CAGED position index (0-4) to each fret position

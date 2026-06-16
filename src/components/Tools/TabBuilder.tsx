@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { T } from '../../theme';
+import {
+  detectTabScale, extractTabNotes, suggestTabProgressions,
+  type TabScaleResult, type ProgressionSuggestion,
+} from '../../utils/analyzeTab';
+import { playChord, unlockAudio } from '../../utils/audioPlayback';
 
 type Tech = 'h' | 'p' | '/' | '\\' | 'b' | '~';
 
@@ -41,6 +46,13 @@ export const TabBuilder: React.FC = () => {
   const [zoom, setZoom]     = useState(100);
   const [busy, setBusy]     = useState(false);
   const [canUndo, setCanUndo] = useState(false);
+
+  // Analyze panel
+  const [analyzeOpen, setAnalyzeOpen]     = useState(false);
+  const [analyzing, setAnalyzing]         = useState(false);
+  const [analyzeScale, setAnalyzeScale]   = useState<TabScaleResult | null>(null);
+  const [analyzeProgs, setAnalyzeProgs]   = useState<ProgressionSuggestion[] | null>(null);
+  const [analyzeErr, setAnalyzeErr]       = useState<string | null>(null);
 
   // Undo history — ref to avoid stale-closure issues
   const histRef = useRef<TabState[]>([]);
@@ -193,6 +205,44 @@ export const TabBuilder: React.FC = () => {
     setSel(null);
   };
 
+  const handleAnalyze = async () => {
+    setAnalyzeOpen(true);
+    setAnalyzeErr(null);
+    setAnalyzeProgs(null);
+
+    const scale = detectTabScale(grid);
+    const { ordered } = extractTabNotes(grid);
+
+    if (!scale || ordered.length === 0) {
+      setAnalyzeScale(null);
+      setAnalyzeErr('כתוב כמה תווים בטאב לפני הניתוח');
+      return;
+    }
+
+    setAnalyzeScale(scale);
+    setAnalyzing(true);
+    try {
+      const res = await suggestTabProgressions(scale.name, ordered);
+      if (res) setAnalyzeProgs(res.progressions);
+      else setAnalyzeErr('לא ניתן ליצור הצעות פרוגרסיות כרגע (חסר חיבור ל-AI)');
+    } catch {
+      setAnalyzeErr('אירעה שגיאה בניתוח');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const playProgression = async (chords: string[]) => {
+    unlockAudio();
+    const { findChordVoicings } = await import('../../utils/chordVoicings');
+    chords.forEach((name, i) => {
+      setTimeout(() => {
+        const v = findChordVoicings(name, 1)[0];
+        if (v && v.length) playChord(v.map(p => ({ string: p.string, fret: p.fret })));
+      }, i * 950);
+    });
+  };
+
   const handleExport = async () => {
     setBusy(true);
     // Auto-save before export
@@ -253,6 +303,15 @@ export const TabBuilder: React.FC = () => {
               +
             </button>
           </div>
+          <button onClick={handleAnalyze}
+            title="Analyze — detect scale & suggest chord progressions"
+            style={{
+              background: T.primary, color: '#fff', border: 'none',
+              borderRadius: 8, padding: '7px 13px', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700,
+            }}>
+            Analyze
+          </button>
           <button onClick={handleExport} disabled={busy}
             style={{
               background: T.secondary, color: '#fff', border: 'none',
@@ -506,6 +565,95 @@ export const TabBuilder: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* ── Analyze modal ─────────────────────────────────── */}
+      {analyzeOpen && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setAnalyzeOpen(false); }}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 200, padding: 16,
+          }}>
+          <div style={{
+            background: T.bgCard, borderRadius: 14, border: `1px solid ${T.border}`,
+            width: '100%', maxWidth: 440, maxHeight: '88vh', overflowY: 'auto',
+            padding: '20px 20px 18px', position: 'relative',
+            display: 'flex', flexDirection: 'column', gap: 14,
+          }}>
+            <button onClick={() => setAnalyzeOpen(false)} style={{
+              position: 'absolute', top: 12, right: 12,
+              background: T.bgInput, border: 'none', borderRadius: 6,
+              cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
+              padding: '3px 7px',
+            }}>✕</button>
+
+            <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>Tab Analysis</div>
+
+            {/* Detected scale */}
+            {analyzeScale && (
+              <div style={{
+                background: T.bgInput, borderRadius: 10, padding: '12px 14px',
+                borderLeft: `3px solid ${T.primary}`,
+              }}>
+                <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 3 }}>הסולם המתאים ביותר</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{analyzeScale.name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: T.primary }}>{analyzeScale.fitPercent}% match</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error / empty */}
+            {analyzeErr && (
+              <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: '8px 0' }}>
+                {analyzeErr}
+              </div>
+            )}
+
+            {/* Loading */}
+            {analyzing && (
+              <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: '12px 0' }}>
+                מחפש פרוגרסיות אקורדים שמתאימות למלודיה…
+              </div>
+            )}
+
+            {/* Progression suggestions */}
+            {analyzeProgs && analyzeProgs.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted }}>
+                  הצעות לפרוגרסיות אקורדים
+                </div>
+                {analyzeProgs.map((p, i) => (
+                  <div key={i} style={{
+                    background: T.bgInput, borderRadius: 10, padding: '12px 14px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{p.name}</span>
+                      <button onClick={() => playProgression(p.chords)}
+                        style={{
+                          background: T.secondary, color: '#fff', border: 'none',
+                          borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                          fontSize: 11, fontWeight: 700, flexShrink: 0,
+                        }}>▶ נגן</button>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0' }}>
+                      {p.chords.map((c, j) => (
+                        <span key={j} style={{
+                          background: T.primaryBg, color: T.text, borderRadius: 6,
+                          padding: '4px 10px', fontSize: 13, fontWeight: 700,
+                          fontFamily: 'monospace',
+                        }}>{c}</span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>{p.why}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

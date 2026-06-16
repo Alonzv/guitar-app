@@ -1,10 +1,23 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
 import type { FretPosition, Tuning } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
+import { scalesContainingNotes, getScalePositions, type ScaleFit } from '../../utils/scaleUtils';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
+
+const SEMITONE_DEGREE: Record<number, string> = {
+  0: 'root', 1: '♭2nd', 2: '2nd', 3: '♭3rd', 4: '3rd', 5: '4th',
+  6: '♭5th', 7: '5th', 8: '♭6th', 9: '6th', 10: '♭7th', 11: '7th',
+};
+
+function degreeInScale(targetNote: string, scaleRoot: string): string {
+  const t = TonalNote.chroma(targetNote);
+  const r = TonalNote.chroma(scaleRoot);
+  if (t === undefined || r === undefined) return '';
+  return SEMITONE_DEGREE[((t - r) % 12 + 12) % 12] ?? '';
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const CORE_INTERVALS    = ['1', 'b3', '3', 'b5', '5'] as const;
@@ -382,6 +395,69 @@ const InputFretboard: React.FC<{
   );
 };
 
+// ── Compact read-only scale strip ─────────────────────────────────────────
+const SS_W   = 560;
+const SS_NUT = 24;
+const SS_R   = SS_W - 8;
+const SS_FSP = (SS_R - SS_NUT) / 12;
+const SS_SSP = 18;
+const SS_TOP = 8;
+const SS_B   = SS_TOP + 5 * SS_SSP;
+const SS_H   = SS_B + 16;
+
+const ScaleStrip: React.FC<{
+  positions: FretPosition[];
+  tuning: string[];
+  targetChroma: number;
+  rootChroma: number;
+}> = ({ positions, tuning, targetChroma, rootChroma }) => {
+  const ssCX = (f: number) => f === 0 ? SS_NUT / 2 : SS_NUT + (f - 0.5) * SS_FSP;
+  const ssY  = (s: number) => SS_TOP + (STRING_COUNT - 1 - s) * SS_SSP;
+
+  return (
+    <div style={{
+      overflowX: 'auto', borderRadius: 8, background: T.bgInput, marginTop: 8,
+      scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
+    }}>
+      <svg viewBox={`0 0 ${SS_W} ${SS_H}`}
+        style={{ width: '100%', minWidth: 460, maxHeight: 130, display: 'block' }}>
+        <rect x={0} y={SS_TOP} width={SS_NUT} height={5 * SS_SSP} fill={T.bgDeep} opacity={0.2} />
+        <rect x={SS_NUT - 2.5} y={SS_TOP} width={3} height={5 * SS_SSP} fill={T.text} opacity={0.6} rx={1} />
+
+        {Array.from({ length: 13 }).map((_, i) => (
+          <line key={i} x1={SS_NUT + i * SS_FSP} y1={SS_TOP} x2={SS_NUT + i * SS_FSP} y2={SS_B}
+            stroke={T.border} strokeWidth={1} />
+        ))}
+        {Array.from({ length: STRING_COUNT }).map((_, s) => (
+          <line key={s} x1={0} y1={ssY(s)} x2={SS_R} y2={ssY(s)}
+            stroke={T.secondary} strokeWidth={0.8 + s * 0.18} opacity={0.45} />
+        ))}
+        {[3,5,7,9,12].map(f => (
+          <text key={f} x={SS_NUT + (f - 0.5) * SS_FSP} y={SS_H - 3}
+            textAnchor="middle" fontSize={8} fill={T.textDim}>{f}</text>
+        ))}
+
+        {positions.map((p, i) => {
+          const note = fretToNote(p.string, p.fret, tuning);
+          const ch = TonalNote.chroma(note);
+          const isTarget = ch === targetChroma;
+          const isRoot = ch === rootChroma;
+          const fill = isTarget ? T.coral : isRoot ? T.primary : T.secondary;
+          return (
+            <g key={i}>
+              <circle cx={ssCX(p.fret)} cy={ssY(p.string)} r={isTarget ? 7.5 : 6.5}
+                fill={fill} opacity={isTarget ? 0.95 : 0.78}
+                stroke={isTarget ? T.bgDeep : 'none'} strokeWidth={isTarget ? 1 : 0} />
+              <text x={ssCX(p.fret)} y={ssY(p.string) + 2.5} textAnchor="middle"
+                fontSize={5.5} fill="#fff" fontWeight="700">{note}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+
 // ── Pill button ───────────────────────────────────────────────────────────
 const Pill: React.FC<{
   label: string; active: boolean; onClick: () => void; color?: string;
@@ -407,6 +483,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
   const [controlsOpen, setControlsOpen]       = useState(false);
   const [results, setResults]                 = useState<ResultItem[]>([]);
   const [expandedIdx, setExpandedIdx]         = useState<number | null>(null);
+  const [scaleIdx, setScaleIdx]               = useState<number | null>(null); // selected "Fits in" scale
 
   const targetNoteName = targetPos
     ? fretToNote(targetPos.string, targetPos.fret, tuning.notes)
@@ -435,6 +512,9 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
     });
   }, []);
 
+  // Reset scale selection whenever the expanded chord changes
+  useEffect(() => { setScaleIdx(null); }, [expandedIdx]);
+
   // Keyboard navigation for modal
   useEffect(() => {
     if (expandedIdx === null) return;
@@ -448,6 +528,13 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
   }, [expandedIdx, results.length]);
 
   const expandedResult = expandedIdx !== null ? results[expandedIdx] : null;
+
+  // Scales the expanded chord lives in ("Fits in")
+  const fitScales: ScaleFit[] = useMemo(() => {
+    if (!expandedResult) return [];
+    const notes = TonalChord.get(expandedResult.chordName).notes;
+    return scalesContainingNotes(notes, 5);
+  }, [expandedResult]);
 
   const dotColors = useCallback((item: ResultItem) =>
     item.voicing.map((_, i) => i === item.targetVoicingIdx ? T.coral : T.secondary),
@@ -618,6 +705,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
         >
           <div style={{
             ...card(), width: '100%', maxWidth: 380,
+            maxHeight: '88vh', overflowY: 'auto',
             padding: '20px 20px 16px',
             display: 'flex', flexDirection: 'column', gap: 12,
             position: 'relative',
@@ -661,6 +749,44 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 background: T.secondary, color: T.white,
               }}
             >▶ Play</button>
+
+            {/* Fits in — scales this chord lives in */}
+            {fitScales.length > 0 && (
+              <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, marginBottom: 6 }}>
+                  Fits in
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {fitScales.map((sc, i) => (
+                    <Pill
+                      key={sc.name}
+                      label={sc.name}
+                      active={scaleIdx === i}
+                      onClick={() => setScaleIdx(prev => prev === i ? null : i)}
+                    />
+                  ))}
+                </div>
+
+                {scaleIdx !== null && fitScales[scaleIdx] && targetNoteName && (
+                  <>
+                    <div style={{ fontSize: 11, color: T.coral, marginTop: 8 }}>
+                      {targetNoteName} is the {degreeInScale(targetNoteName, fitScales[scaleIdx].root)} of {fitScales[scaleIdx].name}
+                    </div>
+                    <ScaleStrip
+                      positions={getScalePositions(fitScales[scaleIdx].root, fitScales[scaleIdx].type, tuning.notes)}
+                      tuning={tuning.notes}
+                      targetChroma={TonalNote.chroma(targetNoteName) ?? -1}
+                      rootChroma={TonalNote.chroma(fitScales[scaleIdx].root) ?? -1}
+                    />
+                    <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 9, color: T.textDim }}>
+                      <span><span style={{ color: T.coral, fontWeight: 700 }}>●</span> target</span>
+                      <span><span style={{ color: T.primary, fontWeight: 700 }}>●</span> root</span>
+                      <span><span style={{ color: T.secondary, fontWeight: 700 }}>●</span> scale</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Carousel */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
