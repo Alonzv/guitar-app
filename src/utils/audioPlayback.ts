@@ -8,9 +8,20 @@ const AudioCtxClass: typeof AudioContext = window.AudioContext || (window as any
 let _ctx: AudioContext | null = null;
 let _masterGain: GainNode | null = null;
 
+// iOS 16.4+ exposes navigator.audioSession — setting it to "playback" makes
+// Web Audio ignore the hardware mute switch. This is the proper, direct fix.
+function setPlaybackSession(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const session = (navigator as any).audioSession;
+    if (session && session.type !== 'playback') session.type = 'playback';
+  } catch { /* not supported — silent-audio fallback handles older iOS */ }
+}
+
 function initAudioGraph(): void {
   if (_ctx && _ctx.state !== 'closed') return;
 
+  setPlaybackSession();
   _ctx = new AudioCtxClass();
   _masterGain = _ctx.createGain();
   _masterGain.connect(_ctx.destination);
@@ -67,17 +78,26 @@ function ensureSilentAudio(): void {
     _silentEl = new Audio(buildSilentWavUri());
     _silentEl.loop = true;
     _silentEl.setAttribute('playsinline', '');
+    _silentEl.preload = 'auto';
     _silentEl.volume = 1; // the clip is silent; this just keeps the session alive
+    // Some iOS versions only promote the session for an element in the DOM.
+    Object.assign(_silentEl.style, {
+      position: 'fixed', width: '1px', height: '1px', opacity: '0', pointerEvents: 'none',
+    });
+    document.body.appendChild(_silentEl);
   } catch { /* ignore */ }
 }
 
 // ── Unlock ────────────────────────────────────────────────────────────────
 // Call from every user-gesture handler to resume AudioContext on iOS.
 export function unlockAudio(): void {
+  // iOS 16.4+: the direct, proper fix — ignore the mute switch.
+  setPlaybackSession();
+
   initAudioGraph();
   _ctx!.resume().catch(() => {});
 
-  // Promote the audio session so output ignores the iOS silent switch.
+  // Fallback for older iOS: loop a silent clip to promote the audio session.
   ensureSilentAudio();
   _silentEl?.play().catch(() => {});
 
