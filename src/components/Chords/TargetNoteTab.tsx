@@ -62,7 +62,14 @@ interface Props { tuning: Tuning; capo: number; }
 
 // ── isPlayable (not exported from chordVoicings) ──────────────────────────
 function isPlayable(voicing: FretPosition[]): boolean {
-  if (voicing.length < 3) return false;
+  if (voicing.length < 4) return false;
+
+  // Count skipped inner strings — muting an inner string is hard in practice
+  const strings = [...voicing.map(p => p.string)].sort((a, b) => a - b);
+  let innerGaps = 0;
+  for (let i = 1; i < strings.length; i++) innerGaps += strings[i] - strings[i - 1] - 1;
+  if (innerGaps > 1) return false;
+
   const nonOpen = voicing.filter(p => p.fret > 0);
   if (nonOpen.length === 0) return true;
   const frets = nonOpen.map(p => p.fret);
