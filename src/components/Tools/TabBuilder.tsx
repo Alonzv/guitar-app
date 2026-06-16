@@ -5,6 +5,37 @@ import {
   type TabScaleResult, type ProgressionSuggestion,
 } from '../../utils/analyzeTab';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
+import { findChordVoicings } from '../../utils/chordVoicings';
+import { MiniFretboard } from '../Fretboard/MiniFretboard';
+import { VerticalScaleFretboard } from '../Fretboard/VerticalScaleFretboard';
+
+type Lang = 'he' | 'en';
+type ErrKey = 'empty' | 'ai' | 'gen';
+
+const L: Record<Lang, {
+  dir: 'rtl' | 'ltr'; heading: string; bestScale: string; match: string;
+  progTitle: string; reanalyze: string; play: string; loading: string;
+  empty: string; ai: string; gen: string; tapHint: string; scaleHint: string;
+}> = {
+  he: {
+    dir: 'rtl', heading: 'ניתוח טאב', bestScale: 'הסולם המתאים ביותר', match: 'התאמה',
+    progTitle: 'הצעות לפרוגרסיות אקורדים', reanalyze: 'נתח מחדש', play: 'נגן',
+    loading: 'מחפש פרוגרסיות אקורדים שמתאימות למלודיה…',
+    empty: 'כתוב כמה תווים בטאב לפני הניתוח',
+    ai: 'לא ניתן ליצור הצעות כרגע (חסר חיבור ל-AI)',
+    gen: 'אירעה שגיאה בניתוח',
+    tapHint: 'לחץ על אקורד לתצוגה', scaleHint: 'לחץ להצגה על הצוואר',
+  },
+  en: {
+    dir: 'ltr', heading: 'Tab Analysis', bestScale: 'Best matching scale', match: 'match',
+    progTitle: 'Suggested chord progressions', reanalyze: 'Re-analyze', play: 'Play',
+    loading: 'Finding chord progressions that fit your melody…',
+    empty: 'Write some notes in the tab before analyzing',
+    ai: 'Couldn’t generate suggestions right now (AI not connected)',
+    gen: 'Analysis error',
+    tapHint: 'Tap a chord to view it', scaleHint: 'Tap to see it on the neck',
+  },
+};
 
 type Tech = 'h' | 'p' | '/' | '\\' | 'b' | '~';
 
@@ -52,7 +83,28 @@ export const TabBuilder: React.FC = () => {
   const [analyzing, setAnalyzing]         = useState(false);
   const [analyzeScale, setAnalyzeScale]   = useState<TabScaleResult | null>(null);
   const [analyzeProgs, setAnalyzeProgs]   = useState<ProgressionSuggestion[] | null>(null);
-  const [analyzeErr, setAnalyzeErr]       = useState<string | null>(null);
+  const [analyzeErr, setAnalyzeErr]       = useState<ErrKey | null>(null);
+  const [lang, setLang] = useState<Lang>(() => {
+    try { return (localStorage.getItem('scaleup_lang') as Lang) || 'he'; } catch { return 'he'; }
+  });
+  const [chordModal, setChordModal]   = useState<string | null>(null); // chord name → diagram
+  const [scaleModal, setScaleModal]   = useState(false);               // scale → vertical neck
+
+  // Restore a previous analysis so it can be reopened after closing
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem('scaleup_tab_analysis');
+      if (s) {
+        const a = JSON.parse(s);
+        if (a.scale) setAnalyzeScale(a.scale);
+        if (a.progs) setAnalyzeProgs(a.progs);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { try { localStorage.setItem('scaleup_lang', lang); } catch { /* ignore */ } }, [lang]);
+
+  const t = L[lang];
 
   // Undo history — ref to avoid stale-closure issues
   const histRef = useRef<TabState[]>([]);
@@ -227,8 +279,13 @@ export const TabBuilder: React.FC = () => {
     setSel(null);
   };
 
-  const handleAnalyze = async () => {
-    setAnalyzeOpen(true);
+  const persistAnalysis = (scale: TabScaleResult | null, progs: ProgressionSuggestion[] | null) => {
+    try {
+      localStorage.setItem('scaleup_tab_analysis', JSON.stringify({ scale, progs }));
+    } catch { /* ignore */ }
+  };
+
+  const runAnalysis = async () => {
     setAnalyzeErr(null);
     setAnalyzeProgs(null);
 
@@ -237,7 +294,8 @@ export const TabBuilder: React.FC = () => {
 
     if (!scale || ordered.length === 0) {
       setAnalyzeScale(null);
-      setAnalyzeErr('כתוב כמה תווים בטאב לפני הניתוח');
+      setAnalyzeErr('empty');
+      persistAnalysis(null, null);
       return;
     }
 
@@ -245,18 +303,28 @@ export const TabBuilder: React.FC = () => {
     setAnalyzing(true);
     try {
       const res = await suggestTabProgressions(scale.name, ordered);
-      if (res) setAnalyzeProgs(res.progressions);
-      else setAnalyzeErr('לא ניתן ליצור הצעות פרוגרסיות כרגע (חסר חיבור ל-AI)');
+      if (res) {
+        setAnalyzeProgs(res.progressions);
+        persistAnalysis(scale, res.progressions);
+      } else {
+        setAnalyzeErr('ai');
+        persistAnalysis(scale, null);
+      }
     } catch {
-      setAnalyzeErr('אירעה שגיאה בניתוח');
+      setAnalyzeErr('gen');
     } finally {
       setAnalyzing(false);
     }
   };
 
-  const playProgression = async (chords: string[]) => {
+  // Header button: reopen cached results if present, otherwise run fresh
+  const handleAnalyze = () => {
+    setAnalyzeOpen(true);
+    if (!analyzeProgs && !analyzing) runAnalysis();
+  };
+
+  const playProgression = (chords: string[]) => {
     unlockAudio();
-    const { findChordVoicings } = await import('../../utils/chordVoicings');
     chords.forEach((name, i) => {
       setTimeout(() => {
         const v = findChordVoicings(name, 1)[0];
@@ -269,9 +337,25 @@ export const TabBuilder: React.FC = () => {
     setBusy(true);
     // Auto-save before export
     localStorage.setItem('scaleup_tab', JSON.stringify(tab));
+
+    // Bundle the analysis (if any) into the PDF, in the chosen language
+    const pdfAnalysis = analyzeScale ? {
+      rtl: lang === 'he',
+      heading: t.heading,
+      scaleLabel: t.bestScale,
+      scaleName: analyzeScale.name,
+      matchText: `${analyzeScale.fitPercent}% ${t.match}`,
+      progHeading: t.progTitle,
+      progressions: (analyzeProgs ?? []).map(p => ({
+        title: lang === 'he' ? p.name_he : p.name_en,
+        chords: p.chords,
+        why: lang === 'he' ? p.why_he : p.why_en,
+      })),
+    } : undefined;
+
     try {
       const { exportTabPDF } = await import('../../utils/pdfExport');
-      await exportTabPDF(title, subtitle, grid, bars, STRS, COLS_PER_LINE);
+      await exportTabPDF(title, subtitle, grid, bars, STRS, COLS_PER_LINE, pdfAnalysis);
     } finally {
       setBusy(false);
     }
@@ -617,82 +701,193 @@ export const TabBuilder: React.FC = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 200, padding: 16,
           }}>
-          <div style={{
+          <div dir={t.dir} style={{
             background: T.bgCard, borderRadius: 14, border: `1px solid ${T.border}`,
             width: '100%', maxWidth: 440, maxHeight: '88vh', overflowY: 'auto',
             padding: '20px 20px 18px', position: 'relative',
             display: 'flex', flexDirection: 'column', gap: 14,
+            textAlign: t.dir === 'rtl' ? 'right' : 'left',
           }}>
+            {/* Close (always top-right visually) */}
             <button onClick={() => setAnalyzeOpen(false)} style={{
-              position: 'absolute', top: 12, right: 12,
+              position: 'absolute', top: 12, insetInlineEnd: 12,
               background: T.bgInput, border: 'none', borderRadius: 6,
               cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
               padding: '3px 7px',
             }}>✕</button>
 
-            <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>Tab Analysis</div>
-
-            {/* Detected scale */}
-            {analyzeScale && (
+            {/* Heading + language toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingInlineEnd: 28 }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{t.heading}</span>
               <div style={{
-                background: T.bgInput, borderRadius: 10, padding: '12px 14px',
-                borderLeft: `3px solid ${T.primary}`,
+                display: 'flex', borderRadius: 7, overflow: 'hidden',
+                border: `1px solid ${T.border}`, marginInlineStart: 'auto',
               }}>
-                <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 3 }}>הסולם המתאים ביותר</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{analyzeScale.name}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: T.primary }}>{analyzeScale.fitPercent}% match</span>
-                </div>
+                {(['he', 'en'] as Lang[]).map(lg => (
+                  <button key={lg} onClick={() => setLang(lg)} style={{
+                    border: 'none', cursor: 'pointer', padding: '4px 9px',
+                    fontSize: 11, fontWeight: 700,
+                    background: lang === lg ? T.secondary : T.bgInput,
+                    color: lang === lg ? '#fff' : T.textMuted,
+                  }}>{lg === 'he' ? 'עברית' : 'EN'}</button>
+                ))}
               </div>
+            </div>
+
+            {/* Detected scale — clickable */}
+            {analyzeScale && (
+              <button
+                onClick={() => setScaleModal(true)}
+                style={{
+                  background: T.bgInput, borderRadius: 10, padding: '12px 14px',
+                  borderInlineStart: `3px solid ${T.primary}`, border: 'none',
+                  cursor: 'pointer', textAlign: 'inherit', width: '100%',
+                }}>
+                <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 3 }}>{t.bestScale}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: T.text, textDecoration: 'underline', textDecorationColor: T.primary }}>
+                    {analyzeScale.name}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: T.primary }}>
+                    {analyzeScale.fitPercent}% {t.match}
+                  </span>
+                </div>
+                <div style={{ fontSize: 10, color: T.textDim, marginTop: 3 }}>{t.scaleHint} ↗</div>
+              </button>
             )}
 
             {/* Error / empty */}
             {analyzeErr && (
               <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: '8px 0' }}>
-                {analyzeErr}
+                {t[analyzeErr]}
               </div>
             )}
 
             {/* Loading */}
             {analyzing && (
               <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: '12px 0' }}>
-                מחפש פרוגרסיות אקורדים שמתאימות למלודיה…
+                {t.loading}
               </div>
             )}
 
             {/* Progression suggestions */}
             {analyzeProgs && analyzeProgs.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted }}>
-                  הצעות לפרוגרסיות אקורדים
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: T.textMuted }}>{t.progTitle}</span>
+                  <span style={{ fontSize: 10, color: T.textDim }}>· {t.tapHint}</span>
                 </div>
                 {analyzeProgs.map((p, i) => (
-                  <div key={i} style={{
-                    background: T.bgInput, borderRadius: 10, padding: '12px 14px',
-                  }}>
+                  <div key={i} style={{ background: T.bgInput, borderRadius: 10, padding: '12px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{p.name}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                        {lang === 'he' ? p.name_he : p.name_en}
+                      </span>
                       <button onClick={() => playProgression(p.chords)}
                         style={{
                           background: T.secondary, color: '#fff', border: 'none',
                           borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
                           fontSize: 11, fontWeight: 700, flexShrink: 0,
-                        }}>▶ נגן</button>
+                        }}>▶ {t.play}</button>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0' }}>
                       {p.chords.map((c, j) => (
-                        <span key={j} style={{
+                        <button key={j} onClick={() => setChordModal(c)} style={{
                           background: T.primaryBg, color: T.text, borderRadius: 6,
                           padding: '4px 10px', fontSize: 13, fontWeight: 700,
-                          fontFamily: 'monospace',
-                        }}>{c}</span>
+                          fontFamily: 'monospace', border: 'none', cursor: 'pointer',
+                        }}>{c}</button>
                       ))}
                     </div>
-                    <div style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>{p.why}</div>
+                    <div style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>
+                      {lang === 'he' ? p.why_he : p.why_en}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Re-analyze */}
+            {!analyzing && (analyzeProgs || analyzeErr) && (
+              <button onClick={runAnalysis} style={{
+                background: 'transparent', border: `1px solid ${T.border}`,
+                borderRadius: 8, padding: '8px 0', cursor: 'pointer',
+                color: T.textMuted, fontSize: 12, fontWeight: 700,
+              }}>↻ {t.reanalyze}</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Chord diagram modal ───────────────────────────── */}
+      {chordModal && (() => {
+        const voicing = findChordVoicings(chordModal, 1)[0] ?? [];
+        return (
+          <div
+            onClick={e => { if (e.target === e.currentTarget) setChordModal(null); }}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 210, padding: 16,
+            }}>
+            <div style={{
+              background: T.bgCard, borderRadius: 14, border: `1px solid ${T.border}`,
+              width: '100%', maxWidth: 300, padding: '20px 20px 16px',
+              display: 'flex', flexDirection: 'column', gap: 12, position: 'relative',
+            }}>
+              <button onClick={() => setChordModal(null)} style={{
+                position: 'absolute', top: 12, right: 12, background: T.bgInput,
+                border: 'none', borderRadius: 6, cursor: 'pointer', color: T.textMuted,
+                fontSize: 16, lineHeight: 1, padding: '3px 7px',
+              }}>✕</button>
+              <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: T.text }}>
+                {chordModal}
+              </div>
+              <div style={{ padding: '0 12px' }}>
+                {voicing.length > 0
+                  ? <MiniFretboard voicing={voicing} showStringLabels showFretNumbers />
+                  : <div style={{ textAlign: 'center', color: T.textMuted, fontSize: 13, padding: '12px 0' }}>—</div>}
+              </div>
+              {voicing.length > 0 && (
+                <button onClick={() => { unlockAudio(); playChord(voicing.map(p => ({ string: p.string, fret: p.fret }))); }}
+                  style={{
+                    padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    fontWeight: 700, fontSize: 14, background: T.secondary, color: '#fff',
+                  }}>▶ {t.play}</button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Scale on the neck (vertical) modal ────────────── */}
+      {scaleModal && analyzeScale && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setScaleModal(false); }}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 210, padding: 16,
+          }}>
+          <div style={{
+            background: T.bgCard, borderRadius: 14, border: `1px solid ${T.border}`,
+            width: '100%', maxWidth: 340, maxHeight: '90vh', overflowY: 'auto',
+            padding: '20px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12,
+            position: 'relative',
+          }}>
+            <button onClick={() => setScaleModal(false)} style={{
+              position: 'absolute', top: 12, right: 12, background: T.bgInput,
+              border: 'none', borderRadius: 6, cursor: 'pointer', color: T.textMuted,
+              fontSize: 16, lineHeight: 1, padding: '3px 7px',
+            }}>✕</button>
+            <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, color: T.text }}>
+              {analyzeScale.name}
+            </div>
+            <VerticalScaleFretboard root={analyzeScale.root} type={analyzeScale.type} />
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 14, fontSize: 10, color: T.textDim }}>
+              <span><span style={{ color: T.primary, fontWeight: 700 }}>●</span> root</span>
+              <span><span style={{ color: T.secondary, fontWeight: 700 }}>●</span> scale</span>
+            </div>
           </div>
         </div>
       )}

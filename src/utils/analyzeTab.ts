@@ -57,17 +57,24 @@ export function detectTabScale(
   grid: Cell[][],
   tuning?: string[],
 ): TabScaleResult | null {
-  const { pitchClasses } = extractTabNotes(grid, tuning);
+  const { ordered, pitchClasses } = extractTabNotes(grid, tuning);
   if (pitchClasses.length === 0) return null;
 
   const wanted = pitchClasses
     .map(n => TonalNote.chroma(n))
     .filter((c): c is number => c !== undefined);
   const wantedSet = new Set(wanted);
+  const firstChroma = TonalNote.chroma(ordered[0]);
+  const lastChroma  = TonalNote.chroma(ordered[ordered.length - 1]);
 
+  // Composite score: higher is better. Tie-breaks favour a tonic the player
+  // actually emphasised — root present in the melody, and especially the
+  // first or last note (common tonal anchors) — then simpler scale types.
   let best: TabScaleResult | null = null;
+  let bestScore = -Infinity;
 
   for (const root of CHROMATIC) {
+    const rootChroma = TonalNote.chroma(root)!;
     for (const type of SCALE_TYPES) {
       const scale = Scale.get(`${root} ${type}`);
       if (!scale || scale.empty) continue;
@@ -78,11 +85,14 @@ export function detectTabScale(
       for (const c of wantedSet) if (scaleChromas.has(c)) covered++;
       const fitPercent = Math.round((covered / wantedSet.size) * 100);
 
-      if (!best
-        || fitPercent > best.fitPercent
-        // tie-break: prefer simpler/more-common scales (earlier in SCALE_TYPES)
-        || (fitPercent === best.fitPercent
-            && SCALE_TYPES.indexOf(type) < SCALE_TYPES.indexOf(best.type))) {
+      let score = fitPercent * 1000;
+      if (wantedSet.has(rootChroma)) score += 120;           // root is actually played
+      if (rootChroma === firstChroma) score += 80;           // melody starts on the root
+      if (rootChroma === lastChroma)  score += 60;           // melody resolves to the root
+      score -= SCALE_TYPES.indexOf(type) * 4;                // prefer common scale types
+
+      if (score > bestScore) {
+        bestScore = score;
         const displayRoot = SHARP_TO_FLAT[root] ?? root;
         best = { name: `${displayRoot} ${type}`, root: displayRoot, type, fitPercent, noteCount: wantedSet.size };
       }
@@ -95,8 +105,10 @@ export function detectTabScale(
 // ── AI progression suggestions ────────────────────────────────────────────
 export interface ProgressionSuggestion {
   chords: string[];   // tonaljs-compatible chord names
-  name: string;       // short Hebrew name/vibe for this progression
-  why: string;        // 1-2 sentences Hebrew explaining the fit
+  name_he: string;    // short vibe label, Hebrew
+  name_en: string;    // short vibe label, English
+  why_he: string;     // 1-2 sentences Hebrew
+  why_en: string;     // 1-2 sentences English
 }
 
 export interface TabProgressionsResult {
@@ -120,7 +132,7 @@ export async function suggestTabProgressions(
 
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 700,
+      max_tokens: 1100,
       messages: [
         {
           role: 'user',
@@ -137,14 +149,16 @@ CRITICAL — Chord name format (must parse with tonaljs Chord.get()):
 - Sus: "Dsus4" "Csus2"   Diminished: "Bdim"   Half-dim: "Bm7b5"   Add9: "Cadd9"
 - 9ths: "Cmaj9" "Am9" "G9"   6: "C6"
 
-Write "name" and "why" in fluent, natural Israeli Hebrew (no transliteration, no English loanwords).
+For each progression provide BOTH a Hebrew and an English version of the vibe label and explanation.
+- Hebrew: fluent, natural Israeli Hebrew (no transliteration, no English loanwords).
+- English: natural, concise musician English.
 
 Return valid JSON only, no markdown:
 {
   "progressions": [
-    { "chords": [<3-4 chord strings>], "name": "<short Hebrew vibe label>", "why": "<1-2 Hebrew sentences on why it fits the melody>" },
-    { "chords": [...], "name": "...", "why": "..." },
-    { "chords": [...], "name": "...", "why": "..." }
+    { "chords": [<3-4 chord strings>], "name_he": "<Hebrew vibe label>", "name_en": "<English vibe label>", "why_he": "<1-2 Hebrew sentences>", "why_en": "<1-2 English sentences>" },
+    { "chords": [...], "name_he": "...", "name_en": "...", "why_he": "...", "why_en": "..." },
+    { "chords": [...], "name_he": "...", "name_en": "...", "why_he": "...", "why_en": "..." }
   ]
 }`,
         },
@@ -161,7 +175,8 @@ Return valid JSON only, no markdown:
     // Basic shape validation
     parsed.progressions = parsed.progressions.filter(
       p => Array.isArray(p.chords) && p.chords.length > 0
-        && typeof p.name === 'string' && typeof p.why === 'string'
+        && typeof p.name_he === 'string' && typeof p.name_en === 'string'
+        && typeof p.why_he === 'string' && typeof p.why_en === 'string'
     );
     if (parsed.progressions.length === 0) return null;
 

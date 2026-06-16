@@ -1,6 +1,18 @@
 import type { ChordInProgression, FretPosition } from '../types/music';
 import { formatChordName } from './chordIdentifier';
 import { fretToNote } from './musicTheory';
+import { findChordVoicings } from './chordVoicings';
+
+// Analysis bundled into the tab PDF (strings already resolved to chosen language)
+export interface TabPDFAnalysis {
+  rtl: boolean;
+  heading: string;
+  scaleLabel: string;
+  scaleName: string;
+  matchText: string;
+  progHeading: string;
+  progressions: { title: string; chords: string[]; why: string }[];
+}
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -188,6 +200,41 @@ function tabCellText(cell: TabCell): string {
   return cell.fret.length === 1 ? `-${cell.fret}${t || '-'}` : `${cell.fret}${t || '-'}`;
 }
 
+function buildAnalysisHTML(a: TabPDFAnalysis): string {
+  const align = a.rtl ? 'right' : 'left';
+  const dir = a.rtl ? 'rtl' : 'ltr';
+
+  const progCards = a.progressions.map(p => {
+    const chordRow = p.chords.map(name => {
+      const v = findChordVoicings(name, 1)[0] ?? [];
+      const diagram = v.length > 0 ? fretboardSVGHtml(v) : '';
+      return `
+        <div style="display:inline-block;width:120px;vertical-align:top;text-align:center;margin:4px;">
+          <div style="font-size:15px;font-weight:800;color:#111;font-family:'Courier New',monospace;">${escapeHtml(name)}</div>
+          ${diagram}
+        </div>`;
+    }).join('');
+
+    return `
+      <div style="background:#F2EAD3;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:800;color:#243238;margin-bottom:6px;">${escapeHtml(p.title)}</div>
+        <div style="text-align:center;">${chordRow}</div>
+        <div style="font-size:11px;color:#555;line-height:1.6;margin-top:6px;">${escapeHtml(p.why)}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div dir="${dir}" style="text-align:${align};margin-top:34px;padding-top:24px;border-top:2px solid #C44900;">
+      <h2 style="font-size:18px;font-weight:800;margin:0 0 14px;color:#243238;">${escapeHtml(a.heading)}</h2>
+      <div style="background:#354a51;border-radius:8px;padding:12px 16px;margin-bottom:18px;color:#F9ECC3;">
+        <div style="font-size:11px;opacity:0.7;margin-bottom:2px;">${escapeHtml(a.scaleLabel)}</div>
+        <span style="font-size:20px;font-weight:800;">${escapeHtml(a.scaleName)}</span>
+        <span style="font-size:12px;opacity:0.85;margin:0 8px;">${escapeHtml(a.matchText)}</span>
+      </div>
+      ${a.progressions.length > 0 ? `<div style="font-size:13px;font-weight:700;color:#243238;margin-bottom:10px;">${escapeHtml(a.progHeading)}</div>${progCards}` : ''}
+    </div>`;
+}
+
 export async function exportTabPDF(
   title: string,
   subtitle: string,
@@ -195,6 +242,7 @@ export async function exportTabPDF(
   bars: number[],
   strings: string[],
   colsPerLine: number,
+  analysis?: TabPDFAnalysis,
 ): Promise<void> {
   const colCount = grid[0]?.length ?? 0;
   const numSys   = Math.ceil(colCount / colsPerLine);
@@ -236,6 +284,7 @@ export async function exportTabPDF(
       ${subtitle ? `<p style="font-size:13px;color:#666;margin:0 0 18px;">${escapeHtml(subtitle)}</p>` : ''}
       <div style="height:2px;background:#C44900;margin-bottom:30px;"></div>
       ${systemsHTML || '<p style="color:#999;font-size:13px;">Empty tab</p>'}
+      ${analysis ? buildAnalysisHTML(analysis) : ''}
       <div style="margin-top:36px;font-size:10px;color:#bbb;text-align:right;">Created with ScaleUp</div>
     </div>`;
 
