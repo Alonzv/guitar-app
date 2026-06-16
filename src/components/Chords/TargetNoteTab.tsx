@@ -262,103 +262,114 @@ function XORow({ voicing }: { voicing: FretPosition[] }) {
 }
 
 // ── Scrollable input fretboard ────────────────────────────────────────────
-const FRET_W  = 44;   // px per fret — wide enough to tap comfortably
-const OPEN_W  = 28;   // open-string column
-const STR_SP  = 17;   // px between strings
-const TOP_PAD = 8;
-const BOT_PAD = 14;   // room for fret number labels
-const FB_H    = TOP_PAD + 5 * STR_SP + BOT_PAD;  // total SVG height
-const FB_W    = OPEN_W + 12 * FRET_W;            // total SVG width
+// Same proportions as InteractiveFretboard (680×168) so it looks identical in size.
+// minWidth: 540 ensures frets are always tap-friendly and triggers scroll on narrow screens.
+const FB_SVG_W  = 680;
+const FB_SVG_H  = 168;
+const FB_NUT_X  = 28;
+const FB_FRET_SP = (FB_SVG_W - FB_NUT_X - 8) / 12;  // ≈ 53.7 px per fret
+const FB_STR_SP  = (FB_SVG_H - 32) / (STRING_COUNT - 1); // ≈ 27.2 px
+const FB_TOP_Y   = 8;
+const FB_DOT_R   = 11;
+
+const fretCX = (f: number) =>
+  f === 0 ? FB_NUT_X / 2 : FB_NUT_X + (f - 0.5) * FB_FRET_SP;
+const strY   = (s: number) => FB_TOP_Y + (STRING_COUNT - 1 - s) * FB_STR_SP;
 
 const InputFretboard: React.FC<{
   selected: TargetPos | null;
   tuning: string[];
   onSelect: (pos: TargetPos) => void;
 }> = ({ selected, tuning, onSelect }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const strY = (s: number) => TOP_PAD + (STRING_COUNT - 1 - s) * STR_SP;
-  const fretCX = (f: number) => f === 0 ? OPEN_W / 2 : OPEN_W + (f - 0.5) * FRET_W;
-  const DOT_FRETS = [3, 5, 7, 9];
+  const handleClick = (s: number, f: number) => {
+    // Second tap on same position → deselect
+    if (selected?.string === s && selected?.fret === f) {
+      onSelect({ string: -1, fret: -1 }); // sentinel handled in parent
+    } else {
+      onSelect({ string: s, fret: f });
+    }
+  };
 
   return (
-    <div
-      ref={scrollRef}
-      style={{
-        overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
-        borderRadius: 8,
-        background: T.bgInput,
-        scrollbarWidth: 'none',
-      }}
-    >
+    <div style={{
+      overflowX: 'auto',
+      WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+      borderRadius: 8,
+      background: T.bgInput,
+      scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
+    }}>
       <svg
-        width={FB_W}
-        height={FB_H}
-        viewBox={`0 0 ${FB_W} ${FB_H}`}
-        style={{ display: 'block', flexShrink: 0 }}
+        viewBox={`0 0 ${FB_SVG_W} ${FB_SVG_H}`}
+        style={{ width: '100%', minWidth: 540, maxHeight: 190, display: 'block' }}
       >
-        {/* Open-string zone background */}
-        <rect x={0} y={0} width={OPEN_W} height={FB_H} fill={T.bgDeep} opacity={0.25} />
+        {/* Open-string zone */}
+        <rect x={0} y={0} width={FB_NUT_X} height={FB_SVG_H} fill={T.bgDeep} opacity={0.2} />
 
         {/* Nut */}
-        <rect x={OPEN_W - 2.5} y={TOP_PAD} width={3} height={5 * STR_SP} fill={T.text} opacity={0.7} rx={1} />
+        <rect x={FB_NUT_X - 3} y={FB_TOP_Y} width={3.5} height={5 * FB_STR_SP}
+          fill={T.text} opacity={0.65} rx={1} />
 
         {/* Fret lines */}
         {Array.from({ length: 13 }).map((_, i) => (
           <line key={i}
-            x1={OPEN_W + i * FRET_W} y1={TOP_PAD}
-            x2={OPEN_W + i * FRET_W} y2={TOP_PAD + 5 * STR_SP}
-            stroke={T.border} strokeWidth={1}
+            x1={FB_NUT_X + i * FB_FRET_SP} y1={FB_TOP_Y}
+            x2={FB_NUT_X + i * FB_FRET_SP} y2={FB_TOP_Y + 5 * FB_STR_SP}
+            stroke={T.border} strokeWidth={1.2}
           />
         ))}
 
         {/* Strings */}
         {Array.from({ length: STRING_COUNT }).map((_, s) => (
           <line key={s}
-            x1={0} y1={strY(s)}
-            x2={FB_W} y2={strY(s)}
-            stroke={T.secondary} strokeWidth={2.2 - s * 0.22} opacity={0.45}
+            x1={0} y1={strY(s)} x2={FB_SVG_W} y2={strY(s)}
+            stroke={T.secondary} strokeWidth={0.9 + s * 0.22} opacity={0.5}
           />
         ))}
 
-        {/* Single dot markers */}
-        {DOT_FRETS.map(f => (
+        {/* Position dots */}
+        {[3, 5, 7, 9].map(f => (
           <circle key={f}
-            cx={OPEN_W + (f - 0.5) * FRET_W}
-            cy={FB_H - 5}
-            r={3} fill={T.textDim} opacity={0.45}
+            cx={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
+            cy={FB_TOP_Y + 2.5 * FB_STR_SP}
+            r={4} fill={T.border} opacity={0.45}
           />
         ))}
+        <circle cx={FB_NUT_X + 11.35 * FB_FRET_SP} cy={FB_TOP_Y + 1.5 * FB_STR_SP} r={3.5} fill={T.border} opacity={0.45} />
+        <circle cx={FB_NUT_X + 11.35 * FB_FRET_SP} cy={FB_TOP_Y + 3.5 * FB_STR_SP} r={3.5} fill={T.border} opacity={0.45} />
 
-        {/* Double dot at 12 */}
-        <circle cx={OPEN_W + 11.35 * FRET_W} cy={FB_H - 5} r={3} fill={T.textDim} opacity={0.45} />
-        <circle cx={OPEN_W + 11.65 * FRET_W} cy={FB_H - 5} r={3} fill={T.textDim} opacity={0.45} />
-
-        {/* Fret numbers */}
+        {/* Fret number labels */}
         {[1,2,3,4,5,6,7,8,9,10,11,12].map(f => (
           <text key={f}
-            x={OPEN_W + (f - 0.5) * FRET_W}
-            y={FB_H - 1}
-            textAnchor="middle" fontSize={7} fill={T.textDim} opacity={0.6}
+            x={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
+            y={FB_SVG_H - 3}
+            textAnchor="middle" fontSize={9} fill={T.textDim}
           >{f}</text>
         ))}
 
-        {/* Clickable cells + selected dot */}
+        {/* Ghost hover rings */}
         {Array.from({ length: STRING_COUNT }).map((_, s) =>
           Array.from({ length: 13 }).map((_, f) => {
             const isSelected = selected?.string === s && selected?.fret === f;
             const cx = fretCX(f);
             const cy = strY(s);
-            const hitX = f === 0 ? 0 : OPEN_W + (f - 1) * FRET_W;
-            const hitW = f === 0 ? OPEN_W : FRET_W;
+            const hitX = f === 0 ? 0 : FB_NUT_X + (f - 1) * FB_FRET_SP;
+            const hitW = f === 0 ? FB_NUT_X : FB_FRET_SP;
             return (
-              <g key={`${s}-${f}`} onClick={() => onSelect({ string: s, fret: f })} style={{ cursor: 'pointer' }}>
-                <rect x={hitX} y={cy - STR_SP / 2} width={hitW} height={STR_SP} fill="transparent" />
+              <g key={`${s}-${f}`} onClick={() => handleClick(s, f)} style={{ cursor: 'pointer' }}>
+                <rect x={hitX} y={cy - FB_STR_SP / 2} width={hitW} height={FB_STR_SP} fill="transparent" />
+                {!isSelected && (
+                  <circle cx={cx} cy={cy} r={FB_DOT_R - 5}
+                    fill="transparent" stroke={T.border} strokeWidth={1} opacity={0.25} />
+                )}
                 {isSelected && (
-                  <circle cx={cx} cy={cy} r={8} fill={T.coral} opacity={0.92}
-                    style={{ filter: 'drop-shadow(0 0 5px var(--gc-coral))' }}
-                  />
+                  <>
+                    <circle cx={cx} cy={cy} r={FB_DOT_R} fill={T.coral} opacity={0.92}
+                      style={{ filter: 'drop-shadow(0 0 5px var(--gc-coral))' }} />
+                    <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9}
+                      fill="#fff" fontWeight="700">
+                      {fretToNote(s, f, tuning)}
+                    </text>
+                  </>
                 )}
               </g>
             );
@@ -451,7 +462,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
         <InputFretboard
           selected={targetPos}
           tuning={tuning.notes}
-          onSelect={pos => setTargetPos(pos)}
+          onSelect={pos => setTargetPos(pos.string === -1 ? null : pos)}
         />
         <div style={{
           marginTop: 8, fontSize: 12, minHeight: 22,
