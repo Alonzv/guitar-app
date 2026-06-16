@@ -29,13 +29,9 @@ const CHROMA_ENHARMONIC: Record<number, string> = { 1: 'Db', 3: 'D#', 6: 'Gb', 8
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
 
 const CHORD_SUFFIXES_TRIADS = ['M', 'm', 'dim', 'aug', 'sus2', 'sus4'];
-const CHORD_SUFFIXES_7THS = [...CHORD_SUFFIXES_TRIADS, '7', 'maj7', 'm7', 'm7b5', 'dim7'];
-const CHORD_SUFFIXES_EXTENSIONS = [
-  ...CHORD_SUFFIXES_7THS,
-  '9', 'maj9', 'm9', 'add9', '6', 'm6',
-  '11', 'm11', '13', 'm13',
-  '7b9', '7#9', '7#11', '7b13', 'alt',
-];
+const CHORD_SUFFIXES_7THS   = [...CHORD_SUFFIXES_TRIADS, '7', 'maj7', 'm7', 'm7b5', 'dim7'];
+const CHORD_SUFFIXES_9THS   = [...CHORD_SUFFIXES_7THS, '9', 'maj9', 'm9', 'add9', '6', 'm6'];
+const CHORD_SUFFIXES_FULL   = [...CHORD_SUFFIXES_9THS, '11', 'm11', '13', 'm13', 'maj13', '69'];
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface TargetPos { string: number; fret: number; }
@@ -155,7 +151,7 @@ function searchChords(
   targetPos: TargetPos,
   intervals: string[],
   positionLock: 'top' | 'bass' | 'anywhere',
-  complexity: 'triads' | '7ths' | 'extensions',
+  complexity: 'triads' | '7ths' | '9ths' | 'full',
   tuning: string[],
 ): ResultItem[] {
   const targetPitchClass = fretToNote(targetPos.string, targetPos.fret, tuning);
@@ -163,8 +159,9 @@ function searchChords(
   if (targetChroma === undefined) return [];
 
   const suffixes = complexity === 'triads' ? CHORD_SUFFIXES_TRIADS
-    : complexity === '7ths' ? CHORD_SUFFIXES_7THS
-    : CHORD_SUFFIXES_EXTENSIONS;
+    : complexity === '7ths'   ? CHORD_SUFFIXES_7THS
+    : complexity === '9ths'   ? CHORD_SUFFIXES_9THS
+    : CHORD_SUFFIXES_FULL;
 
   const results: ResultItem[] = [];
   const seen = new Set<string>();
@@ -330,7 +327,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
   const [targetPos, setTargetPos] = useState<TargetPos | null>(null);
   const [selectedIntervals, setSelectedIntervals] = useState<Set<string>>(new Set(['5']));
   const [positionLock, setPositionLock] = useState<'top' | 'bass' | 'anywhere'>('anywhere');
-  const [complexity, setComplexity] = useState<'triads' | '7ths' | 'extensions'>('7ths');
+  const [complexity, setComplexity] = useState<'triads' | '7ths' | '9ths' | 'full'>('7ths');
   const [controlsOpen, setControlsOpen] = useState(false);
   const [results, setResults] = useState<ResultItem[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -482,10 +479,10 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
             <div>
               <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Complexity</div>
               <div style={{ display: 'flex', gap: 6 }}>
-                {(['triads', '7ths', 'extensions'] as const).map(c => (
+                {(['triads', '7ths', '9ths', 'full'] as const).map(c => (
                   <Pill
                     key={c}
-                    label={c === 'triads' ? 'Triads' : c === '7ths' ? '7ths' : 'Extensions'}
+                    label={c === 'triads' ? 'Triads' : c === '7ths' ? '7ths' : c === '9ths' ? '9ths' : 'Full'}
                     active={complexity === c}
                     onClick={() => setComplexity(c)}
                   />
