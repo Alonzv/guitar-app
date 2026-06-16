@@ -126,44 +126,66 @@ export const TabBuilder: React.FC = () => {
     });
   }, [withHistory]);
 
+  // Hidden numeric input — focused on cell tap so the soft keyboard opens on mobile
+  const fretInputRef = useRef<HTMLInputElement>(null);
+
+  const applyDigit = useCallback((d: string) => {
+    if (!sel) return;
+    const [s, c] = sel;
+    const cur = grid[s][c].fret;
+    if (cur.length === 1 && parseInt(cur + d) <= 24) setCell(s, c, { fret: cur + d });
+    else setCell(s, c, { fret: d });
+  }, [sel, grid, setCell]);
+
+  // Shared by the global keydown listener (desktop) and the hidden input (mobile)
+  const handleEditKey = useCallback((e: {
+    key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; preventDefault: () => void;
+  }) => {
+    if (!sel) return;
+    const [s, c] = sel;
+
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      applyDigit(e.key);
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      setCell(s, c, { fret: '', tech: undefined });
+    } else if (e.key === 'ArrowRight' || e.key === 'Tab') {
+      e.preventDefault();
+      if (c + 1 < numCols) setSel([s, c + 1]);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (c > 0) setSel([s, c - 1]);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (s < 5) setSel([s + 1, c]);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (s > 0) setSel([s - 1, c]);
+    } else if (e.key === 'Escape') {
+      setSel(null);
+      fretInputRef.current?.blur();
+    } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    }
+  }, [sel, grid, numCols, applyDigit, setCell, undo]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!sel) return;
+      // Skip if focus is in a text field (title/subtitle, or the hidden fret input)
       if ((e.target as HTMLElement).tagName === 'INPUT') return;
-      const [s, c] = sel;
-
-      if (e.key >= '0' && e.key <= '9') {
-        e.preventDefault();
-        const cur = grid[s][c].fret;
-        if (cur.length === 1 && parseInt(cur + e.key) <= 24)
-          setCell(s, c, { fret: cur + e.key });
-        else
-          setCell(s, c, { fret: e.key });
-      } else if (e.key === 'Backspace' || e.key === 'Delete') {
-        e.preventDefault();
-        setCell(s, c, { fret: '', tech: undefined });
-      } else if (e.key === 'ArrowRight' || e.key === 'Tab') {
-        e.preventDefault();
-        if (c + 1 < numCols) setSel([s, c + 1]);
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        if (c > 0) setSel([s, c - 1]);
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (s < 5) setSel([s + 1, c]);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (s > 0) setSel([s - 1, c]);
-      } else if (e.key === 'Escape') {
-        setSel(null);
-      } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
+      handleEditKey(e);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [sel, grid, numCols, setCell, undo]);
+  }, [handleEditKey]);
+
+  // Tap a cell → select it and open the numeric keyboard on mobile
+  const selectCell = useCallback((s: number, c: number) => {
+    setSel([s, c]);
+    fretInputRef.current?.focus();
+  }, []);
 
   const applyTech = (tech: Tech) => {
     if (!sel) return;
@@ -259,6 +281,26 @@ export const TabBuilder: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}>
+
+      {/* Hidden numeric input — drives the mobile soft keyboard for fret entry */}
+      <input
+        ref={fretInputRef}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value=""
+        aria-hidden="true"
+        onChange={e => {
+          const d = e.target.value.replace(/[^0-9]/g, '').slice(-1);
+          if (d) applyDigit(d);
+        }}
+        onKeyDown={handleEditKey}
+        style={{
+          position: 'fixed', top: 0, left: 0,
+          width: 1, height: 1, opacity: 0, pointerEvents: 'none',
+          fontSize: 16, border: 'none', padding: 0, background: 'transparent',
+        }}
+      />
 
       {/* ── Header ──────────────────────────────────────── */}
       <div style={{
@@ -428,7 +470,7 @@ export const TabBuilder: React.FC = () => {
                     return (
                       <React.Fragment key={c}>
                         <div
-                          onClick={() => setSel([si, c])}
+                          onClick={() => selectCell(si, c)}
                           onMouseEnter={() => setHov([si, c])}
                           style={{
                             width: cw, height: ch, flexShrink: 0,
