@@ -184,6 +184,15 @@ export const TabBuilder: React.FC = () => {
     }));
   };
 
+  const clearGrid = () => {
+    withHistory(p => ({
+      ...p,
+      grid: emptyGrid(p.grid[0]?.length ?? colsPerLine * 3),
+      bars: [],
+    }));
+    setSel(null);
+  };
+
   const handleExport = async () => {
     setBusy(true);
     // Auto-save before export
@@ -251,6 +260,18 @@ export const TabBuilder: React.FC = () => {
               fontSize: 12, fontWeight: 700,
             }}>
             {busy ? '…' : 'PDF'}
+          </button>
+          <button
+            onClick={clearGrid}
+            title="Clear all notes"
+            style={{
+              background: 'transparent',
+              color: T.textMuted,
+              border: `1px solid ${T.border}`,
+              borderRadius: 8, padding: '7px 11px',
+              cursor: 'pointer', fontSize: 12, fontWeight: 700,
+            }}>
+            Clear
           </button>
           <button
             onClick={undo}
