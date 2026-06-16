@@ -229,8 +229,10 @@ function searchChords(
           if (seen.has(key)) continue;
           seen.add(key);
 
-          const aliases = chordInfo.aliases;
-          const displayName = rootName + (aliases[0] ?? suffix);
+          // Major triad should render as just the root ("C", not "CM")
+          let sym = chordInfo.aliases[0] ?? suffix;
+          if (sym === 'M') sym = '';
+          const displayName = rootName + sym;
 
           results.push({
             chordName: displayName,
