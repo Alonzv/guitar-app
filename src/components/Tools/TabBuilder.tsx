@@ -126,6 +126,12 @@ export const TabBuilder: React.FC = () => {
   // Keep tabRef current so withHistory always captures the latest state
   useEffect(() => { tabRef.current = tab; }, [tab]);
 
+  // Auto-persist the tab on every change so switching tools never loses work.
+  // Only the user (Clear button) wipes it intentionally.
+  useEffect(() => {
+    try { localStorage.setItem('scaleup_tab', JSON.stringify(tab)); } catch { /* ignore */ }
+  }, [tab]);
+
   const { title, subtitle, grid, bars } = tab;
   const numCols = grid[0]?.length ?? 0;
   const barsSet = new Set(bars);

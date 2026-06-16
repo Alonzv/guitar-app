@@ -27,11 +27,59 @@ export function getOutputNode(): AudioNode {
   return _masterGain!;
 }
 
+// ── iOS silent-switch bypass ────────────────────────────────────────────────
+// Web Audio honours the iOS hardware mute switch unless a media element has
+// promoted the page's audio session to the "playback" category. We loop a
+// tiny silent clip (started inside a user gesture) to flip that category, so
+// the metronome / chord playback stay audible even on silent mode.
+let _silentEl: HTMLAudioElement | null = null;
+
+function buildSilentWavUri(): string {
+  const sampleRate = 8000, numSamples = 400, dataSize = numSamples; // 8-bit mono, ~0.05s
+  const buf = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buf);
+  const writeStr = (off: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate, true);
+  view.setUint16(32, 1, true);
+  view.setUint16(34, 8, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize, true);
+  for (let i = 0; i < numSamples; i++) view.setUint8(44 + i, 128); // 8-bit silence = midpoint
+  let binary = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return 'data:audio/wav;base64,' + btoa(binary);
+}
+
+function ensureSilentAudio(): void {
+  if (_silentEl) return;
+  try {
+    _silentEl = new Audio(buildSilentWavUri());
+    _silentEl.loop = true;
+    _silentEl.setAttribute('playsinline', '');
+    _silentEl.volume = 1; // the clip is silent; this just keeps the session alive
+  } catch { /* ignore */ }
+}
+
 // ── Unlock ────────────────────────────────────────────────────────────────
 // Call from every user-gesture handler to resume AudioContext on iOS.
 export function unlockAudio(): void {
   initAudioGraph();
   _ctx!.resume().catch(() => {});
+
+  // Promote the audio session so output ignores the iOS silent switch.
+  ensureSilentAudio();
+  _silentEl?.play().catch(() => {});
 
   // Explicitly suppress the iOS Now Playing / media session widget.
   try {
