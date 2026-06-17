@@ -517,21 +517,19 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* ── Sub-tab selector ───────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', borderRadius: 10, overflow: 'hidden',
-        border: `1px solid ${T.border}`,
-      }}>
+      <div style={{ display: 'flex', gap: 4 }}>
         {([
           { id: 'paths',        label: 'Paths'         },
           { id: 'voiceleading', label: 'Voice Leading' },
           { id: 'reharmonize',  label: 'Re-Harmonize'  },
         ] as { id: 'paths' | 'voiceleading' | 'reharmonize'; label: string }[]).map(tab => (
           <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
-            flex: 1, padding: '11px 0', border: 'none',
+            flex: 1, padding: '11px 6px', borderRadius: 8,
+            border: `1px solid ${subTab === tab.id ? T.secondary : T.border}`,
             background: subTab === tab.id ? T.secondary : T.bgInput,
             color: subTab === tab.id ? '#fff' : T.textMuted,
             fontSize: 14, fontWeight: 500, cursor: 'pointer',
-            transition: 'background 0.15s',
+            transition: 'background 0.15s, border-color 0.15s',
           }}>{tab.label}</button>
         ))}
       </div>
@@ -698,14 +696,15 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
       <div style={{ ...card({ padding: '10px 14px' }), display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 130 }}>
           <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
-          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
+          <div style={{ display: 'flex', gap: 3, flex: 1 }}>
             {(['full', 'triads'] as VoicingMode[]).map(m => (
               <button key={m} onClick={() => setMode(m)} style={{
-                flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
-                fontSize: 12, fontWeight: 700,
+                flex: 1, padding: '7px 4px', borderRadius: 6,
+                border: `1px solid ${mode === m ? T.secondary : T.border}`,
+                cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: mode === m ? T.secondary : T.bgInput,
                 color: mode === m ? '#fff' : T.textMuted,
-                transition: 'background 0.15s',
+                transition: 'background 0.15s, border-color 0.15s',
               }}>
                 {m === 'full' ? 'Full' : 'Triads'}
               </button>
@@ -715,18 +714,19 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 }}>
           <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Strings</span>
-          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
+          <div style={{ display: 'flex', gap: 3, flex: 1 }}>
             {([
               { id: 'all',    label: 'All'  },
               { id: 'bass',   label: 'Low'  },
               { id: 'treble', label: 'High' },
             ] as { id: StringGroup; label: string }[]).map(sg => (
               <button key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
-                flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
-                fontSize: 12, fontWeight: 700,
+                flex: 1, padding: '7px 4px', borderRadius: 6,
+                border: `1px solid ${stringGroup === sg.id ? T.secondary : T.border}`,
+                cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: stringGroup === sg.id ? T.secondary : T.bgInput,
                 color: stringGroup === sg.id ? '#fff' : T.textMuted,
-                transition: 'background 0.15s',
+                transition: 'background 0.15s, border-color 0.15s',
               }}>
                 {sg.label}
               </button>

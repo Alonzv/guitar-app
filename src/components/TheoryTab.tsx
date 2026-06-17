@@ -47,13 +47,7 @@ export function TheoryTab({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
       {/* Sub-tab bar */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(5, 1fr)',
-        borderRadius: 10,
-        overflow: 'hidden',
-        border: `1px solid ${T.border}`,
-      }}>
+      <div style={{ display: 'flex', gap: 4 }}>
         {SUBS.map(s => {
           const active = sub === s.id;
           return (
@@ -61,8 +55,10 @@ export function TheoryTab({
               key={s.id}
               onClick={() => setSub(s.id)}
               style={{
+                flex: 1,
                 padding: '8px 2px',
-                border: 'none',
+                borderRadius: 8,
+                border: `1px solid ${active ? T.secondary : T.border}`,
                 cursor: 'pointer',
                 fontWeight: 500,
                 fontSize: 12,
@@ -72,8 +68,7 @@ export function TheoryTab({
                 gap: 2,
                 background: active ? T.secondary : T.bgInput,
                 color: active ? '#fff' : T.textMuted,
-                transition: 'background 0.15s',
-                borderRight: `1px solid ${T.border}`,
+                transition: 'background 0.15s, border-color 0.15s',
               }}
             >
               <span style={{ height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</span>
