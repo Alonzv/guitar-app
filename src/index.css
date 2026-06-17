@@ -97,6 +97,10 @@ body {
   font-family: var(--gc-font);
   /* Supply Mono reads cramped — open the tracking up a touch (both scripts) */
   letter-spacing: 0.07em;
+  /* Supply Mono is unhinted; grid-fitting snaps glyphs to different pixel
+     rows and makes the baseline look wavy at small sizes. Render straight
+     from the outlines so every glyph sits on the same baseline. */
+  text-rendering: geometricPrecision;
   background-color: var(--gc-bg-deep);
   color: var(--gc-text);
   -webkit-font-smoothing: antialiased;
