@@ -335,7 +335,7 @@ export default function App() {
       <header className="gc-header-retro" style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
         <div style={{ textAlign: 'center', marginBottom: 4, position: 'relative' }}>
           <span className="gc-brand-stamp" style={{ fontSize: 'var(--gc-brand-text)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
-            <span style={{ color: darkMode ? '#D4A820' : '#1E3898' }}>Scale</span><span style={{ color: darkMode ? '#C82840' : '#9B2030' }}>Up</span>
+            <span style={{ color: darkMode ? '#D4A820' : '#1E3898' }}>Scale</span><span style={{ color: darkMode ? '#E02020' : '#CC1C1C' }}>Up</span>
           </span>
           <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
             <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${darkMode ? '#2A4CC8' : '#1E3898'}`, background: darkMode ? '#242220' : '#1E3898', color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0, display:'flex', alignItems:'center', justifyContent:'center' }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <IconSun size={13} /> : <IconMoon size={13} />}</button>

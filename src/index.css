@@ -128,9 +128,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-bg-card:          #E8E2D6;
   --gc-bg-input:         #DDD6C8;
   --gc-border:           #B8B0A0;
-  --gc-primary:          #9B2030;
-  --gc-primary-hov:      #B52840;
-  --gc-primary-bg:       rgba(155,32,48,0.09);
+  --gc-primary:          #CC1C1C;
+  --gc-primary-hov:      #E02020;
+  --gc-primary-bg:       rgba(204,28,28,0.09);
   --gc-secondary:        #1E3898;
   --gc-secondary-bg:     rgba(30,56,152,0.09);
   --gc-coral:            #C8A020;
@@ -139,8 +139,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-text-dim:         rgba(26,24,16,0.30);
   --gc-white:            #F5F0E8;
   /* Alpha variants */
-  --gc-primary-soft:     rgba(155,32,48,0.10);
-  --gc-primary-glow:     rgba(155,32,48,0.32);
+  --gc-primary-soft:     rgba(204,28,28,0.10);
+  --gc-primary-glow:     rgba(204,28,28,0.32);
   --gc-white-soft:       rgba(245,240,232,0.73);
   --gc-secondary-faint:  rgba(30,56,152,0.10);
   --gc-coral-faint:      rgba(200,160,32,0.10);
@@ -153,9 +153,9 @@ body.dark {
   --gc-bg-card:          #1A1918;
   --gc-bg-input:         #242220;
   --gc-border:           #383530;
-  --gc-primary:          #C82840;
-  --gc-primary-hov:      #E03050;
-  --gc-primary-bg:       rgba(200,40,64,0.18);
+  --gc-primary:          #E02020;
+  --gc-primary-hov:      #F52828;
+  --gc-primary-bg:       rgba(224,32,32,0.18);
   --gc-secondary:        #2A4CC8;
   --gc-secondary-bg:     rgba(42,76,200,0.18);
   --gc-coral:            #D4A820;
@@ -164,8 +164,8 @@ body.dark {
   --gc-text-dim:         rgba(240,234,216,0.30);
   --gc-white:            #F5EED8;
   /* Alpha variants */
-  --gc-primary-soft:     rgba(200,40,64,0.18);
-  --gc-primary-glow:     rgba(200,40,64,0.40);
+  --gc-primary-soft:     rgba(224,32,32,0.18);
+  --gc-primary-glow:     rgba(224,32,32,0.40);
   --gc-white-soft:       rgba(245,238,216,0.73);
   --gc-secondary-faint:  rgba(42,76,200,0.22);
   --gc-coral-faint:      rgba(212,168,32,0.12);
