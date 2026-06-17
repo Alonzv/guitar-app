@@ -210,7 +210,7 @@ export default function App() {
     const sidebarVisible = sidebarPinned || sidebarHovered;
 
     return (
-      <div style={{ display: 'flex', height: '100vh', position: 'relative', backgroundColor: T.bgDeep, color: T.text, fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', height: '100vh', position: 'relative', backgroundColor: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', overflow: 'hidden' }}>
         {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 
         {!sidebarPinned && (
@@ -318,7 +318,7 @@ export default function App() {
 
   // ── Mobile layout ──────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: T.bgDeep, color: T.text, display: 'flex', flexDirection: 'column', fontFamily: 'var(--gc-font)' }}>
 
       {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 

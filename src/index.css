@@ -1,11 +1,47 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+   Supply Mono — the app's English/Latin typeface.
+   Hebrew has no glyphs in Supply, so the system fallback in
+   --gc-font handles it automatically (per-glyph fallback).
+───────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Supply';
+  src: url('/font/Supply-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Supply';
+  src: url('/font/Supply-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Supply';
+  src: url('/font/Supply-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Supply';
+  /* Bold face covers 600-900 requests; nearest-weight matching uses it. */
+  src: url('/font/Supply-Bold.otf') format('opentype');
+  font-weight: 700 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  font-family: var(--gc-font);
   background-color: var(--gc-bg-deep);
   color: var(--gc-text);
   -webkit-font-smoothing: antialiased;
@@ -22,6 +58,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
    Design-token colour variables — overridden in .dark for dark mode
 ───────────────────────────────────────────────────────────── */
 :root {
+  /* Typeface — Supply for Latin, system fallback covers Hebrew glyphs */
+  --gc-font: 'Supply', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
   /* Light mode colours */
   --gc-bg-deep:          #F7F0DC;
   --gc-bg-card:          #EDE6C8;
