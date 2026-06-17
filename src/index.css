@@ -7,21 +7,21 @@
 ───────────────────────────────────────────────────────────── */
 @font-face {
   font-family: 'Supply';
-  src: url('/font/Supply-Regular.otf') format('opentype');
+  src: url('/font/Supply-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Supply';
-  src: url('/font/Supply-Light.otf') format('opentype');
+  src: url('/font/Supply-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Supply';
-  src: url('/font/Supply-Medium.otf') format('opentype');
+  src: url('/font/Supply-Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -29,7 +29,7 @@
 @font-face {
   font-family: 'Supply';
   /* Bold face covers 600-900 requests; nearest-weight matching uses it. */
-  src: url('/font/Supply-Bold.otf') format('opentype');
+  src: url('/font/Supply-Bold.woff2') format('woff2');
   font-weight: 700 900;
   font-style: normal;
   font-display: swap;
@@ -107,7 +107,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-button { border: none; background: none; cursor: pointer; font-family: inherit; }
+button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: inherit; }
 
 /* ─────────────────────────────────────────────────────────────
    Responsive design tokens — referenced via var() in inline styles
