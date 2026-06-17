@@ -273,7 +273,7 @@ export default function App() {
           <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
             <button
               onClick={() => setDarkMode(d => !d)}
-              style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${darkMode ? '#4A5830' : '#3A4C20'}`, background: darkMode ? '#252820' : '#3A4C20', fontSize: 15, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
+              style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${darkMode ? '#2A4CC8' : '#1E3898'}`, background: darkMode ? '#242220' : '#1E3898', fontSize: 15, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >{darkMode ? <IconSun size={15} /> : <IconMoon size={15} />}</button>
             <button
@@ -335,10 +335,10 @@ export default function App() {
       <header className="gc-header-retro" style={{ backgroundColor: T.bgInput, borderBottom: `1px solid ${T.border}`, padding: 'var(--gc-header-pad)' }}>
         <div style={{ textAlign: 'center', marginBottom: 4, position: 'relative' }}>
           <span className="gc-brand-stamp" style={{ fontSize: 'var(--gc-brand-text)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1 }}>
-            <span style={{ color: darkMode ? '#8A9858' : '#2A3412' }}>Scale</span><span style={{ color: darkMode ? '#C84820' : '#8C3418' }}>Up</span>
+            <span style={{ color: darkMode ? '#D4A820' : '#1E3898' }}>Scale</span><span style={{ color: darkMode ? '#C82840' : '#9B2030' }}>Up</span>
           </span>
           <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
-            <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${darkMode ? '#4A5830' : '#3A4C20'}`, background: darkMode ? '#252820' : '#3A4C20', color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0, display:'flex', alignItems:'center', justifyContent:'center' }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <IconSun size={13} /> : <IconMoon size={13} />}</button>
+            <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${darkMode ? '#2A4CC8' : '#1E3898'}`, background: darkMode ? '#242220' : '#1E3898', color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0, display:'flex', alignItems:'center', justifyContent:'center' }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <IconSun size={13} /> : <IconMoon size={13} />}</button>
             <button onClick={() => setShowOnboarding(true)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title="Help">?</button>
           </div>
         </div>

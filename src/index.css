@@ -121,57 +121,57 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-font: 'Azeret Mono', 'Miriam Libre', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   /* Halftone dot colour — light mode */
-  --gc-halftone: rgba(30,26,10,0.10);
+  --gc-halftone: rgba(26,24,16,0.09);
 
-  /* Light mode — aged kraft paper & iron oxide */
-  --gc-bg-deep:          #DDD0A4;
-  --gc-bg-card:          #D2C494;
-  --gc-bg-input:         #C6B882;
-  --gc-border:           #A69660;
-  --gc-primary:          #8C3418;
-  --gc-primary-hov:      #A44020;
-  --gc-primary-bg:       rgba(140,52,24,0.10);
-  --gc-secondary:        #4A6830;
-  --gc-secondary-bg:     rgba(74,104,48,0.12);
-  --gc-coral:            #C05030;
-  --gc-text:             #1E1A0A;
-  --gc-text-muted:       rgba(30,26,10,0.55);
-  --gc-text-dim:         rgba(30,26,10,0.30);
-  --gc-white:            #EEDCB0;
+  /* Light mode — Bauhaus poster / cream & ink */
+  --gc-bg-deep:          #F0EBE0;
+  --gc-bg-card:          #E8E2D6;
+  --gc-bg-input:         #DDD6C8;
+  --gc-border:           #B8B0A0;
+  --gc-primary:          #9B2030;
+  --gc-primary-hov:      #B52840;
+  --gc-primary-bg:       rgba(155,32,48,0.09);
+  --gc-secondary:        #1E3898;
+  --gc-secondary-bg:     rgba(30,56,152,0.09);
+  --gc-coral:            #C8A020;
+  --gc-text:             #1A1810;
+  --gc-text-muted:       rgba(26,24,16,0.55);
+  --gc-text-dim:         rgba(26,24,16,0.30);
+  --gc-white:            #F5F0E8;
   /* Alpha variants */
-  --gc-primary-soft:     rgba(140,52,24,0.11);
-  --gc-primary-glow:     rgba(140,52,24,0.33);
-  --gc-white-soft:       rgba(238,220,176,0.73);
-  --gc-secondary-faint:  rgba(74,104,48,0.25);
-  --gc-coral-faint:      rgba(192,80,48,0.09);
-  --gc-coral-faint2:     rgba(192,80,48,0.13);
+  --gc-primary-soft:     rgba(155,32,48,0.10);
+  --gc-primary-glow:     rgba(155,32,48,0.32);
+  --gc-white-soft:       rgba(245,240,232,0.73);
+  --gc-secondary-faint:  rgba(30,56,152,0.10);
+  --gc-coral-faint:      rgba(200,160,32,0.10);
+  --gc-coral-faint2:     rgba(200,160,32,0.16);
 }
 
 body.dark {
-  /* Dark mode — factory soot & oxidised steel */
-  --gc-bg-deep:          #141410;
-  --gc-bg-card:          #1C1E18;
-  --gc-bg-input:         #252820;
-  --gc-border:           #3A3E2C;
-  --gc-primary:          #C84820;
-  --gc-primary-hov:      #E05828;
-  --gc-primary-bg:       rgba(200,72,32,0.18);
-  --gc-secondary:        #6A8040;
-  --gc-secondary-bg:     rgba(106,128,64,0.18);
-  --gc-coral:            #C05838;
-  --gc-text:             #D8CA94;
-  --gc-text-muted:       rgba(216,202,148,0.58);
-  --gc-text-dim:         rgba(216,202,148,0.33);
-  --gc-white:            #E4D4A0;
+  /* Dark mode — midnight stage: black + crimson + gold + cobalt */
+  --gc-bg-deep:          #111110;
+  --gc-bg-card:          #1A1918;
+  --gc-bg-input:         #242220;
+  --gc-border:           #383530;
+  --gc-primary:          #C82840;
+  --gc-primary-hov:      #E03050;
+  --gc-primary-bg:       rgba(200,40,64,0.18);
+  --gc-secondary:        #2A4CC8;
+  --gc-secondary-bg:     rgba(42,76,200,0.18);
+  --gc-coral:            #D4A820;
+  --gc-text:             #F0EAD8;
+  --gc-text-muted:       rgba(240,234,216,0.55);
+  --gc-text-dim:         rgba(240,234,216,0.30);
+  --gc-white:            #F5EED8;
   /* Alpha variants */
-  --gc-primary-soft:     rgba(200,72,32,0.18);
-  --gc-primary-glow:     rgba(200,72,32,0.40);
-  --gc-white-soft:       rgba(228,212,160,0.73);
-  --gc-secondary-faint:  rgba(106,128,64,0.30);
-  --gc-coral-faint:      rgba(192,88,56,0.12);
-  --gc-coral-faint2:     rgba(192,88,56,0.16);
+  --gc-primary-soft:     rgba(200,40,64,0.18);
+  --gc-primary-glow:     rgba(200,40,64,0.40);
+  --gc-white-soft:       rgba(245,238,216,0.73);
+  --gc-secondary-faint:  rgba(42,76,200,0.22);
+  --gc-coral-faint:      rgba(212,168,32,0.12);
+  --gc-coral-faint2:     rgba(212,168,32,0.18);
   /* Halftone dot colour — dark mode */
-  --gc-halftone:         rgba(216,202,148,0.07);
+  --gc-halftone:         rgba(240,234,216,0.06);
 }
 
 :root {
