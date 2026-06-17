@@ -29,11 +29,10 @@ interface Props {
 
 const LABEL_STYLE = {
   margin: '0 0 10px',
-  fontSize: 11,
-  fontWeight: 700,
+  fontSize: 13,
+  fontWeight: 500,
   color: T.textMuted,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.06em',
+  letterSpacing: '0.01em',
 };
 
 const SELECT_STYLE: React.CSSProperties = {
