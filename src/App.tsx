@@ -349,7 +349,7 @@ export default function App() {
           {TABS.map(tab => {
             const active = activeTab === tab.id;
             return (
-              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 10, border: active ? 'none' : `1px solid ${T.border}`, background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, boxShadow: active ? `0 2px 8px rgba(196,73,0,0.4)` : 'none', transition: 'all 0.15s' }}>
+              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 10, border: active ? 'none' : `1px solid ${T.border}`, background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: active ? 600 : 500, boxShadow: active ? `0 2px 8px rgba(196,73,0,0.4)` : 'none', transition: 'all 0.15s' }}>
                 {tab.icon}
                 <span className="gc-tab-label">{tab.label}</span>
               </button>

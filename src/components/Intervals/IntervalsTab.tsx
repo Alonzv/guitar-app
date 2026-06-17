@@ -19,7 +19,7 @@ export function IntervalsTab() {
         {(['explore', 'calculate'] as Sub[]).map(id => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 0', border: 'none', cursor: 'pointer',
-            fontWeight: 700, fontSize: 12,
+            fontWeight: 500, fontSize: 14,
             background: sub === id ? T.secondary : T.bgInput,
             color: sub === id ? '#fff' : T.textMuted,
             transition: 'background 0.15s',

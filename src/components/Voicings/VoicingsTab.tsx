@@ -530,7 +530,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             flex: 1, padding: '11px 0', border: 'none',
             background: subTab === tab.id ? T.secondary : T.bgInput,
             color: subTab === tab.id ? '#fff' : T.textMuted,
-            fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            fontSize: 14, fontWeight: 500, cursor: 'pointer',
             transition: 'background 0.15s',
           }}>{tab.label}</button>
         ))}

@@ -255,12 +255,12 @@ body.dark {
   justify-content: center;
   gap: 6px;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 14px;
   font-family: inherit;
 }
 @media (min-width: 480px) {
   .gc-tab {
-    font-size: 13px;
+    font-size: 15px;
     gap: 7px;
   }
 }

@@ -709,9 +709,9 @@ export const TabBuilder: React.FC = () => {
           }}>
           <div dir={t.dir} style={{
             background: T.bgCard, borderRadius: 14, border: `1px solid ${T.border}`,
-            width: '100%', maxWidth: 440, maxHeight: '88vh', overflowY: 'auto',
-            padding: '20px 20px 18px', position: 'relative',
-            display: 'flex', flexDirection: 'column', gap: 14,
+            width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto',
+            padding: '26px 26px 22px', position: 'relative',
+            display: 'flex', flexDirection: 'column', gap: 16,
             textAlign: t.dir === 'rtl' ? 'right' : 'left',
           }}>
             {/* Close (always top-right visually) */}
@@ -724,15 +724,15 @@ export const TabBuilder: React.FC = () => {
 
             {/* Heading + language toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingInlineEnd: 28 }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{t.heading}</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{t.heading}</span>
               <div style={{
                 display: 'flex', borderRadius: 7, overflow: 'hidden',
                 border: `1px solid ${T.border}`, marginInlineStart: 'auto',
               }}>
                 {(['he', 'en'] as Lang[]).map(lg => (
                   <button key={lg} onClick={() => setLang(lg)} style={{
-                    border: 'none', cursor: 'pointer', padding: '4px 9px',
-                    fontSize: 11, fontWeight: 700,
+                    border: 'none', cursor: 'pointer', padding: '5px 11px',
+                    fontSize: 13, fontWeight: 700,
                     background: lang === lg ? T.secondary : T.bgInput,
                     color: lang === lg ? '#fff' : T.textMuted,
                   }}>{lg === 'he' ? 'עברית' : 'EN'}</button>
@@ -745,33 +745,33 @@ export const TabBuilder: React.FC = () => {
               <button
                 onClick={() => setScaleModal(true)}
                 style={{
-                  background: T.bgInput, borderRadius: 10, padding: '12px 14px',
+                  background: T.bgInput, borderRadius: 10, padding: '15px 18px',
                   borderInlineStart: `3px solid ${T.primary}`, border: 'none',
                   cursor: 'pointer', textAlign: 'inherit', width: '100%',
                 }}>
-                <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 3 }}>{t.bestScale}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: T.text, textDecoration: 'underline', textDecorationColor: T.primary }}>
+                <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 4 }}>{t.bestScale}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                  <span style={{ fontSize: 25, fontWeight: 800, color: T.text, textDecoration: 'underline', textDecorationColor: T.primary }}>
                     {analyzeScale.name}
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: T.primary }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: T.primary }}>
                     {analyzeScale.fitPercent}% {t.match}
                   </span>
                 </div>
-                <div style={{ fontSize: 10, color: T.textDim, marginTop: 3 }}>{t.scaleHint} ↗</div>
+                <div style={{ fontSize: 12, color: T.textDim, marginTop: 4 }}>{t.scaleHint} ↗</div>
               </button>
             )}
 
             {/* Error / empty */}
             {analyzeErr && (
-              <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: '8px 0' }}>
+              <div style={{ fontSize: 15, color: T.textMuted, textAlign: 'center', padding: '8px 0' }}>
                 {t[analyzeErr]}
               </div>
             )}
 
             {/* Loading */}
             {analyzing && (
-              <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: '12px 0' }}>
+              <div style={{ fontSize: 15, color: T.textMuted, textAlign: 'center', padding: '12px 0' }}>
                 {t.loading}
               </div>
             )}
@@ -780,32 +780,32 @@ export const TabBuilder: React.FC = () => {
             {analyzeProgs && analyzeProgs.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: T.textMuted }}>{t.progTitle}</span>
-                  <span style={{ fontSize: 10, color: T.textDim }}>· {t.tapHint}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: T.textMuted }}>{t.progTitle}</span>
+                  <span style={{ fontSize: 12, color: T.textDim }}>· {t.tapHint}</span>
                 </div>
                 {analyzeProgs.map((p, i) => (
-                  <div key={i} style={{ background: T.bgInput, borderRadius: 10, padding: '12px 14px' }}>
+                  <div key={i} style={{ background: T.bgInput, borderRadius: 10, padding: '15px 18px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>
                         {lang === 'he' ? p.name_he : p.name_en}
                       </span>
                       <button onClick={() => playProgression(p.chords)}
                         style={{
                           background: T.secondary, color: '#fff', border: 'none',
-                          borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
-                          fontSize: 11, fontWeight: 700, flexShrink: 0,
+                          borderRadius: 6, padding: '5px 12px', cursor: 'pointer',
+                          fontSize: 13, fontWeight: 700, flexShrink: 0,
                         }}>▶ {t.play}</button>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '10px 0' }}>
                       {p.chords.map((c, j) => (
                         <button key={j} onClick={() => setChordModal(c)} style={{
                           background: T.primaryBg, color: T.text, borderRadius: 6,
-                          padding: '4px 10px', fontSize: 13, fontWeight: 700,
+                          padding: '6px 13px', fontSize: 16, fontWeight: 700,
                           fontFamily: 'monospace', border: 'none', cursor: 'pointer',
                         }}>{c}</button>
                       ))}
                     </div>
-                    <div style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.65 }}>
                       {lang === 'he' ? p.why_he : p.why_en}
                     </div>
                   </div>
@@ -818,7 +818,7 @@ export const TabBuilder: React.FC = () => {
               <button onClick={runAnalysis} style={{
                 background: 'transparent', border: `1px solid ${T.border}`,
                 borderRadius: 8, padding: '8px 0', cursor: 'pointer',
-                color: T.textMuted, fontSize: 12, fontWeight: 700,
+                color: T.textMuted, fontSize: 14, fontWeight: 700,
               }}>↻ {t.reanalyze}</button>
             )}
           </div>

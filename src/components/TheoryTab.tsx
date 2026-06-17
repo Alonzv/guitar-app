@@ -64,8 +64,8 @@ export function TheoryTab({
                 padding: '8px 2px',
                 border: 'none',
                 cursor: 'pointer',
-                fontWeight: 700,
-                fontSize: 10,
+                fontWeight: 500,
+                fontSize: 12,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -76,8 +76,8 @@ export function TheoryTab({
                 borderRight: `1px solid ${T.border}`,
               }}
             >
-              {s.icon}
-              <span>{s.label}</span>
+              <span style={{ height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</span>
+              <span style={{ lineHeight: 1 }}>{s.label}</span>
             </button>
           );
         })}
