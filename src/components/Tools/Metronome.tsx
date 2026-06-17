@@ -228,7 +228,8 @@ export const Metronome: React.FC = () => {
             onBlur={e => applyBpm(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && applyBpm(bpmInput)}
             style={{
-              width: 110, textAlign: 'center', fontSize: 52, fontWeight: 800,
+              width: 140, textAlign: 'center', fontSize: 52, fontWeight: 800,
+              letterSpacing: 0,
               color: T.text, background: 'transparent', border: 'none', outline: 'none',
               fontFamily: 'inherit', padding: 0, boxSizing: 'border-box',
               MozAppearance: 'textfield',
