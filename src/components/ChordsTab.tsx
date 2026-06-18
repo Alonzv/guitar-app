@@ -43,7 +43,7 @@ export const ChordsTab: React.FC<Props> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Sub-tab bar */}
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div style={{ display: 'flex', gap: 0 }}>
         {(['builder', 'finder', 'analyzer', 'target'] as Sub[]).map(id => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 4px', borderRadius: 0,

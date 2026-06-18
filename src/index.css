@@ -232,7 +232,7 @@ body.dark {
 ───────────────────────────────────────────────────────────── */
 .gc-tabs {
   display: flex;
-  gap: 5px;
+  gap: 0;
   /* Match the exact inner width of <main> at every breakpoint so the
      main-nav edges align with the sub-tab row edges below */
   width: 100%;

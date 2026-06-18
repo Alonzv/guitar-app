@@ -518,7 +518,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* ── Sub-tab selector ───────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div style={{ display: 'flex', gap: 0 }}>
         {([
           { id: 'paths',        label: 'Paths'         },
           { id: 'voiceleading', label: 'Voice Leading' },
@@ -700,7 +700,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
       <div style={{ ...card({ padding: '10px 14px' }), display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 130 }}>
           <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
-          <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+          <div style={{ display: 'flex', gap: 0, flex: 1 }}>
             {(['full', 'triads'] as VoicingMode[]).map(m => (
               <button key={m} onClick={() => setMode(m)} style={{
                 flex: 1, padding: '7px 4px', borderRadius: 0,
@@ -718,7 +718,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 }}>
           <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Strings</span>
-          <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+          <div style={{ display: 'flex', gap: 0, flex: 1 }}>
             {([
               { id: 'all',    label: 'All'  },
               { id: 'bass',   label: 'Low'  },

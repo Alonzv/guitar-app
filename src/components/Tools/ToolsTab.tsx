@@ -20,7 +20,7 @@ export const ToolsTab: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div style={{ display: 'flex', gap: 0 }}>
         {(['tuner', 'metronome', 'audiotab', 'tabbuilder'] as Sub[]).map(id => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 4px', borderRadius: 0,

@@ -46,7 +46,7 @@ export function TheoryTab({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
       {/* Sub-tab bar */}
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div style={{ display: 'flex', gap: 0 }}>
         {SUBS.map(s => {
           const active = sub === s.id;
           return (

@@ -210,7 +210,7 @@ export function ScaleExplorer() {
           </div>
 
           {/* ── View toggle ── */}
-          <div style={{ display: 'flex', gap: 7 }}>
+          <div style={{ display: 'flex', gap: 0 }}>
             {(['fretboard', 'tab'] as const).map(v => (
               <button key={v} onClick={() => setViewMode(v)} style={{
                 flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
