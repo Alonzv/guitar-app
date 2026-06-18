@@ -24,15 +24,20 @@ const INTERVAL_NAME: Record<string, string> = {
   '9m': '♭9th', '11P': '11th', '13M': '13th',
 };
 
+const PURPLE = '#6B21A8';
+const GREEN  = '#1A7A4A';
+
 export const INTERVAL_COLOR: Record<string, string> = {
-  '1P': T.primary, '3m': T.secondary, '3M': T.secondary,
-  '4P': '#c4a000', '4A': '#c4a000', '5d': '#8a4aa0',
-  '5P': '#c4a000', '5A': '#8a4aa0', '2m': '#2a7aa0',
-  '2M': '#2a7aa0', '2A': '#2a7aa0', '6m': '#8a4aa0',
-  '6M': '#2a7aa0', '7m': '#8a4aa0', '7M': '#2a7aa0',
-  '8P': T.primary, '9m': '#2a7aa0', '9M': '#2a7aa0',
-  '9A': '#2a7aa0', '11P': '#2a7aa0', '11A': '#2a7aa0',
-  '13m': '#2a7aa0', '13M': '#2a7aa0',
+  '1P': T.primary,  '8P': T.primary,   // root / octave — red
+  '3m': GREEN,      '3M': GREEN,        // 3rd — green
+  '4P': T.coral,    '4A': T.coral,      // 4th — gold
+  '5P': T.coral,    '5A': PURPLE,       '5d': PURPLE,   // 5th — gold / aug/dim — purple
+  '2m': T.secondary,'2M': T.secondary,  '2A': T.secondary, // 2nd — blue
+  '6m': PURPLE,     '6M': T.secondary,  // 6th
+  '7m': T.secondary,'7M': T.secondary,  // 7th — blue
+  '9m': PURPLE,     '9M': T.secondary,  '9A': PURPLE,   // 9th
+  '11P': T.secondary,'11A': PURPLE,     // 11th
+  '13m': PURPLE,    '13M': T.secondary, // 13th
 };
 
 /** Returns a chroma (0–11) → color map for the given chord */

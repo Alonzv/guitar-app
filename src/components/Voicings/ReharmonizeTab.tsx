@@ -473,7 +473,7 @@ export function ReharmonizeTab({
           {error && !loading && (
             <div style={{
               ...card({ padding: '12px 16px' }),
-              borderLeft: `3px solid #c0392b`,
+              borderLeft: `3px solid ${T.primary}`,
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
               <span style={{ fontSize: 16 }}>⚠️</span>
