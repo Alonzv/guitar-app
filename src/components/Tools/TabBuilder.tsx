@@ -439,16 +439,16 @@ export const TabBuilder: React.FC = () => {
             title="Analyze — detect scale & suggest chord progressions"
             style={{
               background: T.primary, color: '#fff', border: 'none',
-              borderRadius: 8, padding: '7px 13px', cursor: 'pointer',
-              fontSize: 12, fontWeight: 700,
+              borderRadius: 0, padding: '7px 13px', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700, boxShadow: 'var(--gc-offset-sm)',
             }}>
             Analyze
           </button>
           <button onClick={handleExport} disabled={busy}
             style={{
               background: T.secondary, color: '#fff', border: 'none',
-              borderRadius: 8, padding: '7px 13px', cursor: busy ? 'wait' : 'pointer',
-              fontSize: 12, fontWeight: 700,
+              borderRadius: 0, padding: '7px 13px', cursor: busy ? 'wait' : 'pointer',
+              fontSize: 12, fontWeight: 700, boxShadow: 'var(--gc-offset-sm)',
             }}>
             {busy ? '…' : 'PDF'}
           </button>
@@ -459,8 +459,9 @@ export const TabBuilder: React.FC = () => {
               background: 'transparent',
               color: T.textMuted,
               border: `1px solid ${T.border}`,
-              borderRadius: 8, padding: '7px 11px',
+              borderRadius: 0, padding: '7px 11px',
               cursor: 'pointer', fontSize: 12, fontWeight: 700,
+              boxShadow: 'var(--gc-offset-sm)',
             }}>
             Clear
           </button>
@@ -472,11 +473,11 @@ export const TabBuilder: React.FC = () => {
               background: T.bgInput,
               color: canUndo ? T.text : T.textMuted,
               border: `1px solid ${T.border}`,
-              borderRadius: 8, padding: '7px 11px',
+              borderRadius: 0, padding: '7px 11px',
               cursor: canUndo ? 'pointer' : 'default',
               fontSize: 16, lineHeight: 1,
               opacity: canUndo ? 1 : 0.35,
-              transition: 'opacity 0.2s',
+              transition: 'opacity 0.2s', boxShadow: 'var(--gc-offset-sm)',
             }}>
             ↩
           </button>
@@ -690,8 +691,8 @@ export const TabBuilder: React.FC = () => {
           <button onClick={addLine}
             style={{
               background: T.bgInput, border: `1px dashed ${T.border}`,
-              borderRadius: 8, padding: '6px 22px', cursor: 'pointer',
-              color: T.textMuted, fontSize: 12,
+              borderRadius: 0, padding: '6px 22px', cursor: 'pointer',
+              color: T.textMuted, fontSize: 12, boxShadow: 'var(--gc-offset-sm)',
             }}>
             + Add line
           </button>
@@ -717,9 +718,9 @@ export const TabBuilder: React.FC = () => {
             {/* Close (always top-right visually) */}
             <button onClick={() => setAnalyzeOpen(false)} style={{
               position: 'absolute', top: 12, insetInlineEnd: 12,
-              background: T.bgInput, border: 'none', borderRadius: 6,
+              background: T.bgInput, border: 'none', borderRadius: 0,
               cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px',
+              padding: '3px 7px', boxShadow: 'var(--gc-offset-sm)',
             }}>✕</button>
 
             {/* Heading + language toggle */}
@@ -792,16 +793,18 @@ export const TabBuilder: React.FC = () => {
                       <button onClick={() => playProgression(p.chords)}
                         style={{
                           background: T.secondary, color: '#fff', border: 'none',
-                          borderRadius: 6, padding: '5px 12px', cursor: 'pointer',
+                          borderRadius: 0, padding: '5px 12px', cursor: 'pointer',
                           fontSize: 13, fontWeight: 700, flexShrink: 0,
+                          boxShadow: 'var(--gc-offset-sm)',
                         }}>▶ {t.play}</button>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '10px 0' }}>
                       {p.chords.map((c, j) => (
                         <button key={j} onClick={() => setChordModal(c)} style={{
-                          background: T.primaryBg, color: T.text, borderRadius: 6,
+                          background: T.primaryBg, color: T.text, borderRadius: 0,
                           padding: '6px 13px', fontSize: 16, fontWeight: 700,
                           fontFamily: 'monospace', border: 'none', cursor: 'pointer',
+                          boxShadow: 'var(--gc-offset-sm)',
                         }}>{c}</button>
                       ))}
                     </div>
@@ -817,8 +820,9 @@ export const TabBuilder: React.FC = () => {
             {!analyzing && (analyzeProgs || analyzeErr) && (
               <button onClick={runAnalysis} style={{
                 background: 'transparent', border: `1px solid ${T.border}`,
-                borderRadius: 8, padding: '8px 0', cursor: 'pointer',
+                borderRadius: 0, padding: '8px 0', cursor: 'pointer',
                 color: T.textMuted, fontSize: 14, fontWeight: 700,
+                boxShadow: 'var(--gc-offset-sm)',
               }}>↻ {t.reanalyze}</button>
             )}
           </div>
@@ -843,8 +847,9 @@ export const TabBuilder: React.FC = () => {
             }}>
               <button onClick={() => setChordModal(null)} style={{
                 position: 'absolute', top: 12, right: 12, background: T.bgInput,
-                border: 'none', borderRadius: 6, cursor: 'pointer', color: T.textMuted,
+                border: 'none', borderRadius: 0, cursor: 'pointer', color: T.textMuted,
                 fontSize: 16, lineHeight: 1, padding: '3px 7px',
+                boxShadow: 'var(--gc-offset-sm)',
               }}>✕</button>
               <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: T.text }}>
                 {chordModal}
@@ -857,8 +862,9 @@ export const TabBuilder: React.FC = () => {
               {voicing.length > 0 && (
                 <button onClick={() => { unlockAudio(); playChord(voicing.map(p => ({ string: p.string, fret: p.fret }))); }}
                   style={{
-                    padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    padding: '10px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
                     fontWeight: 700, fontSize: 14, background: T.secondary, color: '#fff',
+                    boxShadow: 'var(--gc-offset)',
                   }}>▶ {t.play}</button>
               )}
             </div>
@@ -883,8 +889,9 @@ export const TabBuilder: React.FC = () => {
           }}>
             <button onClick={() => setScaleModal(false)} style={{
               position: 'absolute', top: 12, right: 12, background: T.bgInput,
-              border: 'none', borderRadius: 6, cursor: 'pointer', color: T.textMuted,
+              border: 'none', borderRadius: 0, cursor: 'pointer', color: T.textMuted,
               fontSize: 16, lineHeight: 1, padding: '3px 7px',
+              boxShadow: 'var(--gc-offset-sm)',
             }}>✕</button>
             <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, color: T.text }}>
               {analyzeScale.name}

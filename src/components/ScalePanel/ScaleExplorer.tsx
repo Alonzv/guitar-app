@@ -117,12 +117,12 @@ export function ScaleExplorer() {
             const selected = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '9px 4px', borderRadius: 9, cursor: 'pointer',
+                padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 11 : 13, fontWeight: selected ? 700 : 400,
                 border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: selected ? T.primary : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s',
+                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
               }}>
                 {n}
               </button>
@@ -147,11 +147,12 @@ export function ScaleExplorer() {
                   const sel = scaleType === s.id;
                   return (
                     <button key={s.id} onClick={() => setScaleType(s.id)} style={{
-                      padding: '6px 13px', borderRadius: 8, cursor: 'pointer', fontSize: 12,
+                      padding: '6px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
                       fontWeight: sel ? 700 : 400,
                       border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
                       background: sel ? T.secondaryBg : T.bgInput,
                       color: sel ? T.secondary : T.textMuted,
+                      boxShadow: 'var(--gc-offset-sm)',
                     }}>
                       {s.label}
                     </button>
@@ -180,9 +181,9 @@ export function ScaleExplorer() {
                     playScale(midiNotes);
                   }}
                   style={{
-                    padding: '4px 12px', borderRadius: 8, border: `1px solid ${T.secondary}`,
+                    padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`,
                     background: T.secondaryBg, color: T.secondary, fontSize: 12,
-                    fontWeight: 700, cursor: 'pointer',
+                    fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--gc-offset-sm)',
                   }}
                 >▶ Play</button>
               </div>
@@ -212,10 +213,11 @@ export function ScaleExplorer() {
           <div style={{ display: 'flex', gap: 7 }}>
             {(['fretboard', 'tab'] as const).map(v => (
               <button key={v} onClick={() => setViewMode(v)} style={{
-                flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer',
+                flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
                 fontSize: 13, fontWeight: viewMode === v ? 700 : 400, border: 'none',
                 background: viewMode === v ? T.primary : T.bgCard,
                 color: viewMode === v ? T.text : T.textMuted,
+                boxShadow: 'var(--gc-offset-sm)',
               }}>
                 {v === 'fretboard' ? 'Fretboard' : 'Tab'}
               </button>
@@ -226,10 +228,11 @@ export function ScaleExplorer() {
           <div className="gc-pos-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: T.textMuted }}>Position:</span>
             <button onClick={() => setPos(null)} style={{
-              padding: '4px 13px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11,
+              padding: '4px 13px', borderRadius: 0, border: 'none', cursor: 'pointer', fontSize: 11,
               background: pos === null ? T.text : T.bgInput,
               color: pos === null ? T.bgDeep : T.textMuted,
               fontWeight: pos === null ? 700 : 400,
+              boxShadow: 'var(--gc-offset-sm)',
             }}>
               Full Neck
             </button>

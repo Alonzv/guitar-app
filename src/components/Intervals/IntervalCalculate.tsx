@@ -145,9 +145,9 @@ export function IntervalCalculate() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}>
                 {/* Invert */}
                 <button onClick={() => setInverted(v => !v)} style={{
-                  padding: '4px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 10, fontWeight: 700,
+                  padding: '4px 10px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 700,
                   border: `1px solid ${T.border}`, background: inverted ? T.primaryBg : T.bgInput,
-                  color: inverted ? T.primary : T.textMuted,
+                  color: inverted ? T.primary : T.textMuted, boxShadow: 'var(--gc-offset-sm)',
                 }}>↕ Invert</button>
 
                 {/* Mode toggle */}
@@ -163,8 +163,9 @@ export function IntervalCalculate() {
 
                 {/* Play */}
                 <button onClick={handlePlay} style={{
-                  padding: '4px 12px', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                  padding: '4px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700,
                   border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
+                  boxShadow: 'var(--gc-offset-sm)',
                 }}>▶ Play</button>
               </div>
             </div>
@@ -252,8 +253,9 @@ export function IntervalCalculate() {
         {points.length > 0 && (
           <div style={{ textAlign: 'right', marginTop: 6 }}>
             <button onClick={() => { setPoints([]); setInverted(false); }} style={{
-              padding: '3px 10px', borderRadius: 6, border: `1px solid ${T.border}`,
+              padding: '3px 10px', borderRadius: 0, border: `1px solid ${T.border}`,
               background: 'transparent', color: T.textMuted, fontSize: 10, cursor: 'pointer',
+              boxShadow: 'var(--gc-offset-sm)',
             }}>Clear</button>
           </div>
         )}

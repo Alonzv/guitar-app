@@ -36,9 +36,10 @@ function ClearBtn({ onClear }: { onClear: () => void }) {
       onClick={onClear}
       title="איפוס — חזור לתחילה"
       style={{
-        padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700,
+        padding: '7px 14px', borderRadius: 0, cursor: 'pointer', fontWeight: 700,
         fontSize: 12, border: `1px solid ${T.border}`,
         background: T.bgInput, color: T.textMuted, flexShrink: 0,
+        boxShadow: 'var(--gc-offset-sm)',
       }}
     >
       Clear
@@ -612,8 +613,9 @@ export const AudioToTab: React.FC = () => {
         <p style={{ margin: '0 0 20px', fontSize: 12, color: T.textMuted }}>מקליט…</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={stopRecording} style={{
-            padding: '12px 32px', borderRadius: 10, border: 'none', cursor: 'pointer',
+            padding: '12px 32px', borderRadius: 0, border: 'none', cursor: 'pointer',
             background: T.coral, color: '#fff', fontWeight: 700, fontSize: 14,
+            boxShadow: 'var(--gc-offset)',
           }}>
             עצור ועבד
           </button>
@@ -659,8 +661,9 @@ export const AudioToTab: React.FC = () => {
         </div>
       </div>
       <button onClick={reset} style={{
-        padding: '12px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+        padding: '12px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
         background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
+        boxShadow: 'var(--gc-offset)',
       }}>
         נסה שוב
       </button>
@@ -701,9 +704,10 @@ export const AudioToTab: React.FC = () => {
         <button
           onClick={() => exportTabToPDF(tabData)}
           style={{
-            flex: 1, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+            flex: 1, padding: '13px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
             background: T.secondary, color: '#fff', fontWeight: 700, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            boxShadow: 'var(--gc-offset)',
           }}
         >
           <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
@@ -716,9 +720,10 @@ export const AudioToTab: React.FC = () => {
         <button
           onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}
           style={{
-            flex: 1, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+            flex: 1, padding: '13px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
             background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            boxShadow: 'var(--gc-offset)',
           }}
         >
           <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>

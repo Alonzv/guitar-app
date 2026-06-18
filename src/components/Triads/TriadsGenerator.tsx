@@ -146,11 +146,12 @@ function shapeInArea(shape: PosDot[], area: FretArea): boolean {
 function pill(active: boolean, onClick: () => void, label: string) {
   return (
     <button key={label} onClick={onClick} style={{
-      padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
+      padding: '4px 10px', borderRadius: 0, cursor: 'pointer',
       fontSize: 11, fontWeight: active ? 700 : 400,
       background: active ? T.text : T.bgInput,
       color:      active ? T.bgDeep : T.textMuted,
       border:     active ? 'none' : `1px solid ${T.border}`,
+      boxShadow: 'var(--gc-offset-sm)',
     }}>{label}</button>
   );
 }
@@ -272,12 +273,12 @@ export function TriadsGenerator() {
             const sharp = n.includes('#'), sel = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '8px 4px', borderRadius: 8, cursor: 'pointer',
+                padding: '8px 4px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
                 border:      sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background:  sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color:       sel ? T.primary   : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s',
+                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
               }}>{n}</button>
             );
           })}
@@ -292,11 +293,11 @@ export function TriadsGenerator() {
             const sel = triadType === type;
             return (
               <button key={type} onClick={() => setTriadType(type)} style={{
-                padding: '9px 10px', borderRadius: 9, cursor: 'pointer', textAlign: 'left',
+                padding: '9px 10px', borderRadius: 0, cursor: 'pointer', textAlign: 'left',
                 border:      sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                 background:  sel ? T.secondaryBg : T.bgInput,
                 color:       sel ? T.secondary   : T.textMuted,
-                transition: 'all 0.12s',
+                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
               }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
                 <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
@@ -314,9 +315,9 @@ export function TriadsGenerator() {
             <button
               onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
               title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
-              style={{ padding: '4px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 11, fontWeight: 700, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted }}
+              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, boxShadow: 'var(--gc-offset-sm)' }}
             >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
-            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 8, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>▶</button>
+            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--gc-offset-sm)' }}>▶</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -580,10 +581,10 @@ export function TriadsGenerator() {
                 disabled={safeIdx === 0}
                 onClick={() => setExpandedIdx(i => i !== null ? i - 1 : i)}
                 style={{
-                  flex: 1, padding: '8px 0', borderRadius: 10, cursor: safeIdx === 0 ? 'default' : 'pointer',
+                  flex: 1, padding: '8px 0', borderRadius: 0, cursor: safeIdx === 0 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === 0 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 700,
+                  fontSize: 18, fontWeight: 700, boxShadow: 'var(--gc-offset-sm)',
                 }}
               >‹</button>
 
@@ -595,11 +596,11 @@ export function TriadsGenerator() {
                 disabled={safeIdx === allVisibleCards.length - 1}
                 onClick={() => setExpandedIdx(i => i !== null ? i + 1 : i)}
                 style={{
-                  flex: 1, padding: '8px 0', borderRadius: 10,
+                  flex: 1, padding: '8px 0', borderRadius: 0,
                   cursor: safeIdx === allVisibleCards.length - 1 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === allVisibleCards.length - 1 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 700,
+                  fontSize: 18, fontWeight: 700, boxShadow: 'var(--gc-offset-sm)',
                 }}
               >›</button>
             </div>

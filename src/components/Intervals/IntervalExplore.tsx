@@ -123,12 +123,12 @@ export function IntervalExplore() {
             const sel   = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '5px 3px', borderRadius: 7, cursor: 'pointer',
+                padding: '5px 3px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 9 : 11, fontWeight: sel ? 700 : 400,
                 border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: sel ? T.primary : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s',
+                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
               }}>{n}</button>
             );
           })}
@@ -143,11 +143,11 @@ export function IntervalExplore() {
             const sel = iv.semitones === interval;
             return (
               <button key={iv.semitones} onClick={() => setInterval(iv.semitones)} style={{
-                padding: '5px 4px', borderRadius: 7, cursor: 'pointer', textAlign: 'center',
+                padding: '5px 4px', borderRadius: 0, cursor: 'pointer', textAlign: 'center',
                 border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                 background: sel ? T.secondaryBg : T.bgInput,
                 color: sel ? T.secondary : T.textMuted,
-                transition: 'all 0.12s',
+                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
               }}>
                 <div style={{ fontSize: 9, fontWeight: 700 }}>{iv.abbrev}</div>
                 <div style={{ fontSize: 9, fontWeight: sel ? 700 : 400, marginTop: 1 }}>{iv.name}</div>
@@ -180,9 +180,9 @@ export function IntervalExplore() {
             ))}
           </div>
           <button onClick={handlePlay} style={{
-            padding: '6px 20px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 800,
+            padding: '6px 20px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 800,
             border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
-            letterSpacing: '0.02em',
+            letterSpacing: '0.02em', boxShadow: 'var(--gc-offset-sm)',
           }}>▶ Play</button>
         </div>
       </div>
@@ -194,10 +194,11 @@ export function IntervalExplore() {
             <span style={{ fontSize: 10, color: T.textMuted }}>Area:</span>
             {AREAS.map(a => (
               <button key={a.id} onClick={() => setArea(a.id)} style={{
-                padding: '2px 7px', borderRadius: 10, cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                padding: '2px 7px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 600,
                 background: area === a.id ? T.text : T.bgInput,
                 color: area === a.id ? T.bgDeep : T.textMuted,
                 border: area === a.id ? 'none' : `1px solid ${T.border}`,
+                boxShadow: 'var(--gc-offset-sm)',
               }}>{a.label}</button>
             ))}
           </div>

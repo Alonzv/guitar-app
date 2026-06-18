@@ -465,12 +465,13 @@ const Pill: React.FC<{
   label: string; active: boolean; onClick: () => void; color?: string;
 }> = ({ label, active, onClick, color }) => (
   <button onClick={onClick} style={{
-    padding: '4px 10px', borderRadius: 16,
+    padding: '4px 10px', borderRadius: 0,
     border: active ? 'none' : `1px solid ${T.border}`,
     cursor: 'pointer', fontSize: 11, fontWeight: active ? 700 : 400,
     background: active ? (color ?? T.secondary) : T.bgInput,
     color: active ? T.white : T.textMuted,
     transition: 'all 0.12s', flexShrink: 0,
+    boxShadow: 'var(--gc-offset-sm)',
   }}>
     {label}
   </button>
@@ -715,9 +716,9 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
             {/* Close */}
             <button onClick={() => setExpandedIdx(null)} style={{
               position: 'absolute', top: 12, right: 12,
-              background: T.bgInput, border: 'none', borderRadius: 6,
+              background: T.bgInput, border: 'none', borderRadius: 0,
               cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px',
+              padding: '3px 7px', boxShadow: 'var(--gc-offset-sm)',
             }}>✕</button>
 
             {/* Chord name */}
@@ -746,9 +747,10 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
             <button
               onClick={() => { unlockAudio(); playChord(expandedResult!.voicing, tuning.openFreqs, capo); }}
               style={{
-                padding: '11px 0', borderRadius: 10, border: 'none',
+                padding: '11px 0', borderRadius: 0, border: 'none',
                 cursor: 'pointer', fontWeight: 700, fontSize: 14,
                 background: T.secondary, color: T.white,
+                boxShadow: 'var(--gc-offset)',
               }}
             >▶ Play</button>
 
@@ -796,12 +798,12 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 onClick={() => setExpandedIdx(i => Math.max((i ?? 0) - 1, 0))}
                 disabled={expandedIdx === 0}
                 style={{
-                  flex: 1, padding: '8px 0', borderRadius: 8,
+                  flex: 1, padding: '8px 0', borderRadius: 0,
                   border: `1px solid ${T.border}`,
                   cursor: expandedIdx === 0 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === 0 ? T.textDim : T.textMuted,
-                  fontWeight: 700, fontSize: 16,
+                  fontWeight: 700, fontSize: 16, boxShadow: 'var(--gc-offset-sm)',
                 }}
               >‹</button>
               <span style={{ fontSize: 11, color: T.textDim, minWidth: 48, textAlign: 'center' }}>
@@ -811,12 +813,12 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 onClick={() => setExpandedIdx(i => Math.min((i ?? 0) + 1, results.length - 1))}
                 disabled={expandedIdx === results.length - 1}
                 style={{
-                  flex: 1, padding: '8px 0', borderRadius: 8,
+                  flex: 1, padding: '8px 0', borderRadius: 0,
                   border: `1px solid ${T.border}`,
                   cursor: expandedIdx === results.length - 1 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === results.length - 1 ? T.textDim : T.textMuted,
-                  fontWeight: 700, fontSize: 16,
+                  fontWeight: 700, fontSize: 16, boxShadow: 'var(--gc-offset-sm)',
                 }}
               >›</button>
             </div>

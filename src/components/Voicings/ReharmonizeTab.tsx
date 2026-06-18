@@ -79,13 +79,13 @@ function ReharmModal({
   }, [onClose, total]);
 
   const navStyle = (disabled: boolean): React.CSSProperties => ({
-    flex: 1, padding: '10px 16px', borderRadius: 10,
+    flex: 1, padding: '10px 16px', borderRadius: 0,
     border: `1px solid ${T.border}`,
     background: disabled ? T.bgDeep : T.bgInput,
     color: disabled ? T.textDim : T.text,
     cursor: disabled ? 'default' : 'pointer',
     fontSize: 18, fontWeight: 700, opacity: disabled ? 0.35 : 1,
-    transition: 'opacity 0.15s',
+    transition: 'opacity 0.15s', boxShadow: 'var(--gc-offset-sm)',
   });
 
   return (
@@ -306,11 +306,11 @@ export function ReharmonizeTab({
               <button
                 onClick={() => setShowNashville(v => !v)}
                 style={{
-                  padding: '3px 10px', borderRadius: 12, border: 'none',
+                  padding: '3px 10px', borderRadius: 0, border: 'none',
                   cursor: 'pointer', fontSize: 11, fontWeight: 600,
                   background: showNashville ? T.secondary : T.bgInput,
                   color: showNashville ? '#fff' : T.textMuted,
-                  transition: 'background 0.15s',
+                  transition: 'background 0.15s', boxShadow: 'var(--gc-offset-sm)',
                 }}
               >
                 Nashville
@@ -349,13 +349,13 @@ export function ReharmonizeTab({
                     onClick={() => setGenre(g.id)}
                     style={{
                       flexShrink: 0,
-                      padding: '5px 14px', borderRadius: 20, border: 'none',
+                      padding: '5px 14px', borderRadius: 0, border: 'none',
                       cursor: 'pointer', fontSize: 12,
                       fontWeight: genre === g.id ? 600 : 400,
                       background: genre === g.id ? T.primary : T.bgInput,
                       color: genre === g.id ? '#fff' : T.textMuted,
                       transition: 'background 0.15s',
-                      whiteSpace: 'nowrap',
+                      whiteSpace: 'nowrap', boxShadow: 'var(--gc-offset-sm)',
                     }}
                   >
                     {g.label}
@@ -440,13 +440,14 @@ export function ReharmonizeTab({
             disabled={chords.length === 0 || loading}
             style={{
               width: '100%',
-              padding: '13px 0', borderRadius: 10, border: 'none',
+              padding: '13px 0', borderRadius: 0, border: 'none',
               cursor: (chords.length === 0 || loading) ? 'not-allowed' : 'pointer',
               fontWeight: 700, fontSize: 15,
               background: (chords.length === 0 || loading) ? T.border : T.primary,
               color: (chords.length === 0 || loading) ? T.textDim : '#fff',
               transition: 'background 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              boxShadow: 'var(--gc-offset)',
             }}
           >
             {loading ? (
@@ -492,12 +493,12 @@ export function ReharmonizeTab({
                   <button
                     onClick={handlePlay}
                     style={{
-                      padding: '5px 14px', borderRadius: 8,
+                      padding: '5px 14px', borderRadius: 0,
                       cursor: 'pointer', fontSize: 12, fontWeight: 700,
                       background: isPlaying ? T.bgDeep : T.primary,
                       color: isPlaying ? T.primary : '#fff',
                       border: isPlaying ? `1px solid ${T.primary}` : '1px solid transparent',
-                      transition: 'all 0.15s',
+                      transition: 'all 0.15s', boxShadow: 'var(--gc-offset-sm)',
                     }}
                   >
                     {isPlaying ? 'Stop' : 'Play'}
@@ -567,13 +568,13 @@ export function ReharmonizeTab({
                             style={{
                               flexShrink: 0,
                               display: 'flex', alignItems: 'center', gap: 6,
-                              padding: '6px 12px', borderRadius: 20,
+                              padding: '6px 12px', borderRadius: 0,
                               border: active ? 'none' : `1px solid ${T.border}`,
                               background: active ? T.primary : T.bgDeep,
                               color: active ? '#fff' : T.textMuted,
                               fontSize: 12, fontWeight: active ? 700 : 400,
                               cursor: 'pointer', transition: 'all 0.15s',
-                              whiteSpace: 'nowrap',
+                              whiteSpace: 'nowrap', boxShadow: 'var(--gc-offset-sm)',
                             }}
                           >
                             <span style={{
@@ -651,11 +652,11 @@ export function ReharmonizeTab({
                 onClick={() => exportMidi(result.chords)}
                 style={{
                   width: '100%',
-                  padding: '11px 0', borderRadius: 10,
+                  padding: '11px 0', borderRadius: 0,
                   border: `1.5px solid ${T.secondary}`,
                   cursor: 'pointer', fontWeight: 700, fontSize: 14,
                   background: 'transparent', color: T.secondary,
-                  transition: 'background 0.15s',
+                  transition: 'background 0.15s', boxShadow: 'var(--gc-offset)',
                 }}
               >
                 Export MIDI

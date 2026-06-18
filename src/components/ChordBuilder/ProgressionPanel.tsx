@@ -341,11 +341,12 @@ export function ProgressionPanel({
           <button
             onClick={handlePlayAll}
             style={{
-              width: '100%', marginTop: 12, padding: '10px 0', borderRadius: 10,
+              width: '100%', marginTop: 12, padding: '10px 0', borderRadius: 0,
               border: `1px solid ${playingAll ? T.coral : T.secondary}`,
               background: playingAll ? T.coralFaint2 : T.secondaryBg,
               color: playingAll ? T.coral : T.secondary,
               fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
+              boxShadow: 'var(--gc-offset)',
             }}
           >
             {playingAll ? '■  Stop' : '▶▶  Play All'}
@@ -361,11 +362,11 @@ export function ProgressionPanel({
                 <button key={g.id} onClick={() => setGenre(g.id)}
                   className="gc-pill"
                   style={{
-                    padding: '5px 13px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12,
+                    padding: '5px 13px', borderRadius: 0, border: 'none', cursor: 'pointer', fontSize: 12,
                     fontWeight: genre === g.id ? 700 : 400,
                     background: genre === g.id ? T.primary : T.bgInput,
                     color: genre === g.id ? T.text : T.textMuted,
-                    transition: 'filter 0.15s',
+                    transition: 'filter 0.15s', boxShadow: 'var(--gc-offset-sm)',
                   }}>
                   {g.label}
                 </button>
@@ -379,7 +380,7 @@ export function ProgressionPanel({
                   onChange={e => setCustomNumerals(e.target.value)}
                   placeholder="e.g. I IV V vi IIm V7…"
                   style={{
-                    width: '100%', padding: '7px 10px', borderRadius: 8,
+                    width: '100%', padding: '7px 10px', borderRadius: 0,
                     border: `1px solid ${T.border}`, background: T.bgInput,
                     color: T.text, fontSize: 13, fontFamily: 'inherit',
                     boxSizing: 'border-box',
@@ -394,10 +395,11 @@ export function ProgressionPanel({
             <button
               onClick={() => setShowSuggestions(v => !v)}
               style={{
-                width: '100%', padding: '11px 0', borderRadius: 10, border: `1px solid ${T.secondary}`,
+                width: '100%', padding: '11px 0', borderRadius: 0, border: `1px solid ${T.secondary}`,
                 cursor: 'pointer', fontSize: 14, fontWeight: 700,
                 background: showSuggestions ? T.secondaryBg : T.bgInput,
                 color: T.secondary, transition: 'filter 0.15s',
+                boxShadow: 'var(--gc-offset)',
               }}>
               {showSuggestions ? 'Hide Suggestions' : '✨ Suggest Next Chord'}
             </button>
@@ -421,10 +423,10 @@ export function ProgressionPanel({
                   }}
                   onMouseLeave={() => setHoverPreview(null)}
                   style={{
-                    padding: 12, borderRadius: 10,
+                    padding: 12, borderRadius: 0,
                     background: T.bgInput, border: `1px solid ${T.border}`,
                     cursor: 'pointer', color: T.text, textAlign: 'left',
-                    transition: 'filter 0.15s',
+                    transition: 'filter 0.15s', boxShadow: 'var(--gc-offset-sm)',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>

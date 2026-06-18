@@ -252,10 +252,10 @@ export const Metronome: React.FC = () => {
         <button
           onClick={handleTap}
           style={{
-            width: '100%', padding: '10px 0', marginBottom: 20, borderRadius: 10,
+            width: '100%', padding: '10px 0', marginBottom: 20, borderRadius: 0,
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.textMuted, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            transition: 'background 0.1s',
+            transition: 'background 0.1s', boxShadow: 'var(--gc-offset-sm)',
           }}
         >
           Tap Tempo
@@ -274,12 +274,12 @@ export const Metronome: React.FC = () => {
                 onClick={() => setSubdivision(sub)}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 6, padding: '10px 4px', borderRadius: 10,
+                  gap: 6, padding: '10px 4px', borderRadius: 0,
                   border: `1.5px solid ${active ? T.primary : T.border}`,
                   background: active ? T.primaryBg : T.bgInput,
                   color: active ? T.primary : T.textMuted,
                   cursor: 'pointer', fontSize: 11, fontWeight: active ? 700 : 500,
-                  transition: 'all 0.15s',
+                  transition: 'all 0.15s', boxShadow: 'var(--gc-offset-sm)',
                 }}
               >
                 {sub.icon}
@@ -292,10 +292,10 @@ export const Metronome: React.FC = () => {
         <button
           onClick={handleStartStop}
           style={{
-            width: '100%', padding: '14px 0', borderRadius: 12, border: 'none',
+            width: '100%', padding: '14px 0', borderRadius: 0, border: 'none',
             background: playing ? T.coral : T.primary,
             color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
-            transition: 'background 0.2s',
+            transition: 'background 0.2s', boxShadow: 'var(--gc-offset)',
           }}
         >
           {playing ? '■  Stop' : '▶  Start'}
