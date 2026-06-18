@@ -92,7 +92,7 @@ const INTERVAL_COLOR: Record<string, string> = {
   '1P': '#CC1C1C',               // Root — red
   '3m': '#1A7A4A', '3M': '#1A7A4A', // 3rd — green
   '5P': '#C8A020', '5A': '#C8A020', '5d': '#C8A020', // 5th — gold
-  '7m': '#1235FC', '7M': '#1235FC', '7d': '#1235FC', // 7th — blue
+  '7m': '#3A3A3A', '7M': '#3A3A3A', '7d': '#3A3A3A', // 7th — dark gray
   '9M': '#6B21A8', '9m': '#6B21A8', '9A': '#6B21A8', // ext — purple
   '11P': '#6B21A8', '11A': '#6B21A8',
   '13M': '#6B21A8', '13m': '#6B21A8',

@@ -51,7 +51,7 @@ export const MiniFretboard: React.FC<Props> = ({
       {/* Fretboard background — padded by dot radius so no dot overflows */}
       <rect x={LEFT} y={topY - 8}
         width={fretCount * fretSp} height={(STRING_COUNT - 1) * strSp + 16}
-        fill="#2D2D2D" />
+        fill="#1235FC" />
 
       {/* Fret lines */}
       {Array.from({ length: fretCount + 1 }).map((_, i) => {
@@ -60,7 +60,7 @@ export const MiniFretboard: React.FC<Props> = ({
           <line key={i}
             x1={LEFT + i * fretSp} y1={topY}
             x2={LEFT + i * fretSp} y2={topY + (STRING_COUNT - 1) * strSp}
-            stroke="rgba(255,255,255,0.55)"
+            stroke="rgba(255,255,255,0.22)"
             strokeWidth={isNut ? 3 : 1}
           />
         );
@@ -71,7 +71,7 @@ export const MiniFretboard: React.FC<Props> = ({
         <line key={s}
           x1={LEFT} y1={strY(s)}
           x2={LEFT + fretCount * fretSp} y2={strY(s)}
-          stroke="rgba(255,255,255,0.85)" strokeWidth={1.2 + s * 0.15}
+          stroke="rgba(255,255,255,0.40)" strokeWidth={1.2 + s * 0.15}
         />
       ))}
 

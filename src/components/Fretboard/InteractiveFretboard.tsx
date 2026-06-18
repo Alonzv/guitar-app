@@ -34,7 +34,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
         {/* ── Blue fretboard background ── */}
         <rect x={NUT_X - FRET_SP * 0.5} y={TOP_Y - 13}
           width={FRET_COUNT * FRET_SP + FRET_SP * 0.5 + 8} height={(STRING_COUNT - 1) * STR_SP + 26}
-          fill="#2D2D2D" rx={0} />
+          fill="#1235FC" rx={0} />
 
         {/* ── Fret position markers ── */}
         {[3, 5, 7, 9].map(f => (
@@ -49,7 +49,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
           <line key={i}
             x1={NUT_X + i * FRET_SP} y1={TOP_Y}
             x2={NUT_X + i * FRET_SP} y2={TOP_Y + (STRING_COUNT - 1) * STR_SP}
-            stroke="rgba(255,255,255,0.55)"
+            stroke="rgba(255,255,255,0.22)"
             strokeWidth={i === 0 ? 3.5 : 1.2}
           />
         ))}
@@ -59,7 +59,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
           <line key={s}
             x1={NUT_X} y1={strY(s)}
             x2={NUT_X + FRET_COUNT * FRET_SP} y2={strY(s)}
-            stroke="rgba(255,255,255,0.85)" strokeWidth={1.2 + s * 0.2}
+            stroke="rgba(255,255,255,0.40)" strokeWidth={1.2 + s * 0.2}
           />
         ))}
 

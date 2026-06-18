@@ -24,20 +24,21 @@ const INTERVAL_NAME: Record<string, string> = {
   '9m': '♭9th', '11P': '11th', '13M': '13th',
 };
 
-const PURPLE = '#6B21A8';
-const GREEN  = '#1A7A4A';
+const PURPLE  = '#6B21A8';
+const GREEN   = '#1A7A4A';
+const DARKGRAY = '#3A3A3A';
 
 export const INTERVAL_COLOR: Record<string, string> = {
   '1P': T.primary,  '8P': T.primary,   // root / octave — red
   '3m': GREEN,      '3M': GREEN,        // 3rd — green
   '4P': T.coral,    '4A': T.coral,      // 4th — gold
   '5P': T.coral,    '5A': PURPLE,       '5d': PURPLE,   // 5th — gold / aug/dim — purple
-  '2m': T.secondary,'2M': T.secondary,  '2A': T.secondary, // 2nd — blue
-  '6m': PURPLE,     '6M': T.secondary,  // 6th
-  '7m': T.secondary,'7M': T.secondary,  // 7th — blue
-  '9m': PURPLE,     '9M': T.secondary,  '9A': PURPLE,   // 9th
-  '11P': T.secondary,'11A': PURPLE,     // 11th
-  '13m': PURPLE,    '13M': T.secondary, // 13th
+  '2m': DARKGRAY,  '2M': DARKGRAY,    '2A': DARKGRAY,  // 2nd — dark gray
+  '6m': PURPLE,     '6M': DARKGRAY,    // 6th
+  '7m': DARKGRAY,  '7M': DARKGRAY,    // 7th — dark gray
+  '9m': PURPLE,     '9M': DARKGRAY,    '9A': PURPLE,   // 9th
+  '11P': DARKGRAY, '11A': PURPLE,     // 11th
+  '13m': PURPLE,    '13M': DARKGRAY,  // 13th
 };
 
 /** Returns a chroma (0–11) → color map for the given chord */

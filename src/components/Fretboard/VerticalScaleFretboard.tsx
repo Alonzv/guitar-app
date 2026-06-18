@@ -51,7 +51,7 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
       {/* Blue fretboard background */}
       <rect x={LEFT} y={TOP - 3}
         width={(STRING_COUNT - 1) * COL_W} height={rowY(FRET_COUNT) - TOP + 3}
-        fill="#2D2D2D" />
+        fill="#1235FC" />
 
       {/* Inlay markers */}
       {DOT_FRETS.map(f => (
@@ -74,7 +74,7 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
       {Array.from({ length: STRING_COUNT }).map((_, s) => (
         <line key={s}
           x1={colX(s)} y1={TOP} x2={colX(s)} y2={rowY(FRET_COUNT)}
-          stroke="rgba(255,255,255,0.85)" strokeWidth={1.0 + s * 0.18} />
+          stroke="rgba(255,255,255,0.40)" strokeWidth={1.0 + s * 0.18} />
       ))}
 
       {/* String labels (top) */}
