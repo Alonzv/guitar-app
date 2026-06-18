@@ -106,9 +106,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 
   /* (halftone removed) */
 
-  /* Flat offset shadow — Arturia style */
-  --gc-offset: 4px 4px 0 0 #000;
-  --gc-offset-sm: 2px 2px 0 0 #000;
+  /* Flat offset shadow — right bar only */
+  --gc-offset: 4px 0 0 0 #000;
+  --gc-offset-sm: 3px 0 0 0 #000;
 
   /* Light mode — white & ink */
   --gc-bg-deep:          #FFFFFF;
@@ -157,9 +157,9 @@ body.dark {
   --gc-secondary-faint:  rgba(42,76,200,0.22);
   --gc-coral-faint:      rgba(212,168,32,0.12);
   --gc-coral-faint2:     rgba(212,168,32,0.18);
-  /* Flat offset shadow — dark mode (white) */
-  --gc-offset: 4px 4px 0 0 rgba(255,255,255,0.20);
-  --gc-offset-sm: 2px 2px 0 0 rgba(255,255,255,0.20);
+  /* Flat offset shadow — dark mode, right bar only */
+  --gc-offset: 4px 0 0 0 rgba(255,255,255,0.20);
+  --gc-offset-sm: 3px 0 0 0 rgba(255,255,255,0.20);
 
   /* (halftone removed) */
 }
@@ -272,13 +272,13 @@ body.dark {
 
 /* Hover — "pressed into shadow" shift */
 .gc-tab:hover {
-  transform: translate(2px, 2px);
+  transform: translate(2px, 0);
   box-shadow: none !important;
   filter: brightness(1.12);
 }
 
 button:not(.gc-tab):not(:disabled):hover {
-  transform: translate(2px, 2px);
+  transform: translate(2px, 0);
   box-shadow: none !important;
   filter: brightness(1.08);
   transition: transform 0.08s, box-shadow 0.08s, filter 0.08s;
