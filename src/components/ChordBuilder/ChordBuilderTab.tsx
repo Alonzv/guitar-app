@@ -40,7 +40,7 @@ const SELECT_STYLE: React.CSSProperties = {
   WebkitAppearance: 'none',
   background: T.bgInput,
   border: `1px solid ${T.border}`,
-  borderRadius: 8,
+  borderRadius: 0,
   color: T.text,
   fontFamily: 'inherit',
   fontSize: 12,
@@ -48,6 +48,7 @@ const SELECT_STYLE: React.CSSProperties = {
   padding: '5px 26px 5px 10px',
   cursor: 'pointer',
   outline: 'none',
+  boxShadow: 'var(--gc-offset-sm)',
 };
 
 export function ChordBuilderTab({
@@ -133,11 +134,12 @@ export function ChordBuilderTab({
           <button
             onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}
             style={{
-              padding: '6px 16px', borderRadius: 20, border: `1px solid ${T.border}`,
+              padding: '6px 16px', borderRadius: 0, border: `1px solid ${T.border}`,
               cursor: 'pointer', fontSize: 12, fontWeight: 500,
               background: showVariations ? T.primaryBg : T.bgInput,
               color: showVariations ? T.primary : T.textMuted,
               transition: 'filter 0.15s',
+              boxShadow: 'var(--gc-offset-sm)',
             }}
           >
             {showVariations ? 'Hide variations' : 'Show more variations'}

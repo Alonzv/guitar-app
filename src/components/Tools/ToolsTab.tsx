@@ -30,7 +30,7 @@ export const ToolsTab: React.FC = () => {
             boxShadow: 'var(--gc-offset-sm)',
             transition: 'background 0.1s',
           }}>
-            <span style={{ fontWeight: 300, opacity: 0.7 }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span>
+            <span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span>
           </button>
         ))}
       </div>

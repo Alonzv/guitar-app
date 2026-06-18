@@ -79,7 +79,7 @@ const SELECT_STYLE: React.CSSProperties = {
   WebkitAppearance: 'none',
   background: T.bgInput,
   border: `1px solid ${T.border}`,
-  borderRadius: 8,
+  borderRadius: 0,
   color: T.text,
   fontFamily: 'inherit',
   fontSize: 12,
@@ -87,6 +87,7 @@ const SELECT_STYLE: React.CSSProperties = {
   padding: '5px 26px 5px 10px',
   cursor: 'pointer',
   outline: 'none',
+  boxShadow: 'var(--gc-offset-sm)',
 };
 
 export function ChordPickerTab({
@@ -177,12 +178,13 @@ export function ChordPickerTab({
                 key={root}
                 onClick={() => handleRootSelect(root)}
                 style={{
-                  padding: '8px 4px', borderRadius: 8, border: 'none',
+                  padding: '8px 4px', borderRadius: 0, border: 'none',
                   cursor: 'pointer', fontSize: 13,
                   fontWeight: active ? 700 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? T.text : T.textMuted,
                   transition: 'filter 0.15s, background 0.15s',
+                  boxShadow: 'var(--gc-offset-sm)',
                 }}
               >
                 {root}
@@ -204,12 +206,13 @@ export function ChordPickerTab({
                 className="gc-pill"
                 onClick={() => handleTriadSelect(t.key)}
                 style={{
-                  padding: '6px 16px', borderRadius: 20, border: 'none',
+                  padding: '6px 16px', borderRadius: 0, border: 'none',
                   cursor: 'pointer', fontSize: 13,
                   fontWeight: active ? 700 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? T.text : T.textMuted,
                   transition: 'filter 0.15s, background 0.15s',
+                  boxShadow: 'var(--gc-offset-sm)',
                 }}
               >
                 {t.display}
@@ -232,12 +235,13 @@ export function ChordPickerTab({
                   className="gc-pill"
                   onClick={() => handleExtensionSelect(e.key)}
                   style={{
-                    padding: '6px 16px', borderRadius: 20, border: 'none',
+                    padding: '6px 16px', borderRadius: 0, border: 'none',
                     cursor: 'pointer', fontSize: 13,
                     fontWeight: active ? 700 : 400,
                     background: active ? T.secondary : T.bgInput,
                     color: active ? '#fff' : T.textMuted,
                     transition: 'filter 0.15s, background 0.15s',
+                    boxShadow: 'var(--gc-offset-sm)',
                   }}
                 >
                   {e.display}

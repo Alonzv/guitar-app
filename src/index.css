@@ -82,29 +82,13 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: var(--gc-font);
-  /* Supply Mono reads cramped — open the tracking up a touch (both scripts) */
-  letter-spacing: 0.07em;
-  /* Supply Mono is unhinted; grid-fitting snaps glyphs to different pixel
-     rows and makes the baseline look wavy at small sizes. Render straight
-     from the outlines so every glyph sits on the same baseline. */
+  font-weight: 300;
+  letter-spacing: 0.04em;
   text-rendering: geometricPrecision;
   background-color: var(--gc-bg-deep);
-  background-image: radial-gradient(circle, var(--gc-halftone) 1.5px, transparent 1.5px);
-  background-size: 18px 18px;
   color: var(--gc-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* Film grain — floats above everything, barely perceptible */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.06;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
 button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: inherit; }
@@ -120,32 +104,31 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   /* Typeface — Azeret Mono for Latin, Miriam Libre for Hebrew glyphs */
   --gc-font: 'Azeret Mono', 'Miriam Libre', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  /* Halftone dot colour — light mode */
-  --gc-halftone: rgba(26,24,16,0.09);
+  /* (halftone removed) */
 
   /* Flat offset shadow — Arturia style */
   --gc-offset: 4px 4px 0 0 #000;
   --gc-offset-sm: 2px 2px 0 0 #000;
 
-  /* Light mode — Bauhaus poster / cream & ink */
-  --gc-bg-deep:          #F0EBE0;
-  --gc-bg-card:          #E8E2D6;
-  --gc-bg-input:         #DDD6C8;
-  --gc-border:           #B8B0A0;
+  /* Light mode — white & ink */
+  --gc-bg-deep:          #FFFFFF;
+  --gc-bg-card:          #F4F4F4;
+  --gc-bg-input:         #EBEBEB;
+  --gc-border:           #CCCCCC;
   --gc-primary:          #CC1C1C;
   --gc-primary-hov:      #E02020;
   --gc-primary-bg:       rgba(204,28,28,0.09);
   --gc-secondary:        #1E3898;
   --gc-secondary-bg:     rgba(30,56,152,0.09);
   --gc-coral:            #C8A020;
-  --gc-text:             #1A1810;
-  --gc-text-muted:       rgba(26,24,16,0.55);
-  --gc-text-dim:         rgba(26,24,16,0.30);
-  --gc-white:            #F5F0E8;
+  --gc-text:             #1A1818;
+  --gc-text-muted:       rgba(26,24,24,0.52);
+  --gc-text-dim:         rgba(26,24,24,0.28);
+  --gc-white:            #FFFFFF;
   /* Alpha variants */
   --gc-primary-soft:     rgba(204,28,28,0.10);
   --gc-primary-glow:     rgba(204,28,28,0.32);
-  --gc-white-soft:       rgba(245,240,232,0.73);
+  --gc-white-soft:       rgba(255,255,255,0.80);
   --gc-secondary-faint:  rgba(30,56,152,0.10);
   --gc-coral-faint:      rgba(200,160,32,0.10);
   --gc-coral-faint2:     rgba(200,160,32,0.16);
@@ -178,8 +161,7 @@ body.dark {
   --gc-offset: 4px 4px 0 0 rgba(255,255,255,0.20);
   --gc-offset-sm: 2px 2px 0 0 rgba(255,255,255,0.20);
 
-  /* Halftone dot colour — dark mode */
-  --gc-halftone:         rgba(240,234,216,0.06);
+  /* (halftone removed) */
 }
 
 :root {
@@ -469,24 +451,9 @@ select {
    Retro / collage treatments
 ───────────────────────────────────────────────────────────── */
 
-/* Header: coloured halftone dot cluster fades in from the top-right */
+/* Header */
 .gc-header-retro {
   position: relative;
-  overflow: hidden;
-}
-.gc-header-retro::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle, var(--gc-primary) 2px, transparent 2px),
-    radial-gradient(circle, var(--gc-coral) 1.5px, transparent 1.5px);
-  background-size: 10px 10px, 20px 20px;
-  background-position: 0 0, 5px 5px;
-  -webkit-mask-image: radial-gradient(ellipse 180px 100% at 100% 0%, black 20%, transparent 72%);
-  mask-image: radial-gradient(ellipse 180px 100% at 100% 0%, black 20%, transparent 72%);
-  opacity: 0.18;
 }
 
 /* Brand stamp — sharp, Arturia-style, offset shadow */

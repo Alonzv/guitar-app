@@ -531,7 +531,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             boxShadow: 'var(--gc-offset-sm)',
             transition: 'background 0.1s',
           }}>
-            <span style={{ fontWeight: 300, opacity: 0.7 }}>_</span><span style={{ fontWeight: 700 }}>{tab.label}</span>
+            <span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{tab.label}</span>
           </button>
         ))}
       </div>

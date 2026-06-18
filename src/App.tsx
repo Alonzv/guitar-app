@@ -252,18 +252,18 @@ export default function App() {
                   onClick={() => setActiveTab(tab.id)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 14px', borderRadius: 10, border: 'none',
+                    padding: '10px 14px', borderRadius: 0, border: 'none',
                     background: active ? T.primary : 'transparent',
                     color: active ? T.white : T.textMuted,
                     fontWeight: active ? 700 : 500,
                     fontSize: 14, cursor: 'pointer', textAlign: 'left',
                     transition: 'background 0.15s, color 0.15s',
-                    boxShadow: active ? `0 2px 8px rgba(196,73,0,0.3)` : 'none',
+                    boxShadow: active ? 'var(--gc-offset-sm)' : 'none',
                   }}
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bgCard; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span style={{ lineHeight: 1, flexShrink: 0, fontWeight: 300, opacity: 0.7 }}>_</span>
+                  <span style={{ lineHeight: 1, flexShrink: 0, fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span>
                   <span>{tab.label}</span>
                 </button>
               );
@@ -302,8 +302,8 @@ export default function App() {
             <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 8, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Load</button>
-                <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '4px 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
+                <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 0, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--gc-offset-sm)' }}>Load</button>
+                <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '4px 10px', borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
               </div>
             </div>
           )}
@@ -326,8 +326,8 @@ export default function App() {
         <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Load</button>
-            <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
+            <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 0, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--gc-offset-sm)' }}>Load</button>
+            <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '5px 10px', borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
           </div>
         </div>
       )}
@@ -350,7 +350,7 @@ export default function App() {
             const active = activeTab === tab.id;
             return (
               <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 0, border: 'none', background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, boxShadow: 'var(--gc-offset)', transition: 'background 0.1s' }}>
-                <span style={{ fontWeight: 300, opacity: 0.7 }}>_</span><span className="gc-tab-label">{tab.label}</span>
+                <span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span className="gc-tab-label">{tab.label}</span>
               </button>
             );
           })}

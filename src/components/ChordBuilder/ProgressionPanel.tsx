@@ -166,9 +166,10 @@ export function ProgressionPanel({
               disabled={!canUndo}
               title="Undo (Ctrl+Z)"
               style={{
-                padding: '4px 8px', borderRadius: 16, border: `1px solid ${T.border}`,
+                padding: '4px 8px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: canUndo ? T.textMuted : T.textDim,
                 fontSize: 11, cursor: canUndo ? 'pointer' : 'not-allowed', fontWeight: 600,
+                boxShadow: 'var(--gc-offset-sm)',
               }}
             >↩</button>
             <button
@@ -176,18 +177,20 @@ export function ProgressionPanel({
               disabled={!canRedo}
               title="Redo (Ctrl+Shift+Z)"
               style={{
-                padding: '4px 8px', borderRadius: 16, border: `1px solid ${T.border}`,
+                padding: '4px 8px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: canRedo ? T.textMuted : T.textDim,
                 fontSize: 11, cursor: canRedo ? 'pointer' : 'not-allowed', fontWeight: 600,
+                boxShadow: 'var(--gc-offset-sm)',
               }}
             >↪</button>
             <button
               onClick={handleCopy}
               style={{
-                padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.border}`,
+                padding: '4px 10px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: copied ? T.secondaryBg : T.bgInput,
                 color: copied ? T.secondary : T.textMuted, fontSize: 11,
                 cursor: 'pointer', fontWeight: 600, transition: 'filter 0.15s',
+                boxShadow: 'var(--gc-offset-sm)',
               }}
             >
               {copied ? '✓ Copied' : <><IconClipboard size={12} /> Copy</>}
@@ -196,10 +199,10 @@ export function ProgressionPanel({
               onClick={handleExportPDF}
               disabled={exporting}
               style={{
-                padding: '4px 10px', borderRadius: 16, border: `1px solid ${T.border}`,
+                padding: '4px 10px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: T.textMuted, fontSize: 11,
                 cursor: exporting ? 'not-allowed' : 'pointer', fontWeight: 600,
-                transition: 'filter 0.15s',
+                transition: 'filter 0.15s', boxShadow: 'var(--gc-offset-sm)',
               }}
             >
               {exporting ? '…' : 'PDF'}
@@ -212,10 +215,10 @@ export function ProgressionPanel({
           <button
             onClick={handleShare}
             style={{
-              flex: 1, padding: '7px 0', borderRadius: 10, border: `1px solid ${T.border}`,
+              flex: 1, padding: '7px 0', borderRadius: 0, border: `1px solid ${T.border}`,
               background: shared ? T.secondaryBg : T.bgInput,
               color: shared ? T.secondary : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              transition: 'all 0.15s',
+              transition: 'all 0.15s', boxShadow: 'var(--gc-offset-sm)',
             }}
           >
             {shared ? '✓ Copied!' : <><IconLink size={12} /> Share Link</>}
@@ -228,7 +231,7 @@ export function ProgressionPanel({
           onChange={e => setProgressionName(e.target.value)}
           placeholder="Progression name (optional)…"
           style={{
-            width: '100%', marginBottom: 12, padding: '7px 10px', borderRadius: 8,
+            width: '100%', marginBottom: 12, padding: '7px 10px', borderRadius: 0,
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.text, fontSize: 13, fontFamily: 'inherit',
             boxSizing: 'border-box',
@@ -243,18 +246,18 @@ export function ProgressionPanel({
           <button
             onClick={() => onTransposeProgression(-1)}
             style={{
-              width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
+              width: 34, height: 34, borderRadius: 0, border: `1px solid ${T.border}`,
               background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 700,
-              cursor: 'pointer', lineHeight: 1,
+              cursor: 'pointer', lineHeight: 1, boxShadow: 'var(--gc-offset-sm)',
             }}
           >−</button>
           <span style={{ fontSize: 11, color: T.textMuted }}>semitone</span>
           <button
             onClick={() => onTransposeProgression(1)}
             style={{
-              width: 34, height: 34, borderRadius: 8, border: `1px solid ${T.border}`,
+              width: 34, height: 34, borderRadius: 0, border: `1px solid ${T.border}`,
               background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 700,
-              cursor: 'pointer', lineHeight: 1,
+              cursor: 'pointer', lineHeight: 1, boxShadow: 'var(--gc-offset-sm)',
             }}
           >+</button>
         </div>
@@ -263,11 +266,11 @@ export function ProgressionPanel({
         <button
           onClick={handleClear}
           style={{
-            width: '100%', marginBottom: 10, padding: '10px 0', borderRadius: 10,
+            width: '100%', marginBottom: 10, padding: '10px 0', borderRadius: 0,
             border: `1px solid ${T.coral}`,
             background: T.coralFaint,
             color: T.coral, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            transition: 'all 0.15s',
+            transition: 'all 0.15s', boxShadow: 'var(--gc-offset)',
           }}
         >
           🗑 Clear All Chords
@@ -292,18 +295,20 @@ export function ProgressionPanel({
                     onClick={() => onReorderProgression(item.id, -1)}
                     disabled={i === 0}
                     style={{
-                      width: 24, height: 22, borderRadius: 5, border: `1px solid ${T.border}`,
+                      width: 24, height: 22, borderRadius: 0, border: `1px solid ${T.border}`,
                       background: T.bgCard, color: i === 0 ? T.textDim : T.textMuted,
                       fontSize: 12, cursor: i === 0 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
+                      boxShadow: 'var(--gc-offset-sm)',
                     }}
                   >←</button>
                   <button
                     onClick={() => onReorderProgression(item.id, 1)}
                     disabled={i === progression.length - 1}
                     style={{
-                      width: 24, height: 22, borderRadius: 5, border: `1px solid ${T.border}`,
+                      width: 24, height: 22, borderRadius: 0, border: `1px solid ${T.border}`,
                       background: T.bgCard, color: i === progression.length - 1 ? T.textDim : T.textMuted,
                       fontSize: 12, cursor: i === progression.length - 1 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
+                      boxShadow: 'var(--gc-offset-sm)',
                     }}
                   >→</button>
                 </div>
@@ -312,9 +317,9 @@ export function ProgressionPanel({
                     onClick={() => playChord(item.fretPositions, tuning.openFreqs, capo)}
                     style={{
                       display: 'block', width: '100%', marginTop: 6, padding: '7px 0',
-                      borderRadius: 8, border: 'none', background: T.primaryBg,
+                      borderRadius: 0, border: 'none', background: T.primaryBg,
                       color: T.primary, fontSize: 16, fontWeight: 700, cursor: 'pointer',
-                      minHeight: 36,
+                      minHeight: 36, boxShadow: 'var(--gc-offset-sm)',
                     }}
                   >▶</button>
                 )}
