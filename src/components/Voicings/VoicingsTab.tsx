@@ -525,7 +525,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           { id: 'reharmonize',  label: 'Re-Harmonize'  },
         ] as { id: 'paths' | 'voiceleading' | 'reharmonize'; label: string }[]).map(tab => (
           <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
-            flex: 1, padding: '11px 4px', borderRadius: 0, border: 'none',
+            flex: 1, padding: '11px 4px', borderRadius: 0,
             background: subTab === tab.id ? T.secondary : T.bgInput,
             color: subTab === tab.id ? '#fff' : T.textMuted,
             fontSize: 14, cursor: 'pointer',
@@ -549,7 +549,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
             {ROOTS.map(r => (
               <button key={r} onClick={() => setRoot(r)} style={{
-                padding: '7px 0', borderRadius: 0, border: 'none',
+                padding: '7px 0', borderRadius: 0,
                 background: root === r ? T.primary : T.bgDeep,
                 color: root === r ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
@@ -565,7 +565,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {TRIADS.map(t => (
               <button key={t.key} onClick={() => { setTriad(t.key); setExt(''); }} style={{
-                padding: '7px 12px', borderRadius: 0, border: 'none',
+                padding: '7px 12px', borderRadius: 0,
                 background: triad === t.key ? T.secondary : T.bgDeep,
                 color: triad === t.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
@@ -581,7 +581,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {EXTENSIONS.filter(e => validExts.includes(e.key)).map(e => (
               <button key={e.key} onClick={() => setExt(e.key)} style={{
-                padding: '6px 11px', borderRadius: 0, border: 'none',
+                padding: '6px 11px', borderRadius: 0,
                 background: activeExt === e.key ? T.secondary : T.bgDeep,
                 color: activeExt === e.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
@@ -600,7 +600,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             onClick={addChord}
             disabled={!root || !triad || chords.length >= 8}
             style={{
-              padding: '9px 20px', borderRadius: 0, border: 'none',
+              padding: '9px 20px', borderRadius: 0,
               background: (root && triad && chords.length < 8) ? T.secondary : T.border,
               color: '#fff', fontWeight: 700, fontSize: 14,
               cursor: (root && triad && chords.length < 8) ? 'pointer' : 'not-allowed',
@@ -703,7 +703,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           <div style={{ display: 'flex', gap: 3, flex: 1 }}>
             {(['full', 'triads'] as VoicingMode[]).map(m => (
               <button key={m} onClick={() => setMode(m)} style={{
-                flex: 1, padding: '7px 4px', borderRadius: 0, border: 'none',
+                flex: 1, padding: '7px 4px', borderRadius: 0,
                 cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: mode === m ? T.secondary : T.bgInput,
                 color: mode === m ? '#fff' : T.textMuted,
@@ -725,7 +725,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               { id: 'treble', label: 'High' },
             ] as { id: StringGroup; label: string }[]).map(sg => (
               <button key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
-                flex: 1, padding: '7px 4px', borderRadius: 0, border: 'none',
+                flex: 1, padding: '7px 4px', borderRadius: 0,
                 cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: stringGroup === sg.id ? T.secondary : T.bgInput,
                 color: stringGroup === sg.id ? '#fff' : T.textMuted,

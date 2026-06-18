@@ -178,7 +178,7 @@ export function ChordPickerTab({
                 key={root}
                 onClick={() => handleRootSelect(root)}
                 style={{
-                  padding: '8px 4px', borderRadius: 0, border: 'none',
+                  padding: '8px 4px', borderRadius: 0,
                   cursor: 'pointer', fontSize: 13,
                   fontWeight: active ? 700 : 400,
                   background: active ? T.primary : T.bgInput,
@@ -206,7 +206,7 @@ export function ChordPickerTab({
                 className="gc-pill"
                 onClick={() => handleTriadSelect(t.key)}
                 style={{
-                  padding: '6px 16px', borderRadius: 0, border: 'none',
+                  padding: '6px 16px', borderRadius: 0,
                   cursor: 'pointer', fontSize: 13,
                   fontWeight: active ? 700 : 400,
                   background: active ? T.primary : T.bgInput,
@@ -235,7 +235,7 @@ export function ChordPickerTab({
                   className="gc-pill"
                   onClick={() => handleExtensionSelect(e.key)}
                   style={{
-                    padding: '6px 16px', borderRadius: 0, border: 'none',
+                    padding: '6px 16px', borderRadius: 0,
                     cursor: 'pointer', fontSize: 13,
                     fontWeight: active ? 700 : 400,
                     background: active ? T.secondary : T.bgInput,

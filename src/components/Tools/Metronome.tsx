@@ -230,7 +230,7 @@ export const Metronome: React.FC = () => {
             style={{
               width: 140, textAlign: 'center', fontSize: 52, fontWeight: 800,
               letterSpacing: 0,
-              color: T.text, background: 'transparent', border: 'none', outline: 'none',
+              color: T.text, background: 'transparent', outline: 'none',
               fontFamily: 'inherit', padding: 0, boxSizing: 'border-box',
               MozAppearance: 'textfield',
             } as React.CSSProperties}
@@ -292,7 +292,7 @@ export const Metronome: React.FC = () => {
         <button
           onClick={handleStartStop}
           style={{
-            width: '100%', padding: '14px 0', borderRadius: 0, border: 'none',
+            width: '100%', padding: '14px 0', borderRadius: 0,
             background: playing ? T.coral : T.primary,
             color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
             transition: 'background 0.2s', borderRight: '4px solid var(--gc-bar-color)',

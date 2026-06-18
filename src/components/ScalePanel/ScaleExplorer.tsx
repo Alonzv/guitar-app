@@ -214,7 +214,7 @@ export function ScaleExplorer() {
             {(['fretboard', 'tab'] as const).map(v => (
               <button key={v} onClick={() => setViewMode(v)} style={{
                 flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
-                fontSize: 13, fontWeight: viewMode === v ? 700 : 400, border: 'none',
+                fontSize: 13, fontWeight: viewMode === v ? 700 : 400,
                 background: viewMode === v ? T.primary : T.bgCard,
                 color: viewMode === v ? T.text : T.textMuted,
                 borderRight: '3px solid var(--gc-bar-color)',
@@ -228,7 +228,7 @@ export function ScaleExplorer() {
           <div className="gc-pos-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: T.textMuted }}>Position:</span>
             <button onClick={() => setPos(null)} style={{
-              padding: '4px 13px', borderRadius: 0, border: 'none', cursor: 'pointer', fontSize: 11,
+              padding: '4px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
               background: pos === null ? T.text : T.bgInput,
               color: pos === null ? T.bgDeep : T.textMuted,
               fontWeight: pos === null ? 700 : 400,

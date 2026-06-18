@@ -46,7 +46,6 @@ export const btn = {
   primary: (disabled?: boolean): React.CSSProperties => ({
     padding: '12px 0',
     borderRadius: 0,
-    border: 'none',
     cursor: disabled ? 'not-allowed' : 'pointer',
     fontWeight: 800,
     fontSize: 15,

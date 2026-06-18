@@ -613,7 +613,7 @@ export const AudioToTab: React.FC = () => {
         <p style={{ margin: '0 0 20px', fontSize: 12, color: T.textMuted }}>מקליט…</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={stopRecording} style={{
-            padding: '12px 32px', borderRadius: 0, border: 'none', cursor: 'pointer',
+            padding: '12px 32px', borderRadius: 0, cursor: 'pointer',
             background: T.coral, color: '#fff', fontWeight: 700, fontSize: 14,
             borderRight: '4px solid var(--gc-bar-color)',
           }}>
@@ -661,7 +661,7 @@ export const AudioToTab: React.FC = () => {
         </div>
       </div>
       <button onClick={reset} style={{
-        padding: '12px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
+        padding: '12px 0', borderRadius: 0, cursor: 'pointer',
         background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
         borderRight: '4px solid var(--gc-bar-color)',
       }}>
@@ -704,7 +704,7 @@ export const AudioToTab: React.FC = () => {
         <button
           onClick={() => exportTabToPDF(tabData)}
           style={{
-            flex: 1, padding: '13px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
+            flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
             background: T.secondary, color: '#fff', fontWeight: 700, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             borderRight: '4px solid var(--gc-bar-color)',
@@ -720,7 +720,7 @@ export const AudioToTab: React.FC = () => {
         <button
           onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}
           style={{
-            flex: 1, padding: '13px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
+            flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
             background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             borderRight: '4px solid var(--gc-bar-color)',

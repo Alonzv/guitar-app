@@ -277,7 +277,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
         <button
           onClick={listening ? stop : start}
           style={{
-            width: '100%', padding: '14px 0', borderRadius: 0, border: 'none',
+            width: '100%', padding: '14px 0', borderRadius: 0,
             background: listening ? T.coral : T.primary,
             color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
             transition: 'background 0.2s', borderRight: '4px solid var(--gc-bar-color)',

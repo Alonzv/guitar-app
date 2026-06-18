@@ -317,7 +317,7 @@ export function ProgressionPanel({
                     onClick={() => playChord(item.fretPositions, tuning.openFreqs, capo)}
                     style={{
                       display: 'block', width: '100%', marginTop: 6, padding: '7px 0',
-                      borderRadius: 0, border: 'none', background: T.primaryBg,
+                      borderRadius: 0, background: T.primaryBg,
                       color: T.primary, fontSize: 16, fontWeight: 700, cursor: 'pointer',
                       minHeight: 36, borderRight: '3px solid var(--gc-bar-color)',
                     }}
@@ -327,7 +327,7 @@ export function ProgressionPanel({
                   onClick={() => onRemoveFromProgression(item.id)}
                   style={{
                     position: 'absolute', top: -7, right: -7, width: 20, height: 20,
-                    borderRadius: '50%', background: T.border, border: 'none',
+                    borderRadius: '50%', background: T.border,
                     color: T.textMuted, fontSize: 13, cursor: 'pointer', lineHeight: '20px', padding: 0,
                   }}
                 >×</button>
@@ -362,7 +362,7 @@ export function ProgressionPanel({
                 <button key={g.id} onClick={() => setGenre(g.id)}
                   className="gc-pill"
                   style={{
-                    padding: '5px 13px', borderRadius: 0, border: 'none', cursor: 'pointer', fontSize: 12,
+                    padding: '5px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
                     fontWeight: genre === g.id ? 700 : 400,
                     background: genre === g.id ? T.primary : T.bgInput,
                     color: genre === g.id ? T.text : T.textMuted,

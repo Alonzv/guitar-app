@@ -57,7 +57,6 @@ export function TheoryTab({
                 flex: 1,
                 padding: '9px 4px',
                 borderRadius: 0,
-                border: 'none',
                 cursor: 'pointer',
                 fontSize: 12,
                 background: active ? T.secondary : T.bgInput,
