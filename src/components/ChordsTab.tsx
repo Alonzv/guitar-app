@@ -47,13 +47,13 @@ export const ChordsTab: React.FC<Props> = ({
         {(['builder', 'finder', 'analyzer', 'target'] as Sub[]).map(id => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 4px', borderRadius: 0, border: 'none',
-            cursor: 'pointer', fontSize: 13,
+            cursor: 'pointer', fontSize: id === 'target' ? 11 : 13,
             background: sub === id ? T.secondary : T.bgInput,
             color: sub === id ? T.white : T.textMuted,
             boxShadow: 'var(--gc-offset-sm)',
             transition: 'background 0.1s',
           }}>
-            <span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span>
+            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span></span>
           </button>
         ))}
       </div>
