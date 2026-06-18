@@ -48,6 +48,11 @@ export const MiniFretboard: React.FC<Props> = ({
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
 
+      {/* Blue fretboard background */}
+      <rect x={LEFT} y={topY - 3}
+        width={fretCount * fretSp} height={(STRING_COUNT - 1) * strSp + 6}
+        fill={T.secondary} />
+
       {/* Fret lines */}
       {Array.from({ length: fretCount + 1 }).map((_, i) => {
         const isNut = i === 0 && displayMin === 0;
@@ -55,9 +60,8 @@ export const MiniFretboard: React.FC<Props> = ({
           <line key={i}
             x1={LEFT + i * fretSp} y1={topY}
             x2={LEFT + i * fretSp} y2={topY + (STRING_COUNT - 1) * strSp}
-            stroke={isNut ? T.text : T.border}
+            stroke="rgba(255,255,255,0.55)"
             strokeWidth={isNut ? 3 : 1}
-            opacity={isNut ? 0.7 : 1}
           />
         );
       })}
@@ -67,14 +71,14 @@ export const MiniFretboard: React.FC<Props> = ({
         <line key={s}
           x1={LEFT} y1={strY(s)}
           x2={LEFT + fretCount * fretSp} y2={strY(s)}
-          stroke={T.secondary} strokeWidth={2.2 - s * 0.22} opacity={0.5}
+          stroke="rgba(255,255,255,0.85)" strokeWidth={1.2 + s * 0.15}
         />
       ))}
 
       {/* Legacy fret position label (top-left, when not hidden) */}
       {displayMin > 0 && !hideFretLabel && !showFretNumbers && (
         <text x={LEFT - strLabelW - 4} y={topY + (STRING_COUNT - 1) * strSp / 2 + 4}
-          textAnchor="end" fontSize={7} fill={T.textMuted}>{displayMin + 1}fr</text>
+          textAnchor="end" fontSize={7} fill={T.textDim}>{displayMin + 1}fr</text>
       )}
 
       {/* String name labels on the left */}
@@ -106,7 +110,7 @@ export const MiniFretboard: React.FC<Props> = ({
         const label = dotLabels?.[i] ?? fretToNote(p.string, p.fret, tuning);
         return (
           <g key={i}>
-            <circle cx={cx} cy={cy} r={7} fill={dotColors?.[i] ?? dotColor} stroke={T.bgDeep} strokeWidth={1} opacity={0.92} />
+            <circle cx={cx} cy={cy} r={7} fill={dotColors?.[i] ?? dotColor} stroke="#fff" strokeWidth={1} opacity={0.92} />
             <text x={cx} y={cy + 3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{label}</text>
           </g>
         );

@@ -112,14 +112,14 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 
   /* Light mode — white & ink */
   --gc-bg-deep:          #FFFFFF;
-  --gc-bg-card:          #F4F4F4;
-  --gc-bg-input:         #EBEBEB;
-  --gc-border:           #CCCCCC;
+  --gc-bg-card:          #FFFFFF;
+  --gc-bg-input:         #F0F0F0;
+  --gc-border:           #D0D0D0;
   --gc-primary:          #CC1C1C;
   --gc-primary-hov:      #E02020;
   --gc-primary-bg:       rgba(204,28,28,0.09);
-  --gc-secondary:        #1E3898;
-  --gc-secondary-bg:     rgba(30,56,152,0.09);
+  --gc-secondary:        #1235FC;
+  --gc-secondary-bg:     rgba(18,53,252,0.09);
   --gc-coral:            #C8A020;
   --gc-text:             #1A1818;
   --gc-text-muted:       rgba(26,24,24,0.52);
@@ -129,7 +129,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-primary-soft:     rgba(204,28,28,0.10);
   --gc-primary-glow:     rgba(204,28,28,0.32);
   --gc-white-soft:       rgba(255,255,255,0.80);
-  --gc-secondary-faint:  rgba(30,56,152,0.10);
+  --gc-secondary-faint:  rgba(18,53,252,0.10);
   --gc-coral-faint:      rgba(200,160,32,0.10);
   --gc-coral-faint2:     rgba(200,160,32,0.16);
 }

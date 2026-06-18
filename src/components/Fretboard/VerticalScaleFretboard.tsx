@@ -47,28 +47,34 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: 280, display: 'block', margin: '0 auto' }}>
+
+      {/* Blue fretboard background */}
+      <rect x={LEFT} y={TOP - 3}
+        width={(STRING_COUNT - 1) * COL_W} height={rowY(FRET_COUNT) - TOP + 3}
+        fill={T.secondary} />
+
       {/* Inlay markers */}
       {DOT_FRETS.map(f => (
-        <circle key={f} cx={W / 2} cy={rowY(f - 0.5)} r={3} fill={T.border} opacity={0.4} />
+        <circle key={f} cx={W / 2} cy={rowY(f - 0.5)} r={3} fill="rgba(255,255,255,0.25)" />
       ))}
-      <circle cx={W / 2 - 7} cy={rowY(11.5)} r={3} fill={T.border} opacity={0.4} />
-      <circle cx={W / 2 + 7} cy={rowY(11.5)} r={3} fill={T.border} opacity={0.4} />
+      <circle cx={W / 2 - 7} cy={rowY(11.5)} r={3} fill="rgba(255,255,255,0.25)" />
+      <circle cx={W / 2 + 7} cy={rowY(11.5)} r={3} fill="rgba(255,255,255,0.25)" />
 
       {/* Nut */}
-      <rect x={LEFT} y={TOP - 2.5} width={(STRING_COUNT - 1) * COL_W} height={3} fill={T.text} opacity={0.65} rx={1} />
+      <rect x={LEFT} y={TOP - 2.5} width={(STRING_COUNT - 1) * COL_W} height={3} fill="rgba(255,255,255,0.9)" rx={0} />
 
       {/* Fret lines (rows) */}
       {Array.from({ length: FRET_COUNT + 1 }).map((_, f) => (
         <line key={f}
           x1={LEFT} y1={rowY(f)} x2={LEFT + (STRING_COUNT - 1) * COL_W} y2={rowY(f)}
-          stroke={T.border} strokeWidth={1} />
+          stroke="rgba(255,255,255,0.45)" strokeWidth={1} />
       ))}
 
       {/* Strings (columns) */}
       {Array.from({ length: STRING_COUNT }).map((_, s) => (
         <line key={s}
           x1={colX(s)} y1={TOP} x2={colX(s)} y2={rowY(FRET_COUNT)}
-          stroke={T.secondary} strokeWidth={0.8 + s * 0.18} opacity={0.5} />
+          stroke="rgba(255,255,255,0.85)" strokeWidth={1.0 + s * 0.18} />
       ))}
 
       {/* String labels (top) */}
@@ -93,7 +99,7 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
 
       {/* Fret numbers (left edge) */}
       {[3, 5, 7, 9, 12].map(f => (
-        <text key={f} x={4} y={rowY(f - 0.5) + 3} fontSize={8} fill={T.textDim}>{f}</text>
+        <text key={f} x={4} y={rowY(f - 0.5) + 3} fontSize={8} fill={T.textMuted}>{f}</text>
       ))}
     </svg>
   );
