@@ -263,7 +263,7 @@ export default function App() {
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bgCard; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span>{tab.label}</span></span>
+                  <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: '-0.5em' }}>_</span><span>{tab.label}</span></span>
                 </button>
               );
             })}
@@ -349,7 +349,7 @@ export default function App() {
             const active = activeTab === tab.id;
             return (
               <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 0, border: 'none', background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, boxShadow: 'var(--gc-offset)', transition: 'background 0.1s' }}>
-                <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span className="gc-tab-label">{tab.label}</span></span>
+                <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: '-0.5em' }}>_</span><span className="gc-tab-label">{tab.label}</span></span>
               </button>
             );
           })}

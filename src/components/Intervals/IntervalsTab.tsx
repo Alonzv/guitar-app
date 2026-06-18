@@ -25,7 +25,7 @@ export function IntervalsTab() {
             boxShadow: 'var(--gc-offset-sm)',
             transition: 'background 0.1s',
           }}>
-            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span></span>
+            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: '-0.5em' }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span></span>
           </button>
         ))}
       </div>
