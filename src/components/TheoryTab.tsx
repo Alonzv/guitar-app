@@ -1,21 +1,20 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChordsTab } from './ChordsTab';
 import { ScalesTab } from './ScalePanel/ScalesTab';
 import { TriadsGenerator } from './Triads/TriadsGenerator';
 import { IntervalsTab } from './Intervals/IntervalsTab';
 import { WheelTab } from './Tools/WheelTab';
-import { IconChord, IconSteps, IconTriangle, IconInterval, IconWheel } from './Icons';
 import type { ChordInProgression, Tuning } from '../types/music';
 import { T } from '../theme';
 
 type Sub = 'chords' | 'scales' | 'triads' | 'intervals' | 'wheel';
 
-const SUBS: { id: Sub; label: string; icon: React.ReactNode }[] = [
-  { id: 'chords',    label: 'Chords',    icon: <IconChord size={14} />    },
-  { id: 'scales',    label: 'Scales',    icon: <IconSteps size={14} />    },
-  { id: 'triads',    label: 'Triads',    icon: <IconTriangle size={14} /> },
-  { id: 'intervals', label: 'Intervals', icon: <IconInterval size={14} /> },
-  { id: 'wheel',     label: 'Wheel',     icon: <IconWheel size={14} />    },
+const SUBS: { id: Sub; label: string }[] = [
+  { id: 'chords',    label: 'Chords'    },
+  { id: 'scales',    label: 'Scales'    },
+  { id: 'triads',    label: 'Triads'    },
+  { id: 'intervals', label: 'Intervals' },
+  { id: 'wheel',     label: 'Wheel'     },
 ];
 
 interface Props {
@@ -56,23 +55,18 @@ export function TheoryTab({
               onClick={() => setSub(s.id)}
               style={{
                 flex: 1,
-                padding: '8px 2px',
-                borderRadius: 8,
-                border: `1px solid ${active ? T.secondary : T.border}`,
+                padding: '9px 4px',
+                borderRadius: 0,
+                border: 'none',
                 cursor: 'pointer',
-                fontWeight: 500,
                 fontSize: 12,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
                 background: active ? T.secondary : T.bgInput,
                 color: active ? '#fff' : T.textMuted,
-                transition: 'background 0.15s, border-color 0.15s',
+                boxShadow: 'var(--gc-offset-sm)',
+                transition: 'background 0.1s',
               }}
             >
-              <span style={{ height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</span>
-              <span style={{ lineHeight: 1 }}>{s.label}</span>
+              <span style={{ fontWeight: 300, opacity: 0.7 }}>_</span><span style={{ fontWeight: 700 }}>{s.label}</span>
             </button>
           );
         })}

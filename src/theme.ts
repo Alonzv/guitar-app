@@ -16,61 +16,66 @@ export const T = {
   textMuted:       'var(--gc-text-muted)',
   textDim:         'var(--gc-text-dim)',
   white:           'var(--gc-white)',
-  // Alpha / translucent variants (previously written as ${T.x}HH hex suffix)
-  primarySoft:     'var(--gc-primary-soft)',    // ≈ primary @ 12 %
-  primaryGlow:     'var(--gc-primary-glow)',    // ≈ primary @ 33 % (box-shadow)
-  whiteSoft:       'var(--gc-white-soft)',      // ≈ white   @ 73 %
-  secondaryFaint:  'var(--gc-secondary-faint)', // ≈ secondary @ 27 %
-  coralFaint:      'var(--gc-coral-faint)',     // ≈ coral   @ 9 %
-  coralFaint2:     'var(--gc-coral-faint2)',    // ≈ coral   @ 13 %
+  primarySoft:     'var(--gc-primary-soft)',
+  primaryGlow:     'var(--gc-primary-glow)',
+  whiteSoft:       'var(--gc-white-soft)',
+  secondaryFaint:  'var(--gc-secondary-faint)',
+  coralFaint:      'var(--gc-coral-faint)',
+  coralFaint2:     'var(--gc-coral-faint2)',
+  offset:          'var(--gc-offset)',
+  offsetSm:        'var(--gc-offset-sm)',
 } as const;
 
 export type Theme = typeof T;
 
-// Shared card style — padding uses a CSS variable so media queries can scale it
+// Shared card style — flat Arturia-style, no border-radius
 export const card = (extra?: React.CSSProperties): React.CSSProperties => {
   const { padding: explicitPad, ...rest } = extra ?? {};
   return {
     background: T.bgCard,
-    borderRadius: 14,
+    borderRadius: 0,
     padding: explicitPad ?? 'var(--gc-card-pad)',
     border: `1px solid ${T.border}`,
+    boxShadow: 'var(--gc-offset)',
     ...rest,
   };
 };
 
-// Button variants
+// Button variants — sharp corners, flat offset shadow
 export const btn = {
   primary: (disabled?: boolean): React.CSSProperties => ({
-    padding: '11px 0',
-    borderRadius: 10,
+    padding: '12px 0',
+    borderRadius: 0,
     border: 'none',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    fontWeight: 700,
-    fontSize: 14,
+    fontWeight: 800,
+    fontSize: 15,
     background: disabled ? T.border : T.primary,
     color: disabled ? T.textDim : T.white,
-    transition: 'background 0.15s',
+    boxShadow: disabled ? 'none' : 'var(--gc-offset)',
+    transition: 'background 0.1s',
   }),
   secondary: (): React.CSSProperties => ({
-    padding: '11px 0',
-    borderRadius: 10,
+    padding: '12px 0',
+    borderRadius: 0,
     border: `1px solid ${T.border}`,
     cursor: 'pointer',
-    fontWeight: 500,
-    fontSize: 14,
+    fontWeight: 700,
+    fontSize: 15,
     background: T.bgInput,
     color: T.textMuted,
+    boxShadow: 'var(--gc-offset)',
   }),
   pill: (active: boolean): React.CSSProperties => ({
     padding: '5px 14px',
-    borderRadius: 20,
-    border: 'none',
+    borderRadius: 0,
+    border: active ? 'none' : `1px solid ${T.border}`,
     cursor: 'pointer',
     fontSize: 12,
-    fontWeight: active ? 600 : 400,
+    fontWeight: active ? 700 : 500,
     background: active ? T.primary : T.bgInput,
     color: active ? T.white : T.textMuted,
-    transition: 'background 0.15s',
+    boxShadow: 'var(--gc-offset-sm)',
+    transition: 'background 0.1s',
   }),
 };

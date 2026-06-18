@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 import { TheoryTab } from './components/TheoryTab';
@@ -6,7 +6,7 @@ import { ToolsTab } from './components/Tools/ToolsTab';
 import { VoicingsTab } from './components/Voicings/VoicingsTab';
 import { Onboarding } from './components/Onboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { IconNote, IconSliders, IconPath, IconMoon, IconSun } from './components/Icons';
+import { IconMoon, IconSun } from './components/Icons';
 import { T } from './theme';
 
 type Tab = 'theory' | 'voicings' | 'tools';
@@ -37,11 +37,11 @@ function decodeSharedProgression(): ChordInProgression[] | null {
   } catch { return null; }
 }
 
-type TabDef = { id: Tab; label: string; icon: React.ReactNode };
+type TabDef = { id: Tab; label: string };
 const TABS: TabDef[] = [
-  { id: 'theory',   label: 'Theory',   icon: <IconNote size={18} />    },
-  { id: 'voicings', label: 'Voicings', icon: <IconPath size={18} />    },
-  { id: 'tools',    label: 'Tools',    icon: <IconSliders size={18} /> },
+  { id: 'theory',   label: 'Theory'   },
+  { id: 'voicings', label: 'Voicings' },
+  { id: 'tools',    label: 'Tools'    },
 ];
 
 export default function App() {
@@ -263,7 +263,7 @@ export default function App() {
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bgCard; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span style={{ lineHeight: 1, flexShrink: 0 }}>{tab.icon}</span>
+                  <span style={{ lineHeight: 1, flexShrink: 0, fontWeight: 300, opacity: 0.7 }}>_</span>
                   <span>{tab.label}</span>
                 </button>
               );
@@ -349,9 +349,8 @@ export default function App() {
           {TABS.map(tab => {
             const active = activeTab === tab.id;
             return (
-              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 10, border: active ? 'none' : `1px solid ${T.border}`, background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: active ? 600 : 500, boxShadow: active ? `0 2px 8px rgba(196,73,0,0.4)` : 'none', transition: 'all 0.15s' }}>
-                {tab.icon}
-                <span className="gc-tab-label">{tab.label}</span>
+              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 0, border: 'none', background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, boxShadow: 'var(--gc-offset)', transition: 'background 0.1s' }}>
+                <span style={{ fontWeight: 300, opacity: 0.7 }}>_</span><span className="gc-tab-label">{tab.label}</span>
               </button>
             );
           })}

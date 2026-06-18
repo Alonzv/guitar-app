@@ -524,13 +524,15 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           { id: 'reharmonize',  label: 'Re-Harmonize'  },
         ] as { id: 'paths' | 'voiceleading' | 'reharmonize'; label: string }[]).map(tab => (
           <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
-            flex: 1, padding: '11px 6px', borderRadius: 8,
-            border: `1px solid ${subTab === tab.id ? T.secondary : T.border}`,
+            flex: 1, padding: '11px 4px', borderRadius: 0, border: 'none',
             background: subTab === tab.id ? T.secondary : T.bgInput,
             color: subTab === tab.id ? '#fff' : T.textMuted,
-            fontSize: 14, fontWeight: 500, cursor: 'pointer',
-            transition: 'background 0.15s, border-color 0.15s',
-          }}>{tab.label}</button>
+            fontSize: 14, cursor: 'pointer',
+            boxShadow: 'var(--gc-offset-sm)',
+            transition: 'background 0.1s',
+          }}>
+            <span style={{ fontWeight: 300, opacity: 0.7 }}>_</span><span style={{ fontWeight: 700 }}>{tab.label}</span>
+          </button>
         ))}
       </div>
 
@@ -699,12 +701,12 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           <div style={{ display: 'flex', gap: 3, flex: 1 }}>
             {(['full', 'triads'] as VoicingMode[]).map(m => (
               <button key={m} onClick={() => setMode(m)} style={{
-                flex: 1, padding: '7px 4px', borderRadius: 6,
-                border: `1px solid ${mode === m ? T.secondary : T.border}`,
+                flex: 1, padding: '7px 4px', borderRadius: 0, border: 'none',
                 cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: mode === m ? T.secondary : T.bgInput,
                 color: mode === m ? '#fff' : T.textMuted,
-                transition: 'background 0.15s, border-color 0.15s',
+                boxShadow: 'var(--gc-offset-sm)',
+                transition: 'background 0.1s',
               }}>
                 {m === 'full' ? 'Full' : 'Triads'}
               </button>
@@ -721,12 +723,12 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               { id: 'treble', label: 'High' },
             ] as { id: StringGroup; label: string }[]).map(sg => (
               <button key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
-                flex: 1, padding: '7px 4px', borderRadius: 6,
-                border: `1px solid ${stringGroup === sg.id ? T.secondary : T.border}`,
+                flex: 1, padding: '7px 4px', borderRadius: 0, border: 'none',
                 cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: stringGroup === sg.id ? T.secondary : T.bgInput,
                 color: stringGroup === sg.id ? '#fff' : T.textMuted,
-                transition: 'background 0.15s, border-color 0.15s',
+                boxShadow: 'var(--gc-offset-sm)',
+                transition: 'background 0.1s',
               }}>
                 {sg.label}
               </button>

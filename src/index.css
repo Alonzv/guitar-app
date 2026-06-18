@@ -123,6 +123,10 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   /* Halftone dot colour — light mode */
   --gc-halftone: rgba(26,24,16,0.09);
 
+  /* Flat offset shadow — Arturia style */
+  --gc-offset: 4px 4px 0 0 #000;
+  --gc-offset-sm: 2px 2px 0 0 #000;
+
   /* Light mode — Bauhaus poster / cream & ink */
   --gc-bg-deep:          #F0EBE0;
   --gc-bg-card:          #E8E2D6;
@@ -170,6 +174,10 @@ body.dark {
   --gc-secondary-faint:  rgba(42,76,200,0.22);
   --gc-coral-faint:      rgba(212,168,32,0.12);
   --gc-coral-faint2:     rgba(212,168,32,0.18);
+  /* Flat offset shadow — dark mode (white) */
+  --gc-offset: 4px 4px 0 0 rgba(255,255,255,0.20);
+  --gc-offset-sm: 2px 2px 0 0 rgba(255,255,255,0.20);
+
   /* Halftone dot colour — dark mode */
   --gc-halftone:         rgba(240,234,216,0.06);
 }
@@ -280,19 +288,18 @@ body.dark {
 /* Label text always visible (no icon-only mode needed without emoji) */
 .gc-tab-label { display: inline; }
 
-/* Hover lift */
+/* Hover — "pressed into shadow" shift */
 .gc-tab:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.18);
+  transform: translate(2px, 2px);
+  box-shadow: none !important;
+  filter: brightness(1.12);
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Global button hover — applies to all <button> except tabs
-   (tabs have their own .gc-tab:hover rule above)
-───────────────────────────────────────────────────────────── */
 button:not(.gc-tab):not(:disabled):hover {
-  filter: brightness(1.14);
-  transition: filter 0.15s;
+  transform: translate(2px, 2px);
+  box-shadow: none !important;
+  filter: brightness(1.08);
+  transition: transform 0.08s, box-shadow 0.08s, filter 0.08s;
 }
 
 /* Voicing tiles are <div> elements — give them hover feedback */
@@ -482,12 +489,13 @@ select {
   opacity: 0.18;
 }
 
-/* Brand stamp — slight tilt, coral border, suggests a rubber stamp */
+/* Brand stamp — sharp, Arturia-style, offset shadow */
 .gc-brand-stamp {
   display: inline-block;
-  border: 1.5px solid var(--gc-coral);
-  border-radius: 3px;
-  padding: 1px 7px 2px;
+  border: 2px solid var(--gc-coral);
+  border-radius: 0;
+  padding: 1px 8px 2px;
   transform: rotate(-0.6deg);
+  box-shadow: var(--gc-offset-sm);
   line-height: 1;
 }
