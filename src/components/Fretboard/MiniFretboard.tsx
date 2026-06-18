@@ -51,7 +51,7 @@ export const MiniFretboard: React.FC<Props> = ({
       {/* Fretboard background — darker navy so colored dots are visible */}
       <rect x={LEFT} y={topY - 3}
         width={fretCount * fretSp} height={(STRING_COUNT - 1) * strSp + 6}
-        fill="#0B1A9B" />
+        fill="#2D2D2D" />
 
       {/* Fret lines */}
       {Array.from({ length: fretCount + 1 }).map((_, i) => {

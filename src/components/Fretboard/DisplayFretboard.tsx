@@ -29,7 +29,7 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
       {/* Blue fretboard background */}
       <rect x={NUT_X - FRET_SP * 0.5} y={TOP_Y - 6}
         width={FRET_COUNT * FRET_SP + FRET_SP * 0.5 + 10} height={(STRING_COUNT - 1) * STR_SP + 12}
-        fill="#0B1A9B" />
+        fill="#2D2D2D" />
 
       {/* Fret lines */}
       {Array.from({ length: FRET_COUNT + 1 }).map((_, i) => (
