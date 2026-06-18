@@ -244,7 +244,7 @@ function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, 
     fontSize: 18, fontWeight: 700, lineHeight: 1,
     opacity: disabled ? 0.35 : 1,
     transition: 'opacity 0.15s',
-    boxShadow: 'var(--gc-offset-sm)',
+    borderRight: '3px solid var(--gc-bar-color)',
   });
 
   return (
@@ -529,10 +529,10 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             background: subTab === tab.id ? T.secondary : T.bgInput,
             color: subTab === tab.id ? '#fff' : T.textMuted,
             fontSize: 14, cursor: 'pointer',
-            boxShadow: 'var(--gc-offset-sm)',
+            borderRight: '3px solid var(--gc-bar-color)',
             transition: 'background 0.1s',
           }}>
-            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: '-0.5em' }}>_</span><span style={{ fontWeight: 700 }}>{tab.label}</span></span>
+            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{tab.label}</span></span>
           </button>
         ))}
       </div>
@@ -553,7 +553,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 background: root === r ? T.primary : T.bgDeep,
                 color: root === r ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                transition: 'background 0.12s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'background 0.12s', borderRight: '3px solid var(--gc-bar-color)',
               }}>{r}</button>
             ))}
           </div>
@@ -569,7 +569,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 background: triad === t.key ? T.secondary : T.bgDeep,
                 color: triad === t.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                transition: 'background 0.12s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'background 0.12s', borderRight: '3px solid var(--gc-bar-color)',
               }}>{t.display}</button>
             ))}
           </div>
@@ -585,7 +585,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 background: activeExt === e.key ? T.secondary : T.bgDeep,
                 color: activeExt === e.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                transition: 'background 0.12s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'background 0.12s', borderRight: '3px solid var(--gc-bar-color)',
               }}>{e.display}</button>
             ))}
           </div>
@@ -604,7 +604,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               background: (root && triad && chords.length < 8) ? T.secondary : T.border,
               color: '#fff', fontWeight: 700, fontSize: 14,
               cursor: (root && triad && chords.length < 8) ? 'pointer' : 'not-allowed',
-              transition: 'background 0.15s', boxShadow: 'var(--gc-offset-sm)',
+              transition: 'background 0.15s', borderRight: '3px solid var(--gc-bar-color)',
             }}
           >
             + Add
@@ -646,7 +646,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               ))}
               <button
                 onClick={() => setChords([])}
-                style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 600, boxShadow: 'var(--gc-offset-sm)' }}
+                style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 600, borderRight: '3px solid var(--gc-bar-color)' }}
               >Clear</button>
             </div>
           )}
@@ -658,7 +658,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 0,
                 border: `1px solid ${T.border}`, background: T.bgInput,
                 color: T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
               }}
             >
               ↓ Import my progression ({globalProgression.length})
@@ -680,7 +680,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               border: `1px solid ${T.border}`,
               background: T.bgInput, color: T.text,
               fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              outline: 'none', boxShadow: 'var(--gc-offset-sm)',
+              outline: 'none', borderRight: '3px solid var(--gc-bar-color)',
             }}
           >
             {GENRES.map(g => (
@@ -707,7 +707,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: mode === m ? T.secondary : T.bgInput,
                 color: mode === m ? '#fff' : T.textMuted,
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
                 transition: 'background 0.1s',
               }}>
                 {m === 'full' ? 'Full' : 'Triads'}
@@ -729,7 +729,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: stringGroup === sg.id ? T.secondary : T.bgInput,
                 color: stringGroup === sg.id ? '#fff' : T.textMuted,
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
                 transition: 'background 0.1s',
               }}>
                 {sg.label}
@@ -793,7 +793,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                       color: active ? '#fff' : T.textMuted,
                       fontSize: 12, fontWeight: active ? 700 : 400,
                       cursor: 'pointer', transition: 'all 0.15s',
-                      whiteSpace: 'nowrap', boxShadow: 'var(--gc-offset-sm)',
+                      whiteSpace: 'nowrap', borderRight: '3px solid var(--gc-bar-color)',
                     }}
                   >
                     <span style={{
@@ -895,7 +895,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                   background: isPlaying ? T.bgDeep : currentColor,
                   color: isPlaying ? currentColor : '#fff',
                   fontWeight: 800, fontSize: 14, cursor: 'pointer',
-                  transition: 'all 0.2s', boxShadow: 'var(--gc-offset)',
+                  transition: 'all 0.2s', borderRight: '4px solid var(--gc-bar-color)',
                 }}
               >
                 {isPlaying ? '■  Stop' : `▶  Play — ${currentPath.label}`}
@@ -970,7 +970,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                           color: active ? '#fff' : T.textMuted,
                           fontSize: 12, fontWeight: active ? 700 : 400,
                           cursor: 'pointer', transition: 'all 0.15s',
-                          whiteSpace: 'nowrap', boxShadow: 'var(--gc-offset-sm)',
+                          whiteSpace: 'nowrap', borderRight: '3px solid var(--gc-bar-color)',
                         }}
                       >
                         <span style={{
@@ -1017,7 +1017,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                         background: active ? opt.color : opt.color + '12',
                         color: active ? '#fff' : opt.color,
                         cursor: 'pointer', transition: 'all 0.15s',
-                        boxShadow: 'var(--gc-offset-sm)',
+                        borderRight: '3px solid var(--gc-bar-color)',
                       }}
                     >
                       <span style={{ fontSize: 14, fontWeight: 800 }}>{opt.label}</span>

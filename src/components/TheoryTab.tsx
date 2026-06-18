@@ -62,11 +62,11 @@ export function TheoryTab({
                 fontSize: 12,
                 background: active ? T.secondary : T.bgInput,
                 color: active ? '#fff' : T.textMuted,
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
                 transition: 'background 0.1s',
               }}
             >
-              <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: '-0.5em' }}>_</span><span style={{ fontWeight: 700 }}>{s.label}</span></span>
+              <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{s.label}</span></span>
             </button>
           );
         })}

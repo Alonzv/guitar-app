@@ -128,7 +128,7 @@ export function IntervalExplore() {
                 border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: sel ? T.primary : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
               }}>{n}</button>
             );
           })}
@@ -147,7 +147,7 @@ export function IntervalExplore() {
                 border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                 background: sel ? T.secondaryBg : T.bgInput,
                 color: sel ? T.secondary : T.textMuted,
-                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
               }}>
                 <div style={{ fontSize: 9, fontWeight: 700 }}>{iv.abbrev}</div>
                 <div style={{ fontSize: 9, fontWeight: sel ? 700 : 400, marginTop: 1 }}>{iv.name}</div>
@@ -182,7 +182,7 @@ export function IntervalExplore() {
           <button onClick={handlePlay} style={{
             padding: '6px 20px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 800,
             border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
-            letterSpacing: '0.02em', boxShadow: 'var(--gc-offset-sm)',
+            letterSpacing: '0.02em', borderRight: '3px solid var(--gc-bar-color)',
           }}>▶ Play</button>
         </div>
       </div>
@@ -198,7 +198,7 @@ export function IntervalExplore() {
                 background: area === a.id ? T.text : T.bgInput,
                 color: area === a.id ? T.bgDeep : T.textMuted,
                 border: area === a.id ? 'none' : `1px solid ${T.border}`,
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
               }}>{a.label}</button>
             ))}
           </div>

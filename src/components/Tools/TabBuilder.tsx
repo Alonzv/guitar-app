@@ -440,7 +440,7 @@ export const TabBuilder: React.FC = () => {
             style={{
               background: T.primary, color: '#fff', border: 'none',
               borderRadius: 0, padding: '7px 13px', cursor: 'pointer',
-              fontSize: 12, fontWeight: 700, boxShadow: 'var(--gc-offset-sm)',
+              fontSize: 12, fontWeight: 700, borderRight: '3px solid var(--gc-bar-color)',
             }}>
             Analyze
           </button>
@@ -448,7 +448,7 @@ export const TabBuilder: React.FC = () => {
             style={{
               background: T.secondary, color: '#fff', border: 'none',
               borderRadius: 0, padding: '7px 13px', cursor: busy ? 'wait' : 'pointer',
-              fontSize: 12, fontWeight: 700, boxShadow: 'var(--gc-offset-sm)',
+              fontSize: 12, fontWeight: 700, borderRight: '3px solid var(--gc-bar-color)',
             }}>
             {busy ? '…' : 'PDF'}
           </button>
@@ -461,7 +461,7 @@ export const TabBuilder: React.FC = () => {
               border: `1px solid ${T.border}`,
               borderRadius: 0, padding: '7px 11px',
               cursor: 'pointer', fontSize: 12, fontWeight: 700,
-              boxShadow: 'var(--gc-offset-sm)',
+              borderRight: '3px solid var(--gc-bar-color)',
             }}>
             Clear
           </button>
@@ -477,7 +477,7 @@ export const TabBuilder: React.FC = () => {
               cursor: canUndo ? 'pointer' : 'default',
               fontSize: 16, lineHeight: 1,
               opacity: canUndo ? 1 : 0.35,
-              transition: 'opacity 0.2s', boxShadow: 'var(--gc-offset-sm)',
+              transition: 'opacity 0.2s', borderRight: '3px solid var(--gc-bar-color)',
             }}>
             ↩
           </button>
@@ -692,7 +692,7 @@ export const TabBuilder: React.FC = () => {
             style={{
               background: T.bgInput, border: `1px dashed ${T.border}`,
               borderRadius: 0, padding: '6px 22px', cursor: 'pointer',
-              color: T.textMuted, fontSize: 12, boxShadow: 'var(--gc-offset-sm)',
+              color: T.textMuted, fontSize: 12, borderRight: '3px solid var(--gc-bar-color)',
             }}>
             + Add line
           </button>
@@ -720,7 +720,7 @@ export const TabBuilder: React.FC = () => {
               position: 'absolute', top: 12, insetInlineEnd: 12,
               background: T.bgInput, border: 'none', borderRadius: 0,
               cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px', boxShadow: 'var(--gc-offset-sm)',
+              padding: '3px 7px', borderRight: '3px solid var(--gc-bar-color)',
             }}>✕</button>
 
             {/* Heading + language toggle */}
@@ -795,7 +795,7 @@ export const TabBuilder: React.FC = () => {
                           background: T.secondary, color: '#fff', border: 'none',
                           borderRadius: 0, padding: '5px 12px', cursor: 'pointer',
                           fontSize: 13, fontWeight: 700, flexShrink: 0,
-                          boxShadow: 'var(--gc-offset-sm)',
+                          borderRight: '3px solid var(--gc-bar-color)',
                         }}>▶ {t.play}</button>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '10px 0' }}>
@@ -804,7 +804,7 @@ export const TabBuilder: React.FC = () => {
                           background: T.primaryBg, color: T.text, borderRadius: 0,
                           padding: '6px 13px', fontSize: 16, fontWeight: 700,
                           fontFamily: 'monospace', border: 'none', cursor: 'pointer',
-                          boxShadow: 'var(--gc-offset-sm)',
+                          borderRight: '3px solid var(--gc-bar-color)',
                         }}>{c}</button>
                       ))}
                     </div>
@@ -822,7 +822,7 @@ export const TabBuilder: React.FC = () => {
                 background: 'transparent', border: `1px solid ${T.border}`,
                 borderRadius: 0, padding: '8px 0', cursor: 'pointer',
                 color: T.textMuted, fontSize: 14, fontWeight: 700,
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
               }}>↻ {t.reanalyze}</button>
             )}
           </div>
@@ -849,7 +849,7 @@ export const TabBuilder: React.FC = () => {
                 position: 'absolute', top: 12, right: 12, background: T.bgInput,
                 border: 'none', borderRadius: 0, cursor: 'pointer', color: T.textMuted,
                 fontSize: 16, lineHeight: 1, padding: '3px 7px',
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
               }}>✕</button>
               <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: T.text }}>
                 {chordModal}
@@ -864,7 +864,7 @@ export const TabBuilder: React.FC = () => {
                   style={{
                     padding: '10px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
                     fontWeight: 700, fontSize: 14, background: T.secondary, color: '#fff',
-                    boxShadow: 'var(--gc-offset)',
+                    borderRight: '4px solid var(--gc-bar-color)',
                   }}>▶ {t.play}</button>
               )}
             </div>
@@ -891,7 +891,7 @@ export const TabBuilder: React.FC = () => {
               position: 'absolute', top: 12, right: 12, background: T.bgInput,
               border: 'none', borderRadius: 0, cursor: 'pointer', color: T.textMuted,
               fontSize: 16, lineHeight: 1, padding: '3px 7px',
-              boxShadow: 'var(--gc-offset-sm)',
+              borderRight: '3px solid var(--gc-bar-color)',
             }}>✕</button>
             <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, color: T.text }}>
               {analyzeScale.name}

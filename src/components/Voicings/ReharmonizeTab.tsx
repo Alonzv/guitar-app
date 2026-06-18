@@ -85,7 +85,7 @@ function ReharmModal({
     color: disabled ? T.textDim : T.text,
     cursor: disabled ? 'default' : 'pointer',
     fontSize: 18, fontWeight: 700, opacity: disabled ? 0.35 : 1,
-    transition: 'opacity 0.15s', boxShadow: 'var(--gc-offset-sm)',
+    transition: 'opacity 0.15s', borderRight: '3px solid var(--gc-bar-color)',
   });
 
   return (
@@ -310,7 +310,7 @@ export function ReharmonizeTab({
                   cursor: 'pointer', fontSize: 11, fontWeight: 600,
                   background: showNashville ? T.secondary : T.bgInput,
                   color: showNashville ? '#fff' : T.textMuted,
-                  transition: 'background 0.15s', boxShadow: 'var(--gc-offset-sm)',
+                  transition: 'background 0.15s', borderRight: '3px solid var(--gc-bar-color)',
                 }}
               >
                 Nashville
@@ -355,7 +355,7 @@ export function ReharmonizeTab({
                       background: genre === g.id ? T.primary : T.bgInput,
                       color: genre === g.id ? '#fff' : T.textMuted,
                       transition: 'background 0.15s',
-                      whiteSpace: 'nowrap', boxShadow: 'var(--gc-offset-sm)',
+                      whiteSpace: 'nowrap', borderRight: '3px solid var(--gc-bar-color)',
                     }}
                   >
                     {g.label}
@@ -447,7 +447,7 @@ export function ReharmonizeTab({
               color: (chords.length === 0 || loading) ? T.textDim : '#fff',
               transition: 'background 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: 'var(--gc-offset)',
+              borderRight: '4px solid var(--gc-bar-color)',
             }}
           >
             {loading ? (
@@ -498,7 +498,7 @@ export function ReharmonizeTab({
                       background: isPlaying ? T.bgDeep : T.primary,
                       color: isPlaying ? T.primary : '#fff',
                       border: isPlaying ? `1px solid ${T.primary}` : '1px solid transparent',
-                      transition: 'all 0.15s', boxShadow: 'var(--gc-offset-sm)',
+                      transition: 'all 0.15s', borderRight: '3px solid var(--gc-bar-color)',
                     }}
                   >
                     {isPlaying ? 'Stop' : 'Play'}
@@ -574,7 +574,7 @@ export function ReharmonizeTab({
                               color: active ? '#fff' : T.textMuted,
                               fontSize: 12, fontWeight: active ? 700 : 400,
                               cursor: 'pointer', transition: 'all 0.15s',
-                              whiteSpace: 'nowrap', boxShadow: 'var(--gc-offset-sm)',
+                              whiteSpace: 'nowrap', borderRight: '3px solid var(--gc-bar-color)',
                             }}
                           >
                             <span style={{
@@ -656,7 +656,7 @@ export function ReharmonizeTab({
                   border: `1.5px solid ${T.secondary}`,
                   cursor: 'pointer', fontWeight: 700, fontSize: 14,
                   background: 'transparent', color: T.secondary,
-                  transition: 'background 0.15s', boxShadow: 'var(--gc-offset)',
+                  transition: 'background 0.15s', borderRight: '4px solid var(--gc-bar-color)',
                 }}
               >
                 Export MIDI

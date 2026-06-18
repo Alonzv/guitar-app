@@ -258,12 +258,12 @@ export default function App() {
                     fontWeight: active ? 700 : 500,
                     fontSize: 14, cursor: 'pointer', textAlign: 'left',
                     transition: 'background 0.15s, color 0.15s',
-                    boxShadow: active ? 'var(--gc-offset-sm)' : 'none',
+                    borderRight: active ? '3px solid var(--gc-bar-color)' : 'none',
                   }}
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bgCard; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: '-0.5em' }}>_</span><span>{tab.label}</span></span>
+                  <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span>{tab.label}</span></span>
                 </button>
               );
             })}
@@ -301,7 +301,7 @@ export default function App() {
             <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 0, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--gc-offset-sm)' }}>Load</button>
+                <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 0, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderRight: '3px solid var(--gc-bar-color)' }}>Load</button>
                 <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '4px 10px', borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
               </div>
             </div>
@@ -325,7 +325,7 @@ export default function App() {
         <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 0, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--gc-offset-sm)' }}>Load</button>
+            <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 0, border: 'none', background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderRight: '3px solid var(--gc-bar-color)' }}>Load</button>
             <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '5px 10px', borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
           </div>
         </div>
@@ -348,8 +348,8 @@ export default function App() {
           {TABS.map(tab => {
             const active = activeTab === tab.id;
             return (
-              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 0, border: 'none', background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, boxShadow: 'var(--gc-offset)', transition: 'background 0.1s' }}>
-                <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: '-0.5em' }}>_</span><span className="gc-tab-label">{tab.label}</span></span>
+              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 0, border: 'none', background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, borderRight: '4px solid var(--gc-bar-color)', transition: 'background 0.1s' }}>
+                <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span className="gc-tab-label">{tab.label}</span></span>
               </button>
             );
           })}

@@ -107,8 +107,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   /* (halftone removed) */
 
   /* Inset right bar — active bg fills flush to the stripe */
-  --gc-offset: inset -4px 0 0 0 #000;
-  --gc-offset-sm: inset -3px 0 0 0 #000;
+  --gc-offset: none;
+  --gc-offset-sm: none;
+  --gc-bar-color: #000;
 
   /* Light mode — white & ink */
   --gc-bg-deep:          #FFFFFF;
@@ -158,8 +159,9 @@ body.dark {
   --gc-coral-faint:      rgba(212,168,32,0.12);
   --gc-coral-faint2:     rgba(212,168,32,0.18);
   /* Inset right bar — dark mode */
-  --gc-offset: inset -4px 0 0 0 rgba(255,255,255,0.20);
-  --gc-offset-sm: inset -3px 0 0 0 rgba(255,255,255,0.20);
+  --gc-offset: none;
+  --gc-offset-sm: none;
+  --gc-bar-color: rgba(255,255,255,0.20);
 
   /* (halftone removed) */
 }
@@ -273,15 +275,15 @@ body.dark {
 /* Hover — "pressed into shadow" shift */
 .gc-tab:hover {
   transform: translate(2px, 0);
-  box-shadow: none !important;
+  border-right-color: transparent !important;
   filter: brightness(1.12);
 }
 
 button:not(.gc-tab):not(:disabled):hover {
   transform: translate(2px, 0);
-  box-shadow: none !important;
+  border-right-color: transparent !important;
   filter: brightness(1.08);
-  transition: transform 0.08s, box-shadow 0.08s, filter 0.08s;
+  transition: transform 0.08s, border-right-color 0.08s, filter 0.08s;
 }
 
 /* Voicing tiles are <div> elements — give them hover feedback */
@@ -463,6 +465,6 @@ select {
   border-radius: 0;
   padding: 1px 8px 2px;
   transform: rotate(-0.6deg);
-  box-shadow: var(--gc-offset-sm);
+  border-right: 3px solid var(--gc-bar-color);
   line-height: 1;
 }

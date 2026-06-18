@@ -147,7 +147,7 @@ export function IntervalCalculate() {
                 <button onClick={() => setInverted(v => !v)} style={{
                   padding: '4px 10px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 700,
                   border: `1px solid ${T.border}`, background: inverted ? T.primaryBg : T.bgInput,
-                  color: inverted ? T.primary : T.textMuted, boxShadow: 'var(--gc-offset-sm)',
+                  color: inverted ? T.primary : T.textMuted, borderRight: '3px solid var(--gc-bar-color)',
                 }}>↕ Invert</button>
 
                 {/* Mode toggle */}
@@ -165,7 +165,7 @@ export function IntervalCalculate() {
                 <button onClick={handlePlay} style={{
                   padding: '4px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700,
                   border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
-                  boxShadow: 'var(--gc-offset-sm)',
+                  borderRight: '3px solid var(--gc-bar-color)',
                 }}>▶ Play</button>
               </div>
             </div>
@@ -255,7 +255,7 @@ export function IntervalCalculate() {
             <button onClick={() => { setPoints([]); setInverted(false); }} style={{
               padding: '3px 10px', borderRadius: 0, border: `1px solid ${T.border}`,
               background: 'transparent', color: T.textMuted, fontSize: 10, cursor: 'pointer',
-              boxShadow: 'var(--gc-offset-sm)',
+              borderRight: '3px solid var(--gc-bar-color)',
             }}>Clear</button>
           </div>
         )}

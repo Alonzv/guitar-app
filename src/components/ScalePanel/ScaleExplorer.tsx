@@ -122,7 +122,7 @@ export function ScaleExplorer() {
                 border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: selected ? T.primary : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
               }}>
                 {n}
               </button>
@@ -152,7 +152,7 @@ export function ScaleExplorer() {
                       border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
                       background: sel ? T.secondaryBg : T.bgInput,
                       color: sel ? T.secondary : T.textMuted,
-                      boxShadow: 'var(--gc-offset-sm)',
+                      borderRight: '3px solid var(--gc-bar-color)',
                     }}>
                       {s.label}
                     </button>
@@ -183,7 +183,7 @@ export function ScaleExplorer() {
                   style={{
                     padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`,
                     background: T.secondaryBg, color: T.secondary, fontSize: 12,
-                    fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--gc-offset-sm)',
+                    fontWeight: 700, cursor: 'pointer', borderRight: '3px solid var(--gc-bar-color)',
                   }}
                 >▶ Play</button>
               </div>
@@ -217,7 +217,7 @@ export function ScaleExplorer() {
                 fontSize: 13, fontWeight: viewMode === v ? 700 : 400, border: 'none',
                 background: viewMode === v ? T.primary : T.bgCard,
                 color: viewMode === v ? T.text : T.textMuted,
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
               }}>
                 {v === 'fretboard' ? 'Fretboard' : 'Tab'}
               </button>
@@ -232,7 +232,7 @@ export function ScaleExplorer() {
               background: pos === null ? T.text : T.bgInput,
               color: pos === null ? T.bgDeep : T.textMuted,
               fontWeight: pos === null ? 700 : 400,
-              boxShadow: 'var(--gc-offset-sm)',
+              borderRight: '3px solid var(--gc-bar-color)',
             }}>
               Full Neck
             </button>

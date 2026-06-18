@@ -255,7 +255,7 @@ export const Metronome: React.FC = () => {
             width: '100%', padding: '10px 0', marginBottom: 20, borderRadius: 0,
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.textMuted, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            transition: 'background 0.1s', boxShadow: 'var(--gc-offset-sm)',
+            transition: 'background 0.1s', borderRight: '3px solid var(--gc-bar-color)',
           }}
         >
           Tap Tempo
@@ -279,7 +279,7 @@ export const Metronome: React.FC = () => {
                   background: active ? T.primaryBg : T.bgInput,
                   color: active ? T.primary : T.textMuted,
                   cursor: 'pointer', fontSize: 11, fontWeight: active ? 700 : 500,
-                  transition: 'all 0.15s', boxShadow: 'var(--gc-offset-sm)',
+                  transition: 'all 0.15s', borderRight: '3px solid var(--gc-bar-color)',
                 }}
               >
                 {sub.icon}
@@ -295,7 +295,7 @@ export const Metronome: React.FC = () => {
             width: '100%', padding: '14px 0', borderRadius: 0, border: 'none',
             background: playing ? T.coral : T.primary,
             color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
-            transition: 'background 0.2s', boxShadow: 'var(--gc-offset)',
+            transition: 'background 0.2s', borderRight: '4px solid var(--gc-bar-color)',
           }}
         >
           {playing ? '■  Stop' : '▶  Start'}

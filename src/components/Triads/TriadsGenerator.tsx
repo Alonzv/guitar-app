@@ -151,7 +151,7 @@ function pill(active: boolean, onClick: () => void, label: string) {
       background: active ? T.text : T.bgInput,
       color:      active ? T.bgDeep : T.textMuted,
       border:     active ? 'none' : `1px solid ${T.border}`,
-      boxShadow: 'var(--gc-offset-sm)',
+      borderRight: '3px solid var(--gc-bar-color)',
     }}>{label}</button>
   );
 }
@@ -278,7 +278,7 @@ export function TriadsGenerator() {
                 border:      sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background:  sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color:       sel ? T.primary   : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
               }}>{n}</button>
             );
           })}
@@ -297,7 +297,7 @@ export function TriadsGenerator() {
                 border:      sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                 background:  sel ? T.secondaryBg : T.bgInput,
                 color:       sel ? T.secondary   : T.textMuted,
-                transition: 'all 0.12s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
               }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
                 <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
@@ -315,9 +315,9 @@ export function TriadsGenerator() {
             <button
               onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
               title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
-              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, boxShadow: 'var(--gc-offset-sm)' }}
+              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderRight: '3px solid var(--gc-bar-color)' }}
             >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
-            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--gc-offset-sm)' }}>▶</button>
+            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderRight: '3px solid var(--gc-bar-color)' }}>▶</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -584,7 +584,7 @@ export function TriadsGenerator() {
                   flex: 1, padding: '8px 0', borderRadius: 0, cursor: safeIdx === 0 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === 0 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 700, boxShadow: 'var(--gc-offset-sm)',
+                  fontSize: 18, fontWeight: 700, borderRight: '3px solid var(--gc-bar-color)',
                 }}
               >‹</button>
 
@@ -600,7 +600,7 @@ export function TriadsGenerator() {
                   cursor: safeIdx === allVisibleCards.length - 1 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === allVisibleCards.length - 1 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 700, boxShadow: 'var(--gc-offset-sm)',
+                  fontSize: 18, fontWeight: 700, borderRight: '3px solid var(--gc-bar-color)',
                 }}
               >›</button>
             </div>

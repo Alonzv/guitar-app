@@ -471,7 +471,7 @@ const Pill: React.FC<{
     background: active ? (color ?? T.secondary) : T.bgInput,
     color: active ? T.white : T.textMuted,
     transition: 'all 0.12s', flexShrink: 0,
-    boxShadow: 'var(--gc-offset-sm)',
+    borderRight: '3px solid var(--gc-bar-color)',
   }}>
     {label}
   </button>
@@ -718,7 +718,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
               position: 'absolute', top: 12, right: 12,
               background: T.bgInput, border: 'none', borderRadius: 0,
               cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px', boxShadow: 'var(--gc-offset-sm)',
+              padding: '3px 7px', borderRight: '3px solid var(--gc-bar-color)',
             }}>✕</button>
 
             {/* Chord name */}
@@ -750,7 +750,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 padding: '11px 0', borderRadius: 0, border: 'none',
                 cursor: 'pointer', fontWeight: 700, fontSize: 14,
                 background: T.secondary, color: T.white,
-                boxShadow: 'var(--gc-offset)',
+                borderRight: '4px solid var(--gc-bar-color)',
               }}
             >▶ Play</button>
 
@@ -803,7 +803,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                   cursor: expandedIdx === 0 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === 0 ? T.textDim : T.textMuted,
-                  fontWeight: 700, fontSize: 16, boxShadow: 'var(--gc-offset-sm)',
+                  fontWeight: 700, fontSize: 16, borderRight: '3px solid var(--gc-bar-color)',
                 }}
               >‹</button>
               <span style={{ fontSize: 11, color: T.textDim, minWidth: 48, textAlign: 'center' }}>
@@ -818,7 +818,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                   cursor: expandedIdx === results.length - 1 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === results.length - 1 ? T.textDim : T.textMuted,
-                  fontWeight: 700, fontSize: 16, boxShadow: 'var(--gc-offset-sm)',
+                  fontWeight: 700, fontSize: 16, borderRight: '3px solid var(--gc-bar-color)',
                 }}
               >›</button>
             </div>

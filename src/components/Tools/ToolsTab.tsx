@@ -27,10 +27,10 @@ export const ToolsTab: React.FC = () => {
             cursor: 'pointer', fontSize: id === 'tabbuilder' ? 10 : 13,
             background: sub === id ? T.secondary : T.bgInput,
             color: sub === id ? '#fff' : T.textMuted,
-            boxShadow: 'var(--gc-offset-sm)',
+            borderRight: '3px solid var(--gc-bar-color)',
             transition: 'background 0.1s',
           }}>
-            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: '-0.5em' }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span></span>
+            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span></span>
           </button>
         ))}
       </div>

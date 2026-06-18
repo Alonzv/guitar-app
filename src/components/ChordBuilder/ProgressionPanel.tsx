@@ -169,7 +169,7 @@ export function ProgressionPanel({
                 padding: '4px 8px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: canUndo ? T.textMuted : T.textDim,
                 fontSize: 11, cursor: canUndo ? 'pointer' : 'not-allowed', fontWeight: 600,
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
               }}
             >↩</button>
             <button
@@ -180,7 +180,7 @@ export function ProgressionPanel({
                 padding: '4px 8px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: canRedo ? T.textMuted : T.textDim,
                 fontSize: 11, cursor: canRedo ? 'pointer' : 'not-allowed', fontWeight: 600,
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
               }}
             >↪</button>
             <button
@@ -190,7 +190,7 @@ export function ProgressionPanel({
                 background: copied ? T.secondaryBg : T.bgInput,
                 color: copied ? T.secondary : T.textMuted, fontSize: 11,
                 cursor: 'pointer', fontWeight: 600, transition: 'filter 0.15s',
-                boxShadow: 'var(--gc-offset-sm)',
+                borderRight: '3px solid var(--gc-bar-color)',
               }}
             >
               {copied ? '✓ Copied' : <><IconClipboard size={12} /> Copy</>}
@@ -202,7 +202,7 @@ export function ProgressionPanel({
                 padding: '4px 10px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: T.textMuted, fontSize: 11,
                 cursor: exporting ? 'not-allowed' : 'pointer', fontWeight: 600,
-                transition: 'filter 0.15s', boxShadow: 'var(--gc-offset-sm)',
+                transition: 'filter 0.15s', borderRight: '3px solid var(--gc-bar-color)',
               }}
             >
               {exporting ? '…' : 'PDF'}
@@ -218,7 +218,7 @@ export function ProgressionPanel({
               flex: 1, padding: '7px 0', borderRadius: 0, border: `1px solid ${T.border}`,
               background: shared ? T.secondaryBg : T.bgInput,
               color: shared ? T.secondary : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              transition: 'all 0.15s', boxShadow: 'var(--gc-offset-sm)',
+              transition: 'all 0.15s', borderRight: '3px solid var(--gc-bar-color)',
             }}
           >
             {shared ? '✓ Copied!' : <><IconLink size={12} /> Share Link</>}
@@ -248,7 +248,7 @@ export function ProgressionPanel({
             style={{
               width: 34, height: 34, borderRadius: 0, border: `1px solid ${T.border}`,
               background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 700,
-              cursor: 'pointer', lineHeight: 1, boxShadow: 'var(--gc-offset-sm)',
+              cursor: 'pointer', lineHeight: 1, borderRight: '3px solid var(--gc-bar-color)',
             }}
           >−</button>
           <span style={{ fontSize: 11, color: T.textMuted }}>semitone</span>
@@ -257,7 +257,7 @@ export function ProgressionPanel({
             style={{
               width: 34, height: 34, borderRadius: 0, border: `1px solid ${T.border}`,
               background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 700,
-              cursor: 'pointer', lineHeight: 1, boxShadow: 'var(--gc-offset-sm)',
+              cursor: 'pointer', lineHeight: 1, borderRight: '3px solid var(--gc-bar-color)',
             }}
           >+</button>
         </div>
@@ -270,7 +270,7 @@ export function ProgressionPanel({
             border: `1px solid ${T.coral}`,
             background: T.coralFaint,
             color: T.coral, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            transition: 'all 0.15s', boxShadow: 'var(--gc-offset)',
+            transition: 'all 0.15s', borderRight: '4px solid var(--gc-bar-color)',
           }}
         >
           🗑 Clear All Chords
@@ -298,7 +298,7 @@ export function ProgressionPanel({
                       width: 24, height: 22, borderRadius: 0, border: `1px solid ${T.border}`,
                       background: T.bgCard, color: i === 0 ? T.textDim : T.textMuted,
                       fontSize: 12, cursor: i === 0 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
-                      boxShadow: 'var(--gc-offset-sm)',
+                      borderRight: '3px solid var(--gc-bar-color)',
                     }}
                   >←</button>
                   <button
@@ -308,7 +308,7 @@ export function ProgressionPanel({
                       width: 24, height: 22, borderRadius: 0, border: `1px solid ${T.border}`,
                       background: T.bgCard, color: i === progression.length - 1 ? T.textDim : T.textMuted,
                       fontSize: 12, cursor: i === progression.length - 1 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
-                      boxShadow: 'var(--gc-offset-sm)',
+                      borderRight: '3px solid var(--gc-bar-color)',
                     }}
                   >→</button>
                 </div>
@@ -319,7 +319,7 @@ export function ProgressionPanel({
                       display: 'block', width: '100%', marginTop: 6, padding: '7px 0',
                       borderRadius: 0, border: 'none', background: T.primaryBg,
                       color: T.primary, fontSize: 16, fontWeight: 700, cursor: 'pointer',
-                      minHeight: 36, boxShadow: 'var(--gc-offset-sm)',
+                      minHeight: 36, borderRight: '3px solid var(--gc-bar-color)',
                     }}
                   >▶</button>
                 )}
@@ -346,7 +346,7 @@ export function ProgressionPanel({
               background: playingAll ? T.coralFaint2 : T.secondaryBg,
               color: playingAll ? T.coral : T.secondary,
               fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
-              boxShadow: 'var(--gc-offset)',
+              borderRight: '4px solid var(--gc-bar-color)',
             }}
           >
             {playingAll ? '■  Stop' : '▶▶  Play All'}
@@ -366,7 +366,7 @@ export function ProgressionPanel({
                     fontWeight: genre === g.id ? 700 : 400,
                     background: genre === g.id ? T.primary : T.bgInput,
                     color: genre === g.id ? T.text : T.textMuted,
-                    transition: 'filter 0.15s', boxShadow: 'var(--gc-offset-sm)',
+                    transition: 'filter 0.15s', borderRight: '3px solid var(--gc-bar-color)',
                   }}>
                   {g.label}
                 </button>
@@ -399,7 +399,7 @@ export function ProgressionPanel({
                 cursor: 'pointer', fontSize: 14, fontWeight: 700,
                 background: showSuggestions ? T.secondaryBg : T.bgInput,
                 color: T.secondary, transition: 'filter 0.15s',
-                boxShadow: 'var(--gc-offset)',
+                borderRight: '4px solid var(--gc-bar-color)',
               }}>
               {showSuggestions ? 'Hide Suggestions' : '✨ Suggest Next Chord'}
             </button>
@@ -426,7 +426,7 @@ export function ProgressionPanel({
                     padding: 12, borderRadius: 0,
                     background: T.bgInput, border: `1px solid ${T.border}`,
                     cursor: 'pointer', color: T.text, textAlign: 'left',
-                    transition: 'filter 0.15s', boxShadow: 'var(--gc-offset-sm)',
+                    transition: 'filter 0.15s', borderRight: '3px solid var(--gc-bar-color)',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>

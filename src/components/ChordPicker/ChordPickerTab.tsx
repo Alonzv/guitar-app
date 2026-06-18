@@ -87,7 +87,7 @@ const SELECT_STYLE: React.CSSProperties = {
   padding: '5px 26px 5px 10px',
   cursor: 'pointer',
   outline: 'none',
-  boxShadow: 'var(--gc-offset-sm)',
+  borderRight: '3px solid var(--gc-bar-color)',
 };
 
 export function ChordPickerTab({
@@ -184,7 +184,7 @@ export function ChordPickerTab({
                   background: active ? T.primary : T.bgInput,
                   color: active ? T.text : T.textMuted,
                   transition: 'filter 0.15s, background 0.15s',
-                  boxShadow: 'var(--gc-offset-sm)',
+                  borderRight: '3px solid var(--gc-bar-color)',
                 }}
               >
                 {root}
@@ -212,7 +212,7 @@ export function ChordPickerTab({
                   background: active ? T.primary : T.bgInput,
                   color: active ? T.text : T.textMuted,
                   transition: 'filter 0.15s, background 0.15s',
-                  boxShadow: 'var(--gc-offset-sm)',
+                  borderRight: '3px solid var(--gc-bar-color)',
                 }}
               >
                 {t.display}
@@ -241,7 +241,7 @@ export function ChordPickerTab({
                     background: active ? T.secondary : T.bgInput,
                     color: active ? '#fff' : T.textMuted,
                     transition: 'filter 0.15s, background 0.15s',
-                    boxShadow: 'var(--gc-offset-sm)',
+                    borderRight: '3px solid var(--gc-bar-color)',
                   }}
                 >
                   {e.display}
