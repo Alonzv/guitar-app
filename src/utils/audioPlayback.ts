@@ -8,13 +8,13 @@ const AudioCtxClass: typeof AudioContext = window.AudioContext || (window as any
 let _ctx: AudioContext | null = null;
 let _masterGain: GainNode | null = null;
 
-// iOS 16.4+ exposes navigator.audioSession — setting it to "playback" makes
-// Web Audio ignore the hardware mute switch. This is the proper, direct fix.
+// iOS 16.4+: set session to "ambient" so the app mixes with background music
+// rather than interrupting the system media player.
 function setPlaybackSession(): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const session = (navigator as any).audioSession;
-    if (session && session.type !== 'playback') session.type = 'playback';
+    if (session && session.type !== 'ambient') session.type = 'ambient';
   } catch { /* not supported — silent-audio fallback handles older iOS */ }
 }
 

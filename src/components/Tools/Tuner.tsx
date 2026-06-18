@@ -190,6 +190,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       streamRef.current = stream;
+      try { (navigator as any).audioSession && ((navigator as any).audioSession.type = 'play-and-record'); } catch { /* ignore */ }
       const ctx = new AudioContext();
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);

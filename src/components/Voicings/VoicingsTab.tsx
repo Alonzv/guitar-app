@@ -158,13 +158,13 @@ function ChordSpelling({ chordName }: { chordName: string }) {
         return (
           <div key={i} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
-            padding: '5px 10px', borderRadius: 8,
-            background: color + '18', border: `1px solid ${color}44`,
+            padding: '5px 10px',
+            background: color + '20', borderRight: `3px solid ${color}`,
             minWidth: 34,
           }}>
             <span style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1.1 }}>{note}</span>
             <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1.3 }}>{short}</span>
-            <span style={{ fontSize: 8, color: color + 'aa', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{name}</span>
+            <span style={{ fontSize: 8, color: color + 'bb', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{name}</span>
           </div>
         );
       })}
