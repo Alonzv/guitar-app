@@ -15,12 +15,12 @@ const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' 
 
 // ── Tab visual constants ──────────────────────────────────────────────────────
 
-const TAB_BG   = '#f7f4ed';
-const TAB_LINE = '#9a8c78';
-const TAB_BAR  = '#6e6252';
-const TAB_NUM  = '#1a1512';
-const TAB_LBL  = '#7a6e5c';
-const TAB_SEL  = '#c96219';
+const TAB_BG   = '#F0F0F0';
+const TAB_LINE = '#D0D0D0';
+const TAB_BAR  = '#2D2D2D';
+const TAB_NUM  = '#1A1818';
+const TAB_LBL  = '#3A3A3A';
+const TAB_SEL  = '#CC1C1C';
 
 const COL_W        = 16;
 const STR_GAP      = 16;
@@ -204,9 +204,9 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
         preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
         <defs>
           <linearGradient id="wv-green" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stopColor="#69f0ae" />
-            <stop offset="50%"  stopColor="#00e676" />
-            <stop offset="100%" stopColor="#00c853" />
+            <stop offset="0%"   stopColor="#1A7A4A" />
+            <stop offset="50%"  stopColor="#1A7A4A" />
+            <stop offset="100%" stopColor="#136038" />
           </linearGradient>
         </defs>
         {sampled.map((v, i) => {

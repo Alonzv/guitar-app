@@ -13,8 +13,8 @@ type HarmonicFn = 'T' | 'SD' | 'D' | '?';
 
 const FN_COLORS: Record<HarmonicFn, string> = {
   T:  T.primary,
-  SD: '#3d6b53',
-  D:  '#C44900',
+  SD: '#1A7A4A',
+  D:  '#CC1C1C',
   '?': T.textDim,
 };
 

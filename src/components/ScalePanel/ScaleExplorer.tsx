@@ -62,7 +62,7 @@ const INTERVAL_DEGREE: Record<string, { num: string; name: string }> = {
 };
 
 const POSITION_WINDOWS = [[0,3],[2,5],[4,8],[6,10],[9,12]] as const;
-const POS_COLORS = [T.primary, T.secondary, '#c4a000', '#8a4aa0', '#2a7aa0'];
+const POS_COLORS = [T.primary, T.secondary, '#C8A020', '#6B21A8', '#1A7A4A'];
 
 export function ScaleExplorer() {
   const [root, setRoot]           = useState<Note>('A');

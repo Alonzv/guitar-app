@@ -25,9 +25,9 @@ type HarmonicFunc = 'tonic' | 'subdominant' | 'dominant';
 type Mode = 'major' | 'minor';
 
 const FC: Record<HarmonicFunc, { fill: string; hover: string; text: string }> = {
-  tonic:       { fill: '#1235FC', hover: '#0e2bd4', text: '#ffffff' },
+  tonic:       { fill: '#1235FC', hover: '#2A4CC8', text: '#ffffff' },
   subdominant: { fill: '#1A7A4A', hover: '#136038', text: '#ffffff' },
-  dominant:    { fill: '#CC1C1C', hover: '#a81515', text: '#ffffff' },
+  dominant:    { fill: '#CC1C1C', hover: '#E02020', text: '#ffffff' },
 };
 
 interface HLInfo { chord: string; roman: string; func: HarmonicFunc }

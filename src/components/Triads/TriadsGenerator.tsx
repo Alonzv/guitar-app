@@ -31,7 +31,7 @@ const TRIADS: Record<TriadType, TriadDef> = {
 const DEGREE_COLORS: Record<Degree, string> = {
   root:  T.primary,
   third: T.secondary,
-  fifth: '#b8921a',
+  fifth: '#C8A020',
 };
 
 const DEGREES: Degree[] = ['root', 'third', 'fifth'];

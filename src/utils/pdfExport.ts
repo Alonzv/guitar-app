@@ -35,12 +35,12 @@ function buildProgressionHTML(
     return `
     <div style="
       display:inline-block;width:130px;vertical-align:top;
-      background:#354a51;border-radius:8px;padding:10px 12px;
+      background:#1A1918;border-radius:0;padding:10px 12px;
       margin:4px;text-align:center;
     ">
-      <div style="font-size:11px;color:rgba(249,236,195,0.5);margin-bottom:3px;">${i + 1}</div>
-      <div style="font-size:18px;font-weight:800;color:#F9ECC3;">${escapeHtml(formatChordName(item.chord.name))}</div>
-      <div style="font-size:9px;color:rgba(249,236,195,0.55);margin-top:3px;">${escapeHtml(item.chord.notes.join(' · '))}</div>
+      <div style="font-size:11px;color:rgba(240,234,216,0.5);margin-bottom:3px;">${i + 1}</div>
+      <div style="font-size:18px;font-weight:800;color:#F0EAD8;">${escapeHtml(formatChordName(item.chord.name))}</div>
+      <div style="font-size:9px;color:rgba(240,234,216,0.55);margin-top:3px;">${escapeHtml(item.chord.notes.join(' · '))}</div>
       ${diagram}
     </div>`;
   }).join('');
@@ -50,12 +50,12 @@ function buildProgressionHTML(
       font-family: Arial, Helvetica, sans-serif;
       padding: 28px 32px;
       width: 680px;
-      background: #243238;
-      color: #F9ECC3;
+      background: #111110;
+      color: #F0EAD8;
       box-sizing: border-box;
     ">
       <h1 style="font-size:20px;font-weight:800;margin:0 0 8px;">${escapeHtml(name || 'Chord Progression')}</h1>
-      <div style="height:2px;background:#C44900;margin-bottom:20px;"></div>
+      <div style="height:2px;background:#CC1C1C;margin-bottom:20px;"></div>
       <div>${cards}</div>
     </div>`;
 }
@@ -85,18 +85,18 @@ function fretboardSVGHtml(voicing: FretPosition[]): string {
 
   for (let i = 0; i <= fretCount; i++) {
     const isNut = i === 0 && displayMin === 0;
-    svg += `<line x1="${LEFT + i * fretSp}" y1="${topY}" x2="${LEFT + i * fretSp}" y2="${topY + (STRING_COUNT - 1) * strSp}" stroke="${isNut ? '#2E4A5A' : '#CDBF96'}" stroke-width="${isNut ? 3 : 1}" opacity="${isNut ? 0.7 : 1}"/>`;
+    svg += `<line x1="${LEFT + i * fretSp}" y1="${topY}" x2="${LEFT + i * fretSp}" y2="${topY + (STRING_COUNT - 1) * strSp}" stroke="${isNut ? '#1235FC' : 'rgba(255,255,255,0.40)'}" stroke-width="${isNut ? 3 : 1}" opacity="${isNut ? 0.7 : 1}"/>`;
   }
   for (let s = 0; s < STRING_COUNT; s++) {
-    svg += `<line x1="${LEFT}" y1="${sy(s)}" x2="${LEFT + fretCount * fretSp}" y2="${sy(s)}" stroke="#629677" stroke-width="${0.7 + s * 0.18}" opacity="0.5"/>`;
+    svg += `<line x1="${LEFT}" y1="${sy(s)}" x2="${LEFT + fretCount * fretSp}" y2="${sy(s)}" stroke="rgba(255,255,255,0.55)" stroke-width="${0.7 + s * 0.18}" opacity="0.5"/>`;
   }
   if (displayMin > 0) {
-    svg += `<text x="${LEFT - 4}" y="${topY + (STRING_COUNT - 1) * strSp / 2 + 4}" text-anchor="end" font-size="7" fill="rgba(46,74,90,0.58)">${displayMin + 1}fr</text>`;
+    svg += `<text x="${LEFT - 4}" y="${topY + (STRING_COUNT - 1) * strSp / 2 + 4}" text-anchor="end" font-size="7" fill="rgba(255,255,255,0.50)">${displayMin + 1}fr</text>`;
   }
   for (const p of voicing) {
     const cx = fx(p.fret), cy = sy(p.string);
     const note = fretToNote(p.string, p.fret);
-    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#C44900" stroke="#F7F0DC" stroke-width="1" opacity="0.92"/>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#CC1C1C" stroke="#F7F0DC" stroke-width="1" opacity="0.92"/>`;
     svg += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">${note}</text>`;
   }
 
@@ -210,28 +210,28 @@ function buildAnalysisHTML(a: TabPDFAnalysis): string {
       const diagram = v.length > 0 ? fretboardSVGHtml(v) : '';
       return `
         <div style="display:inline-block;width:120px;vertical-align:top;text-align:center;margin:4px;">
-          <div style="font-size:15px;font-weight:800;color:#111;font-family:'Courier New',monospace;">${escapeHtml(name)}</div>
+          <div style="font-size:15px;font-weight:800;color:#1A1818;font-family:'Courier New',monospace;">${escapeHtml(name)}</div>
           ${diagram}
         </div>`;
     }).join('');
 
     return `
-      <div style="background:#F2EAD3;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
-        <div style="font-size:14px;font-weight:800;color:#243238;margin-bottom:6px;">${escapeHtml(p.title)}</div>
+      <div style="background:#FFFFFF;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:800;color:#111110;margin-bottom:6px;">${escapeHtml(p.title)}</div>
         <div style="text-align:center;">${chordRow}</div>
-        <div style="font-size:11px;color:#555;line-height:1.6;margin-top:6px;">${escapeHtml(p.why)}</div>
+        <div style="font-size:11px;color:#3A3A3A;line-height:1.6;margin-top:6px;">${escapeHtml(p.why)}</div>
       </div>`;
   }).join('');
 
   return `
-    <div dir="${dir}" style="text-align:${align};margin-top:34px;padding-top:24px;border-top:2px solid #C44900;">
-      <h2 style="font-size:18px;font-weight:800;margin:0 0 14px;color:#243238;">${escapeHtml(a.heading)}</h2>
-      <div style="background:#354a51;border-radius:8px;padding:12px 16px;margin-bottom:18px;color:#F9ECC3;">
+    <div dir="${dir}" style="text-align:${align};margin-top:34px;padding-top:24px;border-top:2px solid #CC1C1C;">
+      <h2 style="font-size:18px;font-weight:800;margin:0 0 14px;color:#111110;">${escapeHtml(a.heading)}</h2>
+      <div style="background:#1A1918;border-radius:8px;padding:12px 16px;margin-bottom:18px;color:#F0EAD8;">
         <div style="font-size:11px;opacity:0.7;margin-bottom:2px;">${escapeHtml(a.scaleLabel)}</div>
         <span style="font-size:20px;font-weight:800;">${escapeHtml(a.scaleName)}</span>
         <span style="font-size:12px;opacity:0.85;margin:0 8px;">${escapeHtml(a.matchText)}</span>
       </div>
-      ${a.progressions.length > 0 ? `<div style="font-size:13px;font-weight:700;color:#243238;margin-bottom:10px;">${escapeHtml(a.progHeading)}</div>${progCards}` : ''}
+      ${a.progressions.length > 0 ? `<div style="font-size:13px;font-weight:700;color:#111110;margin-bottom:10px;">${escapeHtml(a.progHeading)}</div>${progCards}` : ''}
     </div>`;
 }
 
@@ -277,15 +277,15 @@ export async function exportTabPDF(
       padding:44px 52px;
       width:680px;
       background:#fff;
-      color:#111;
+      color:#1A1818;
       box-sizing:border-box;
     ">
       ${title ? `<h1 style="font-size:24px;font-weight:800;margin:0 0 6px;">${escapeHtml(title)}</h1>` : ''}
-      ${subtitle ? `<p style="font-size:13px;color:#666;margin:0 0 18px;">${escapeHtml(subtitle)}</p>` : ''}
-      <div style="height:2px;background:#C44900;margin-bottom:30px;"></div>
-      ${systemsHTML || '<p style="color:#999;font-size:13px;">Empty tab</p>'}
+      ${subtitle ? `<p style="font-size:13px;color:#3A3A3A;margin:0 0 18px;">${escapeHtml(subtitle)}</p>` : ''}
+      <div style="height:2px;background:#CC1C1C;margin-bottom:30px;"></div>
+      ${systemsHTML || '<p style="color:#3A3A3A;font-size:13px;">Empty tab</p>'}
       ${analysis ? buildAnalysisHTML(analysis) : ''}
-      <div style="margin-top:36px;font-size:10px;color:#bbb;text-align:right;">Created with ScaleUp</div>
+      <div style="margin-top:36px;font-size:10px;color:#D0D0D0;text-align:right;">Created with ScaleUp</div>
     </div>`;
 
   const filename = `${(title || 'tab').replace(/[^a-zA-Z0-9 ]/g, '_')}.pdf`;
