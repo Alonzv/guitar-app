@@ -32,8 +32,8 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
         style={{ width: '100%', maxHeight: 195, userSelect: 'none', display: 'block' }}>
 
         {/* ── Blue fretboard background ── */}
-        <rect x={NUT_X - FRET_SP * 0.5} y={TOP_Y - 6}
-          width={FRET_COUNT * FRET_SP + FRET_SP * 0.5 + 8} height={(STRING_COUNT - 1) * STR_SP + 12}
+        <rect x={NUT_X - FRET_SP * 0.5} y={TOP_Y - 13}
+          width={FRET_COUNT * FRET_SP + FRET_SP * 0.5 + 8} height={(STRING_COUNT - 1) * STR_SP + 26}
           fill="#2D2D2D" rx={0} />
 
         {/* ── Fret position markers ── */}

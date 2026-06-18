@@ -48,9 +48,9 @@ export const MiniFretboard: React.FC<Props> = ({
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
 
-      {/* Fretboard background — darker navy so colored dots are visible */}
-      <rect x={LEFT} y={topY - 3}
-        width={fretCount * fretSp} height={(STRING_COUNT - 1) * strSp + 6}
+      {/* Fretboard background — padded by dot radius so no dot overflows */}
+      <rect x={LEFT} y={topY - 8}
+        width={fretCount * fretSp} height={(STRING_COUNT - 1) * strSp + 16}
         fill="#2D2D2D" />
 
       {/* Fret lines */}

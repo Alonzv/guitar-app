@@ -27,8 +27,8 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block' }}>
 
       {/* Blue fretboard background */}
-      <rect x={NUT_X - FRET_SP * 0.5} y={TOP_Y - 6}
-        width={FRET_COUNT * FRET_SP + FRET_SP * 0.5 + 10} height={(STRING_COUNT - 1) * STR_SP + 12}
+      <rect x={NUT_X - FRET_SP * 0.5} y={TOP_Y - 10}
+        width={FRET_COUNT * FRET_SP + FRET_SP * 0.5 + 10} height={(STRING_COUNT - 1) * STR_SP + 20}
         fill="#2D2D2D" />
 
       {/* Fret lines */}
