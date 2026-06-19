@@ -466,13 +466,14 @@ export const TabBuilder: React.FC = () => {
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
             style={{
-              background: '#FFD800', border: 'none',
+              background: '#F8F32B', border: 'none',
               borderRadius: 0, padding: '7px 9px',
               cursor: canUndo ? 'pointer' : 'default',
               opacity: canUndo ? 1 : 0.35,
               transition: 'opacity 0.2s',
               borderLeft: '3px solid var(--gc-bar-color)',
               flexShrink: 0,
+              fontSize: 12, fontWeight: 700, color: '#1235FC',
             }}>
             undo
           </button>
