@@ -71,13 +71,6 @@ export const MiniFretboard: React.FC<Props> = ({
         />
       ))}
 
-      {/* Nut — thick solid bar (B2 style) */}
-      {displayMin === 0 && (
-        <rect x={LEFT - 1} y={topY - 8}
-          width={NUT_W} height={(STRING_COUNT - 1) * strSp + 16}
-          fill="var(--gc-fretboard-nut)" />
-      )}
-
       {/* Position dots — visible when in range */}
       {POSITION_DOTS.filter(f => f > displayMin && f <= displayMax).map(f => {
         const cx = LEFT + (f - displayMin - 0.5) * fretSp;
@@ -101,6 +94,13 @@ export const MiniFretboard: React.FC<Props> = ({
           stroke="var(--gc-fretboard-str)" strokeWidth={strW(s)}
         />
       ))}
+
+      {/* Nut — drawn last to cover overlapping lines */}
+      {displayMin === 0 && (
+        <rect x={LEFT - 1} y={topY - 8}
+          width={NUT_W} height={(STRING_COUNT - 1) * strSp + 16}
+          fill="var(--gc-fretboard-nut)" />
+      )}
 
       {/* Fret position label (top-left, when not hidden) */}
       {displayMin > 0 && !hideFretLabel && !showFretNumbers && (

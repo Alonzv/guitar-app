@@ -50,11 +50,6 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
           />
         ))}
 
-        {/* Nut — thick solid bar */}
-        <rect x={NUT_X - 1} y={TOP_Y - 13}
-          width={NUT_W} height={(STRING_COUNT - 1) * STR_SP + 26}
-          fill="var(--gc-fretboard-nut)" />
-
         {/* Position dots: 3,5,7,9 single • 12 double */}
         {[3, 5, 7, 9].map(f => (
           <circle key={f} cx={NUT_X + (f - 0.5) * FRET_SP} cy={SVG_H / 2}
@@ -71,6 +66,11 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
             stroke="var(--gc-fretboard-str)" strokeWidth={strW(s)}
           />
         ))}
+
+        {/* Nut — drawn last so it covers overlapping fret/string lines */}
+        <rect x={NUT_X - 1} y={TOP_Y - 13}
+          width={NUT_W} height={(STRING_COUNT - 1) * STR_SP + 26}
+          fill="var(--gc-fretboard-nut)" />
 
         {/* Fret number labels — all 1-12 */}
         {Array.from({ length: FRET_COUNT }, (_, i) => i + 1).map(f => (

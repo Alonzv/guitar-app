@@ -45,11 +45,6 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
         />
       ))}
 
-      {/* Nut — thick solid bar (B2 style) */}
-      <rect x={NUT_X - 1} y={TOP_Y - 10}
-        width={NUT_W} height={(STRING_COUNT - 1) * STR_SP + 20}
-        fill="var(--gc-fretboard-nut)" />
-
       {/* Position dots: 3,5,7,9 single • 12 double */}
       {[3, 5, 7, 9].map(f => (
         <circle key={f} cx={NUT_X + (f - 0.5) * FRET_SP} cy={SVG_H / 2}
@@ -66,6 +61,11 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
           stroke="var(--gc-fretboard-str)" strokeWidth={strW(s)}
         />
       ))}
+
+      {/* Nut — drawn last to cover overlapping lines */}
+      <rect x={NUT_X - 1} y={TOP_Y - 10}
+        width={NUT_W} height={(STRING_COUNT - 1) * STR_SP + 20}
+        fill="var(--gc-fretboard-nut)" />
 
       {/* Fret numbers */}
       {[3, 5, 7, 9, 12].map(f => (

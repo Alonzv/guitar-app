@@ -60,9 +60,6 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
       <circle cx={W / 2 - 7} cy={rowY(11.5)} r={3.5} fill="var(--gc-fretboard-pos)" />
       <circle cx={W / 2 + 7} cy={rowY(11.5)} r={3.5} fill="var(--gc-fretboard-pos)" />
 
-      {/* Nut — thick bar (B2 style) */}
-      <rect x={LEFT} y={TOP - 3} width={(STRING_COUNT - 1) * COL_W} height={5} fill="var(--gc-fretboard-nut)" />
-
       {/* Fret lines (rows) */}
       {Array.from({ length: FRET_COUNT + 1 }).map((_, f) => (
         <line key={f}
@@ -70,12 +67,15 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
           stroke="var(--gc-fretboard-fret)" strokeWidth={1} />
       ))}
 
-      {/* Strings (columns) — ×1.25 thickness, graduating low-E thick */}
+      {/* Strings (columns) — graduating low-E thick */}
       {Array.from({ length: STRING_COUNT }).map((_, s) => (
         <line key={s}
           x1={colX(s)} y1={TOP} x2={colX(s)} y2={rowY(FRET_COUNT)}
           stroke="var(--gc-fretboard-str)" strokeWidth={1.5 + s * 0.22} />
       ))}
+
+      {/* Nut — drawn last to cover overlapping lines */}
+      <rect x={LEFT} y={TOP - 3} width={(STRING_COUNT - 1) * COL_W} height={5} fill="var(--gc-fretboard-nut)" />
 
       {/* String labels (top) */}
       {COL_STR.map((lbl, s) => (
