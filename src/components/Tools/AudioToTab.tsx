@@ -18,7 +18,6 @@ const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' 
 const TAB_BG   = 'var(--gc-fretboard-bg)';
 const TAB_LINE = 'var(--gc-fretboard-str)';
 const TAB_BAR  = 'rgba(255,255,255,0.9)';
-const TAB_NUM  = '#ffffff';
 const TAB_LBL  = 'rgba(255,255,255,0.75)';
 const TAB_SEL  = '#CC1C1C';
 
