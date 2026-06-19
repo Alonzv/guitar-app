@@ -466,7 +466,7 @@ export const TabBuilder: React.FC = () => {
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
             style={{
-              background: '#C8A020', border: 'none',
+              background: '#FFD800', border: 'none',
               borderRadius: 0, padding: '7px 9px',
               cursor: canUndo ? 'pointer' : 'default',
               opacity: canUndo ? 1 : 0.35,
@@ -476,7 +476,7 @@ export const TabBuilder: React.FC = () => {
               flexShrink: 0,
             }}>
             <svg viewBox="0 0 14 12" width={14} height={12} fill="none"
-              stroke="#000" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
+              stroke="#1235FC" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
               <path d="M12 8 Q12 2 7 2 Q2 2 2 4" />
               <polyline points="4,2 2,4 4,6" />
             </svg>
