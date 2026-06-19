@@ -39,7 +39,7 @@ const GENRES: { id: Genre; label: string }[] = [
   { id: 'custom', label: 'Custom' },
 ];
 
-const CHORD_ACCENTS = [T.primary, T.secondary, '#8b6914', '#7a3a6a', '#2a6a8a', '#4a7a3a'];
+const CHORD_ACCENTS = ['#CC1C1C', '#1235FC', '#1A7A4A', '#C8A020', '#6B21A8', '#1A1818'];
 
 const LABEL_STYLE = {
   margin: '0 0 10px',
@@ -282,33 +282,30 @@ export function ProgressionPanel({
             const accent = CHORD_ACCENTS[i % CHORD_ACCENTS.length];
             return (
               <div key={item.id} style={{
-                position: 'relative', minWidth: 72, flexShrink: 0,
-                padding: '10px 14px', borderRadius: 0,
-                background: T.bgInput, border: `1px solid ${T.border}`,
-                borderLeftWidth: 3, borderLeftColor: accent,
+                position: 'relative', minWidth: 80, flexShrink: 0,
+                padding: '10px 12px 10px', borderRadius: 0,
+                background: accent,
                 textAlign: 'center',
               }}>
-                <span style={{ display: 'block', fontSize: 10, color: accent, marginBottom: 2, fontWeight: 600 }}>{i + 1}</span>
-                <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: T.text }}>{formatChordName(item.chord.name)}</span>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 6 }}>
+                <span style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,0.55)', marginBottom: 3, fontWeight: 700, letterSpacing: '0.08em' }}>{i + 1}</span>
+                <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>{formatChordName(item.chord.name)}</span>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 8 }}>
                   <button
                     onClick={() => onReorderProgression(item.id, -1)}
                     disabled={i === 0}
                     style={{
-                      width: 24, height: 22, borderRadius: 0, border: `1px solid ${T.border}`,
-                      background: T.bgCard, color: i === 0 ? T.textDim : T.textMuted,
+                      width: 24, height: 22, borderRadius: 0, border: 'none',
+                      background: 'rgba(0,0,0,0.25)', color: i === 0 ? 'rgba(255,255,255,0.25)' : '#fff',
                       fontSize: 12, cursor: i === 0 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
-                      borderLeft: '3px solid var(--gc-bar-color)',
                     }}
                   >←</button>
                   <button
                     onClick={() => onReorderProgression(item.id, 1)}
                     disabled={i === progression.length - 1}
                     style={{
-                      width: 24, height: 22, borderRadius: 0, border: `1px solid ${T.border}`,
-                      background: T.bgCard, color: i === progression.length - 1 ? T.textDim : T.textMuted,
+                      width: 24, height: 22, borderRadius: 0, border: 'none',
+                      background: 'rgba(0,0,0,0.25)', color: i === progression.length - 1 ? 'rgba(255,255,255,0.25)' : '#fff',
                       fontSize: 12, cursor: i === progression.length - 1 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
-                      borderLeft: '3px solid var(--gc-bar-color)',
                     }}
                   >→</button>
                 </div>
@@ -317,9 +314,9 @@ export function ProgressionPanel({
                     onClick={() => playChord(item.fretPositions, tuning.openFreqs, capo)}
                     style={{
                       display: 'block', width: '100%', marginTop: 6, padding: '7px 0',
-                      borderRadius: 0, background: T.primaryBg,
-                      color: T.primary, fontSize: 16, fontWeight: 700, cursor: 'pointer',
-                      minHeight: 36, borderLeft: '3px solid var(--gc-bar-color)',
+                      borderRadius: 0, background: 'rgba(0,0,0,0.22)', border: 'none',
+                      color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                      minHeight: 36,
                     }}
                   >▶</button>
                 )}
@@ -327,8 +324,8 @@ export function ProgressionPanel({
                   onClick={() => onRemoveFromProgression(item.id)}
                   style={{
                     position: 'absolute', top: -7, right: -7, width: 20, height: 20,
-                    borderRadius: 0, background: T.border,
-                    color: T.textMuted, fontSize: 13, cursor: 'pointer', lineHeight: '20px', padding: 0,
+                    borderRadius: 0, background: 'rgba(0,0,0,0.55)', border: 'none',
+                    color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '20px', padding: 0,
                   }}
                 >×</button>
               </div>

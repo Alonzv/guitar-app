@@ -667,30 +667,38 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
 
           {results.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {results.map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setExpandedIdx(idx)}
-                  style={{
-                    ...card(), padding: '10px 10px 8px',
-                    cursor: 'pointer', border: `1px solid ${T.border}`,
-                    textAlign: 'left', display: 'block', width: '100%',
-                  }}
-                >
-                  <XORow voicing={item.voicing} />
-                  <MiniFretboard
-                    voicing={item.voicing}
-                    dotColors={dotColors(item)}
-                    tuning={tuning.notes}
-                  />
-                  <div style={{ marginTop: 5, fontWeight: 700, fontSize: 13, color: T.text }}>
-                    {item.chordName}
-                  </div>
-                  <div style={{ fontSize: 10, color: T.coral, marginTop: 1 }}>
-                    {targetNoteName} = {item.intervalLabel}
-                  </div>
-                </button>
-              ))}
+              {results.map((item, idx) => {
+                const RESULT_COLORS = ['#CC1C1C', '#1235FC', '#1A7A4A', '#C8A020', '#6B21A8', '#1A1818'];
+                const bg = RESULT_COLORS[idx % RESULT_COLORS.length];
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setExpandedIdx(idx)}
+                    style={{
+                      cursor: 'pointer', border: 'none',
+                      textAlign: 'left', display: 'block', width: '100%',
+                      background: 'none', padding: 0, borderRadius: 0,
+                    }}
+                  >
+                    <div style={{ background: bg, padding: '6px 10px 4px' }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: '#fff', lineHeight: 1.1 }}>
+                        {item.chordName}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>
+                        {targetNoteName} = {item.intervalLabel}
+                      </div>
+                    </div>
+                    <div style={{ background: T.bgInput, padding: '6px 10px 8px', border: `1px solid ${T.border}`, borderTop: 'none' }}>
+                      <XORow voicing={item.voicing} />
+                      <MiniFretboard
+                        voicing={item.voicing}
+                        dotColors={dotColors(item)}
+                        tuning={tuning.notes}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
