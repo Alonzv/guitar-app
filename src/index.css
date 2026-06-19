@@ -114,8 +114,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   /* Fretboard */
   --gc-fretboard-bg:  #1235FC;
   --gc-fretboard-nut: #000000;
-  --gc-fretboard-str: rgba(255,255,255,0.40);
-  --gc-fretboard-fret: rgba(255,255,255,0.22);
+  --gc-fretboard-str: rgba(255,255,255,1);
+  --gc-fretboard-fret: rgba(255,255,255,1);
   --gc-fretboard-pos: rgba(255,255,255,0.20);
 
   /* Light mode — white & ink */
@@ -173,8 +173,8 @@ body.dark {
   /* Fretboard — dark mode (B3: graphite) */
   --gc-fretboard-bg:  #1A1818;
   --gc-fretboard-nut: rgba(255,255,255,0.75);
-  --gc-fretboard-str: rgba(255,255,255,0.30);
-  --gc-fretboard-fret: rgba(255,255,255,0.14);
+  --gc-fretboard-str: rgba(255,255,255,1);
+  --gc-fretboard-fret: rgba(255,255,255,1);
   --gc-fretboard-pos: rgba(255,255,255,0.13);
 
   /* (halftone removed) */
