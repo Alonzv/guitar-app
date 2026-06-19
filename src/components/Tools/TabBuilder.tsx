@@ -393,11 +393,8 @@ export const TabBuilder: React.FC = () => {
       />
 
       {/* ── Header ──────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        padding: '12px 2px 16px', gap: 12,
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ padding: '12px 2px 16px' }}>
+        <div style={{ minWidth: 0, marginBottom: 10 }}>
           <input
             value={title}
             placeholder="Song's title"
@@ -420,18 +417,18 @@ export const TabBuilder: React.FC = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            background: T.bgInput, borderRadius: 0, padding: '4px 8px',
+            display: 'flex', alignItems: 'center', gap: 3,
+            background: T.bgInput, borderRadius: 0, padding: '5px 7px', flexShrink: 0,
           }}>
             <button onClick={() => setZoom(z => Math.max(60, z - 10))}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 16, lineHeight: 1, padding: '0 2px' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: '0 1px' }}>
               −
             </button>
-            <span style={{ fontSize: 11, color: T.textMuted, minWidth: 36, textAlign: 'center' }}>{zoom}%</span>
+            <span style={{ fontSize: 11, color: T.textMuted, minWidth: 30, textAlign: 'center' }}>{zoom}%</span>
             <button onClick={() => setZoom(z => Math.min(150, z + 10))}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 16, lineHeight: 1, padding: '0 2px' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: '0 1px' }}>
               +
             </button>
           </div>
@@ -439,16 +436,16 @@ export const TabBuilder: React.FC = () => {
             title="Analyze — detect scale & suggest chord progressions"
             style={{
               background: T.primary, color: '#fff', border: 'none',
-              borderRadius: 0, padding: '7px 13px', cursor: 'pointer',
-              fontSize: 12, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)',
+              borderRadius: 0, padding: '7px 10px', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
             }}>
             Analyze
           </button>
           <button onClick={handleExport} disabled={busy}
             style={{
               background: T.secondary, color: '#fff', border: 'none',
-              borderRadius: 0, padding: '7px 13px', cursor: busy ? 'wait' : 'pointer',
-              fontSize: 12, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)',
+              borderRadius: 0, padding: '7px 10px', cursor: busy ? 'wait' : 'pointer',
+              fontSize: 12, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
             }}>
             {busy ? '…' : 'PDF'}
           </button>
@@ -456,12 +453,11 @@ export const TabBuilder: React.FC = () => {
             onClick={clearGrid}
             title="Clear all notes"
             style={{
-              background: 'transparent',
-              color: T.textMuted,
+              background: 'transparent', color: T.textMuted,
               border: `1px solid ${T.border}`,
-              borderRadius: 0, padding: '7px 11px',
+              borderRadius: 0, padding: '7px 9px',
               cursor: 'pointer', fontSize: 12, fontWeight: 700,
-              borderLeft: '3px solid var(--gc-bar-color)',
+              borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
             }}>
             Clear
           </button>
@@ -470,16 +466,20 @@ export const TabBuilder: React.FC = () => {
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
             style={{
-              background: T.bgInput,
-              color: canUndo ? T.text : T.textMuted,
-              border: `1px solid ${T.border}`,
-              borderRadius: 0, padding: '7px 11px',
+              background: '#C8A020', border: 'none',
+              borderRadius: 0, padding: '7px 9px',
               cursor: canUndo ? 'pointer' : 'default',
-              fontSize: 16, lineHeight: 1,
               opacity: canUndo ? 1 : 0.35,
-              transition: 'opacity 0.2s', borderLeft: '3px solid var(--gc-bar-color)',
+              transition: 'opacity 0.2s',
+              borderLeft: '3px solid var(--gc-bar-color)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
             }}>
-            ↩
+            <svg viewBox="0 0 14 12" width={14} height={12} fill="none"
+              stroke="#000" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
+              <path d="M12 8 Q12 2 7 2 Q2 2 2 4" />
+              <polyline points="4,2 2,4 4,6" />
+            </svg>
           </button>
         </div>
       </div>
