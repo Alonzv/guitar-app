@@ -15,11 +15,11 @@ const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' 
 
 // ── Tab visual constants ──────────────────────────────────────────────────────
 
-const TAB_BG   = '#F0F0F0';
-const TAB_LINE = '#D0D0D0';
-const TAB_BAR  = '#2D2D2D';
-const TAB_NUM  = '#1A1818';
-const TAB_LBL  = '#3A3A3A';
+const TAB_BG   = 'var(--gc-fretboard-bg)';
+const TAB_LINE = 'var(--gc-fretboard-str)';
+const TAB_BAR  = 'rgba(255,255,255,0.9)';
+const TAB_NUM  = '#ffffff';
+const TAB_LBL  = 'rgba(255,255,255,0.75)';
 const TAB_SEL  = '#CC1C1C';
 
 const COL_W        = 16;
@@ -67,7 +67,7 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     const sy = TOP + di * STR_GAP;
     els.push(
       <line key={`l${di}`} x1={LEFT_PAD - 2} y1={sy} x2={LEFT_PAD + lineW} y2={sy}
-        stroke={TAB_LINE} strokeWidth={1.2} />,
+        stroke={TAB_LINE} strokeWidth={2} />,
       <text key={`n${di}`} x={LEFT_PAD - 6} y={sy + 3.5}
         fontSize={9} fill={TAB_LBL} textAnchor="end"
         fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
@@ -101,9 +101,9 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
       els.push(
         <g key={`${c}-${si}`} onClick={e => onTap(c, si, e)} style={{ cursor: 'pointer' }}>
           <rect x={cx - (wide ? 7 : 5)} y={sy - 6} width={wide ? 14 : 10} height={12}
-            fill={sel ? TAB_SEL : TAB_BG} rx={2} />
+            fill={sel ? TAB_SEL : TAB_BG} rx={0} />
           <text x={cx} y={sy + 4.5} fontSize={8.5}
-            fill={sel ? '#fff' : TAB_NUM}
+            fill='#fff'
             textAnchor="middle"
             fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
             {lbl}

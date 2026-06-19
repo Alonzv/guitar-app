@@ -83,21 +83,33 @@ function fretboardSVGHtml(voicing: FretPosition[]): string {
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
 
+  // Fretboard background
+  svg += `<rect x="${LEFT}" y="${topY - 8}" width="${fretCount * fretSp}" height="${(STRING_COUNT - 1) * strSp + 16}" fill="#1235FC"/>`;
+
+  // Fret lines
   for (let i = 0; i <= fretCount; i++) {
-    const isNut = i === 0 && displayMin === 0;
-    svg += `<line x1="${LEFT + i * fretSp}" y1="${topY}" x2="${LEFT + i * fretSp}" y2="${topY + (STRING_COUNT - 1) * strSp}" stroke="${isNut ? '#1235FC' : 'rgba(255,255,255,0.40)'}" stroke-width="${isNut ? 3 : 1}" opacity="${isNut ? 0.7 : 1}"/>`;
+    svg += `<line x1="${LEFT + i * fretSp}" y1="${topY}" x2="${LEFT + i * fretSp}" y2="${topY + (STRING_COUNT - 1) * strSp}" stroke="rgba(255,255,255,1)" stroke-width="1"/>`;
   }
+
+  // String lines — graduating thickness
   for (let s = 0; s < STRING_COUNT; s++) {
-    svg += `<line x1="${LEFT}" y1="${sy(s)}" x2="${LEFT + fretCount * fretSp}" y2="${sy(s)}" stroke="rgba(255,255,255,0.55)" stroke-width="${0.7 + s * 0.18}" opacity="0.5"/>`;
+    const sw = (1.5 + s * 0.22).toFixed(2);
+    svg += `<line x1="${LEFT}" y1="${sy(s)}" x2="${LEFT + fretCount * fretSp}" y2="${sy(s)}" stroke="rgba(255,255,255,1)" stroke-width="${sw}"/>`;
   }
-  if (displayMin > 0) {
-    svg += `<text x="${LEFT - 4}" y="${topY + (STRING_COUNT - 1) * strSp / 2 + 4}" text-anchor="end" font-size="7" fill="rgba(255,255,255,0.50)">${displayMin + 1}fr</text>`;
+
+  // Nut — drawn last to cover overlapping lines
+  if (displayMin === 0) {
+    svg += `<rect x="${LEFT - 1}" y="${topY - 8}" width="4" height="${(STRING_COUNT - 1) * strSp + 16}" fill="#000000"/>`;
+  } else {
+    svg += `<text x="${LEFT - 4}" y="${topY + (STRING_COUNT - 1) * strSp / 2 + 4}" text-anchor="end" font-size="7" fill="rgba(255,255,255,0.60)" font-family="'Courier New',monospace">${displayMin + 1}fr</text>`;
   }
+
+  // Dots
   for (const p of voicing) {
     const cx = fx(p.fret), cy = sy(p.string);
     const note = fretToNote(p.string, p.fret);
-    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#CC1C1C" stroke="#F7F0DC" stroke-width="1" opacity="0.92"/>`;
-    svg += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">${note}</text>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#CC1C1C" stroke="#fff" stroke-width="1.25" opacity="0.92"/>`;
+    svg += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700" font-family="'Courier New',monospace">${note}</text>`;
   }
 
   svg += `</svg>`;

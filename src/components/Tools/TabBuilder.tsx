@@ -420,7 +420,7 @@ export const TabBuilder: React.FC = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 4,
             background: T.bgInput, borderRadius: 0, padding: '4px 8px',
@@ -537,18 +537,18 @@ export const TabBuilder: React.FC = () => {
           const s1 = Math.min(s0 + colsPerLine, numCols);
 
           return (
-            <div key={sys} style={{ marginBottom: 28 }}
+            <div key={sys} style={{ marginBottom: 28, background: 'var(--gc-fretboard-bg)', padding: '8px 4px' }}
               onMouseLeave={() => setHov(null)}>
               {STRS.map((lbl, si) => (
                 <div key={si} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
                   {/* String label */}
                   <span style={{
                     width: 14, fontSize: fs, fontFamily: 'monospace',
-                    color: T.textMuted, textAlign: 'right', paddingRight: 3, flexShrink: 0,
+                    color: 'rgba(255,255,255,0.75)', textAlign: 'right', paddingRight: 3, flexShrink: 0,
                   }}>
                     {lbl}
                   </span>
-                  <span style={{ fontSize: fs, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
+                  <span style={{ fontSize: fs, fontFamily: 'monospace', color: 'rgba(255,255,255,0.75)', flexShrink: 0 }}>|</span>
 
                   {/* Cells */}
                   {Array.from({ length: s1 - s0 }, (_, ci) => {
@@ -573,7 +573,7 @@ export const TabBuilder: React.FC = () => {
                             position: 'absolute',
                             top: '50%', left: 0, right: 0,
                             height: 0,
-                            borderTop: `1px dashed ${T.border}`,
+                            borderTop: '2px solid rgba(255,255,255,1)',
                             transform: 'translateY(-0.5px)',
                             pointerEvents: 'none',
                           }} />
@@ -611,7 +611,7 @@ export const TabBuilder: React.FC = () => {
                               top: '50%', left: '50%',
                               transform: 'translate(-50%, -50%)',
                               fontSize: fs, fontFamily: 'monospace',
-                              fontWeight: 700, color: T.text,
+                              fontWeight: 700, color: '#ffffff',
                               lineHeight: 1, zIndex: 1,
                             }}>
                               {cell.fret}
@@ -671,15 +671,15 @@ export const TabBuilder: React.FC = () => {
                         {/* Bar line */}
                         {isBar && (
                           <div style={{
-                            width: 2, height: ch, background: T.text,
-                            flexShrink: 0, opacity: 0.6,
+                            width: 2, height: ch, background: 'rgba(255,255,255,0.9)',
+                            flexShrink: 0,
                           }} />
                         )}
                       </React.Fragment>
                     );
                   })}
 
-                  <span style={{ fontSize: fs, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
+                  <span style={{ fontSize: fs, fontFamily: 'monospace', color: 'rgba(255,255,255,0.75)', flexShrink: 0 }}>|</span>
                 </div>
               ))}
             </div>
