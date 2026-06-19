@@ -23,8 +23,8 @@ const NUT_W   = 7;
 const fretX = (f: number) => f === 0 ? NUT_X - FRET_SP * 0.5 : NUT_X + (f - 0.5) * FRET_SP;
 const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 
-// String thickness: high-e thin → low-E thick, ×1.25 vs old values
-const strW = (s: number) => 1.5 + s * 0.25;
+// String thickness: high-e thin → low-E thick
+const strW = (s: number) => 2.0 + s * 0.40;
 
 export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, readonly, tuning, capo = 0 }) => {
   const isActive  = (s: number, f: number) => activeDots.some(d => d.string === s && d.fret === f);
@@ -46,7 +46,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
             x1={NUT_X + i * FRET_SP} y1={TOP_Y}
             x2={NUT_X + i * FRET_SP} y2={TOP_Y + (STRING_COUNT - 1) * STR_SP}
             stroke="var(--gc-fretboard-fret)"
-            strokeWidth={1.2}
+            strokeWidth={2}
           />
         ))}
 
@@ -72,10 +72,12 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
           />
         ))}
 
-        {/* Fret number labels */}
-        {[3, 5, 7, 9, 12].map(f => (
+        {/* Fret number labels — all 1-12 */}
+        {Array.from({ length: FRET_COUNT }, (_, i) => i + 1).map(f => (
           <text key={f} x={NUT_X + (f - 0.5) * FRET_SP} y={SVG_H - 3}
-            textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.6)">{f}</text>
+            textAnchor="middle" fontSize={8}
+            fontWeight={[3,5,7,9,12].includes(f) ? '700' : '400'}
+            fill={[3,5,7,9,12].includes(f) ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.38)'}>{f}</text>
         ))}
 
         {/* String labels (open note) + mute × */}
@@ -112,15 +114,12 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
                 style={{ cursor: readonly ? 'default' : 'pointer' }}>
                 <rect x={cx - DOT_R - 3} y={cy - DOT_R - 3}
                   width={(DOT_R + 3) * 2} height={(DOT_R + 3) * 2} fill="transparent" />
-                {active ? (
+                {active && (
                   <>
                     <circle cx={cx} cy={cy} r={DOT_R} fill={T.primary} stroke="#fff" strokeWidth={1.9} />
                     <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9}
                       fill="#fff" fontWeight="700">{fretToNote(s, f, tuning, capo)}</text>
                   </>
-                ) : !readonly && (
-                  <circle cx={cx} cy={cy} r={DOT_R - 5}
-                    fill="transparent" stroke="rgba(255,255,255,0.35)" strokeWidth={1.25} />
                 )}
               </g>
             );

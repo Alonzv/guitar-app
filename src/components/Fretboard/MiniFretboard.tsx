@@ -50,8 +50,8 @@ export const MiniFretboard: React.FC<Props> = ({
     f === 0 ? LEFT - fretSp * 0.5 : LEFT + (f - displayMin - 0.5) * fretSp;
   const strY = (s: number) => topY + (STRING_COUNT - 1 - s) * strSp;
 
-  // String thickness: high-e thin → low-E thick, ×1.25
-  const strW = (s: number) => 1.5 + s * 0.19;
+  // String thickness: high-e thin → low-E thick
+  const strW = (s: number) => 1.9 + s * 0.25;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
@@ -67,7 +67,7 @@ export const MiniFretboard: React.FC<Props> = ({
           x1={LEFT + i * fretSp} y1={topY}
           x2={LEFT + i * fretSp} y2={botY}
           stroke="var(--gc-fretboard-fret)"
-          strokeWidth={1}
+          strokeWidth={1.5}
         />
       ))}
 

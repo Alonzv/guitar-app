@@ -23,8 +23,8 @@ const NUT_W   = 7;
 const fretX = (f: number) => f === 0 ? NUT_X - FRET_SP * 0.5 : NUT_X + (f - 0.5) * FRET_SP;
 const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 
-// String thickness: high-e thin → low-E thick, ×1.25 vs old values
-const strW = (s: number) => 1.5 + s * 0.25;
+// String thickness: high-e thin → low-E thick
+const strW = (s: number) => 2.0 + s * 0.40;
 
 export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
   <div className={compact ? 'gc-fretboard-compact' : 'gc-fretboard-wrap'}>
@@ -41,7 +41,7 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
           x1={NUT_X + i * FRET_SP} y1={TOP_Y}
           x2={NUT_X + i * FRET_SP} y2={TOP_Y + (STRING_COUNT - 1) * STR_SP}
           stroke="var(--gc-fretboard-fret)"
-          strokeWidth={1.2}
+          strokeWidth={2}
         />
       ))}
 
