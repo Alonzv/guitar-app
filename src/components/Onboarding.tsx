@@ -57,7 +57,7 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
           <button
             onClick={() => setSlide1Added(true)}
             style={{
-              width: '100%', padding: '10px 0', borderRadius: 10, border: 'none',
+              width: '100%', padding: '10px 0', borderRadius: 0, border: 'none',
               background: slide1Added ? T.secondary : T.primary,
               color: T.white, fontWeight: 700, fontSize: 14, cursor: 'pointer',
               transition: 'background 0.3s',
@@ -99,13 +99,13 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       padding: 20,
     }}>
       <div style={{
-        background: T.bgCard, borderRadius: 22, maxWidth: 390, width: '100%',
+        background: T.bgCard, borderRadius: 0, maxWidth: 390, width: '100%',
         padding: '28px 24px 24px', border: `1px solid ${T.border}`,
         boxShadow: '0 24px 64px rgba(46,74,90,0.25)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
       }}>
         {slide === 0 && (
-          <img src="/favicon.png" alt="ScaleUp" style={{ width: 56, height: 56, borderRadius: 14 }} />
+          <img src="/favicon.png" alt="ScaleUp" style={{ width: 56, height: 56, borderRadius: 0 }} />
         )}
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: T.text, textAlign: 'center', letterSpacing: '-0.3px' }}>
           {title}
@@ -117,7 +117,7 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         <div style={{ display: 'flex', gap: 6 }}>
           {slides.map((_, i) => (
             <div key={i} onClick={() => setSlide(i)} style={{
-              height: 8, borderRadius: 4, cursor: 'pointer', transition: 'all 0.2s',
+              height: 8, borderRadius: 0, cursor: 'pointer', transition: 'all 0.2s',
               width: i === slide ? 22 : 8,
               background: i === slide ? T.primary : T.border,
             }} />
@@ -127,14 +127,14 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         <div style={{ display: 'flex', gap: 8, width: '100%' }}>
           {!isLast && (
             <button onClick={onDone} style={{
-              flex: 1, padding: '12px 0', borderRadius: 10, border: `1px solid ${T.border}`,
+              flex: 1, padding: '12px 0', borderRadius: 0, border: `1px solid ${T.border}`,
               background: T.bgInput, color: T.textMuted, fontWeight: 600, fontSize: 14, cursor: 'pointer',
             }}>Skip</button>
           )}
           <button
             onClick={isLast ? onDone : () => setSlide(s => s + 1)}
             style={{
-              flex: 2, padding: '12px 0', borderRadius: 10, border: 'none',
+              flex: 2, padding: '12px 0', borderRadius: 0, border: 'none',
               background: T.primary, color: T.white, fontWeight: 800, fontSize: 15, cursor: 'pointer',
             }}
           >

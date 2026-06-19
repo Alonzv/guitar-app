@@ -50,7 +50,7 @@ export const ChordsTab: React.FC<Props> = ({
             cursor: 'pointer', fontSize: id === 'target' ? 11 : 13,
             background: sub === id ? T.secondary : T.bgInput,
             color: sub === id ? T.white : T.textMuted,
-            borderRight: '3px solid var(--gc-bar-color)',
+            borderLeft: '3px solid var(--gc-bar-color)',
             transition: 'background 0.1s',
           }}>
             <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span></span>

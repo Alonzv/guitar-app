@@ -239,7 +239,7 @@ export default function App() {
             <img
               src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
               alt="ScaleUp"
-              style={{ width: 55, height: 55, borderRadius: 14, display: 'block', objectFit: 'cover' }}
+              style={{ width: 55, height: 55, borderRadius: 0, display: 'block', objectFit: 'cover' }}
             />
           </div>
 
@@ -258,7 +258,7 @@ export default function App() {
                     fontWeight: active ? 700 : 500,
                     fontSize: 14, cursor: 'pointer', textAlign: 'left',
                     transition: 'background 0.15s, color 0.15s',
-                    borderRight: active ? '3px solid var(--gc-bar-color)' : 'none',
+                    borderLeft: active ? '3px solid var(--gc-bar-color)' : 'none',
                   }}
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bgCard; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
@@ -272,20 +272,20 @@ export default function App() {
           <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
             <button
               onClick={() => setDarkMode(d => !d)}
-              style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${darkMode ? '#2A4CC8' : '#1235FC'}`, background: darkMode ? '#242220' : '#1235FC', fontSize: 15, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
+              style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${darkMode ? '#2A4CC8' : '#1235FC'}`, background: darkMode ? '#242220' : '#1235FC', fontSize: 15, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >{darkMode ? <IconSun size={15} /> : <IconMoon size={15} />}</button>
             <button
               onClick={() => setShowOnboarding(true)}
-              style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
+              style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: '30px', padding: 0 }}
               title="Help"
             >?</button>
             {sidebarPinned ? (
               <button onClick={() => setSidebarPinned(false)} title="Hide sidebar"
-                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0, lineHeight: '30px' }}>‹</button>
+                style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0, lineHeight: '30px' }}>‹</button>
             ) : (
               <button onClick={() => { setSidebarPinned(true); setSidebarHovered(false); }} title="Pin sidebar"
-                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0, lineHeight: '30px' }}>›</button>
+                style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 17, cursor: 'pointer', padding: 0, lineHeight: '30px' }}>›</button>
             )}
           </div>
         </aside>
@@ -301,7 +301,7 @@ export default function App() {
             <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 0, background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderRight: '3px solid var(--gc-bar-color)' }}>Load</button>
+                <button onClick={handleLoadShared} style={{ padding: '4px 12px', borderRadius: 0, background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>Load</button>
                 <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '4px 10px', borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
               </div>
             </div>
@@ -325,7 +325,7 @@ export default function App() {
         <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 0, background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderRight: '3px solid var(--gc-bar-color)' }}>Load</button>
+            <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 0, background: T.secondary, color: T.white, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>Load</button>
             <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '5px 10px', borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
           </div>
         </div>
@@ -337,8 +337,8 @@ export default function App() {
             <span style={{ color: darkMode ? '#D4A820' : '#1235FC' }}>Scale</span><span style={{ color: darkMode ? '#E02020' : '#CC1C1C' }}>Up</span>
           </span>
           <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
-            <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${darkMode ? '#2A4CC8' : '#1235FC'}`, background: darkMode ? '#242220' : '#1235FC', color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0, display:'flex', alignItems:'center', justifyContent:'center' }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <IconSun size={13} /> : <IconMoon size={13} />}</button>
-            <button onClick={() => setShowOnboarding(true)} style={{ width: 26, height: 26, borderRadius: '50%', border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title="Help">?</button>
+            <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: 0, border: `1px solid ${darkMode ? '#2A4CC8' : '#1235FC'}`, background: darkMode ? '#242220' : '#1235FC', color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0, display:'flex', alignItems:'center', justifyContent:'center' }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <IconSun size={13} /> : <IconMoon size={13} />}</button>
+            <button onClick={() => setShowOnboarding(true)} style={{ width: 26, height: 26, borderRadius: 0, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title="Help">?</button>
           </div>
         </div>
         <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-tab-title)', fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.2px' }}>
@@ -348,7 +348,7 @@ export default function App() {
           {TABS.map(tab => {
             const active = activeTab === tab.id;
             return (
-              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 0, background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, borderRight: '4px solid var(--gc-bar-color)', transition: 'background 0.1s' }}>
+              <button key={tab.id} className="gc-tab" onClick={() => setActiveTab(tab.id)} style={{ borderRadius: 0, background: active ? T.primary : T.bgCard, color: active ? T.white : T.textMuted, fontWeight: 700, borderLeft: '4px solid var(--gc-bar-color)', transition: 'background 0.1s' }}>
                 <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span className="gc-tab-label">{tab.label}</span></span>
               </button>
             );

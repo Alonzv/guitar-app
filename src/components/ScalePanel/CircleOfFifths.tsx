@@ -299,9 +299,9 @@ export const CircleOfFifths: React.FC<Props> = () => {
         {(['tonic', 'subdominant', 'dominant'] as HarmonicFunc[]).map(f => (
           <div key={f} style={{
             display: 'flex', alignItems: 'center', gap: 5,
-            background: T.bgCard, borderRadius: 7, padding: '4px 10px', border: `1px solid ${T.border}`,
+            background: T.bgCard, borderRadius: 0, padding: '4px 10px', border: `1px solid ${T.border}`,
           }}>
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: FC[f].fill }} />
+            <div style={{ width: 10, height: 10, borderRadius: 0, background: FC[f].fill }} />
             <span style={{ fontSize: 11, fontWeight: 600, color: FC[f].fill, textTransform: 'capitalize' }}>{f}</span>
           </div>
         ))}

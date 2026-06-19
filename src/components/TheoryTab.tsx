@@ -61,7 +61,7 @@ export function TheoryTab({
                 fontSize: 12,
                 background: active ? T.secondary : T.bgInput,
                 color: active ? '#fff' : T.textMuted,
-                borderRight: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
                 transition: 'background 0.1s',
               }}
             >

@@ -423,7 +423,7 @@ export const TabBuilder: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 4,
-            background: T.bgInput, borderRadius: 8, padding: '4px 8px',
+            background: T.bgInput, borderRadius: 0, padding: '4px 8px',
           }}>
             <button onClick={() => setZoom(z => Math.max(60, z - 10))}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 16, lineHeight: 1, padding: '0 2px' }}>
@@ -440,7 +440,7 @@ export const TabBuilder: React.FC = () => {
             style={{
               background: T.primary, color: '#fff', border: 'none',
               borderRadius: 0, padding: '7px 13px', cursor: 'pointer',
-              fontSize: 12, fontWeight: 700, borderRight: '3px solid var(--gc-bar-color)',
+              fontSize: 12, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)',
             }}>
             Analyze
           </button>
@@ -448,7 +448,7 @@ export const TabBuilder: React.FC = () => {
             style={{
               background: T.secondary, color: '#fff', border: 'none',
               borderRadius: 0, padding: '7px 13px', cursor: busy ? 'wait' : 'pointer',
-              fontSize: 12, fontWeight: 700, borderRight: '3px solid var(--gc-bar-color)',
+              fontSize: 12, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)',
             }}>
             {busy ? '…' : 'PDF'}
           </button>
@@ -461,7 +461,7 @@ export const TabBuilder: React.FC = () => {
               border: `1px solid ${T.border}`,
               borderRadius: 0, padding: '7px 11px',
               cursor: 'pointer', fontSize: 12, fontWeight: 700,
-              borderRight: '3px solid var(--gc-bar-color)',
+              borderLeft: '3px solid var(--gc-bar-color)',
             }}>
             Clear
           </button>
@@ -477,7 +477,7 @@ export const TabBuilder: React.FC = () => {
               cursor: canUndo ? 'pointer' : 'default',
               fontSize: 16, lineHeight: 1,
               opacity: canUndo ? 1 : 0.35,
-              transition: 'opacity 0.2s', borderRight: '3px solid var(--gc-bar-color)',
+              transition: 'opacity 0.2s', borderLeft: '3px solid var(--gc-bar-color)',
             }}>
             ↩
           </button>
@@ -488,7 +488,7 @@ export const TabBuilder: React.FC = () => {
       <div style={{
         display: 'flex',
         marginBottom: 18,
-        borderRadius: 10,
+        borderRadius: 0,
         overflow: 'hidden',
         border: `1px solid ${T.border}`,
         background: T.bgInput,
@@ -583,7 +583,7 @@ export const TabBuilder: React.FC = () => {
                             <div style={{
                               position: 'absolute',
                               width: circleD, height: circleD,
-                              borderRadius: '50%',
+                              borderRadius: 0,
                               background: 'rgba(255, 220, 80, 0.32)',
                               top: '50%', left: '50%',
                               transform: 'translate(-50%, -50%)',
@@ -596,7 +596,7 @@ export const TabBuilder: React.FC = () => {
                             <div style={{
                               position: 'absolute',
                               width: circleD, height: circleD,
-                              borderRadius: '50%',
+                              borderRadius: 0,
                               background: 'rgba(255, 210, 0, 0.60)',
                               top: '50%', left: '50%',
                               transform: 'translate(-50%, -50%)',
@@ -692,7 +692,7 @@ export const TabBuilder: React.FC = () => {
             style={{
               background: T.bgInput, border: `1px dashed ${T.border}`,
               borderRadius: 0, padding: '6px 22px', cursor: 'pointer',
-              color: T.textMuted, fontSize: 12, borderRight: '3px solid var(--gc-bar-color)',
+              color: T.textMuted, fontSize: 12, borderLeft: '3px solid var(--gc-bar-color)',
             }}>
             + Add line
           </button>
@@ -709,7 +709,7 @@ export const TabBuilder: React.FC = () => {
             zIndex: 200, padding: 16,
           }}>
           <div dir={t.dir} style={{
-            background: T.bgCard, borderRadius: 14, border: `1px solid ${T.border}`,
+            background: T.bgCard, borderRadius: 0, border: `1px solid ${T.border}`,
             width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto',
             padding: '26px 26px 22px', position: 'relative',
             display: 'flex', flexDirection: 'column', gap: 16,
@@ -720,14 +720,14 @@ export const TabBuilder: React.FC = () => {
               position: 'absolute', top: 12, insetInlineEnd: 12,
               background: T.bgInput, border: 'none', borderRadius: 0,
               cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px', borderRight: '3px solid var(--gc-bar-color)',
+              padding: '3px 7px', borderLeft: '3px solid var(--gc-bar-color)',
             }}>✕</button>
 
             {/* Heading + language toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingInlineEnd: 28 }}>
               <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{t.heading}</span>
               <div style={{
-                display: 'flex', borderRadius: 7, overflow: 'hidden',
+                display: 'flex', borderRadius: 0, overflow: 'hidden',
                 border: `1px solid ${T.border}`, marginInlineStart: 'auto',
               }}>
                 {(['he', 'en'] as Lang[]).map(lg => (
@@ -746,7 +746,7 @@ export const TabBuilder: React.FC = () => {
               <button
                 onClick={() => setScaleModal(true)}
                 style={{
-                  background: T.bgInput, borderRadius: 10, padding: '15px 18px',
+                  background: T.bgInput, borderRadius: 0, padding: '15px 18px',
                   borderInlineStart: `3px solid ${T.primary}`, border: 'none',
                   cursor: 'pointer', textAlign: 'inherit', width: '100%',
                 }}>
@@ -785,7 +785,7 @@ export const TabBuilder: React.FC = () => {
                   <span style={{ fontSize: 12, color: T.textDim }}>· {t.tapHint}</span>
                 </div>
                 {analyzeProgs.map((p, i) => (
-                  <div key={i} style={{ background: T.bgInput, borderRadius: 10, padding: '15px 18px' }}>
+                  <div key={i} style={{ background: T.bgInput, borderRadius: 0, padding: '15px 18px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>
                         {lang === 'he' ? p.name_he : p.name_en}
@@ -795,7 +795,7 @@ export const TabBuilder: React.FC = () => {
                           background: T.secondary, color: '#fff', border: 'none',
                           borderRadius: 0, padding: '5px 12px', cursor: 'pointer',
                           fontSize: 13, fontWeight: 700, flexShrink: 0,
-                          borderRight: '3px solid var(--gc-bar-color)',
+                          borderLeft: '3px solid var(--gc-bar-color)',
                         }}>▶ {t.play}</button>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '10px 0' }}>
@@ -804,7 +804,7 @@ export const TabBuilder: React.FC = () => {
                           background: T.primaryBg, color: T.text, borderRadius: 0,
                           padding: '6px 13px', fontSize: 16, fontWeight: 700,
                           fontFamily: 'monospace', border: 'none', cursor: 'pointer',
-                          borderRight: '3px solid var(--gc-bar-color)',
+                          borderLeft: '3px solid var(--gc-bar-color)',
                         }}>{c}</button>
                       ))}
                     </div>
@@ -822,7 +822,7 @@ export const TabBuilder: React.FC = () => {
                 background: 'transparent', border: `1px solid ${T.border}`,
                 borderRadius: 0, padding: '8px 0', cursor: 'pointer',
                 color: T.textMuted, fontSize: 14, fontWeight: 700,
-                borderRight: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>↻ {t.reanalyze}</button>
             )}
           </div>
@@ -841,7 +841,7 @@ export const TabBuilder: React.FC = () => {
               zIndex: 210, padding: 16,
             }}>
             <div style={{
-              background: T.bgCard, borderRadius: 14, border: `1px solid ${T.border}`,
+              background: T.bgCard, borderRadius: 0, border: `1px solid ${T.border}`,
               width: '100%', maxWidth: 300, padding: '20px 20px 16px',
               display: 'flex', flexDirection: 'column', gap: 12, position: 'relative',
             }}>
@@ -849,7 +849,7 @@ export const TabBuilder: React.FC = () => {
                 position: 'absolute', top: 12, right: 12, background: T.bgInput,
                 border: 'none', borderRadius: 0, cursor: 'pointer', color: T.textMuted,
                 fontSize: 16, lineHeight: 1, padding: '3px 7px',
-                borderRight: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>✕</button>
               <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: T.text }}>
                 {chordModal}
@@ -864,7 +864,7 @@ export const TabBuilder: React.FC = () => {
                   style={{
                     padding: '10px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
                     fontWeight: 700, fontSize: 14, background: T.secondary, color: '#fff',
-                    borderRight: '4px solid var(--gc-bar-color)',
+                    borderLeft: '4px solid var(--gc-bar-color)',
                   }}>▶ {t.play}</button>
               )}
             </div>
@@ -882,7 +882,7 @@ export const TabBuilder: React.FC = () => {
             zIndex: 210, padding: 16,
           }}>
           <div style={{
-            background: T.bgCard, borderRadius: 14, border: `1px solid ${T.border}`,
+            background: T.bgCard, borderRadius: 0, border: `1px solid ${T.border}`,
             width: '100%', maxWidth: 340, maxHeight: '90vh', overflowY: 'auto',
             padding: '20px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12,
             position: 'relative',
@@ -891,7 +891,7 @@ export const TabBuilder: React.FC = () => {
               position: 'absolute', top: 12, right: 12, background: T.bgInput,
               border: 'none', borderRadius: 0, cursor: 'pointer', color: T.textMuted,
               fontSize: 16, lineHeight: 1, padding: '3px 7px',
-              borderRight: '3px solid var(--gc-bar-color)',
+              borderLeft: '3px solid var(--gc-bar-color)',
             }}>✕</button>
             <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, color: T.text }}>
               {analyzeScale.name}

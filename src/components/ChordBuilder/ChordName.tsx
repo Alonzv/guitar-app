@@ -41,7 +41,7 @@ export const ChordName: React.FC<Props> = ({ positions, tuning, capo = 0 }) => {
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
           {alts.slice(0, 4).map(c => (
             <span key={c.name} style={{
-              padding: '3px 10px', borderRadius: 6, fontSize: 12,
+              padding: '3px 10px', borderRadius: 0, fontSize: 12,
               background: T.bgInput, color: T.secondary,
               border: `1px solid ${T.secondaryFaint}`,
             }}>

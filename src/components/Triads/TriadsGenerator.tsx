@@ -151,7 +151,7 @@ function pill(active: boolean, onClick: () => void, label: string) {
       background: active ? T.text : T.bgInput,
       color:      active ? T.bgDeep : T.textMuted,
       border:     active ? 'none' : `1px solid ${T.border}`,
-      borderRight: '3px solid var(--gc-bar-color)',
+      borderLeft: '3px solid var(--gc-bar-color)',
     }}>{label}</button>
   );
 }
@@ -278,7 +278,7 @@ export function TriadsGenerator() {
                 border:      sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background:  sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color:       sel ? T.primary   : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
+                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
               }}>{n}</button>
             );
           })}
@@ -297,7 +297,7 @@ export function TriadsGenerator() {
                 border:      sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                 background:  sel ? T.secondaryBg : T.bgInput,
                 color:       sel ? T.secondary   : T.textMuted,
-                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
+                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
               }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
                 <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
@@ -315,16 +315,16 @@ export function TriadsGenerator() {
             <button
               onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
               title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
-              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderRight: '3px solid var(--gc-bar-color)' }}
+              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderLeft: '3px solid var(--gc-bar-color)' }}
             >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
-            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderRight: '3px solid var(--gc-bar-color)' }}>▶</button>
+            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>▶</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {notes.map((n, i) => {
             const color = DEGREE_COLORS[DEGREES[i]];
             return (
-              <div key={i} style={{ flex: 1, textAlign: 'center', padding: '6px', borderRadius: 8, background: T.bgInput, border: `1px solid ${color}44` }}>
+              <div key={i} style={{ flex: 1, textAlign: 'center', padding: '6px', borderRadius: 0, background: T.bgInput, border: `1px solid ${color}44` }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color, lineHeight: 1 }}>{def.intervalLabels[i]}</div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{n}</div>
               </div>
@@ -358,7 +358,7 @@ export function TriadsGenerator() {
                     <span style={{
                       fontSize: 10, fontWeight: 700, color: T.primary,
                       background: T.primaryBg, border: `1px solid ${T.primary}55`,
-                      padding: '1px 6px', borderRadius: 10,
+                      padding: '1px 6px', borderRadius: 0,
                     }}>{activeLabels.join(' · ')}</span>
                   )}
                 </div>
@@ -439,7 +439,7 @@ export function TriadsGenerator() {
                 <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   {c.setLabel}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 0 }}>
                   {c.fretBadge}
                 </span>
               </div>
@@ -451,7 +451,7 @@ export function TriadsGenerator() {
                     fontSize: 8, fontWeight: 700,
                     color:      DEGREE_COLORS[p.degree],
                     background: `${DEGREE_COLORS[p.degree]}18`,
-                    padding: '1px 4px', borderRadius: 3,
+                    padding: '1px 4px', borderRadius: 0,
                   }}>{fretToNote(p.string, p.fret)}</span>
                 ))}
               </div>
@@ -479,7 +479,7 @@ export function TriadsGenerator() {
                       <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {INVERSION_LABELS[c.inv]}
                       </span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 0 }}>
                         {c.fretBadge}
                       </span>
                     </div>
@@ -490,7 +490,7 @@ export function TriadsGenerator() {
                           fontSize: 8, fontWeight: 700,
                           color:      DEGREE_COLORS[p.degree],
                           background: `${DEGREE_COLORS[p.degree]}18`,
-                          padding: '1px 4px', borderRadius: 3,
+                          padding: '1px 4px', borderRadius: 0,
                         }}>{fretToNote(p.string, p.fret)}</span>
                       ))}
                     </div>
@@ -506,7 +506,7 @@ export function TriadsGenerator() {
       <div style={{ display: 'flex', gap: 14, fontSize: 11, color: T.textMuted, flexWrap: 'wrap', paddingBottom: 4 }}>
         {DEGREES.map((deg, i) => (
           <span key={deg} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 9, height: 9, borderRadius: '50%', background: DEGREE_COLORS[deg], display: 'inline-block' }} />
+            <span style={{ width: 9, height: 9, borderRadius: 0, background: DEGREE_COLORS[deg], display: 'inline-block' }} />
             {def.intervalLabels[i]} ({notes[i]})
           </span>
         ))}
@@ -526,7 +526,7 @@ export function TriadsGenerator() {
           <div onClick={e => e.stopPropagation()} style={{
             background: T.bgCard,
             border:     `1px solid ${T.border}`,
-            borderRadius: 18,
+            borderRadius: 0,
             padding: '18px 18px 14px',
             width: '100%', maxWidth: 440,
             display: 'flex', flexDirection: 'column', gap: 14,
@@ -544,7 +544,7 @@ export function TriadsGenerator() {
                 </div>
               </div>
               <button onClick={() => setExpandedIdx(null)} style={{
-                width: 32, height: 32, borderRadius: '50%',
+                width: 32, height: 32, borderRadius: 0,
                 border: `1px solid ${T.border}`,
                 background: T.bgInput, color: T.textMuted,
                 fontSize: 18, cursor: 'pointer', flexShrink: 0,
@@ -553,7 +553,7 @@ export function TriadsGenerator() {
             </div>
 
             {/* Large fretboard */}
-            <div style={{ background: T.bgDeep, borderRadius: 12, padding: '16px 12px 12px' }}>
+            <div style={{ background: T.bgDeep, borderRadius: 0, padding: '16px 12px 12px' }}>
               <MiniFretboard
                 voicing={expandedCard.fretPositions}
                 dotColors={expandedCard.colors}
@@ -570,7 +570,7 @@ export function TriadsGenerator() {
                   color:      DEGREE_COLORS[p.degree],
                   background: `${DEGREE_COLORS[p.degree]}22`,
                   border:     `1px solid ${DEGREE_COLORS[p.degree]}55`,
-                  padding: '4px 12px', borderRadius: 8,
+                  padding: '4px 12px', borderRadius: 0,
                 }}>{fretToNote(p.string, p.fret)}</span>
               ))}
             </div>
@@ -584,7 +584,7 @@ export function TriadsGenerator() {
                   flex: 1, padding: '8px 0', borderRadius: 0, cursor: safeIdx === 0 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === 0 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 700, borderRight: '3px solid var(--gc-bar-color)',
+                  fontSize: 18, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >‹</button>
 
@@ -600,7 +600,7 @@ export function TriadsGenerator() {
                   cursor: safeIdx === allVisibleCards.length - 1 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === allVisibleCards.length - 1 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 700, borderRight: '3px solid var(--gc-bar-color)',
+                  fontSize: 18, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >›</button>
             </div>
@@ -609,7 +609,7 @@ export function TriadsGenerator() {
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', fontSize: 11, color: T.textMuted }}>
               {DEGREES.map((deg, i) => (
                 <span key={deg} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: DEGREE_COLORS[deg], display: 'inline-block' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: 0, background: DEGREE_COLORS[deg], display: 'inline-block' }} />
                   {def.intervalLabels[i]} ({notes[i]})
                 </span>
               ))}

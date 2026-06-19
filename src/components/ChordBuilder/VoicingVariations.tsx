@@ -46,7 +46,7 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
               onClick={() => onSelect(voicing, i)}
               style={{
                 cursor: 'pointer',
-                borderRadius: 10,
+                borderRadius: 0,
                 border: `2px solid ${isSelected ? T.secondary : T.border}`,
                 background: isSelected ? T.secondaryBg : T.bgInput,
                 padding: '6px 4px 2px',

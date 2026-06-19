@@ -122,7 +122,7 @@ export function ScaleExplorer() {
                 border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: selected ? T.primary : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
+                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
               }}>
                 {n}
               </button>
@@ -152,7 +152,7 @@ export function ScaleExplorer() {
                       border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
                       background: sel ? T.secondaryBg : T.bgInput,
                       color: sel ? T.secondary : T.textMuted,
-                      borderRight: '3px solid var(--gc-bar-color)',
+                      borderLeft: '3px solid var(--gc-bar-color)',
                     }}>
                       {s.label}
                     </button>
@@ -183,7 +183,7 @@ export function ScaleExplorer() {
                   style={{
                     padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`,
                     background: T.secondaryBg, color: T.secondary, fontSize: 12,
-                    fontWeight: 700, cursor: 'pointer', borderRight: '3px solid var(--gc-bar-color)',
+                    fontWeight: 700, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)',
                   }}
                 >▶ Play</button>
               </div>
@@ -196,7 +196,7 @@ export function ScaleExplorer() {
                 return (
                   <div key={i} style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    padding: '5px 8px', borderRadius: 10, gap: 2, minWidth: 44,
+                    padding: '5px 8px', borderRadius: 0, gap: 2, minWidth: 44,
                     background: isR ? T.primaryBg : T.bgInput,
                     border: `1px solid ${isR ? T.primary : T.border}`,
                   }}>
@@ -217,7 +217,7 @@ export function ScaleExplorer() {
                 fontSize: 13, fontWeight: viewMode === v ? 700 : 400,
                 background: viewMode === v ? T.primary : T.bgCard,
                 color: viewMode === v ? T.text : T.textMuted,
-                borderRight: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>
                 {v === 'fretboard' ? 'Fretboard' : 'Tab'}
               </button>
@@ -232,7 +232,7 @@ export function ScaleExplorer() {
               background: pos === null ? T.text : T.bgInput,
               color: pos === null ? T.bgDeep : T.textMuted,
               fontWeight: pos === null ? 700 : 400,
-              borderRight: '3px solid var(--gc-bar-color)',
+              borderLeft: '3px solid var(--gc-bar-color)',
             }}>
               Full Neck
             </button>
@@ -241,7 +241,7 @@ export function ScaleExplorer() {
                 title={`Frets ${POSITION_WINDOWS[i][0]}–${POSITION_WINDOWS[i][1]}`}
                 style={{
                   width: 'var(--gc-pos-btn)', height: 'var(--gc-pos-btn)',
-                  borderRadius: '50%', cursor: 'pointer',
+                  borderRadius: 0, cursor: 'pointer',
                   fontSize: 12, fontWeight: 700,
                   background: POS_COLORS[i],
                   color: '#fff',
@@ -273,11 +273,11 @@ export function ScaleExplorer() {
           {/* ── Legend ── */}
           <div style={{ display: 'flex', gap: 16, fontSize: 11, color: T.textMuted }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: T.primary, display: 'inline-block' }} />
+              <span style={{ width: 10, height: 10, borderRadius: 0, background: T.primary, display: 'inline-block' }} />
               Root ({root})
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: T.secondary, display: 'inline-block' }} />
+              <span style={{ width: 10, height: 10, borderRadius: 0, background: T.secondary, display: 'inline-block' }} />
               Scale tones
             </span>
           </div>

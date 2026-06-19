@@ -23,7 +23,7 @@ export class ErrorBoundary extends React.Component<
     return (
       <div style={{
         padding: 32, textAlign: 'center',
-        border: `1px dashed ${T.border}`, borderRadius: 14, margin: 8,
+        border: `1px dashed ${T.border}`, borderRadius: 0, margin: 8,
       }}>
         <div style={{ marginBottom: 12, color: T.textMuted }}><IconWarn size={32} /></div>
         <p style={{ fontWeight: 700, color: T.text, marginBottom: 6, margin: '0 0 6px' }}>
@@ -35,7 +35,7 @@ export class ErrorBoundary extends React.Component<
         <button
           onClick={() => this.setState({ hasError: false, error: null })}
           style={{
-            padding: '8px 20px', borderRadius: 8, border: 'none',
+            padding: '8px 20px', borderRadius: 0, border: 'none',
             background: T.primary, color: T.white, fontWeight: 700, cursor: 'pointer',
           }}
         >

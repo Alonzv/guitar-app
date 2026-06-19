@@ -48,7 +48,7 @@ const SELECT_STYLE: React.CSSProperties = {
   padding: '5px 26px 5px 10px',
   cursor: 'pointer',
   outline: 'none',
-  borderRight: '3px solid var(--gc-bar-color)',
+  borderLeft: '3px solid var(--gc-bar-color)',
 };
 
 export function ChordBuilderTab({
@@ -139,7 +139,7 @@ export function ChordBuilderTab({
               background: showVariations ? T.primaryBg : T.bgInput,
               color: showVariations ? T.primary : T.textMuted,
               transition: 'filter 0.15s',
-              borderRight: '3px solid var(--gc-bar-color)',
+              borderLeft: '3px solid var(--gc-bar-color)',
             }}
           >
             {showVariations ? 'Hide variations' : 'Show more variations'}

@@ -14,7 +14,7 @@ interface Props {
 }
 
 const BTN: React.CSSProperties = {
-  flex: 1, padding: '11px 8px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+  flex: 1, padding: '11px 8px', borderRadius: 0, fontSize: 13, fontWeight: 700,
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
   transition: 'background 0.15s, color 0.15s',
 };
@@ -148,7 +148,7 @@ export const AlphaTabViewer: React.FC<Props> = ({ tabData, notes, originalUrl, a
       <div
         ref={containerRef}
         style={{
-          borderRadius: 10, overflow: 'hidden', background: '#fff',
+          borderRadius: 0, overflow: 'hidden', background: '#fff',
           minHeight: rendered ? undefined : 80,
           opacity: rendered ? 1 : 0.4,
           transition: 'opacity 0.3s',

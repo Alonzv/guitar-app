@@ -39,7 +39,7 @@ function ClearBtn({ onClear }: { onClear: () => void }) {
         padding: '7px 14px', borderRadius: 0, cursor: 'pointer', fontWeight: 700,
         fontSize: 12, border: `1px solid ${T.border}`,
         background: T.bgInput, color: T.textMuted, flexShrink: 0,
-        borderRight: '3px solid var(--gc-bar-color)',
+        borderLeft: '3px solid var(--gc-bar-color)',
       }}
     >
       Clear
@@ -137,7 +137,7 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
 
   if (totalColumns === 0) {
     return (
-      <div style={{ background: TAB_BG, borderRadius: 8, padding: '20px', textAlign: 'center' }}>
+      <div style={{ background: TAB_BG, borderRadius: 0, padding: '20px', textAlign: 'center' }}>
         <p style={{ margin: 0, fontSize: 13, color: TAB_LBL }}>לא זוהו תווים בקטע השמע</p>
       </div>
     );
@@ -162,7 +162,7 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
 
   return (
     <div style={{
-      background: TAB_BG, borderRadius: 8, padding: '10px 8px',
+      background: TAB_BG, borderRadius: 0, padding: '10px 8px',
       display: 'flex', flexDirection: 'column', gap: 6,
     }}>
       {Array.from({ length: numRows }, (_, r) => {
@@ -585,7 +585,7 @@ export const AudioToTab: React.FC = () => {
         }}
       >
         <div style={{
-          width: 38, height: 38, borderRadius: '50%', background: T.coral, flexShrink: 0,
+          width: 38, height: 38, borderRadius: 0, background: T.coral, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="#fff" strokeWidth={2}>
@@ -615,7 +615,7 @@ export const AudioToTab: React.FC = () => {
           <button onClick={stopRecording} style={{
             padding: '12px 32px', borderRadius: 0, cursor: 'pointer',
             background: T.coral, color: '#fff', fontWeight: 700, fontSize: 14,
-            borderRight: '4px solid var(--gc-bar-color)',
+            borderLeft: '4px solid var(--gc-bar-color)',
           }}>
             עצור ועבד
           </button>
@@ -629,7 +629,7 @@ export const AudioToTab: React.FC = () => {
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={card({ padding: '22px 18px' })}>
         {waveform && waveform.length > 0 && (
-          <div style={{ marginBottom: 16, borderRadius: 10, overflow: 'hidden', padding: '4px 0' }}>
+          <div style={{ marginBottom: 16, borderRadius: 0, overflow: 'hidden', padding: '4px 0' }}>
             <Waveform data={waveform} height={64} />
           </div>
         )}
@@ -639,9 +639,9 @@ export const AudioToTab: React.FC = () => {
           </p>
           <span style={{ fontSize: 12, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{progress}%</span>
         </div>
-        <div style={{ background: T.bgInput, borderRadius: 10, height: 8, overflow: 'hidden' }}>
+        <div style={{ background: T.bgInput, borderRadius: 0, height: 8, overflow: 'hidden' }}>
           <div style={{
-            height: '100%', borderRadius: 10, background: T.primary,
+            height: '100%', borderRadius: 0, background: T.primary,
             width: `${progress}%`, transition: 'width 0.3s',
           }} />
         </div>
@@ -663,7 +663,7 @@ export const AudioToTab: React.FC = () => {
       <button onClick={reset} style={{
         padding: '12px 0', borderRadius: 0, cursor: 'pointer',
         background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
-        borderRight: '4px solid var(--gc-bar-color)',
+        borderLeft: '4px solid var(--gc-bar-color)',
       }}>
         נסה שוב
       </button>
@@ -694,7 +694,7 @@ export const AudioToTab: React.FC = () => {
 
       {/* Waveform */}
       {waveform && waveform.length > 0 && (
-        <div style={{ borderRadius: 12, overflow: 'hidden', padding: '4px 0' }}>
+        <div style={{ borderRadius: 0, overflow: 'hidden', padding: '4px 0' }}>
           <Waveform data={waveform} height={72} />
         </div>
       )}
@@ -707,7 +707,7 @@ export const AudioToTab: React.FC = () => {
             flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
             background: T.secondary, color: '#fff', fontWeight: 700, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            borderRight: '4px solid var(--gc-bar-color)',
+            borderLeft: '4px solid var(--gc-bar-color)',
           }}
         >
           <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
@@ -723,7 +723,7 @@ export const AudioToTab: React.FC = () => {
             flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
             background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            borderRight: '4px solid var(--gc-bar-color)',
+            borderLeft: '4px solid var(--gc-bar-color)',
           }}
         >
           <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
@@ -750,7 +750,7 @@ export const AudioToTab: React.FC = () => {
       {selNote && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-          padding: '9px 13px', background: T.bgInput, borderRadius: 8,
+          padding: '9px 13px', background: T.bgInput, borderRadius: 0,
           borderLeft: `3px solid ${T.primary}`,
         }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>

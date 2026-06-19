@@ -134,7 +134,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end', maxWidth: 160 }}>
               {scale.map((note, i) => (
                 <span key={i} style={{
-                  padding: '2px 6px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+                  padding: '2px 6px', borderRadius: 0, fontSize: 10, fontWeight: 600,
                   background: i === 0 ? T.primaryBg : T.bgInput,
                   color: i === 0 ? T.primary : T.textMuted,
                   border: i === 0 ? `1px solid ${T.primary}44` : `1px solid ${T.border}`,
@@ -150,7 +150,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
         {(['T', 'SD', 'D', '?'] as HarmonicFn[]).map(fn => (
           <div key={fn} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{
-              width: 10, height: 10, borderRadius: '50%',
+              width: 10, height: 10, borderRadius: 0,
               background: FN_COLORS[fn], display: 'inline-block', flexShrink: 0,
             }} />
             <span style={{ fontSize: 10, color: T.textMuted }}>{fn} — {FN_LABELS[fn]}</span>
@@ -190,7 +190,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
 
               {/* Function badge */}
               <div style={{
-                padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700,
+                padding: '4px 10px', borderRadius: 0, fontSize: 11, fontWeight: 700,
                 background: `${color}22`, color, border: `1px solid ${color}44`,
                 whiteSpace: 'nowrap',
               }}>
@@ -206,7 +206,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
         <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
           Harmonic Summary
         </div>
-        <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', height: 10 }}>
+        <div style={{ display: 'flex', gap: 0, borderRadius: 0, overflow: 'hidden', height: 10 }}>
           {analyses.map((a, i) => (
             <div key={i} style={{
               flex: 1, background: FN_COLORS[a.harmonicFn], opacity: 0.8,

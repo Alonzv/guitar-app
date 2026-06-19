@@ -36,7 +36,7 @@ export const card = (extra?: React.CSSProperties): React.CSSProperties => {
     borderRadius: 0,
     padding: explicitPad ?? 'var(--gc-card-pad)',
     border: `1px solid ${T.border}`,
-    borderRight: '4px solid var(--gc-bar-color)',
+    borderLeft: '4px solid var(--gc-bar-color)',
     ...rest,
   };
 };
@@ -51,7 +51,7 @@ export const btn = {
     fontSize: 15,
     background: disabled ? T.border : T.primary,
     color: disabled ? T.textDim : T.white,
-    borderRight: disabled ? 'none' : '4px solid var(--gc-bar-color)',
+    borderLeft: disabled ? 'none' : '4px solid var(--gc-bar-color)',
     transition: 'background 0.1s',
   }),
   secondary: (): React.CSSProperties => ({
@@ -63,7 +63,7 @@ export const btn = {
     fontSize: 15,
     background: T.bgInput,
     color: T.textMuted,
-    borderRight: '4px solid var(--gc-bar-color)',
+    borderLeft: '4px solid var(--gc-bar-color)',
   }),
   pill: (active: boolean): React.CSSProperties => ({
     padding: '5px 14px',
@@ -74,7 +74,7 @@ export const btn = {
     fontWeight: active ? 700 : 500,
     background: active ? T.primary : T.bgInput,
     color: active ? T.white : T.textMuted,
-    borderRight: '3px solid var(--gc-bar-color)',
+    borderLeft: '3px solid var(--gc-bar-color)',
     transition: 'background 0.1s',
   }),
 };

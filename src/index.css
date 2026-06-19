@@ -274,16 +274,16 @@ body.dark {
 
 /* Hover — "pressed into shadow" shift */
 .gc-tab:hover {
-  transform: translate(2px, 0);
-  border-right-color: transparent !important;
+  transform: translate(-2px, 0);
+  border-left-color: transparent !important;
   filter: brightness(1.12);
 }
 
 button:not(.gc-tab):not(:disabled):hover {
-  transform: translate(2px, 0);
-  border-right-color: transparent !important;
+  transform: translate(-2px, 0);
+  border-left-color: transparent !important;
   filter: brightness(1.08);
-  transition: transform 0.08s, border-right-color 0.08s, filter 0.08s;
+  transition: transform 0.08s, border-left-color 0.08s, filter 0.08s;
 }
 
 /* Voicing tiles are <div> elements — give them hover feedback */
@@ -465,6 +465,6 @@ select {
   border-radius: 0;
   padding: 1px 8px 2px;
   transform: rotate(-0.6deg);
-  border-right: 3px solid var(--gc-bar-color);
+  border-left: 3px solid var(--gc-bar-color);
   line-height: 1;
 }

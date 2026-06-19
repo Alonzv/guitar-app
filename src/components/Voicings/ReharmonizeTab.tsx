@@ -40,7 +40,7 @@ function FretBadge({ voicing, color }: { voicing: FretPosition[]; color: string 
   return (
     <span style={{
       display: 'inline-block',
-      padding: '2px 7px', borderRadius: 10,
+      padding: '2px 7px', borderRadius: 0,
       background: color + '22',
       border: `1px solid ${color}55`,
       fontSize: 10, fontWeight: 700, color,
@@ -85,7 +85,7 @@ function ReharmModal({
     color: disabled ? T.textDim : T.text,
     cursor: disabled ? 'default' : 'pointer',
     fontSize: 18, fontWeight: 700, opacity: disabled ? 0.35 : 1,
-    transition: 'opacity 0.15s', borderRight: '3px solid var(--gc-bar-color)',
+    transition: 'opacity 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
   });
 
   return (
@@ -101,7 +101,7 @@ function ReharmModal({
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: T.bgCard, borderRadius: 18,
+          background: T.bgCard, borderRadius: 0,
           border: `1px solid ${T.border}`,
           padding: 24, maxWidth: 340, width: '100%',
           display: 'flex', flexDirection: 'column', gap: 14,
@@ -115,7 +115,7 @@ function ReharmModal({
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 22, cursor: 'pointer', lineHeight: 1, padding: '2px 6px' }}>×</button>
           </div>
         </div>
-        <div style={{ background: T.bgInput, borderRadius: 12, border: `1px solid ${color}44`, padding: '8px 8px 4px' }}>
+        <div style={{ background: T.bgInput, borderRadius: 0, border: `1px solid ${color}44`, padding: '8px 8px 4px' }}>
           <MiniFretboard voicing={voicings[idx]} dotColor={color} tuning={tuning} showStringLabels showFretNumbers hideFretLabel />
         </div>
         <FretBadge voicing={voicings[idx]} color={color} />
@@ -310,7 +310,7 @@ export function ReharmonizeTab({
                   cursor: 'pointer', fontSize: 11, fontWeight: 600,
                   background: showNashville ? T.secondary : T.bgInput,
                   color: showNashville ? '#fff' : T.textMuted,
-                  transition: 'background 0.15s', borderRight: '3px solid var(--gc-bar-color)',
+                  transition: 'background 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >
                 Nashville
@@ -320,7 +320,7 @@ export function ReharmonizeTab({
               {chords.map((c, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <span style={{
-                    padding: '5px 12px', borderRadius: 20,
+                    padding: '5px 12px', borderRadius: 0,
                     background: T.bgDeep, border: `1px solid ${T.border}`,
                     fontSize: 13, fontWeight: 700, color: T.text,
                   }}>
@@ -355,7 +355,7 @@ export function ReharmonizeTab({
                       background: genre === g.id ? T.primary : T.bgInput,
                       color: genre === g.id ? '#fff' : T.textMuted,
                       transition: 'background 0.15s',
-                      whiteSpace: 'nowrap', borderRight: '3px solid var(--gc-bar-color)',
+                      whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                     }}
                   >
                     {g.label}
@@ -369,7 +369,7 @@ export function ReharmonizeTab({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <p style={LABEL_STYLE}>Tension</p>
                 <span style={{
-                  padding: '2px 8px', borderRadius: 10,
+                  padding: '2px 8px', borderRadius: 0,
                   background: T.primarySoft, color: T.primary,
                   fontSize: 11, fontWeight: 700,
                 }}>
@@ -396,7 +396,7 @@ export function ReharmonizeTab({
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 130 }}>
                 <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
-                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
+                <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
                   {(['full', 'triads'] as VoicingMode[]).map(m => (
                     <button key={m} onClick={() => setMode(m)} style={{
                       flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
@@ -413,7 +413,7 @@ export function ReharmonizeTab({
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 }}>
                 <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Strings</span>
-                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
+                <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
                   {([
                     { id: 'all',    label: 'All'  },
                     { id: 'bass',   label: 'Low'  },
@@ -447,7 +447,7 @@ export function ReharmonizeTab({
               color: (chords.length === 0 || loading) ? T.textDim : '#fff',
               transition: 'background 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              borderRight: '4px solid var(--gc-bar-color)',
+              borderLeft: '4px solid var(--gc-bar-color)',
             }}
           >
             {loading ? (
@@ -456,7 +456,7 @@ export function ReharmonizeTab({
                   display: 'inline-block', width: 14, height: 14,
                   border: `2px solid ${T.textDim}`,
                   borderTopColor: T.text,
-                  borderRadius: '50%',
+                  borderRadius: 0,
                   animation: 'spin 0.7s linear infinite',
                 }} />
                 Re-Harmonizing...
@@ -498,7 +498,7 @@ export function ReharmonizeTab({
                       background: isPlaying ? T.bgDeep : T.primary,
                       color: isPlaying ? T.primary : '#fff',
                       border: isPlaying ? `1px solid ${T.primary}` : '1px solid transparent',
-                      transition: 'all 0.15s', borderRight: '3px solid var(--gc-bar-color)',
+                      transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
                     }}
                   >
                     {isPlaying ? 'Stop' : 'Play'}
@@ -508,7 +508,7 @@ export function ReharmonizeTab({
                   {result.chords.map((c, i) => (
                     <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <span style={{
-                        padding: '5px 12px', borderRadius: 20,
+                        padding: '5px 12px', borderRadius: 0,
                         background: T.primarySoft,
                         border: `1px solid ${T.primary}44`,
                         fontSize: 13, fontWeight: 700, color: T.primary,
@@ -574,11 +574,11 @@ export function ReharmonizeTab({
                               color: active ? '#fff' : T.textMuted,
                               fontSize: 12, fontWeight: active ? 700 : 400,
                               cursor: 'pointer', transition: 'all 0.15s',
-                              whiteSpace: 'nowrap', borderRight: '3px solid var(--gc-bar-color)',
+                              whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                             }}
                           >
                             <span style={{
-                              width: 16, height: 16, borderRadius: '50%',
+                              width: 16, height: 16, borderRadius: 0,
                               background: active ? 'rgba(255,255,255,0.3)' : T.primary,
                               color: '#fff',
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -621,7 +621,7 @@ export function ReharmonizeTab({
                             </span>
                             <div style={{
                               width: '100%', background: T.bgInput,
-                              borderRadius: 10, border: `1px solid ${currentColor}33`,
+                              borderRadius: 0, border: `1px solid ${currentColor}33`,
                               padding: '4px 4px 2px', boxSizing: 'border-box',
                             }}>
                               <MiniFretboard
@@ -656,7 +656,7 @@ export function ReharmonizeTab({
                   border: `1.5px solid ${T.secondary}`,
                   cursor: 'pointer', fontWeight: 700, fontSize: 14,
                   background: 'transparent', color: T.secondary,
-                  transition: 'background 0.15s', borderRight: '4px solid var(--gc-bar-color)',
+                  transition: 'background 0.15s', borderLeft: '4px solid var(--gc-bar-color)',
                 }}
               >
                 Export MIDI

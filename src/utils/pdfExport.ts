@@ -216,7 +216,7 @@ function buildAnalysisHTML(a: TabPDFAnalysis): string {
     }).join('');
 
     return `
-      <div style="background:#FFFFFF;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+      <div style="background:#FFFFFF;border-radius:0;padding:12px 14px;margin-bottom:12px;">
         <div style="font-size:14px;font-weight:800;color:#111110;margin-bottom:6px;">${escapeHtml(p.title)}</div>
         <div style="text-align:center;">${chordRow}</div>
         <div style="font-size:11px;color:#3A3A3A;line-height:1.6;margin-top:6px;">${escapeHtml(p.why)}</div>
@@ -226,7 +226,7 @@ function buildAnalysisHTML(a: TabPDFAnalysis): string {
   return `
     <div dir="${dir}" style="text-align:${align};margin-top:34px;padding-top:24px;border-top:2px solid #CC1C1C;">
       <h2 style="font-size:18px;font-weight:800;margin:0 0 14px;color:#111110;">${escapeHtml(a.heading)}</h2>
-      <div style="background:#1A1918;border-radius:8px;padding:12px 16px;margin-bottom:18px;color:#F0EAD8;">
+      <div style="background:#1A1918;border-radius:0;padding:12px 16px;margin-bottom:18px;color:#F0EAD8;">
         <div style="font-size:11px;opacity:0.7;margin-bottom:2px;">${escapeHtml(a.scaleLabel)}</div>
         <span style="font-size:20px;font-weight:800;">${escapeHtml(a.scaleName)}</span>
         <span style="font-size:12px;opacity:0.85;margin:0 8px;">${escapeHtml(a.matchText)}</span>

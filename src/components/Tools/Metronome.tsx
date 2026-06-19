@@ -203,7 +203,7 @@ export const Metronome: React.FC = () => {
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: dotGap }}>
           {Array.from({ length: subdivision.beats }).map((_, i) => (
             <div key={i} style={{
-              width: dotSize, height: dotSize, borderRadius: '50%', flexShrink: 0,
+              width: dotSize, height: dotSize, borderRadius: 0, flexShrink: 0,
               background: playing && beat === i ? (i === 0 ? T.primary : T.secondary) : T.bgInput,
               border: `2px solid ${i === 0 ? T.primary : T.border}`,
               transition: 'background 0.05s, transform 0.05s',
@@ -218,7 +218,7 @@ export const Metronome: React.FC = () => {
         {/* Large BPM display + manual input */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 6 }}>
           <button onClick={() => adjustBpm(-1)} style={{
-            width: 44, height: 44, borderRadius: '50%', border: `1px solid ${T.border}`,
+            width: 44, height: 44, borderRadius: 0, border: `1px solid ${T.border}`,
             background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 700, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
           }}>−</button>
           <input
@@ -236,7 +236,7 @@ export const Metronome: React.FC = () => {
             } as React.CSSProperties}
           />
           <button onClick={() => adjustBpm(1)} style={{
-            width: 44, height: 44, borderRadius: '50%', border: `1px solid ${T.border}`,
+            width: 44, height: 44, borderRadius: 0, border: `1px solid ${T.border}`,
             background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 700, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
           }}>+</button>
         </div>
@@ -255,7 +255,7 @@ export const Metronome: React.FC = () => {
             width: '100%', padding: '10px 0', marginBottom: 20, borderRadius: 0,
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.textMuted, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            transition: 'background 0.1s', borderRight: '3px solid var(--gc-bar-color)',
+            transition: 'background 0.1s', borderLeft: '3px solid var(--gc-bar-color)',
           }}
         >
           Tap Tempo
@@ -279,7 +279,7 @@ export const Metronome: React.FC = () => {
                   background: active ? T.primaryBg : T.bgInput,
                   color: active ? T.primary : T.textMuted,
                   cursor: 'pointer', fontSize: 11, fontWeight: active ? 700 : 500,
-                  transition: 'all 0.15s', borderRight: '3px solid var(--gc-bar-color)',
+                  transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >
                 {sub.icon}
@@ -295,7 +295,7 @@ export const Metronome: React.FC = () => {
             width: '100%', padding: '14px 0', borderRadius: 0,
             background: playing ? T.coral : T.primary,
             color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
-            transition: 'background 0.2s', borderRight: '4px solid var(--gc-bar-color)',
+            transition: 'background 0.2s', borderLeft: '4px solid var(--gc-bar-color)',
           }}
         >
           {playing ? '■  Stop' : '▶  Start'}

@@ -128,7 +128,7 @@ export function IntervalExplore() {
                 border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: sel ? T.primary : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
+                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
               }}>{n}</button>
             );
           })}
@@ -147,7 +147,7 @@ export function IntervalExplore() {
                 border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                 background: sel ? T.secondaryBg : T.bgInput,
                 color: sel ? T.secondary : T.textMuted,
-                transition: 'all 0.12s', borderRight: '3px solid var(--gc-bar-color)',
+                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
               }}>
                 <div style={{ fontSize: 9, fontWeight: 700 }}>{iv.abbrev}</div>
                 <div style={{ fontSize: 9, fontWeight: sel ? 700 : 400, marginTop: 1 }}>{iv.name}</div>
@@ -158,7 +158,7 @@ export function IntervalExplore() {
 
         {/* Musical context */}
         <div style={{
-          marginTop: 7, padding: '6px 8px', borderRadius: 7,
+          marginTop: 7, padding: '6px 8px', borderRadius: 0,
           background: T.bgDeep, border: `1px solid ${T.secondary}44`,
         }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: T.secondary }}>{selectedInterval.name} · {selectedInterval.semitones} semitone{selectedInterval.semitones !== 1 ? 's' : ''}</span>
@@ -169,7 +169,7 @@ export function IntervalExplore() {
 
         {/* Play controls */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
-          <div style={{ display: 'flex', borderRadius: 7, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+          <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: `1px solid ${T.border}` }}>
             {(['melodic', 'harmonic'] as const).map(m => (
               <button key={m} onClick={() => setMode(m)} style={{
                 padding: '5px 11px', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
@@ -182,7 +182,7 @@ export function IntervalExplore() {
           <button onClick={handlePlay} style={{
             padding: '6px 20px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 800,
             border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
-            letterSpacing: '0.02em', borderRight: '3px solid var(--gc-bar-color)',
+            letterSpacing: '0.02em', borderLeft: '3px solid var(--gc-bar-color)',
           }}>▶ Play</button>
         </div>
       </div>
@@ -198,7 +198,7 @@ export function IntervalExplore() {
                 background: area === a.id ? T.text : T.bgInput,
                 color: area === a.id ? T.bgDeep : T.textMuted,
                 border: area === a.id ? 'none' : `1px solid ${T.border}`,
-                borderRight: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>{a.label}</button>
             ))}
           </div>
@@ -207,11 +207,11 @@ export function IntervalExplore() {
         {/* Legend */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 6, fontSize: 10 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.primary, display: 'inline-block' }} />
+            <span style={{ width: 8, height: 8, borderRadius: 0, background: T.primary, display: 'inline-block' }} />
             <span style={{ color: T.textMuted }}>{root} (root)</span>
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.secondary, display: 'inline-block' }} />
+            <span style={{ width: 8, height: 8, borderRadius: 0, background: T.secondary, display: 'inline-block' }} />
             <span style={{ color: T.textMuted }}>{intervalNote} ({selectedInterval.abbrev})</span>
           </span>
         </div>

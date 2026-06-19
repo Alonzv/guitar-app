@@ -248,13 +248,13 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
         </div>
 
         {/* Needle bar */}
-        <div style={{ position: 'relative', height: 10, borderRadius: 5, background: T.bgInput, marginBottom: 10, overflow: 'visible' }}>
+        <div style={{ position: 'relative', height: 10, borderRadius: 0, background: T.bgInput, marginBottom: 10, overflow: 'visible' }}>
           <div style={{
             position: 'absolute', left: '50%', top: -6, width: 2, height: 22,
-            background: T.border, transform: 'translateX(-50%)', borderRadius: 1,
+            background: T.border, transform: 'translateX(-50%)', borderRadius: 0,
           }} />
           <div style={{
-            position: 'absolute', top: -4, width: 8, height: 18, borderRadius: 4,
+            position: 'absolute', top: -4, width: 8, height: 18, borderRadius: 0,
             background: tuneColor, transform: 'translateX(-50%)',
             left: `${needlePct}%`,
             transition: 'left 0.15s ease-out, background 0.3s',
@@ -281,7 +281,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
             width: '100%', padding: '14px 0', borderRadius: 0,
             background: listening ? T.coral : T.primary,
             color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
-            transition: 'background 0.2s', borderRight: '4px solid var(--gc-bar-color)',
+            transition: 'background 0.2s', borderLeft: '4px solid var(--gc-bar-color)',
           }}
         >
           {listening ? '■  Stop' : <><IconMic size={14} />  Start Tuning</>}

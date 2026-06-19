@@ -190,7 +190,7 @@ function FretBadge({ voicing, color }: { voicing: FretPosition[]; color: string 
   return (
     <span style={{
       display: 'inline-block',
-      padding: '2px 7px', borderRadius: 10,
+      padding: '2px 7px', borderRadius: 0,
       background: color + '22',
       border: `1px solid ${color}55`,
       fontSize: 10, fontWeight: 700, color,
@@ -244,7 +244,7 @@ function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, 
     fontSize: 18, fontWeight: 700, lineHeight: 1,
     opacity: disabled ? 0.35 : 1,
     transition: 'opacity 0.15s',
-    borderRight: '3px solid var(--gc-bar-color)',
+    borderLeft: '3px solid var(--gc-bar-color)',
   });
 
   return (
@@ -260,7 +260,7 @@ function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, 
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: T.bgCard, borderRadius: 18,
+          background: T.bgCard, borderRadius: 0,
           border: `1px solid ${T.border}`,
           padding: 24, maxWidth: 340, width: '100%',
           display: 'flex', flexDirection: 'column', gap: 14,
@@ -283,7 +283,7 @@ function ChordModal({ voicings, chordNames, index: initialIndex, color, tuning, 
 
         {/* Fretboard */}
         <div style={{
-          background: T.bgInput, borderRadius: 12,
+          background: T.bgInput, borderRadius: 0,
           border: `1px solid ${color}44`, padding: '8px 8px 4px',
         }}>
           <MiniFretboard
@@ -333,7 +333,7 @@ function AnalysisCard({
         {loading && <span style={{ fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>מנתח…</span>}
         {analysis && (
           <span style={{
-            padding: '2px 8px', borderRadius: 10,
+            padding: '2px 8px', borderRadius: 0,
             background: T.primarySoft, color: T.primary,
             fontSize: 10, fontWeight: 700,
           }}>{analysis.key}</span>
@@ -529,7 +529,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
             background: subTab === tab.id ? T.secondary : T.bgInput,
             color: subTab === tab.id ? '#fff' : T.textMuted,
             fontSize: 14, cursor: 'pointer',
-            borderRight: '3px solid var(--gc-bar-color)',
+            borderLeft: '3px solid var(--gc-bar-color)',
             transition: 'background 0.1s',
           }}>
             <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{tab.label}</span></span>
@@ -553,7 +553,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 background: root === r ? T.primary : T.bgDeep,
                 color: root === r ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                transition: 'background 0.12s', borderRight: '3px solid var(--gc-bar-color)',
+                transition: 'background 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
               }}>{r}</button>
             ))}
           </div>
@@ -569,7 +569,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 background: triad === t.key ? T.secondary : T.bgDeep,
                 color: triad === t.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                transition: 'background 0.12s', borderRight: '3px solid var(--gc-bar-color)',
+                transition: 'background 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
               }}>{t.display}</button>
             ))}
           </div>
@@ -585,7 +585,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 background: activeExt === e.key ? T.secondary : T.bgDeep,
                 color: activeExt === e.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                transition: 'background 0.12s', borderRight: '3px solid var(--gc-bar-color)',
+                transition: 'background 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
               }}>{e.display}</button>
             ))}
           </div>
@@ -604,7 +604,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               background: (root && triad && chords.length < 8) ? T.secondary : T.border,
               color: '#fff', fontWeight: 700, fontSize: 14,
               cursor: (root && triad && chords.length < 8) ? 'pointer' : 'not-allowed',
-              transition: 'background 0.15s', borderRight: '3px solid var(--gc-bar-color)',
+              transition: 'background 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
             }}
           >
             + Add
@@ -631,7 +631,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                   onDrop={() => onDrop(i)}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '5px 11px', borderRadius: 20,
+                    padding: '5px 11px', borderRadius: 0,
                     background: T.bgDeep, border: `1px solid ${T.border}`,
                     fontSize: 13, fontWeight: 700, color: T.text,
                     cursor: 'grab', userSelect: 'none',
@@ -646,7 +646,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               ))}
               <button
                 onClick={() => setChords([])}
-                style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 600, borderRight: '3px solid var(--gc-bar-color)' }}
+                style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 600, borderLeft: '3px solid var(--gc-bar-color)' }}
               >Clear</button>
             </div>
           )}
@@ -658,7 +658,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 0,
                 border: `1px solid ${T.border}`, background: T.bgInput,
                 color: T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                borderRight: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}
             >
               ↓ Import my progression ({globalProgression.length})
@@ -680,7 +680,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               border: `1px solid ${T.border}`,
               background: T.bgInput, color: T.text,
               fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              outline: 'none', borderRight: '3px solid var(--gc-bar-color)',
+              outline: 'none', borderLeft: '3px solid var(--gc-bar-color)',
             }}
           >
             {GENRES.map(g => (
@@ -707,7 +707,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: mode === m ? T.secondary : T.bgInput,
                 color: mode === m ? '#fff' : T.textMuted,
-                borderRight: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
                 transition: 'background 0.1s',
               }}>
                 {m === 'full' ? 'Full' : 'Triads'}
@@ -729,7 +729,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                 cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 background: stringGroup === sg.id ? T.secondary : T.bgInput,
                 color: stringGroup === sg.id ? '#fff' : T.textMuted,
-                borderRight: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
                 transition: 'background 0.1s',
               }}>
                 {sg.label}
@@ -793,11 +793,11 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                       color: active ? '#fff' : T.textMuted,
                       fontSize: 12, fontWeight: active ? 700 : 400,
                       cursor: 'pointer', transition: 'all 0.15s',
-                      whiteSpace: 'nowrap', borderRight: '3px solid var(--gc-bar-color)',
+                      whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                     }}
                   >
                     <span style={{
-                      width: 16, height: 16, borderRadius: '50%',
+                      width: 16, height: 16, borderRadius: 0,
                       background: active ? 'rgba(255,255,255,0.3)' : c,
                       color: '#fff',
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -810,7 +810,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                         background: active ? 'rgba(255,255,255,0.25)' : c + '22',
                         color: active ? '#fff' : c,
                         border: active ? 'none' : `1px solid ${c}66`,
-                        padding: '1px 5px', borderRadius: 6,
+                        padding: '1px 5px', borderRadius: 0,
                       }}>✦ AI</span>
                     )}
                   </button>
@@ -833,7 +833,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                   <div style={{ display: 'flex', gap: 2 }}>
                     {[1, 2, 3, 4, 5].map(n => (
                       <span key={n} style={{
-                        width: 8, height: 8, borderRadius: '50%',
+                        width: 8, height: 8, borderRadius: 0,
                         background: n <= currentPath.smoothness ? currentColor : T.border,
                         display: 'inline-block', transition: 'background 0.2s',
                       }} />
@@ -866,7 +866,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                     </span>
                     <div style={{
                       width: '100%', background: T.bgInput,
-                      borderRadius: 10, border: `1px solid ${currentColor}33`,
+                      borderRadius: 0, border: `1px solid ${currentColor}33`,
                       padding: '4px 4px 2px', boxSizing: 'border-box',
                       transition: 'border-color 0.15s, box-shadow 0.15s',
                     }}
@@ -895,7 +895,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                   background: isPlaying ? T.bgDeep : currentColor,
                   color: isPlaying ? currentColor : '#fff',
                   fontWeight: 800, fontSize: 14, cursor: 'pointer',
-                  transition: 'all 0.2s', borderRight: '4px solid var(--gc-bar-color)',
+                  transition: 'all 0.2s', borderLeft: '4px solid var(--gc-bar-color)',
                 }}
               >
                 {isPlaying ? '■  Stop' : `▶  Play — ${currentPath.label}`}
@@ -935,7 +935,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                   return (
                     <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                       <span style={{
-                        padding: '5px 12px', borderRadius: 20,
+                        padding: '5px 12px', borderRadius: 0,
                         background: noteName ? (ivColor! + '18') : T.bgDeep,
                         border: `1px solid ${noteName ? (ivColor! + '55') : T.border}`,
                         fontSize: 13, fontWeight: 700, color: T.text,
@@ -970,11 +970,11 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                           color: active ? '#fff' : T.textMuted,
                           fontSize: 12, fontWeight: active ? 700 : 400,
                           cursor: 'pointer', transition: 'all 0.15s',
-                          whiteSpace: 'nowrap', borderRight: '3px solid var(--gc-bar-color)',
+                          whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                         }}
                       >
                         <span style={{
-                          width: 14, height: 14, borderRadius: '50%',
+                          width: 14, height: 14, borderRadius: 0,
                           background: active ? 'rgba(255,255,255,0.3)' : c,
                           color: '#fff', display: 'inline-flex', alignItems: 'center',
                           justifyContent: 'center', fontSize: 8, fontWeight: 800, flexShrink: 0,
@@ -1017,7 +1017,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                         background: active ? opt.color : opt.color + '12',
                         color: active ? '#fff' : opt.color,
                         cursor: 'pointer', transition: 'all 0.15s',
-                        borderRight: '3px solid var(--gc-bar-color)',
+                        borderLeft: '3px solid var(--gc-bar-color)',
                       }}
                     >
                       <span style={{ fontSize: 14, fontWeight: 800 }}>{opt.label}</span>
@@ -1103,7 +1103,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                           </span>
                           <div style={{
                             width: '100%', background: T.bgInput,
-                            borderRadius: 10,
+                            borderRadius: 0,
                             border: `1px solid ${filtered.length > 0 ? ivColor + '33' : T.border}`,
                             padding: '4px 4px 2px', boxSizing: 'border-box',
                           }}>

@@ -311,7 +311,7 @@ const InputFretboard: React.FC<{
     <div style={{
       overflowX: 'auto',
       WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
-      borderRadius: 8,
+      borderRadius: 0,
       background: T.bgInput,
       scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
     }}>
@@ -418,7 +418,7 @@ const ScaleStrip: React.FC<{
 
   return (
     <div style={{
-      overflowX: 'auto', borderRadius: 8, background: T.bgInput, marginTop: 8,
+      overflowX: 'auto', borderRadius: 0, background: T.bgInput, marginTop: 8,
       scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
     }}>
       <svg viewBox={`0 0 ${SS_W} ${SS_H}`}
@@ -471,7 +471,7 @@ const Pill: React.FC<{
     background: active ? (color ?? T.secondary) : T.bgInput,
     color: active ? T.white : T.textMuted,
     transition: 'all 0.12s', flexShrink: 0,
-    borderRight: '3px solid var(--gc-bar-color)',
+    borderLeft: '3px solid var(--gc-bar-color)',
   }}>
     {label}
   </button>
@@ -565,7 +565,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
             <>
               <span style={{
                 background: T.coralFaint2, color: T.coral,
-                borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: 13,
+                borderRadius: 0, padding: '2px 8px', fontWeight: 700, fontSize: 13,
               }}>
                 {targetNoteName}
               </span>
@@ -718,7 +718,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
               position: 'absolute', top: 12, right: 12,
               background: T.bgInput, border: 'none', borderRadius: 0,
               cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px', borderRight: '3px solid var(--gc-bar-color)',
+              padding: '3px 7px', borderLeft: '3px solid var(--gc-bar-color)',
             }}>✕</button>
 
             {/* Chord name */}
@@ -750,7 +750,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 padding: '11px 0', borderRadius: 0, border: 'none',
                 cursor: 'pointer', fontWeight: 700, fontSize: 14,
                 background: T.secondary, color: T.white,
-                borderRight: '4px solid var(--gc-bar-color)',
+                borderLeft: '4px solid var(--gc-bar-color)',
               }}
             >▶ Play</button>
 
@@ -803,7 +803,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                   cursor: expandedIdx === 0 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === 0 ? T.textDim : T.textMuted,
-                  fontWeight: 700, fontSize: 16, borderRight: '3px solid var(--gc-bar-color)',
+                  fontWeight: 700, fontSize: 16, borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >‹</button>
               <span style={{ fontSize: 11, color: T.textDim, minWidth: 48, textAlign: 'center' }}>
@@ -818,7 +818,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                   cursor: expandedIdx === results.length - 1 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === results.length - 1 ? T.textDim : T.textMuted,
-                  fontWeight: 700, fontSize: 16, borderRight: '3px solid var(--gc-bar-color)',
+                  fontWeight: 700, fontSize: 16, borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >›</button>
             </div>
