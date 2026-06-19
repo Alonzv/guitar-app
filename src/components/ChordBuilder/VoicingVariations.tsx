@@ -47,8 +47,9 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
               style={{
                 cursor: 'pointer',
                 borderRadius: 0,
-                border: `2px solid ${isSelected ? T.secondary : T.border}`,
-                background: isSelected ? T.secondaryBg : T.bgInput,
+                border: `1px solid ${isSelected ? T.secondary : T.border}`,
+                borderLeft: isSelected ? `4px solid ${T.secondary}` : '4px solid var(--gc-bar-color)',
+                background: isSelected ? T.secondaryBg : T.bgCard,
                 padding: '6px 4px 2px',
                 transition: 'border-color 0.15s, background 0.15s',
               }}
