@@ -18,45 +18,54 @@ const FRET_SP = (SVG_W - NUT_X - 16) / FRET_COUNT;
 const STR_SP  = (SVG_H - 36) / (STRING_COUNT - 1);
 const TOP_Y   = 14;
 const DOT_R   = 9;
+const NUT_W   = 7;
 
 const fretX = (f: number) => f === 0 ? NUT_X - FRET_SP * 0.5 : NUT_X + (f - 0.5) * FRET_SP;
 const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
+
+// String thickness: high-e thin → low-E thick, ×1.25 vs old values
+const strW = (s: number) => 1.5 + s * 0.25;
 
 export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
   <div className={compact ? 'gc-fretboard-compact' : 'gc-fretboard-wrap'}>
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block' }}>
 
-      {/* Blue fretboard background */}
+      {/* Fretboard background */}
       <rect x={NUT_X - FRET_SP * 0.5} y={TOP_Y - 10}
         width={FRET_COUNT * FRET_SP + FRET_SP * 0.5 + 10} height={(STRING_COUNT - 1) * STR_SP + 20}
-        fill="#1235FC" />
+        fill="var(--gc-fretboard-bg)" />
 
       {/* Fret lines */}
       {Array.from({ length: FRET_COUNT + 1 }).map((_, i) => (
         <line key={i}
           x1={NUT_X + i * FRET_SP} y1={TOP_Y}
           x2={NUT_X + i * FRET_SP} y2={TOP_Y + (STRING_COUNT - 1) * STR_SP}
-          stroke="rgba(255,255,255,0.22)"
-          strokeWidth={i === 0 ? 3.5 : 1.2}
+          stroke="var(--gc-fretboard-fret)"
+          strokeWidth={1.2}
         />
       ))}
 
-      {/* String lines */}
+      {/* Nut — thick solid bar (B2 style) */}
+      <rect x={NUT_X - 1} y={TOP_Y - 10}
+        width={NUT_W} height={(STRING_COUNT - 1) * STR_SP + 20}
+        fill="var(--gc-fretboard-nut)" />
+
+      {/* Position dots: 3,5,7,9 single • 12 double */}
+      {[3, 5, 7, 9].map(f => (
+        <circle key={f} cx={NUT_X + (f - 0.5) * FRET_SP} cy={SVG_H / 2}
+          r={5} fill="var(--gc-fretboard-pos)" />
+      ))}
+      <circle cx={NUT_X + 11.5 * FRET_SP} cy={TOP_Y + STR_SP}   r={4.5} fill="var(--gc-fretboard-pos)" />
+      <circle cx={NUT_X + 11.5 * FRET_SP} cy={TOP_Y + 4 * STR_SP} r={4.5} fill="var(--gc-fretboard-pos)" />
+
+      {/* String lines — graduating thickness */}
       {Array.from({ length: STRING_COUNT }).map((_, s) => (
         <line key={s}
           x1={NUT_X} y1={strY(s)}
           x2={NUT_X + FRET_COUNT * FRET_SP} y2={strY(s)}
-          stroke="rgba(255,255,255,0.40)" strokeWidth={1.2 + s * 0.2}
+          stroke="var(--gc-fretboard-str)" strokeWidth={strW(s)}
         />
       ))}
-
-      {/* Fret markers */}
-      {[3, 5, 7, 9].map(f => (
-        <circle key={f} cx={NUT_X + (f - 0.5) * FRET_SP} cy={SVG_H / 2}
-          r={4} fill="rgba(255,255,255,0.25)" />
-      ))}
-      <circle cx={NUT_X + 11.5 * FRET_SP} cy={TOP_Y + STR_SP} r={3.5} fill="rgba(255,255,255,0.25)" />
-      <circle cx={NUT_X + 11.5 * FRET_SP} cy={TOP_Y + 4 * STR_SP} r={3.5} fill="rgba(255,255,255,0.25)" />
 
       {/* Fret numbers */}
       {[3, 5, 7, 9, 12].map(f => (
@@ -77,7 +86,7 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
         const label = dot.label ?? fretToNote(dot.string, dot.fret);
         return (
           <g key={i}>
-            <circle cx={cx} cy={cy} r={DOT_R} fill={dot.color} stroke="#fff" strokeWidth={1.5} opacity={dot.opacity ?? 0.92} />
+            <circle cx={cx} cy={cy} r={DOT_R} fill={dot.color} stroke="#fff" strokeWidth={1.9} opacity={dot.opacity ?? 0.92} />
             <text x={cx} y={cy + 4} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">{label}</text>
           </g>
         );

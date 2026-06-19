@@ -3,8 +3,10 @@ import type { FretPosition } from '../../types/music';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
 import { T } from '../../theme';
 
-// s=0 (low E) → bottom of SVG, s=5 (high e) → top of SVG
 const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'e'] as const;
+
+// Frets with position markers on a real guitar
+const POSITION_DOTS = [3, 5, 7, 9, 12];
 
 interface Props {
   voicing: FretPosition[];
@@ -32,6 +34,7 @@ export const MiniFretboard: React.FC<Props> = ({
 
   const W = 200, H = 90;
   const strLabelW = showStringLabels ? 14 : 0;
+  const NUT_W = 5;
 
   const minLeftForOpen = displayMin === 0 && hasOpen
     ? Math.ceil((16 * fretCount + W - 8) / (2 * fretCount + 1))
@@ -40,42 +43,66 @@ export const MiniFretboard: React.FC<Props> = ({
   const fretSp = (W - LEFT - 8) / Math.max(fretCount, 1);
   const strSp = (H - 20) / (STRING_COUNT - 1);
   const topY = 8;
+  const botY = topY + (STRING_COUNT - 1) * strSp;
+  const midY = (topY + botY) / 2;
 
   const fretX = (f: number) =>
     f === 0 ? LEFT - fretSp * 0.5 : LEFT + (f - displayMin - 0.5) * fretSp;
   const strY = (s: number) => topY + (STRING_COUNT - 1 - s) * strSp;
 
+  // String thickness: high-e thin → low-E thick, ×1.25
+  const strW = (s: number) => 1.5 + s * 0.19;
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
 
-      {/* Fretboard background — padded by dot radius so no dot overflows */}
+      {/* Fretboard background */}
       <rect x={LEFT} y={topY - 8}
         width={fretCount * fretSp} height={(STRING_COUNT - 1) * strSp + 16}
-        fill="#1235FC" />
+        fill="var(--gc-fretboard-bg)" />
 
       {/* Fret lines */}
-      {Array.from({ length: fretCount + 1 }).map((_, i) => {
-        const isNut = i === 0 && displayMin === 0;
-        return (
-          <line key={i}
-            x1={LEFT + i * fretSp} y1={topY}
-            x2={LEFT + i * fretSp} y2={topY + (STRING_COUNT - 1) * strSp}
-            stroke="rgba(255,255,255,0.22)"
-            strokeWidth={isNut ? 3 : 1}
-          />
-        );
+      {Array.from({ length: fretCount + 1 }).map((_, i) => (
+        <line key={i}
+          x1={LEFT + i * fretSp} y1={topY}
+          x2={LEFT + i * fretSp} y2={botY}
+          stroke="var(--gc-fretboard-fret)"
+          strokeWidth={1}
+        />
+      ))}
+
+      {/* Nut — thick solid bar (B2 style) */}
+      {displayMin === 0 && (
+        <rect x={LEFT - 1} y={topY - 8}
+          width={NUT_W} height={(STRING_COUNT - 1) * strSp + 16}
+          fill="var(--gc-fretboard-nut)" />
+      )}
+
+      {/* Position dots — visible when in range */}
+      {POSITION_DOTS.filter(f => f > displayMin && f <= displayMax).map(f => {
+        const cx = LEFT + (f - displayMin - 0.5) * fretSp;
+        if (f === 12) {
+          // double dot
+          return (
+            <g key={f}>
+              <circle cx={cx} cy={midY - strSp * 0.8} r={3.5} fill="var(--gc-fretboard-pos)" />
+              <circle cx={cx} cy={midY + strSp * 0.8} r={3.5} fill="var(--gc-fretboard-pos)" />
+            </g>
+          );
+        }
+        return <circle key={f} cx={cx} cy={midY} r={3.5} fill="var(--gc-fretboard-pos)" />;
       })}
 
-      {/* Strings */}
+      {/* String lines — graduating thickness */}
       {Array.from({ length: STRING_COUNT }).map((_, s) => (
         <line key={s}
           x1={LEFT} y1={strY(s)}
           x2={LEFT + fretCount * fretSp} y2={strY(s)}
-          stroke="rgba(255,255,255,0.40)" strokeWidth={1.2 + s * 0.15}
+          stroke="var(--gc-fretboard-str)" strokeWidth={strW(s)}
         />
       ))}
 
-      {/* Legacy fret position label (top-left, when not hidden) */}
+      {/* Fret position label (top-left, when not hidden) */}
       {displayMin > 0 && !hideFretLabel && !showFretNumbers && (
         <text x={LEFT - strLabelW - 4} y={topY + (STRING_COUNT - 1) * strSp / 2 + 4}
           textAnchor="end" fontSize={7} fill={T.textDim}>{displayMin + 1}fr</text>
@@ -110,7 +137,7 @@ export const MiniFretboard: React.FC<Props> = ({
         const label = dotLabels?.[i] ?? fretToNote(p.string, p.fret, tuning);
         return (
           <g key={i}>
-            <circle cx={cx} cy={cy} r={7} fill={dotColors?.[i] ?? dotColor} stroke="#fff" strokeWidth={1} opacity={0.92} />
+            <circle cx={cx} cy={cy} r={7} fill={dotColors?.[i] ?? dotColor} stroke="#fff" strokeWidth={1.25} opacity={0.92} />
             <text x={cx} y={cy + 3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{label}</text>
           </g>
         );
