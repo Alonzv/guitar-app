@@ -341,7 +341,7 @@ export default function App() {
             <button onClick={() => setShowOnboarding(true)} style={{ width: 26, height: 26, borderRadius: 0, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title="Help">?</button>
           </div>
         </div>
-        <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-tab-title)', fontWeight: 800, color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.2px' }}>
+        <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-tab-title)', fontWeight: 800, fontFamily: 'inherit', color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.5px' }}>
           {TABS.find(t => t.id === activeTab)?.label ?? ''}
         </h1>
         <div className="gc-tabs">

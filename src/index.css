@@ -275,7 +275,7 @@ body.dark {
   white-space: nowrap;
   font-size: 14px;
   font-family: inherit;
-  letter-spacing: 0.06em;
+  letter-spacing: -0.02em;
 }
 @media (min-width: 480px) {
   .gc-tab {
@@ -427,7 +427,7 @@ button:not(.gc-tab):not(:disabled):hover {
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  letter-spacing: 0.05em;
+  letter-spacing: -0.02em;
   transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: transform;
 }
