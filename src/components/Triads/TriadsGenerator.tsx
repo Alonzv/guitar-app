@@ -356,7 +356,6 @@ export function TriadsGenerator() {
       </div>}
 
       {/* ── Filters + Sort by ────────────────────────────────────────────── */}
-      {!def && null}
       {def && <>
 
       {(() => {
