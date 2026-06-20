@@ -130,8 +130,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-secondary-bg:     rgba(18,53,252,0.09);
   --gc-coral:            #C8A020;
   --gc-text:             #1A1818;
-  --gc-text-muted:       rgba(26,24,24,0.52);
-  --gc-text-dim:         rgba(26,24,24,0.28);
+  --gc-text-muted:       #000000;
+  --gc-text-dim:         rgba(0,0,0,0.45);
   --gc-white:            #FFFFFF;
   /* Alpha variants */
   --gc-primary-soft:     rgba(204,28,28,0.10);
