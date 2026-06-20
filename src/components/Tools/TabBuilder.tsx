@@ -143,6 +143,8 @@ export const TabBuilder: React.FC = () => {
   const numSys = Math.ceil(numCols / colsPerLine);
 
   // Default = exactly 3 systems. Resize without pushing to undo history.
+  // NEVER shrink: only add columns. Trimming could destroy user data if the
+  // container width changes momentarily (e.g. during PDF export or scroll).
   useEffect(() => {
     setTab(p => {
       const cols = p.grid[0]?.length ?? 0;
@@ -151,12 +153,12 @@ export const TabBuilder: React.FC = () => {
         for (let c = cols - 1; c > lastUsed; c--)
           if (row[c].fret) { lastUsed = c; break; }
       const want = Math.max(3, Math.ceil((lastUsed + 1) / colsPerLine)) * colsPerLine;
-      if (want === cols) return p;
-      const grid = p.grid.map(row =>
-        want > cols
-          ? [...row, ...Array.from({ length: want - cols }, () => ({ fret: '' }))]
-          : row.slice(0, want)
-      );
+      // Only grow — never trim
+      if (want <= cols) return p;
+      const grid = p.grid.map(row => [
+        ...row,
+        ...Array.from({ length: want - cols }, () => ({ fret: '' })),
+      ]);
       return { ...p, grid };
     });
   }, [colsPerLine]);
