@@ -104,7 +104,7 @@ export function IntervalCalculate() {
   const dotColor = (p: Point) => {
     if (!has2) return T.primary;
     if (rootPt && p.string === rootPt.string && p.fret === rootPt.fret) return T.primary;
-    return '#C8A020'; // gold — visible on blue fretboard background
+    return '#FFC800'; // yellow — visible on blue fretboard background
   };
 
   return (
