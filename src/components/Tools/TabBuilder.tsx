@@ -56,11 +56,11 @@ function emptyGrid(cols: number): Cell[][] {
   return STRS.map(() => Array.from({ length: cols }, () => ({ fret: '' })));
 }
 
-const TECH_BTNS: { id: Tech; label: string; sym: string }[] = [
-  { id: 'h', label: 'Hammer/Pull', sym: 'h/p' },
-  { id: '/', label: 'Slide',       sym: '/'   },
-  { id: 'b', label: 'Bend',        sym: 'b'   },
-  { id: '~', label: 'Vibrato',     sym: '~'   },
+const TECH_BTNS: { id: Tech; label: string; sym: string; key: string }[] = [
+  { id: 'h', label: 'Hammer/Pull', sym: 'h/p', key: 'H' },
+  { id: '/', label: 'Slide',       sym: '/',   key: '/' },
+  { id: 'b', label: 'Bend',        sym: 'b',   key: 'B' },
+  { id: '~', label: 'Vibrato',     sym: '~',   key: '~' },
 ];
 
 export const TabBuilder: React.FC = () => {
@@ -226,8 +226,24 @@ export const TabBuilder: React.FC = () => {
     } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
       e.preventDefault();
       undo();
+    } else if (['h', '/', 'b', '~'].includes(e.key)) {
+      e.preventDefault();
+      const tech = e.key as Tech;
+      const toggled: Tech | undefined = grid[s][c].tech === tech ? undefined : tech;
+      withHistory(p => {
+        const g = p.grid.map(r => [...r]);
+        g[s][c] = { ...g[s][c], tech: toggled };
+        return { ...p, grid: g };
+      });
+      if (toggled && c + 1 < numCols) setSel([s, c + 1]);
+    } else if (e.key === '|') {
+      e.preventDefault();
+      withHistory(p => ({
+        ...p,
+        bars: p.bars.includes(c) ? p.bars.filter(b => b !== c) : [...p.bars, c],
+      }));
     }
-  }, [sel, grid, numCols, applyDigit, setCell, undo]);
+  }, [sel, grid, numCols, applyDigit, setCell, undo, withHistory]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -489,11 +505,11 @@ export const TabBuilder: React.FC = () => {
         border: `1px solid ${T.border}`,
         background: T.bgInput,
       }}>
-        {TECH_BTNS.map(({ id, label, sym }) => (
+        {TECH_BTNS.map(({ id, label, sym, key }) => (
           <button
             key={id}
             onClick={() => applyTech(id)}
-            title={!sel ? 'Select a note first' : label}
+            title={!sel ? 'Select a note first' : `${label} [${key}]`}
             style={{
               flex: 1, padding: '8px 4px', border: 'none',
               borderRight: `1px solid ${T.border}`,
@@ -506,13 +522,14 @@ export const TabBuilder: React.FC = () => {
             <div style={{ fontSize: 16, fontFamily: 'monospace', color: T.coral, marginBottom: 3 }}>
               {sym}
             </div>
-            {label}
+            <div>{label}</div>
+            <div style={{ fontSize: 9, color: T.textDim, marginTop: 2, fontFamily: 'monospace' }}>[{key}]</div>
           </button>
         ))}
 
         <button
           onClick={toggleBar}
-          title={!sel ? 'Select a note first' : 'Toggle bar line after column'}
+          title={!sel ? 'Select a note first' : 'Toggle bar line [|]'}
           style={{
             flex: 1, padding: '8px 4px', border: 'none',
             background: sel && barsSet.has(sel[1]) ? T.primaryBg : T.bgInput,
@@ -522,7 +539,8 @@ export const TabBuilder: React.FC = () => {
             transition: 'background 0.12s',
           }}>
           <div style={{ fontSize: 16, fontFamily: 'monospace', color: T.coral, marginBottom: 3 }}>|</div>
-          Bar
+          <div>Bar</div>
+          <div style={{ fontSize: 9, color: T.textDim, marginTop: 2, fontFamily: 'monospace' }}>[|]</div>
         </button>
       </div>
 
