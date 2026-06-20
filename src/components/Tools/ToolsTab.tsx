@@ -24,7 +24,7 @@ export const ToolsTab: React.FC = () => {
         {(['tuner', 'metronome', 'audiotab', 'tabbuilder'] as Sub[]).map(id => (
           <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 4px', borderRadius: 0,
-            cursor: 'pointer', fontSize: id === 'tabbuilder' ? 10 : 13,
+            cursor: 'pointer', fontSize: 12,
             background: sub === id ? T.secondary : T.bgInput,
             color: sub === id ? '#fff' : T.textMuted,
             borderLeft: '3px solid var(--gc-bar-color)',

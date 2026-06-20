@@ -33,7 +33,7 @@ function ClearBtn({ onClear }: { onClear: () => void }) {
   return (
     <button
       onClick={onClear}
-      title="איפוס — חזור לתחילה"
+      title="Reset — back to start"
       style={{
         padding: '7px 14px', borderRadius: 0, cursor: 'pointer', fontWeight: 700,
         fontSize: 12, border: `1px solid ${T.border}`,
@@ -137,7 +137,7 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
   if (totalColumns === 0) {
     return (
       <div style={{ background: TAB_BG, borderRadius: 0, padding: '20px', textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: 13, color: TAB_LBL }}>לא זוהו תווים בקטע השמע</p>
+        <p style={{ margin: 0, fontSize: 13, color: TAB_LBL }}>No notes detected in audio</p>
       </div>
     );
   }
@@ -458,19 +458,19 @@ export const AudioToTab: React.FC = () => {
       const serverUrl = (localStorage.getItem('mt3ServerUrl') ?? DEFAULT_MT3_URL).trim();
 
       if (serverUrl) {
-        setPhaseLabel('שולח לשרת תמלול…');
+        setPhaseLabel('Sending to transcription server…');
         setProgress(5);
         try {
           rawNotes = await transcribeWithMT3Server(blob, serverUrl, p => setProgress(p));
           viaServer = true;
         } catch (serverErr) {
           console.warn('[AudioToTab] server failed, falling back to Basic Pitch:', serverErr);
-          setPhaseLabel('השרת לא זמין — מנתח בדפדפן…');
+          setPhaseLabel('Server unavailable — analysing in browser…');
           setProgress(0);
           rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
         }
       } else {
-        setPhaseLabel('מזהה תדרים…');
+        setPhaseLabel('Detecting frequencies…');
         rawNotes = await transcribeAudioBuffer(audioBuf, p => setProgress(p), cfg);
       }
 
@@ -479,12 +479,12 @@ export const AudioToTab: React.FC = () => {
         refined = rawNotes;
         setProgress(96);
       } else {
-        setPhaseLabel('מנקה עם AI…');
+        setPhaseLabel('Cleaning with AI…');
         setProgress(74);
         refined = await refineNotesWithAI(rawNotes, p => setProgress(74 + Math.round(p * 0.22)));
       }
 
-      setPhaseLabel('בונה טאב…');
+      setPhaseLabel('Building tab…');
       setProgress(97);
       setNotes(refined);
       const tab = notesToTab(refined, 200, name.replace(/\.[^.]+$/, ''), audioBuf.duration);
@@ -494,7 +494,7 @@ export const AudioToTab: React.FC = () => {
     } catch (e) {
       console.error('[AudioToTab]', e);
       const msg = e instanceof Error ? e.message : String(e);
-      setError(msg || 'שגיאה בעיבוד השמע — ודא שהקובץ תקין ונסה שוב.');
+      setError(msg || 'Error processing audio — check the file and try again.');
       setStage('error');
     }
   }, []);
@@ -504,7 +504,7 @@ export const AudioToTab: React.FC = () => {
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith('audio/') &&
         !/\.(mp3|wav|ogg|flac|m4a|aac|webm)$/i.test(file.name)) {
-      setError('אנא בחר קובץ שמע (MP3, WAV, OGG, FLAC, M4A)');
+      setError('Please select an audio file (MP3, WAV, OGG, FLAC, M4A)');
       setStage('error');
       return;
     }
@@ -535,7 +535,7 @@ export const AudioToTab: React.FC = () => {
       setStage('recording');
       timerRef.current = setInterval(() => setRecSecs(s => s + 1), 1000);
     } catch {
-      setError('לא ניתן לגשת למיקרופון — בדוק הרשאות ונסה שוב.');
+      setError('Cannot access microphone — check permissions and try again.');
       setStage('error');
     }
   }, [processBlob]);
@@ -569,8 +569,8 @@ export const AudioToTab: React.FC = () => {
           <path d="M14 19l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M12 31c0 1.7 1.3 3 3 3h10c1.7 0 3-1.3 3-3" strokeLinecap="round" />
         </svg>
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.text }}>גרור קובץ שמע לכאן</p>
-        <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>MP3 · WAV · OGG · M4A · עד 5 דקות</p>
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.text }}>Drag audio file here</p>
+        <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>MP3 · WAV · OGG · M4A · up to 5 min</p>
         <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
       </div>
@@ -595,8 +595,8 @@ export const AudioToTab: React.FC = () => {
           </svg>
         </div>
         <div style={{ textAlign: 'left' }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.text }}>הקלטה מהמיקרופון</p>
-          <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>נגן ציר יחיד ישירות לאפליקציה</p>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.text }}>Record from Microphone</p>
+          <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>Play a single line directly into the app</p>
         </div>
       </button>
     </div>
@@ -609,14 +609,14 @@ export const AudioToTab: React.FC = () => {
         <p style={{ margin: '16px 0 4px', fontSize: 26, fontWeight: 800, color: T.primary, fontVariantNumeric: 'tabular-nums' }}>
           {String(Math.floor(recSecs / 60)).padStart(2, '0')}:{String(recSecs % 60).padStart(2, '0')}
         </p>
-        <p style={{ margin: '0 0 20px', fontSize: 12, color: T.textMuted }}>מקליט…</p>
+        <p style={{ margin: '0 0 20px', fontSize: 12, color: T.textMuted }}>Recording…</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={stopRecording} style={{
             padding: '12px 32px', borderRadius: 0, cursor: 'pointer',
             background: T.coral, color: '#fff', fontWeight: 700, fontSize: 14,
             borderLeft: '4px solid var(--gc-bar-color)',
           }}>
-            עצור ועבד
+            Stop &amp; Process
           </button>
           <ClearBtn onClear={reset} />
         </div>
@@ -634,7 +634,7 @@ export const AudioToTab: React.FC = () => {
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: T.text }}>
-            {phaseLabel || 'מעבד…'}
+            {phaseLabel || 'Processing…'}
           </p>
           <span style={{ fontSize: 12, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{progress}%</span>
         </div>
@@ -664,7 +664,7 @@ export const AudioToTab: React.FC = () => {
         background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
         borderLeft: '4px solid var(--gc-bar-color)',
       }}>
-        נסה שוב
+        Try Again
       </button>
     </div>
   );
@@ -685,7 +685,7 @@ export const AudioToTab: React.FC = () => {
             {fileName}
           </p>
           <p style={{ margin: 0, fontSize: 11, color: T.textMuted }}>
-            {notes.length} תווים זוהו · {tabData.duration.toFixed(1)}s
+            {notes.length} notes detected · {tabData.duration.toFixed(1)}s
           </p>
         </div>
         <ClearBtn onClear={reset} />
@@ -714,7 +714,7 @@ export const AudioToTab: React.FC = () => {
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          ייצא ל-PDF
+          Export to PDF
         </button>
         <button
           onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}
@@ -730,16 +730,16 @@ export const AudioToTab: React.FC = () => {
             <circle cx="6" cy="18" r="3" />
             <circle cx="18" cy="16" r="3" />
           </svg>
-          ייצא ל-MIDI
+          Export to MIDI
         </button>
       </div>
 
       {/* Tab — click a note to select, then type to edit */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
-          <p style={{ ...LABEL, margin: 0 }}>טאב</p>
+          <p style={{ ...LABEL, margin: 0 }}>Tab</p>
           {!selNote && (
-            <span style={{ fontSize: 11, color: T.textMuted }}>לחץ על תו לעריכה</span>
+            <span style={{ fontSize: 11, color: T.textMuted }}>Tap a note to edit</span>
           )}
         </div>
         <TabDisplay tabData={tabData} onSelectNote={handleNoteSelect} clearToken={editClearToken} />
@@ -753,13 +753,13 @@ export const AudioToTab: React.FC = () => {
           borderLeft: `3px solid ${T.primary}`,
         }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
-            ✎ מיתר {strName(selNote.string)}{' '}
+            ✎ String {strName(selNote.string)}{' '}
             <span style={{ color: T.primary, fontVariantNumeric: 'tabular-nums' }}>
-              {fretInput ? `→ ${fretInput}` : `· פרט ${selNote.fret}`}
+              {fretInput ? `→ ${fretInput}` : `· Fret ${selNote.fret}`}
             </span>
           </span>
-          <span style={{ fontSize: 11, color: T.textMuted, marginLeft: 'auto', direction: 'rtl' }}>
-            הקלד פרט חדש · ⌫ מחיקה · Esc ביטול
+          <span style={{ fontSize: 11, color: T.textMuted, marginLeft: 'auto' }}>
+            Type new fret · ⌫ Delete · Esc Cancel
           </span>
         </div>
       )}
