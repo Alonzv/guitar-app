@@ -63,6 +63,32 @@ const TECH_BTNS: { id: Tech; label: string; sym: string; key: string }[] = [
   { id: '~', label: 'Vibrato',     sym: '~',   key: '~' },
 ];
 
+// ── Backup helpers ────────────────────────────────────────────────────────────
+const BACKUP_KEY  = 'scaleup_tab_backups';
+const MAX_BACKUPS = 5;
+
+interface TabBackup { ts: number; tab: TabState }
+
+function loadBackups(): TabBackup[] {
+  try { return JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]'); } catch { return []; }
+}
+
+function saveBackup(tab: TabState) {
+  const hasContent = tab.grid.some(row => row.some(c => c.fret));
+  if (!hasContent) return;
+  try {
+    const prev = loadBackups();
+    // Deduplicate: skip if identical to the most recent backup
+    if (prev.length && JSON.stringify(prev[prev.length - 1].tab) === JSON.stringify(tab)) return;
+    const next: TabBackup[] = [...prev.slice(-(MAX_BACKUPS - 1)), { ts: Date.now(), tab }];
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(next));
+  } catch { /* ignore */ }
+}
+
+function tabHasContent(tab: TabState) {
+  return tab.grid.some(row => row.some(c => c.fret));
+}
+
 export const TabBuilder: React.FC = () => {
   const [tab, setTab] = useState<TabState>(() => {
     try {
@@ -72,11 +98,13 @@ export const TabBuilder: React.FC = () => {
     return { title: '', subtitle: '', grid: emptyGrid(COLS_PER_LINE * 3), bars: [] };
   });
 
-  const [sel, setSel]       = useState<[number, number] | null>(null);
-  const [hov, setHov]       = useState<[number, number] | null>(null);
-  const [zoom, setZoom]     = useState(100);
-  const [busy, setBusy]     = useState(false);
+  const [sel, setSel]         = useState<[number, number] | null>(null);
+  const [hov, setHov]         = useState<[number, number] | null>(null);
+  const [zoom, setZoom]       = useState(100);
+  const [busy, setBusy]       = useState(false);
   const [canUndo, setCanUndo] = useState(false);
+  const [recoverOpen, setRecoverOpen] = useState(false);
+  const [backups, setBackups]         = useState<TabBackup[]>(() => loadBackups());
 
   // Analyze panel
   const [analyzeOpen, setAnalyzeOpen]     = useState(false);
@@ -126,10 +154,19 @@ export const TabBuilder: React.FC = () => {
   // Keep tabRef current so withHistory always captures the latest state
   useEffect(() => { tabRef.current = tab; }, [tab]);
 
-  // Auto-persist the tab on every change so switching tools never loses work.
-  // Only the user (Clear button) wipes it intentionally.
+  // Auto-persist + rotating backup.
+  // Anti-wipe guard: never overwrite a tab-with-content with an empty tab
+  // (guards against any accidental state reset, e.g. mid-resize or mid-export).
   useEffect(() => {
-    try { localStorage.setItem('scaleup_tab', JSON.stringify(tab)); } catch { /* ignore */ }
+    try {
+      const prev = localStorage.getItem('scaleup_tab');
+      const prevHasContent = prev ? JSON.parse(prev).grid?.some((r: {fret:string}[]) => r.some(c => c.fret)) : false;
+      if (prevHasContent && !tabHasContent(tab)) return; // never wipe with empty
+      localStorage.setItem('scaleup_tab', JSON.stringify(tab));
+      // Rotating backup — only when content exists
+      saveBackup(tab);
+      setBackups(loadBackups());
+    } catch { /* ignore */ }
   }, [tab]);
 
   const { title, subtitle, grid, bars } = tab;
@@ -470,7 +507,10 @@ export const TabBuilder: React.FC = () => {
             {busy ? '…' : 'PDF'}
           </button>
           <button
-            onClick={clearGrid}
+            onClick={() => {
+              if (!window.confirm('Clear all notes? This cannot be undone.')) return;
+              clearGrid();
+            }}
             title="Clear all notes"
             style={{
               background: 'transparent', color: T.textMuted,
@@ -481,6 +521,19 @@ export const TabBuilder: React.FC = () => {
             }}>
             Clear
           </button>
+          {backups.length > 0 && (
+            <button
+              onClick={() => setRecoverOpen(true)}
+              title="Recover a previous save"
+              style={{
+                background: '#1A7A4A', color: '#fff', border: 'none',
+                borderRadius: 0, padding: '7px 9px',
+                cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
+              }}>
+              ↺ Recover
+            </button>
+          )}
           <button
             onClick={undo}
             disabled={!canUndo}
@@ -716,6 +769,62 @@ export const TabBuilder: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* ── Recover modal ────────────────────────────────────── */}
+      {recoverOpen && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setRecoverOpen(false); }}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 300, padding: 16,
+          }}>
+          <div style={{
+            background: T.bgCard, borderRadius: 0, border: `1px solid ${T.border}`,
+            width: '100%', maxWidth: 500, maxHeight: '80vh', overflowY: 'auto',
+            padding: '22px 20px', position: 'relative',
+            display: 'flex', flexDirection: 'column', gap: 10,
+          }}>
+            <button onClick={() => setRecoverOpen(false)} style={{
+              position: 'absolute', top: 12, right: 12,
+              background: T.bgInput, border: 'none', borderRadius: 0,
+              cursor: 'pointer', color: T.textMuted, fontSize: 16, padding: '3px 7px',
+              borderLeft: '3px solid var(--gc-bar-color)',
+            }}>✕</button>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.text, marginBottom: 4 }}>
+              ↺ Recover saved tab
+            </div>
+            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 8 }}>
+              Up to {MAX_BACKUPS} auto-saves are kept. Click one to restore it.
+            </div>
+            {[...backups].reverse().map((b, i) => {
+              const d = new Date(b.ts);
+              const noteCount = b.tab.grid.reduce((n, r) => n + r.filter(c => c.fret).length, 0);
+              return (
+                <button key={i} onClick={() => {
+                  if (!window.confirm('Restore this version? Your current tab will be replaced.')) return;
+                  withHistory(() => b.tab);
+                  setRecoverOpen(false);
+                }} style={{
+                  background: T.bgInput, border: `1px solid ${T.border}`,
+                  borderRadius: 0, padding: '10px 14px', cursor: 'pointer', textAlign: 'left',
+                  borderLeft: '4px solid #1A7A4A',
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                    {b.tab.title || '(untitled)'}{' '}
+                    <span style={{ fontWeight: 400, color: T.textMuted, fontSize: 11 }}>
+                      — {noteCount} note{noteCount !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 10, color: T.textMuted, marginTop: 3 }}>
+                    {d.toLocaleDateString()} {d.toLocaleTimeString()}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Analyze modal ─────────────────────────────────── */}
       {analyzeOpen && (
