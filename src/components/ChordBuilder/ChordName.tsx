@@ -12,9 +12,7 @@ interface Props {
 export const ChordName: React.FC<Props> = ({ positions, tuning, capo = 0 }) => {
   const chords = identifyChord(positions, tuning, capo);
 
-  if (positions.length < 2) return (
-    <p style={{ color: T.textDim, fontSize: 13, fontWeight: 700, margin: 0 }}>Place 2+ notes on the fretboard</p>
-  );
+  if (positions.length < 2) return null;
 
   if (chords.length === 0) return (
     <p style={{ color: T.textMuted, fontSize: 13, fontStyle: 'italic', margin: 0 }}>No chord detected</p>
