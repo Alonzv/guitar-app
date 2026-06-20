@@ -53,6 +53,7 @@ export function TheoryTab({
             <button
               key={s.id}
               onClick={() => setSub(s.id)}
+              className="gc-sub-tab"
               style={{
                 flex: 1,
                 padding: '9px 4px',

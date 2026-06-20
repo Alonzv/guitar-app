@@ -524,7 +524,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           { id: 'voiceleading', label: 'Voice Leading' },
           { id: 'reharmonize',  label: 'Re-Harmonize'  },
         ] as { id: 'paths' | 'voiceleading' | 'reharmonize'; label: string }[]).map(tab => (
-          <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
+          <button key={tab.id} onClick={() => setSubTab(tab.id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 4px', borderRadius: 0,
             background: subTab === tab.id ? T.secondary : T.bgInput,
             color: subTab === tab.id ? '#fff' : T.textMuted,
