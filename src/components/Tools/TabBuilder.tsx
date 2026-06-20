@@ -379,7 +379,9 @@ export const TabBuilder: React.FC = () => {
 
     try {
       const { exportTabPDF } = await import('../../utils/pdfExport');
-      await exportTabPDF(title, subtitle, grid, bars, STRS, COLS_PER_LINE, pdfAnalysis);
+      // Pass the live colsPerLine so the PDF breaks lines exactly where the
+      // user sees them on screen (the grid is sized in multiples of it).
+      await exportTabPDF(title, subtitle, grid, bars, STRS, colsPerLine, pdfAnalysis);
     } finally {
       setBusy(false);
     }

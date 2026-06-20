@@ -247,6 +247,11 @@ function buildAnalysisHTML(a: TabPDFAnalysis): string {
     </div>`;
 }
 
+// Usable text width inside the rendered page (680px − 52px padding each side)
+const TAB_USABLE_W = RENDER_WIDTH - 2 * 52;
+// Courier New advance width is 0.6em; use 0.62 as a safety margin
+const TAB_CHAR_FACTOR = 0.62;
+
 export async function exportTabPDF(
   title: string,
   subtitle: string,
@@ -257,20 +262,24 @@ export async function exportTabPDF(
   analysis?: TabPDFAnalysis,
 ): Promise<void> {
   const colCount = grid[0]?.length ?? 0;
-  const numSys   = Math.ceil(colCount / colsPerLine);
+  // Match the on-screen line breaks exactly. Fall back to 32 if not provided.
+  const perLine  = colsPerLine > 0 ? colsPerLine : 32;
+  const numSys   = Math.ceil(colCount / perLine);
   const barsSet  = new Set(bars);
 
-  let systemsHTML = '';
+  // ── Pass 1: build each system's lines and find the widest line ──
+  const systems: string[][] = [];
+  let maxLineChars = 0;
   for (let sys = 0; sys < numSys; sys++) {
-    const start = sys * colsPerLine;
-    const end   = Math.min(start + colsPerLine, colCount);
+    const start = sys * perLine;
+    const end   = Math.min(start + perLine, colCount);
     const isEmpty = strings.every((_, s) =>
       Array.from({ length: end - start }, (_, ci) => grid[s][start + ci])
         .every(c => !c.fret)
     );
     if (isEmpty) continue;
 
-    systemsHTML += '<div style="margin-bottom:22px;">';
+    const lines: string[] = [];
     for (let s = 0; s < strings.length; s++) {
       let line = `${strings[s]}|`;
       for (let c = start; c < end; c++) {
@@ -278,7 +287,23 @@ export async function exportTabPDF(
         if (barsSet.has(c)) line += '|';
       }
       line += '|';
-      systemsHTML += `<div style="font-family:'Courier New',monospace;font-size:14px;line-height:1.85;white-space:pre;">${escapeHtml(line)}</div>`;
+      maxLineChars = Math.max(maxLineChars, line.length);
+      lines.push(line);
+    }
+    systems.push(lines);
+  }
+
+  // ── Auto-size the font so the widest line always fits the page width ──
+  const fontSize = maxLineChars > 0
+    ? Math.max(6, Math.min(14, Math.floor(TAB_USABLE_W / (TAB_CHAR_FACTOR * maxLineChars))))
+    : 14;
+
+  // ── Pass 2: render ──
+  let systemsHTML = '';
+  for (const lines of systems) {
+    systemsHTML += '<div style="margin-bottom:22px;">';
+    for (const line of lines) {
+      systemsHTML += `<div style="font-family:'Courier New',monospace;font-size:${fontSize}px;line-height:1.85;white-space:pre;">${escapeHtml(line)}</div>`;
     }
     systemsHTML += '</div>';
   }
