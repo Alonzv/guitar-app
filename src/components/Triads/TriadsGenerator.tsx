@@ -158,7 +158,8 @@ function pill(active: boolean, onClick: () => void, label: string) {
 
 export function TriadsGenerator() {
   const [root,               setRoot]               = useState<Note>('C');
-  const [triadType,          setTriadType]          = useState<TriadType>('major');
+  const [triadType,          setTriadType]          = useState<TriadType | null>(null);
+  const [triadMenuOpen,      setTriadMenuOpen]      = useState(false);
   const [selectedSet,        setSelectedSet]        = useState<number | null>(null);
   const [displayMode,        setDisplayMode]        = useState<DisplayMode>('notes');
   const [selectedInversion,  setSelectedInversion]  = useState<0 | 1 | 2 | null>(null);
@@ -168,13 +169,13 @@ export function TriadsGenerator() {
   const [sortMode,           setSortMode]           = useState<SortMode>('strings');
   const [sortOpen,           setSortOpen]           = useState(false);
 
-  const def   = TRIADS[triadType];
-  const notes = useMemo(() => getTriadNotes(root, def.intervals), [root, def]);
+  const def   = triadType ? TRIADS[triadType] : null;
+  const notes = useMemo(() => def ? getTriadNotes(root, def.intervals) : ([] as string[]), [root, def]);
 
   const allShapes = useMemo(() =>
-    STRING_SETS.map(ss =>
+    def ? STRING_SETS.map(ss =>
       ([0, 1, 2] as const).map(inv => findShape(root, def.intervals, ss.strings, inv))
-    ),
+    ) : [],
     [root, def]
   );
 
@@ -197,7 +198,7 @@ export function TriadsGenerator() {
         const labels        = shape.map(p =>
           displayMode === 'notes'
             ? fretToNote(p.string, p.fret)
-            : def.intervalLabels[DEGREES.indexOf(p.degree)]
+            : (def?.intervalLabels[DEGREES.indexOf(p.degree)] ?? '')
         );
         const frets     = shape.map(p => p.fret);
         const minFret   = Math.min(...frets);
@@ -285,30 +286,50 @@ export function TriadsGenerator() {
         </div>
       </div>
 
-      {/* Triad type */}
-      <div style={card()}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Triad Type</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-          {(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => {
-            const sel = triadType === type;
-            return (
-              <button key={type} onClick={() => setTriadType(type)} style={{
-                padding: '9px 10px', borderRadius: 0, cursor: 'pointer', textAlign: 'left',
-                border:      sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
-                background:  sel ? T.secondaryBg : T.bgInput,
-                color:       sel ? T.secondary   : T.textMuted,
-                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
-              }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
-                <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Triad type — collapsible */}
+      <div>
+        <button
+          onClick={() => setTriadMenuOpen(o => !o)}
+          style={{
+            width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
+            background: '#1235FC', color: '#fff',
+            fontSize: 13, fontWeight: 700, textAlign: 'left',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderLeft: '3px solid var(--gc-bar-color)',
+          }}
+        >
+          <span>
+            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Triad Type</span>
+            {triadType ? TRIADS[triadType].label : '— Select —'}
+          </span>
+          <span style={{ fontSize: 11 }}>{triadMenuOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {triadMenuOpen && (
+          <div style={{ ...card(), marginTop: 2 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+              {(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => {
+                const sel = triadType === type;
+                return (
+                  <button key={type} onClick={() => { setTriadType(type); setTriadMenuOpen(false); }} style={{
+                    padding: '9px 10px', borderRadius: 0, cursor: 'pointer', textAlign: 'left',
+                    border:      sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
+                    background:  sel ? T.secondaryBg : T.bgInput,
+                    color:       sel ? T.secondary   : T.textMuted,
+                    transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                  }}>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
+                    <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Chord summary + controls */}
-      <div style={card({ padding: '10px 14px' })}>
+      {def && <div style={card({ padding: '10px 14px' })}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{root}{def.suffix}</span>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -325,15 +346,18 @@ export function TriadsGenerator() {
             const color = DEGREE_COLORS[DEGREES[i]];
             return (
               <div key={i} style={{ flex: 1, textAlign: 'center', padding: '6px', borderRadius: 0, background: T.bgInput, border: `1px solid ${color}44` }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color, lineHeight: 1 }}>{def.intervalLabels[i]}</div>
+                <div style={{ fontSize: 9, fontWeight: 700, color, lineHeight: 1 }}>{def!.intervalLabels[i]}</div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{n}</div>
               </div>
             );
           })}
         </div>
-      </div>
+      </div>}
 
       {/* ── Filters + Sort by ────────────────────────────────────────────── */}
+      {!def && null}
+      {def && <>
+
       {(() => {
         const activeLabels = [
           selectedSet       !== null  ? STRING_SETS[selectedSet].label      : null,
@@ -507,10 +531,11 @@ export function TriadsGenerator() {
         {DEGREES.map((deg, i) => (
           <span key={deg} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ width: 9, height: 9, borderRadius: 0, background: DEGREE_COLORS[deg], display: 'inline-block' }} />
-            {def.intervalLabels[i]} ({notes[i]})
+            {def?.intervalLabels[i]} ({notes[i]})
           </span>
         ))}
       </div>
+      </>}
 
       {/* ── Expanded card modal (mobile + desktop) ───────────────────────── */}
       {expandedCard && (
@@ -610,7 +635,7 @@ export function TriadsGenerator() {
               {DEGREES.map((deg, i) => (
                 <span key={deg} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ width: 8, height: 8, borderRadius: 0, background: DEGREE_COLORS[deg], display: 'inline-block' }} />
-                  {def.intervalLabels[i]} ({notes[i]})
+                  {def?.intervalLabels[i]} ({notes[i]})
                 </span>
               ))}
             </div>
