@@ -53,7 +53,7 @@ export const ChordsTab: React.FC<Props> = ({
             borderLeft: '3px solid var(--gc-bar-color)',
             transition: 'background 0.1s',
           }}>
-            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 700 }}>{SUB_LABELS[id]}</span></span>
+            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 400 }}>{SUB_LABELS[id]}</span></span>
           </button>
         ))}
       </div>
