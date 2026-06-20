@@ -127,25 +127,27 @@ export function ChordBuilderTab({
         <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} tuning={tuning.notes} capo={capo} />
       </div>
 
-      {/* ── Chord name ── */}
-      <div style={card({ minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 })}>
-        <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} />
-        {chords.length > 0 && (
-          <button
-            onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}
-            style={{
-              padding: '6px 16px', borderRadius: 0, border: `1px solid ${T.border}`,
-              cursor: 'pointer', fontSize: 12, fontWeight: 500,
-              background: showVariations ? T.primaryBg : T.bgInput,
-              color: showVariations ? T.primary : T.textMuted,
-              transition: 'filter 0.15s',
-              borderLeft: '3px solid var(--gc-bar-color)',
-            }}
-          >
-            {showVariations ? 'Hide variations' : 'Show more variations'}
-          </button>
-        )}
-      </div>
+      {/* ── Chord name — hidden until notes are placed ── */}
+      {activeDots.length >= 2 && (
+        <div style={card({ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '16px 12px' })}>
+          <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} />
+          {chords.length > 0 && (
+            <button
+              onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}
+              style={{
+                padding: '6px 16px', borderRadius: 0, border: `1px solid ${T.border}`,
+                cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                background: showVariations ? T.primaryBg : T.bgInput,
+                color: showVariations ? T.primary : T.textMuted,
+                transition: 'filter 0.15s',
+                borderLeft: '3px solid var(--gc-bar-color)',
+              }}
+            >
+              {showVariations ? 'Hide variations' : 'Show more variations'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Chord structure ── */}
       {chords.length > 0 && (
