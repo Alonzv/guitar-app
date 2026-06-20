@@ -251,6 +251,13 @@ function buildAnalysisHTML(a: TabPDFAnalysis): string {
 const TAB_USABLE_W = RENDER_WIDTH - 2 * 52;
 // Courier New advance width is 0.6em; use 0.62 as a safety margin
 const TAB_CHAR_FACTOR = 0.62;
+// Hard ceiling on columns per PDF line. Each column is 3 monospace chars, plus
+// ~6 chars of overhead (string label + bar lines), so 20 cols ≈ 66 chars, which
+// fits the usable width at the full 14px font. This guarantees a readable,
+// never-clipped result even on very wide screens where the live colsPerLine is
+// large. On phones/tablets the live value is already below this, so the PDF
+// line breaks still match exactly what the user sees on screen.
+const TAB_PDF_MAX_COLS = 20;
 
 export async function exportTabPDF(
   title: string,
@@ -262,8 +269,9 @@ export async function exportTabPDF(
   analysis?: TabPDFAnalysis,
 ): Promise<void> {
   const colCount = grid[0]?.length ?? 0;
-  // Match the on-screen line breaks exactly. Fall back to 32 if not provided.
-  const perLine  = colsPerLine > 0 ? colsPerLine : 32;
+  // Match the on-screen line breaks when they fit; otherwise reflow so a line
+  // never overflows the page width (which would clip notes off the right edge).
+  const perLine  = Math.min(colsPerLine > 0 ? colsPerLine : 32, TAB_PDF_MAX_COLS);
   const numSys   = Math.ceil(colCount / perLine);
   const barsSet  = new Set(bars);
 
