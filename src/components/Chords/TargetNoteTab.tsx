@@ -312,26 +312,29 @@ const InputFretboard: React.FC<{
       overflowX: 'auto',
       WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
       borderRadius: 0,
-      background: T.bgInput,
+      background: 'var(--gc-fretboard-bg)',
       scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
     }}>
       <svg
         viewBox={`0 0 ${FB_SVG_W} ${FB_SVG_H}`}
         style={{ width: '100%', minWidth: 540, maxHeight: 210, display: 'block' }}
       >
+        {/* Background */}
+        <rect x={0} y={0} width={FB_SVG_W} height={FB_SVG_H} fill="var(--gc-fretboard-bg)" />
+
         {/* Open-string zone */}
-        <rect x={0} y={FB_TOP_Y} width={FB_NUT_X} height={5 * FB_STR_SP} fill={T.bgDeep} opacity={0.2} />
+        <rect x={0} y={FB_TOP_Y} width={FB_NUT_X} height={5 * FB_STR_SP} fill="rgba(0,0,0,0.15)" />
 
         {/* Nut */}
         <rect x={FB_NUT_X - 3} y={FB_TOP_Y} width={3.5} height={5 * FB_STR_SP}
-          fill={T.text} opacity={0.65} rx={1} />
+          fill="var(--gc-fretboard-nut)" rx={1} />
 
         {/* Fret lines */}
         {Array.from({ length: 13 }).map((_, i) => (
           <line key={i}
             x1={FB_NUT_X + i * FB_FRET_SP} y1={FB_TOP_Y}
             x2={FB_NUT_X + i * FB_FRET_SP} y2={FB_BOARD_B}
-            stroke={T.border} strokeWidth={1.2}
+            stroke="rgba(255,255,255,1)" strokeWidth={1.2}
           />
         ))}
 
@@ -339,7 +342,7 @@ const InputFretboard: React.FC<{
         {Array.from({ length: STRING_COUNT }).map((_, s) => (
           <line key={s}
             x1={0} y1={strY(s)} x2={FB_BOARD_R} y2={strY(s)}
-            stroke={T.secondary} strokeWidth={0.9 + s * 0.22} opacity={0.5}
+            stroke="rgba(255,255,255,1)" strokeWidth={0.9 + s * 0.22}
           />
         ))}
 
@@ -348,18 +351,18 @@ const InputFretboard: React.FC<{
           <circle key={f}
             cx={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
             cy={FB_TOP_Y + 2.5 * FB_STR_SP}
-            r={4} fill={T.border} opacity={0.45}
+            r={4} fill="rgba(255,255,255,0.15)"
           />
         ))}
-        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 1.5 * FB_STR_SP} r={3.5} fill={T.border} opacity={0.45} />
-        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 3.5 * FB_STR_SP} r={3.5} fill={T.border} opacity={0.45} />
+        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 1.5 * FB_STR_SP} r={3.5} fill="rgba(255,255,255,0.15)" />
+        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 3.5 * FB_STR_SP} r={3.5} fill="rgba(255,255,255,0.15)" />
 
         {/* Fret number labels */}
         {[1,2,3,4,5,6,7,8,9,10,11,12].map(f => (
           <text key={f}
             x={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
             y={FB_BOARD_B + 22}
-            textAnchor="middle" fontSize={10} fill={T.textDim}
+            textAnchor="middle" fontSize={10} fill="rgba(255,255,255,0.6)"
           >{f}</text>
         ))}
 
@@ -418,25 +421,26 @@ const ScaleStrip: React.FC<{
 
   return (
     <div style={{
-      overflowX: 'auto', borderRadius: 0, background: T.bgInput, marginTop: 8,
+      overflowX: 'auto', borderRadius: 0, background: 'var(--gc-fretboard-bg)', marginTop: 8,
       scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
     }}>
       <svg viewBox={`0 0 ${SS_W} ${SS_H}`}
         style={{ width: '100%', minWidth: 460, maxHeight: 130, display: 'block' }}>
-        <rect x={0} y={SS_TOP} width={SS_NUT} height={5 * SS_SSP} fill={T.bgDeep} opacity={0.2} />
-        <rect x={SS_NUT - 2.5} y={SS_TOP} width={3} height={5 * SS_SSP} fill={T.text} opacity={0.6} rx={1} />
+        <rect x={0} y={0} width={SS_W} height={SS_H} fill="var(--gc-fretboard-bg)" />
+        <rect x={0} y={SS_TOP} width={SS_NUT} height={5 * SS_SSP} fill="rgba(0,0,0,0.15)" />
+        <rect x={SS_NUT - 2.5} y={SS_TOP} width={3} height={5 * SS_SSP} fill="var(--gc-fretboard-nut)" rx={1} />
 
         {Array.from({ length: 13 }).map((_, i) => (
           <line key={i} x1={SS_NUT + i * SS_FSP} y1={SS_TOP} x2={SS_NUT + i * SS_FSP} y2={SS_B}
-            stroke={T.border} strokeWidth={1} />
+            stroke="rgba(255,255,255,1)" strokeWidth={1} />
         ))}
         {Array.from({ length: STRING_COUNT }).map((_, s) => (
           <line key={s} x1={0} y1={ssY(s)} x2={SS_R} y2={ssY(s)}
-            stroke={T.secondary} strokeWidth={0.8 + s * 0.18} opacity={0.45} />
+            stroke="rgba(255,255,255,1)" strokeWidth={0.8 + s * 0.18} />
         ))}
         {[3,5,7,9,12].map(f => (
           <text key={f} x={SS_NUT + (f - 0.5) * SS_FSP} y={SS_H - 3}
-            textAnchor="middle" fontSize={8} fill={T.textDim}>{f}</text>
+            textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.6)">{f}</text>
         ))}
 
         {positions.map((p, i) => {
@@ -585,15 +589,15 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
           onClick={() => setControlsOpen(o => !o)}
           style={{
             width: '100%', padding: '10px 14px',
-            background: 'transparent', border: 'none', cursor: 'pointer',
+            background: '#1235FC', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}
         >
-          <span style={{ fontSize: 12, fontWeight: 700, color: T.textMuted }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
             ⚙ Search Settings
           </span>
           <span style={{
-            fontSize: 11, color: T.textDim,
+            fontSize: 11, color: '#fff',
             transform: controlsOpen ? 'rotate(180deg)' : 'none',
             transition: 'transform 0.18s', display: 'inline-block',
           }}>▼</span>

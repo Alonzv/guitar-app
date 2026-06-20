@@ -213,16 +213,16 @@ export function IntervalExplore() {
         </div>
 
         {/* Fretboard + area filter */}
-        <div style={card({ padding: '9px 10px 8px' })}>
+        <div style={{ ...card({ padding: '9px 10px 8px' }), background: 'var(--gc-fretboard-bg)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <span style={{ fontSize: 10, color: T.textMuted }}>Area:</span>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>Area:</span>
               {AREAS.map(a => (
                 <button key={a.id} onClick={() => setArea(a.id)} style={{
                   padding: '2px 7px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                  background: area === a.id ? T.text : T.bgInput,
-                  color: area === a.id ? T.bgDeep : T.textMuted,
-                  border: area === a.id ? 'none' : `1px solid ${T.border}`,
+                  background: area === a.id ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.1)',
+                  color: area === a.id ? '#1A1818' : 'rgba(255,255,255,0.7)',
+                  border: 'none',
                   borderLeft: '3px solid var(--gc-bar-color)',
                 }}>{a.label}</button>
               ))}
@@ -232,36 +232,38 @@ export function IntervalExplore() {
           <div style={{ display: 'flex', gap: 10, marginBottom: 6, fontSize: 10 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: 0, background: T.primary, display: 'inline-block' }} />
-              <span style={{ color: T.textMuted }}>{root} (root)</span>
+              <span style={{ color: 'rgba(255,255,255,0.7)' }}>{root} (root)</span>
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 0, background: T.secondary, display: 'inline-block' }} />
-              <span style={{ color: T.textMuted }}>{intervalNote} ({selectedInterval.abbrev})</span>
+              <span style={{ width: 8, height: 8, borderRadius: 0, background: '#FFC800', display: 'inline-block' }} />
+              <span style={{ color: 'rgba(255,255,255,0.7)' }}>{intervalNote} ({selectedInterval.abbrev})</span>
             </span>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
             <svg viewBox={`0 0 ${FB_W} ${FB_H}`} style={{ display: 'block', width: '100%', minWidth: 260 }}>
+              <rect x={0} y={0} width={FB_W} height={FB_H} fill="var(--gc-fretboard-bg)" />
               {FRET_MARKERS.map(f => (
                 <circle key={f} cx={NUT + (f - 0.5) * FRET_SP} cy={FB_TOP + 2.5 * STR_SP}
-                  r={f === 12 ? 3 : 4} fill={T.border} opacity={0.4} />
+                  r={f === 12 ? 3 : 4} fill="rgba(255,255,255,0.15)" />
               ))}
               {Array.from({ length: 13 }).map((_, i) => (
                 <line key={i} x1={NUT + i * FRET_SP} y1={FB_TOP} x2={NUT + i * FRET_SP} y2={FB_TOP + 5 * STR_SP}
-                  stroke={i === 0 ? T.text : T.border} strokeWidth={i === 0 ? 3 : 1} opacity={i === 0 ? 0.6 : 0.8} />
+                  stroke="rgba(255,255,255,1)" strokeWidth={i === 0 ? 0 : 1} />
               ))}
+              <rect x={NUT - 3} y={FB_TOP} width={3} height={5 * STR_SP} fill="var(--gc-fretboard-nut)" />
               {Array.from({ length: 6 }).map((_, s) => (
                 <line key={s} x1={NUT} y1={strY(s)} x2={NUT + 12 * FRET_SP} y2={strY(s)}
-                  stroke={T.textMuted} strokeWidth={0.7 + (5 - s) * 0.28} opacity={0.5} />
+                  stroke="rgba(255,255,255,1)" strokeWidth={0.7 + (5 - s) * 0.28} />
               ))}
               {[3, 5, 7, 9, 12].map(f => (
                 <text key={f} x={NUT + (f - 0.5) * FRET_SP} y={FB_H - 1}
-                  textAnchor="middle" fontSize={7} fill={T.textDim}>{f}</text>
+                  textAnchor="middle" fontSize={7} fill="rgba(255,255,255,0.6)">{f}</text>
               ))}
               {intervalDots.map((p, i) => (
                 <g key={`iv-${i}`}>
-                  <circle cx={noteX(p.fret)} cy={strY(p.string)} r={8} fill={T.secondary} opacity={0.88} />
-                  <text x={noteX(p.fret)} y={strY(p.string) + 3.5} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{intervalNote}</text>
+                  <circle cx={noteX(p.fret)} cy={strY(p.string)} r={8} fill="#FFC800" opacity={0.92} />
+                  <text x={noteX(p.fret)} y={strY(p.string) + 3.5} textAnchor="middle" fontSize={6} fill="#1A1818" fontWeight="700">{intervalNote}</text>
                 </g>
               ))}
               {rootDots.map((p, i) => (
