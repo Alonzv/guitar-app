@@ -110,13 +110,6 @@ export function IntervalCalculate() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-      {/* Instruction */}
-      <div style={card({ padding: '7px 12px' })}>
-        <p style={{ margin: 0, fontSize: 11, color: T.textMuted, lineHeight: 1.4 }}>
-          Tap any two frets to calculate the interval. Tap again to deselect.
-        </p>
-      </div>
-
       {/* Result panel */}
       <div style={{
         ...card({ padding: '10px 12px' }),
