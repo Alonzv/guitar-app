@@ -215,13 +215,14 @@ export function ScaleExplorer() {
                 return (
                   <div key={i} style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    padding: '5px 8px', borderRadius: 0, gap: 2, minWidth: 44,
+                    padding: '8px 10px', borderRadius: 0, gap: 3, flex: 1, minWidth: 48,
                     background: isR ? T.primaryBg : T.bgInput,
                     border: `1px solid ${isR ? T.primary : T.border}`,
+                    borderTop: isR ? `3px solid ${T.primary}` : `3px solid ${T.border}`,
                   }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
-                    <span style={{ fontSize: 14, fontWeight: isR ? 800 : 400, color: isR ? T.primary : T.text, lineHeight: 1.2 }}>{note}</span>
-                    <span style={{ fontSize: 8, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
+                    <span style={{ fontSize: 18, fontWeight: isR ? 800 : 600, color: isR ? T.primary : T.text, lineHeight: 1.1 }}>{note}</span>
+                    <span style={{ fontSize: 9, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
                   </div>
                 );
               })}
