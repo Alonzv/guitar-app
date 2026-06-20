@@ -65,13 +65,14 @@ const POSITION_WINDOWS = [[0,3],[2,5],[4,8],[6,10],[9,12]] as const;
 const POS_COLORS = [T.primary, T.secondary, '#C8A020', '#6B21A8', '#1A7A4A'];
 
 export function ScaleExplorer() {
-  const [root, setRoot]           = useState<Note>('A');
-  const [scaleType, setScaleType] = useState('minor pentatonic');
-  const [pos, setPos]             = useState<number | null>(null);
-  const [viewMode, setViewMode]   = useState<'fretboard' | 'tab'>('fretboard');
+  const [root, setRoot]             = useState<Note>('A');
+  const [scaleType, setScaleType]   = useState<string | null>(null);
+  const [scaleMenuOpen, setScaleMenuOpen] = useState(false);
+  const [pos, setPos]               = useState<number | null>(null);
+  const [viewMode, setViewMode]     = useState<'fretboard' | 'tab'>('fretboard');
 
-  const scale       = useMemo(() => Scale.get(`${root} ${scaleType}`), [root, scaleType]);
-  const allPos      = useMemo(() => getScalePositions(root, scaleType), [root, scaleType]);
+  const scale       = useMemo(() => scaleType ? Scale.get(`${root} ${scaleType}`) : Scale.get(''), [root, scaleType]);
+  const allPos      = useMemo(() => scaleType ? getScalePositions(root, scaleType) : [], [root, scaleType]);
 
   const displayPos  = useMemo(() => {
     if (pos === null) return allPos;
@@ -132,36 +133,54 @@ export function ScaleExplorer() {
       </div>
 
       {/* ── Scale type ── */}
-      <div style={card()}>
-        <p style={{ margin: '0 0 12px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Scale Type
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {SCALE_GROUPS.map(g => (
-            <div key={g.label}>
-              <p style={{ margin: '0 0 7px', fontSize: 10, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {g.label}
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {g.scales.map(s => {
-                  const sel = scaleType === s.id;
-                  return (
-                    <button key={s.id} onClick={() => setScaleType(s.id)} style={{
-                      padding: '6px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
-                      fontWeight: sel ? 700 : 400,
-                      border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
-                      background: sel ? T.secondaryBg : T.bgInput,
-                      color: sel ? T.secondary : T.textMuted,
-                      borderLeft: '3px solid var(--gc-bar-color)',
-                    }}>
-                      {s.label}
-                    </button>
-                  );
-                })}
+      <div>
+        <button
+          onClick={() => setScaleMenuOpen(o => !o)}
+          style={{
+            width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
+            background: '#1235FC', color: '#fff',
+            fontSize: 13, fontWeight: 700, textAlign: 'left',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderLeft: '3px solid var(--gc-bar-color)',
+          }}
+        >
+          <span>
+            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Scale Type</span>
+            {scaleType
+              ? SCALE_GROUPS.flatMap(g => g.scales).find(s => s.id === scaleType)?.label ?? scaleType
+              : '— Select —'}
+          </span>
+          <span style={{ fontSize: 11 }}>{scaleMenuOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {scaleMenuOpen && (
+          <div style={{ ...card(), marginTop: 2, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {SCALE_GROUPS.map(g => (
+              <div key={g.label}>
+                <p style={{ margin: '0 0 7px', fontSize: 10, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {g.label}
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {g.scales.map(s => {
+                    const sel = scaleType === s.id;
+                    return (
+                      <button key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); }} style={{
+                        padding: '6px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
+                        fontWeight: sel ? 700 : 400,
+                        border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
+                        background: sel ? T.secondaryBg : T.bgInput,
+                        color: sel ? T.secondary : T.textMuted,
+                        borderLeft: '3px solid var(--gc-bar-color)',
+                      }}>
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {!scale.empty ? (
