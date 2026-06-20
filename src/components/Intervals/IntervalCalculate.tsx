@@ -104,7 +104,7 @@ export function IntervalCalculate() {
   const dotColor = (p: Point) => {
     if (!has2) return T.primary;
     if (rootPt && p.string === rootPt.string && p.fret === rootPt.fret) return T.primary;
-    return T.secondary;
+    return '#C8A020'; // gold — visible on blue fretboard background
   };
 
   return (
@@ -114,23 +114,25 @@ export function IntervalCalculate() {
       <div style={{
         ...card({ padding: '10px 12px' }),
         minHeight: 68, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        background: has2 ? '#1A1818' : undefined,
+        borderLeft: has2 ? '3px solid #CC1C1C' : undefined,
       }}>
         {has2 && intervalInfo ? (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <div style={{ fontSize: 10, color: T.textMuted, marginBottom: 2 }}>
+                <div style={{ fontSize: 10, color: '#FFC800', fontWeight: 600, marginBottom: 2 }}>
                   {fretToNote(points[inverted ? 1 : 0].string, points[inverted ? 1 : 0].fret)}
                   {' → '}
                   {fretToNote(points[inverted ? 0 : 1].string, points[inverted ? 0 : 1].fret)}
                 </div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: T.secondary, lineHeight: 1 }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#CC1C1C', lineHeight: 1 }}>
                   {intervalInfo.abbrev}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginTop: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginTop: 2 }}>
                   {intervalInfo.name}
                 </div>
-                <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>
+                <div style={{ fontSize: 10, color: '#FFC800', marginTop: 1 }}>
                   {semitones} semitone{semitones !== 1 ? 's' : ''}
                 </div>
               </div>
