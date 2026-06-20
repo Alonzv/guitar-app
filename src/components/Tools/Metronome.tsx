@@ -219,7 +219,7 @@ export const Metronome: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 6 }}>
           <button onClick={() => adjustBpm(-1)} style={{
             width: 44, height: 44, borderRadius: 0, border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 700, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
+            background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 400, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
           }}>−</button>
           <input
             type="number" min={40} max={240}
@@ -237,7 +237,7 @@ export const Metronome: React.FC = () => {
           />
           <button onClick={() => adjustBpm(1)} style={{
             width: 44, height: 44, borderRadius: 0, border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 700, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
+            background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 400, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
           }}>+</button>
         </div>
         <div style={{ textAlign: 'center', fontSize: 12, color: T.textMuted, marginBottom: 16 }}>BPM</div>
@@ -254,7 +254,7 @@ export const Metronome: React.FC = () => {
           style={{
             width: '100%', padding: '10px 0', marginBottom: 20, borderRadius: 0,
             border: `1px solid ${T.border}`, background: T.bgInput,
-            color: T.textMuted, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            color: T.textMuted, fontWeight: 400, fontSize: 13, cursor: 'pointer',
             transition: 'background 0.1s', borderLeft: '3px solid var(--gc-bar-color)',
           }}
         >
@@ -262,7 +262,7 @@ export const Metronome: React.FC = () => {
         </button>
 
         {/* Subdivision buttons */}
-        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
           Subdivision
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
@@ -278,7 +278,7 @@ export const Metronome: React.FC = () => {
                   border: `1.5px solid ${active ? T.primary : T.border}`,
                   background: active ? T.primaryBg : T.bgInput,
                   color: active ? T.primary : T.textMuted,
-                  cursor: 'pointer', fontSize: 11, fontWeight: active ? 700 : 500,
+                  cursor: 'pointer', fontSize: 11, fontWeight: active ? 500 : 500,
                   transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >

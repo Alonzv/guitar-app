@@ -264,7 +264,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
           <span>♭ Flat</span><span>In tune</span><span>Sharp ♯</span>
         </div>
 
-        <div style={{ fontSize: 15, fontWeight: 700, color: tuneColor, transition: 'color 0.3s', minHeight: 22 }}>
+        <div style={{ fontSize: 15, fontWeight: 400, color: tuneColor, transition: 'color 0.3s', minHeight: 22 }}>
           {!display ? ''
             : absCents <= 5  ? '✓ In tune!'
             : cents > 0 ? `+${cents}¢ — Tune down`

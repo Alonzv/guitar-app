@@ -25,7 +25,7 @@ interface Props {
 const LABEL_STYLE: React.CSSProperties = {
   margin: 0,
   fontSize: 11,
-  fontWeight: 700,
+  fontWeight: 400,
   color: T.textMuted,
   textTransform: 'uppercase',
   letterSpacing: '-0.02em',
@@ -43,7 +43,7 @@ function FretBadge({ voicing, color }: { voicing: FretPosition[]; color: string 
       padding: '2px 7px', borderRadius: 0,
       background: color + '22',
       border: `1px solid ${color}55`,
-      fontSize: 10, fontWeight: 700, color,
+      fontSize: 10, fontWeight: 400, color,
     }}>
       {nonOpen.length === 0
         ? 'open'
@@ -84,7 +84,7 @@ function ReharmModal({
     background: disabled ? T.bgDeep : T.bgInput,
     color: disabled ? T.textDim : T.text,
     cursor: disabled ? 'default' : 'pointer',
-    fontSize: 18, fontWeight: 700, opacity: disabled ? 0.35 : 1,
+    fontSize: 18, fontWeight: 400, opacity: disabled ? 0.35 : 1,
     transition: 'opacity 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
   });
 
@@ -322,12 +322,12 @@ export function ReharmonizeTab({
                   <span style={{
                     padding: '5px 12px', borderRadius: 0,
                     background: T.bgDeep, border: `1px solid ${T.border}`,
-                    fontSize: 13, fontWeight: 700, color: T.text,
+                    fontSize: 13, fontWeight: 400, color: T.text,
                   }}>
                     {c}
                   </span>
                   {showNashville && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted }}>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted }}>
                       {toNashville(c, keyRoot)}
                     </span>
                   )}
@@ -371,7 +371,7 @@ export function ReharmonizeTab({
                 <span style={{
                   padding: '2px 8px', borderRadius: 0,
                   background: T.primarySoft, color: T.primary,
-                  fontSize: 11, fontWeight: 700,
+                  fontSize: 11, fontWeight: 400,
                 }}>
                   {tension} — {tensionLabel(tension)}
                 </span>
@@ -400,7 +400,7 @@ export function ReharmonizeTab({
                   {(['full', 'triads'] as VoicingMode[]).map(m => (
                     <button key={m} onClick={() => setMode(m)} style={{
                       flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
-                      fontSize: 12, fontWeight: 700,
+                      fontSize: 12, fontWeight: 400,
                       background: mode === m ? T.secondary : T.bgInput,
                       color: mode === m ? '#fff' : T.textMuted,
                       transition: 'background 0.15s',
@@ -421,7 +421,7 @@ export function ReharmonizeTab({
                   ] as { id: StringGroup; label: string }[]).map(sg => (
                     <button key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
                       flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
-                      fontSize: 12, fontWeight: 700,
+                      fontSize: 12, fontWeight: 400,
                       background: stringGroup === sg.id ? T.secondary : T.bgInput,
                       color: stringGroup === sg.id ? '#fff' : T.textMuted,
                       transition: 'background 0.15s',
@@ -442,7 +442,7 @@ export function ReharmonizeTab({
               width: '100%',
               padding: '13px 0', borderRadius: 0, border: 'none',
               cursor: (chords.length === 0 || loading) ? 'not-allowed' : 'pointer',
-              fontWeight: 700, fontSize: 15,
+              fontWeight: 400, fontSize: 15,
               background: (chords.length === 0 || loading) ? T.border : T.primary,
               color: (chords.length === 0 || loading) ? T.textDim : '#fff',
               transition: 'background 0.15s',
@@ -494,7 +494,7 @@ export function ReharmonizeTab({
                     onClick={handlePlay}
                     style={{
                       padding: '5px 14px', borderRadius: 0,
-                      cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                      cursor: 'pointer', fontSize: 12, fontWeight: 400,
                       background: isPlaying ? T.bgDeep : T.primary,
                       color: isPlaying ? T.primary : '#fff',
                       border: isPlaying ? `1px solid ${T.primary}` : '1px solid transparent',
@@ -511,12 +511,12 @@ export function ReharmonizeTab({
                         padding: '5px 12px', borderRadius: 0,
                         background: T.primarySoft,
                         border: `1px solid ${T.primary}44`,
-                        fontSize: 13, fontWeight: 700, color: T.primary,
+                        fontSize: 13, fontWeight: 400, color: T.primary,
                       }}>
                         {c}
                       </span>
                       {showNashville && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted }}>
+                        <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted }}>
                           {toNashville(c, keyRoot)}
                         </span>
                       )}
@@ -572,7 +572,7 @@ export function ReharmonizeTab({
                               border: active ? 'none' : `1px solid ${T.border}`,
                               background: active ? T.primary : T.bgDeep,
                               color: active ? '#fff' : T.textMuted,
-                              fontSize: 12, fontWeight: active ? 700 : 400,
+                              fontSize: 12, fontWeight: active ? 500 : 400,
                               cursor: 'pointer', transition: 'all 0.15s',
                               whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                             }}
@@ -654,7 +654,7 @@ export function ReharmonizeTab({
                   width: '100%',
                   padding: '11px 0', borderRadius: 0,
                   border: `1.5px solid ${T.secondary}`,
-                  cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                  cursor: 'pointer', fontWeight: 400, fontSize: 14,
                   background: 'transparent', color: T.secondary,
                   transition: 'background 0.15s', borderLeft: '4px solid var(--gc-bar-color)',
                 }}

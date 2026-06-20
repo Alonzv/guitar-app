@@ -266,7 +266,7 @@ function XORow({ voicing }: { voicing: FretPosition[] }) {
     <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: 2 }}>
       {symbols.map(({ s, label, muted }) => (
         <span key={s} style={{
-          fontSize: 9, fontWeight: 700, width: 12, textAlign: 'center',
+          fontSize: 9, fontWeight: 400, width: 12, textAlign: 'center',
           color: muted ? T.textDim : label === 'O' ? T.primary : T.textMuted,
         }}>
           {label}
@@ -471,7 +471,7 @@ const Pill: React.FC<{
   <button onClick={onClick} style={{
     padding: '4px 10px', borderRadius: 0,
     border: active ? 'none' : `1px solid ${T.border}`,
-    cursor: 'pointer', fontSize: 11, fontWeight: active ? 700 : 400,
+    cursor: 'pointer', fontSize: 11, fontWeight: active ? 500 : 400,
     background: active ? (color ?? T.secondary) : T.bgInput,
     color: active ? T.white : T.textMuted,
     transition: 'all 0.12s', flexShrink: 0,
@@ -569,7 +569,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
             <>
               <span style={{
                 background: T.coralFaint2, color: T.coral,
-                borderRadius: 0, padding: '2px 8px', fontWeight: 700, fontSize: 13,
+                borderRadius: 0, padding: '2px 8px', fontWeight: 400, fontSize: 13,
               }}>
                 {targetNoteName}
               </span>
@@ -593,7 +593,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}
         >
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
+          <span style={{ fontSize: 12, fontWeight: 400, color: '#fff' }}>
             ⚙ Search Settings
           </span>
           <span style={{
@@ -760,7 +760,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
               onClick={() => { unlockAudio(); playChord(expandedResult!.voicing, tuning.openFreqs, capo); }}
               style={{
                 padding: '11px 0', borderRadius: 0, border: 'none',
-                cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                cursor: 'pointer', fontWeight: 400, fontSize: 14,
                 background: T.secondary, color: T.white,
                 borderLeft: '4px solid var(--gc-bar-color)',
               }}
@@ -769,7 +769,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
             {/* Fits in — scales this chord lives in */}
             {fitScales.length > 0 && (
               <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, marginBottom: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 400, color: T.textMuted, marginBottom: 6 }}>
                   Fits in
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -795,9 +795,9 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                       rootChroma={TonalNote.chroma(fitScales[scaleIdx].root) ?? -1}
                     />
                     <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 9, color: T.textDim }}>
-                      <span><span style={{ color: T.coral, fontWeight: 700 }}>●</span> target</span>
-                      <span><span style={{ color: T.primary, fontWeight: 700 }}>●</span> root</span>
-                      <span><span style={{ color: T.secondary, fontWeight: 700 }}>●</span> scale</span>
+                      <span><span style={{ color: T.coral, fontWeight: 400 }}>●</span> target</span>
+                      <span><span style={{ color: T.primary, fontWeight: 400 }}>●</span> root</span>
+                      <span><span style={{ color: T.secondary, fontWeight: 400 }}>●</span> scale</span>
                     </div>
                   </>
                 )}
@@ -815,7 +815,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                   cursor: expandedIdx === 0 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === 0 ? T.textDim : T.textMuted,
-                  fontWeight: 700, fontSize: 16, borderLeft: '3px solid var(--gc-bar-color)',
+                  fontWeight: 400, fontSize: 16, borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >‹</button>
               <span style={{ fontSize: 11, color: T.textDim, minWidth: 48, textAlign: 'center' }}>
@@ -830,7 +830,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                   cursor: expandedIdx === results.length - 1 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === results.length - 1 ? T.textDim : T.textMuted,
-                  fontWeight: 700, fontSize: 16, borderLeft: '3px solid var(--gc-bar-color)',
+                  fontWeight: 400, fontSize: 16, borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >›</button>
             </div>

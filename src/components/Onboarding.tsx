@@ -59,7 +59,7 @@ export const Onboarding: React.FC<{ onDone: () => void }> = ({ onDone }) => {
             style={{
               width: '100%', padding: '10px 0', borderRadius: 0, border: 'none',
               background: slide1Added ? T.secondary : T.primary,
-              color: T.white, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              color: T.white, fontWeight: 400, fontSize: 14, cursor: 'pointer',
               transition: 'background 0.3s',
             }}
           >

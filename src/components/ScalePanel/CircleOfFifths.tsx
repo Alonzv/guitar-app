@@ -252,7 +252,7 @@ export const CircleOfFifths: React.FC<Props> = () => {
               <g key={`it-${i}`} style={{ pointerEvents: 'none' }}>
                 <text x={mp.x} y={mp.y - (hl ? 7 : 0)}
                   textAnchor="middle" dominantBaseline="middle"
-                  fill={textColor} fontSize={nameFontSz} fontWeight={hl ? 700 : 400}
+                  fill={textColor} fontSize={nameFontSz} fontWeight={hl ? 500 : 400}
                   fontFamily="system-ui, -apple-system, Arial, sans-serif"
                   style={tStyle(mp.x, mp.y - (hl ? 7 : 0), rotation, transDur)}>{displayName}</text>
                 {hl && (
@@ -311,30 +311,30 @@ export const CircleOfFifths: React.FC<Props> = () => {
       <div style={card({ padding: '10px 14px' })}>
         {hasSelection ? (
           <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
-            <span style={{ color: T.text, fontWeight: 700 }}>{centerRoot} {centerLabel}</span>
+            <span style={{ color: T.text, fontWeight: 400 }}>{centerRoot} {centerLabel}</span>
             {selectedMode === 'major' ? (
               <>
                 {' — outer: '}
-                <span style={{ color: FC.subdominant.fill, fontWeight: 700 }}>IV</span>{', '}
-                <span style={{ color: FC.tonic.fill,       fontWeight: 700 }}>I</span>{', '}
-                <span style={{ color: FC.dominant.fill,    fontWeight: 700 }}>V</span>
+                <span style={{ color: FC.subdominant.fill, fontWeight: 400 }}>IV</span>{', '}
+                <span style={{ color: FC.tonic.fill,       fontWeight: 400 }}>I</span>{', '}
+                <span style={{ color: FC.dominant.fill,    fontWeight: 400 }}>V</span>
                 {'  ·  inner: '}
-                <span style={{ color: FC.subdominant.fill, fontWeight: 700 }}>ii</span>{', '}
-                <span style={{ color: FC.tonic.fill,       fontWeight: 700 }}>vi</span>{', '}
-                <span style={{ color: FC.tonic.fill,       fontWeight: 700 }}>iii</span>{', '}
-                <span style={{ color: FC.dominant.fill,    fontWeight: 700 }}>vii°</span>
+                <span style={{ color: FC.subdominant.fill, fontWeight: 400 }}>ii</span>{', '}
+                <span style={{ color: FC.tonic.fill,       fontWeight: 400 }}>vi</span>{', '}
+                <span style={{ color: FC.tonic.fill,       fontWeight: 400 }}>iii</span>{', '}
+                <span style={{ color: FC.dominant.fill,    fontWeight: 400 }}>vii°</span>
               </>
             ) : (
               <>
                 {' — inner: '}
-                <span style={{ color: FC.subdominant.fill, fontWeight: 700 }}>iv</span>{', '}
-                <span style={{ color: FC.tonic.fill,       fontWeight: 700 }}>i</span>{', '}
-                <span style={{ color: FC.dominant.fill,    fontWeight: 700 }}>v</span>{', '}
-                <span style={{ color: FC.subdominant.fill, fontWeight: 700 }}>ii°</span>
+                <span style={{ color: FC.subdominant.fill, fontWeight: 400 }}>iv</span>{', '}
+                <span style={{ color: FC.tonic.fill,       fontWeight: 400 }}>i</span>{', '}
+                <span style={{ color: FC.dominant.fill,    fontWeight: 400 }}>v</span>{', '}
+                <span style={{ color: FC.subdominant.fill, fontWeight: 400 }}>ii°</span>
                 {'  ·  outer: '}
-                <span style={{ color: FC.subdominant.fill, fontWeight: 700 }}>VI</span>{', '}
-                <span style={{ color: FC.tonic.fill,       fontWeight: 700 }}>III</span>{', '}
-                <span style={{ color: FC.dominant.fill,    fontWeight: 700 }}>VII</span>
+                <span style={{ color: FC.subdominant.fill, fontWeight: 400 }}>VI</span>{', '}
+                <span style={{ color: FC.tonic.fill,       fontWeight: 400 }}>III</span>{', '}
+                <span style={{ color: FC.dominant.fill,    fontWeight: 400 }}>VII</span>
               </>
             )}
           </p>

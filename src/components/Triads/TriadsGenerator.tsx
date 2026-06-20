@@ -147,7 +147,7 @@ function pill(active: boolean, onClick: () => void, label: string) {
   return (
     <button key={label} onClick={onClick} style={{
       padding: '4px 10px', borderRadius: 0, cursor: 'pointer',
-      fontSize: 11, fontWeight: active ? 700 : 400,
+      fontSize: 11, fontWeight: active ? 500 : 400,
       background: active ? T.text : T.bgInput,
       color:      active ? T.bgDeep : T.textMuted,
       border:     active ? 'none' : `1px solid ${T.border}`,
@@ -276,7 +276,7 @@ export function TriadsGenerator() {
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
                 padding: '8px 4px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
+                fontSize: sharp ? 10 : 12, fontWeight: sel ? 500 : 400,
                 border:      sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background:  sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color:       sel ? T.primary   : sharp ? T.textMuted : T.text,
@@ -294,7 +294,7 @@ export function TriadsGenerator() {
           style={{
             width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
             background: '#1235FC', color: '#fff',
-            fontSize: 13, fontWeight: 700, textAlign: 'left',
+            fontSize: 13, fontWeight: 400, textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderLeft: '3px solid var(--gc-bar-color)',
           }}
@@ -319,7 +319,7 @@ export function TriadsGenerator() {
                     color:       sel ? T.secondary   : T.textMuted,
                     transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
                   }}>
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 400 }}>{d.label}</span>
                     <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
                   </button>
                 );
@@ -337,9 +337,9 @@ export function TriadsGenerator() {
             <button
               onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
               title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
-              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderLeft: '3px solid var(--gc-bar-color)' }}
+              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 400, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderLeft: '3px solid var(--gc-bar-color)' }}
             >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
-            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>▶</button>
+            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>▶</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -347,7 +347,7 @@ export function TriadsGenerator() {
             const color = DEGREE_COLORS[DEGREES[i]];
             return (
               <div key={i} style={{ flex: 1, textAlign: 'center', padding: '6px', borderRadius: 0, background: T.bgInput, border: `1px solid ${color}44` }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color, lineHeight: 1 }}>{def!.intervalLabels[i]}</div>
+                <div style={{ fontSize: 9, fontWeight: 400, color, lineHeight: 1 }}>{def!.intervalLabels[i]}</div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{n}</div>
               </div>
             );
@@ -377,10 +377,10 @@ export function TriadsGenerator() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Filters</span>
+                  <span style={{ fontSize: 12, fontWeight: 400, color: T.text }}>Filters</span>
                   {activeLabels.length > 0 && (
                     <span style={{
-                      fontSize: 10, fontWeight: 700, color: T.primary,
+                      fontSize: 10, fontWeight: 400, color: T.primary,
                       background: T.primaryBg, border: `1px solid ${T.primary}55`,
                       padding: '1px 6px', borderRadius: 0,
                     }}>{activeLabels.join(' · ')}</span>
@@ -432,7 +432,7 @@ export function TriadsGenerator() {
               >
                 <div>
                   <div style={{ fontSize: 10, color: T.textMuted, lineHeight: 1, marginBottom: 2 }}>Sort by</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text, lineHeight: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 400, color: T.text, lineHeight: 1 }}>
                     {sortMode === 'strings' ? 'Strings' : 'Position'}
                   </div>
                 </div>
@@ -460,10 +460,10 @@ export function TriadsGenerator() {
               onClick={() => setExpandedIdx(c.globalIdx)}
               style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   {c.setLabel}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 400, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 0 }}>
                   {c.fretBadge}
                 </span>
               </div>
@@ -472,7 +472,7 @@ export function TriadsGenerator() {
               <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
                 {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
                   <span key={j} style={{
-                    fontSize: 8, fontWeight: 700,
+                    fontSize: 8, fontWeight: 400,
                     color:      DEGREE_COLORS[p.degree],
                     background: `${DEGREE_COLORS[p.degree]}18`,
                     padding: '1px 4px', borderRadius: 0,
@@ -491,7 +491,7 @@ export function TriadsGenerator() {
 
           return (
             <div key={setIdx}>
-              <p style={{ margin: '0 0 6px 2px', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <p style={{ margin: '0 0 6px 2px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {ss.label}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
@@ -500,10 +500,10 @@ export function TriadsGenerator() {
                     onClick={() => setExpandedIdx(c.globalIdx)}
                     style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {INVERSION_LABELS[c.inv]}
                       </span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 0 }}>
+                      <span style={{ fontSize: 11, fontWeight: 400, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 0 }}>
                         {c.fretBadge}
                       </span>
                     </div>
@@ -511,7 +511,7 @@ export function TriadsGenerator() {
                     <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
                       {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
                         <span key={j} style={{
-                          fontSize: 8, fontWeight: 700,
+                          fontSize: 8, fontWeight: 400,
                           color:      DEGREE_COLORS[p.degree],
                           background: `${DEGREE_COLORS[p.degree]}18`,
                           padding: '1px 4px', borderRadius: 0,
@@ -565,7 +565,7 @@ export function TriadsGenerator() {
                   {expandedCard.chordName}
                 </div>
                 <div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>
-                  {expandedCard.setLabel} · {expandedCard.invLabel} · <span style={{ color: T.text, fontWeight: 700 }}>{expandedCard.fretBadge}</span>
+                  {expandedCard.setLabel} · {expandedCard.invLabel} · <span style={{ color: T.text, fontWeight: 400 }}>{expandedCard.fretBadge}</span>
                 </div>
               </div>
               <button onClick={() => setExpandedIdx(null)} style={{
@@ -609,7 +609,7 @@ export function TriadsGenerator() {
                   flex: 1, padding: '8px 0', borderRadius: 0, cursor: safeIdx === 0 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === 0 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)',
+                  fontSize: 18, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >‹</button>
 
@@ -625,7 +625,7 @@ export function TriadsGenerator() {
                   cursor: safeIdx === allVisibleCards.length - 1 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === allVisibleCards.length - 1 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)',
+                  fontSize: 18, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >›</button>
             </div>

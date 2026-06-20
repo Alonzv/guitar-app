@@ -127,7 +127,7 @@ export function IntervalExplore() {
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
                 padding: '5px 3px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 9 : 11, fontWeight: sel ? 700 : 400,
+                fontSize: sharp ? 9 : 11, fontWeight: sel ? 500 : 400,
                 border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: sel ? T.primary : sharp ? T.textMuted : T.text,
@@ -145,7 +145,7 @@ export function IntervalExplore() {
           style={{
             width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
             background: '#1235FC', color: '#fff',
-            fontSize: 13, fontWeight: 700, textAlign: 'left',
+            fontSize: 13, fontWeight: 400, textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderLeft: '3px solid var(--gc-bar-color)',
           }}
@@ -170,8 +170,8 @@ export function IntervalExplore() {
                     color: sel ? T.secondary : T.textMuted,
                     transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
                   }}>
-                    <div style={{ fontSize: 11, fontWeight: 700 }}>{iv.abbrev}</div>
-                    <div style={{ fontSize: 11, fontWeight: sel ? 700 : 400, marginTop: 1 }}>{iv.name}</div>
+                    <div style={{ fontSize: 11, fontWeight: 400 }}>{iv.abbrev}</div>
+                    <div style={{ fontSize: 11, fontWeight: sel ? 500 : 400, marginTop: 1 }}>{iv.name}</div>
                   </button>
                 );
               })}
@@ -187,7 +187,7 @@ export function IntervalExplore() {
             padding: '6px 8px', borderRadius: 0,
             background: T.bgDeep, border: `1px solid ${T.secondary}44`, marginBottom: 8,
           }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: T.secondary }}>{selectedInterval.name} · {selectedInterval.semitones} semitone{selectedInterval.semitones !== 1 ? 's' : ''}</span>
+            <span style={{ fontSize: 10, fontWeight: 400, color: T.secondary }}>{selectedInterval.name} · {selectedInterval.semitones} semitone{selectedInterval.semitones !== 1 ? 's' : ''}</span>
             <p style={{ margin: '2px 0 0', fontSize: 10, color: T.textMuted, lineHeight: 1.35 }}>
               {selectedInterval.context}
             </p>

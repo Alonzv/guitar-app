@@ -458,7 +458,7 @@ export const TabBuilder: React.FC = () => {
             onChange={e => setTab(p => ({ ...p, title: e.target.value }))}
             style={{
               background: 'none', border: 'none', outline: 'none',
-              fontSize: 20, fontWeight: 700, width: '100%',
+              fontSize: 20, fontWeight: 400, width: '100%',
               color: title ? T.text : T.textMuted, fontFamily: 'inherit',
             }}
           />
@@ -494,7 +494,7 @@ export const TabBuilder: React.FC = () => {
             style={{
               background: T.primary, color: '#fff', border: 'none',
               borderRadius: 0, padding: '7px 10px', cursor: 'pointer',
-              fontSize: 12, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
+              fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
             }}>
             Analyze
           </button>
@@ -502,7 +502,7 @@ export const TabBuilder: React.FC = () => {
             style={{
               background: T.secondary, color: '#fff', border: 'none',
               borderRadius: 0, padding: '7px 10px', cursor: busy ? 'wait' : 'pointer',
-              fontSize: 12, fontWeight: 700, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
+              fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
             }}>
             {busy ? '…' : 'PDF'}
           </button>
@@ -516,7 +516,7 @@ export const TabBuilder: React.FC = () => {
               background: 'transparent', color: T.textMuted,
               border: `1px solid ${T.border}`,
               borderRadius: 0, padding: '7px 9px',
-              cursor: 'pointer', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontSize: 12, fontWeight: 400,
               borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
             }}>
             Clear
@@ -528,7 +528,7 @@ export const TabBuilder: React.FC = () => {
               style={{
                 background: '#1A7A4A', color: '#fff', border: 'none',
                 borderRadius: 0, padding: '7px 9px',
-                cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', fontSize: 12, fontWeight: 400,
                 borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
               }}>
               ↺ Recover
@@ -545,7 +545,7 @@ export const TabBuilder: React.FC = () => {
               cursor: canUndo ? 'pointer' : 'default',
               borderLeft: '3px solid var(--gc-bar-color)',
               flexShrink: 0,
-              fontSize: 12, fontWeight: 700,
+              fontSize: 12, fontWeight: 400,
               color: '#1235FC',
             }}>
             undo
@@ -682,7 +682,7 @@ export const TabBuilder: React.FC = () => {
                               top: '50%', left: '50%',
                               transform: 'translate(-50%, -50%)',
                               fontSize: fs, fontFamily: 'monospace',
-                              fontWeight: 700, color: '#ffffff',
+                              fontWeight: 400, color: '#ffffff',
                               lineHeight: 1, zIndex: 1,
                             }}>
                               {cell.fret}
@@ -694,7 +694,7 @@ export const TabBuilder: React.FC = () => {
                               position: 'absolute', top: '50%', right: 0,
                               transform: 'translate(50%, -50%)',
                               fontSize: Math.round(fs * 1.5), fontFamily: 'monospace',
-                              fontWeight: 700, color: T.coral,
+                              fontWeight: 400, color: T.coral,
                               lineHeight: 1, zIndex: 2, pointerEvents: 'none',
                             }}>
                               {cell.tech}
@@ -705,7 +705,7 @@ export const TabBuilder: React.FC = () => {
                               position: 'absolute', top: -2, right: 0,
                               transform: 'translateX(50%)',
                               fontSize: Math.round(fs * 1.1), fontFamily: 'monospace',
-                              fontWeight: 700, fontStyle: 'italic', color: T.coral,
+                              fontWeight: 400, fontStyle: 'italic', color: T.coral,
                               lineHeight: 1, zIndex: 2, pointerEvents: 'none',
                             }}>
                               {cell.tech}
@@ -730,7 +730,7 @@ export const TabBuilder: React.FC = () => {
                               position: 'absolute', top: -1, left: '50%',
                               transform: 'translateX(-50%)',
                               fontSize: Math.round(fs * 1.3), fontFamily: 'monospace',
-                              fontWeight: 700, color: T.coral,
+                              fontWeight: 400, color: T.coral,
                               lineHeight: 1, zIndex: 2, pointerEvents: 'none',
                               letterSpacing: -1,
                             }}>
@@ -810,7 +810,7 @@ export const TabBuilder: React.FC = () => {
                   borderRadius: 0, padding: '10px 14px', cursor: 'pointer', textAlign: 'left',
                   borderLeft: '4px solid #1A7A4A',
                 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                  <div style={{ fontSize: 13, fontWeight: 400, color: T.text }}>
                     {b.tab.title || '(untitled)'}{' '}
                     <span style={{ fontWeight: 400, color: T.textMuted, fontSize: 11 }}>
                       — {noteCount} note{noteCount !== 1 ? 's' : ''}
@@ -860,7 +860,7 @@ export const TabBuilder: React.FC = () => {
                 {(['he', 'en'] as Lang[]).map(lg => (
                   <button key={lg} onClick={() => setLang(lg)} style={{
                     border: 'none', cursor: 'pointer', padding: '5px 11px',
-                    fontSize: 13, fontWeight: 700,
+                    fontSize: 13, fontWeight: 400,
                     background: lang === lg ? T.secondary : T.bgInput,
                     color: lang === lg ? '#fff' : T.textMuted,
                   }}>{lg === 'he' ? 'עברית' : 'EN'}</button>
@@ -882,7 +882,7 @@ export const TabBuilder: React.FC = () => {
                   <span style={{ fontSize: 25, fontWeight: 800, color: T.text, textDecoration: 'underline', textDecorationColor: T.primary }}>
                     {analyzeScale.name}
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: T.primary }}>
+                  <span style={{ fontSize: 14, fontWeight: 400, color: T.primary }}>
                     {analyzeScale.fitPercent}% {t.match}
                   </span>
                 </div>
@@ -908,20 +908,20 @@ export const TabBuilder: React.FC = () => {
             {analyzeProgs && analyzeProgs.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: T.textMuted }}>{t.progTitle}</span>
+                  <span style={{ fontSize: 13, fontWeight: 400, color: T.textMuted }}>{t.progTitle}</span>
                   <span style={{ fontSize: 12, color: T.textDim }}>· {t.tapHint}</span>
                 </div>
                 {analyzeProgs.map((p, i) => (
                   <div key={i} style={{ background: T.bgInput, borderRadius: 0, padding: '15px 18px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>
+                      <span style={{ fontSize: 16, fontWeight: 400, color: T.text }}>
                         {lang === 'he' ? p.name_he : p.name_en}
                       </span>
                       <button onClick={() => playProgression(p.chords)}
                         style={{
                           background: T.secondary, color: '#fff', border: 'none',
                           borderRadius: 0, padding: '5px 12px', cursor: 'pointer',
-                          fontSize: 13, fontWeight: 700, flexShrink: 0,
+                          fontSize: 13, fontWeight: 400, flexShrink: 0,
                           borderLeft: '3px solid var(--gc-bar-color)',
                         }}>▶ {t.play}</button>
                     </div>
@@ -929,7 +929,7 @@ export const TabBuilder: React.FC = () => {
                       {p.chords.map((c, j) => (
                         <button key={j} onClick={() => setChordModal(c)} style={{
                           background: T.primaryBg, color: T.text, borderRadius: 0,
-                          padding: '6px 13px', fontSize: 16, fontWeight: 700,
+                          padding: '6px 13px', fontSize: 16, fontWeight: 400,
                           fontFamily: 'monospace', border: 'none', cursor: 'pointer',
                           borderLeft: '3px solid var(--gc-bar-color)',
                         }}>{c}</button>
@@ -948,7 +948,7 @@ export const TabBuilder: React.FC = () => {
               <button onClick={runAnalysis} style={{
                 background: 'transparent', border: `1px solid ${T.border}`,
                 borderRadius: 0, padding: '8px 0', cursor: 'pointer',
-                color: T.textMuted, fontSize: 14, fontWeight: 700,
+                color: T.textMuted, fontSize: 14, fontWeight: 400,
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}>↻ {t.reanalyze}</button>
             )}
@@ -990,7 +990,7 @@ export const TabBuilder: React.FC = () => {
                 <button onClick={() => { unlockAudio(); playChord(voicing.map(p => ({ string: p.string, fret: p.fret }))); }}
                   style={{
                     padding: '10px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
-                    fontWeight: 700, fontSize: 14, background: T.secondary, color: '#fff',
+                    fontWeight: 400, fontSize: 14, background: T.secondary, color: '#fff',
                     borderLeft: '4px solid var(--gc-bar-color)',
                   }}>▶ {t.play}</button>
               )}
@@ -1025,8 +1025,8 @@ export const TabBuilder: React.FC = () => {
             </div>
             <VerticalScaleFretboard root={analyzeScale.root} type={analyzeScale.type} />
             <div style={{ display: 'flex', justifyContent: 'center', gap: 14, fontSize: 10, color: T.textDim }}>
-              <span><span style={{ color: T.primary, fontWeight: 700 }}>●</span> root</span>
-              <span><span style={{ color: T.secondary, fontWeight: 700 }}>●</span> scale</span>
+              <span><span style={{ color: T.primary, fontWeight: 400 }}>●</span> root</span>
+              <span><span style={{ color: T.secondary, fontWeight: 400 }}>●</span> scale</span>
             </div>
           </div>
         </div>

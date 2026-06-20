@@ -119,7 +119,7 @@ export function ScaleExplorer() {
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
                 padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 11 : 13, fontWeight: selected ? 700 : 400,
+                fontSize: sharp ? 11 : 13, fontWeight: selected ? 500 : 400,
                 border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: selected ? T.primary : sharp ? T.textMuted : T.text,
@@ -139,7 +139,7 @@ export function ScaleExplorer() {
           style={{
             width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
             background: '#1235FC', color: '#fff',
-            fontSize: 13, fontWeight: 700, textAlign: 'left',
+            fontSize: 13, fontWeight: 400, textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderLeft: '3px solid var(--gc-bar-color)',
           }}
@@ -166,7 +166,7 @@ export function ScaleExplorer() {
                     return (
                       <button key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); }} style={{
                         padding: '6px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
-                        fontWeight: sel ? 700 : 400,
+                        fontWeight: sel ? 500 : 400,
                         border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
                         background: sel ? T.secondaryBg : T.bgInput,
                         color: sel ? T.secondary : T.textMuted,
@@ -202,7 +202,7 @@ export function ScaleExplorer() {
                   style={{
                     padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`,
                     background: T.secondaryBg, color: T.secondary, fontSize: 12,
-                    fontWeight: 700, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)',
+                    fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)',
                   }}
                 >▶ Play</button>
               </div>
@@ -220,7 +220,7 @@ export function ScaleExplorer() {
                     border: `1px solid ${isR ? T.primary : T.border}`,
                     borderTop: isR ? `3px solid ${T.primary}` : `3px solid ${T.border}`,
                   }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
+                    <span style={{ fontSize: 11, fontWeight: 400, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
                     <span style={{ fontSize: 18, fontWeight: isR ? 800 : 600, color: isR ? T.primary : T.text, lineHeight: 1.1 }}>{note}</span>
                     <span style={{ fontSize: 9, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
                   </div>
@@ -234,7 +234,7 @@ export function ScaleExplorer() {
             {(['fretboard', 'tab'] as const).map(v => (
               <button key={v} onClick={() => setViewMode(v)} style={{
                 flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
-                fontSize: 13, fontWeight: viewMode === v ? 700 : 400,
+                fontSize: 13, fontWeight: viewMode === v ? 500 : 400,
                 background: viewMode === v ? T.primary : T.bgCard,
                 color: viewMode === v ? T.text : T.textMuted,
                 borderLeft: '3px solid var(--gc-bar-color)',
@@ -251,7 +251,7 @@ export function ScaleExplorer() {
               padding: '4px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
               background: pos === null ? T.text : T.bgInput,
               color: pos === null ? T.bgDeep : T.textMuted,
-              fontWeight: pos === null ? 700 : 400,
+              fontWeight: pos === null ? 500 : 400,
               borderLeft: '3px solid var(--gc-bar-color)',
             }}>
               Full Neck
@@ -262,7 +262,7 @@ export function ScaleExplorer() {
                 style={{
                   width: 'var(--gc-pos-btn)', height: 'var(--gc-pos-btn)',
                   borderRadius: 0, cursor: 'pointer',
-                  fontSize: 12, fontWeight: 700,
+                  fontSize: 12, fontWeight: 400,
                   background: POS_COLORS[i],
                   color: '#fff',
                   border: pos === i ? `2px solid ${T.text}` : '2px solid transparent',

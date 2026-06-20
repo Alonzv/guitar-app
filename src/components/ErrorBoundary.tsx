@@ -26,7 +26,7 @@ export class ErrorBoundary extends React.Component<
         border: `1px dashed ${T.border}`, borderRadius: 0, margin: 8,
       }}>
         <div style={{ marginBottom: 12, color: T.textMuted }}><IconWarn size={32} /></div>
-        <p style={{ fontWeight: 700, color: T.text, marginBottom: 6, margin: '0 0 6px' }}>
+        <p style={{ fontWeight: 400, color: T.text, marginBottom: 6, margin: '0 0 6px' }}>
           Something went wrong{this.props.label ? ` in ${this.props.label}` : ''}
         </p>
         <p style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>
@@ -36,7 +36,7 @@ export class ErrorBoundary extends React.Component<
           onClick={() => this.setState({ hasError: false, error: null })}
           style={{
             padding: '8px 20px', borderRadius: 0, border: 'none',
-            background: T.primary, color: T.white, fontWeight: 700, cursor: 'pointer',
+            background: T.primary, color: T.white, fontWeight: 400, cursor: 'pointer',
           }}
         >
           Try Again

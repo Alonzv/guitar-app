@@ -100,7 +100,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
     return (
       <div style={card({ padding: '32px 16px', textAlign: 'center' })}>
         <div style={{ marginBottom: 10, color: T.textMuted }}><IconSearch size={32} /></div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>No progression to analyze</div>
+        <div style={{ fontSize: 14, fontWeight: 400, color: T.text, marginBottom: 6 }}>No progression to analyze</div>
         <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.5 }}>
           Build a chord progression in the By Ear or By Name tab,<br />then come back here to analyze it.
         </div>
@@ -124,7 +124,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
               <span style={{ fontSize: 32, fontWeight: 900, color: T.primary, lineHeight: 1 }}>{keyRoot}</span>
-              <span style={{ fontSize: 16, fontWeight: 700, color: T.textMuted }}>{modeLabel}</span>
+              <span style={{ fontSize: 16, fontWeight: 400, color: T.textMuted }}>{modeLabel}</span>
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -190,7 +190,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
 
               {/* Function badge */}
               <div style={{
-                padding: '4px 10px', borderRadius: 0, fontSize: 11, fontWeight: 700,
+                padding: '4px 10px', borderRadius: 0, fontSize: 11, fontWeight: 400,
                 background: `${color}22`, color, border: `1px solid ${color}44`,
                 whiteSpace: 'nowrap',
               }}>
@@ -215,7 +215,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
         </div>
         <div style={{ display: 'flex', marginTop: 6, gap: 0 }}>
           {analyses.map((a, i) => (
-            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: FN_COLORS[a.harmonicFn], fontWeight: 700 }}>
+            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: FN_COLORS[a.harmonicFn], fontWeight: 400 }}>
               {a.romanNumeral}
             </div>
           ))}

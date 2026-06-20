@@ -44,7 +44,7 @@ const CHORD_ACCENTS = ['#CC1C1C', '#1235FC', '#1A7A4A', '#C8A020', '#6B21A8', '#
 const LABEL_STYLE = {
   margin: '0 0 10px',
   fontSize: 11,
-  fontWeight: 700,
+  fontWeight: 400,
   color: T.textMuted,
   textTransform: 'uppercase' as const,
   letterSpacing: '-0.02em',
@@ -153,7 +153,7 @@ export function ProgressionPanel({
             </p>
             {detectedKey && (
               <span style={{
-                padding: '2px 8px', borderRadius: 0, fontSize: 10, fontWeight: 700,
+                padding: '2px 8px', borderRadius: 0, fontSize: 10, fontWeight: 400,
                 background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondaryFaint}`,
               }}>
                 Key: {detectedKey}
@@ -240,14 +240,14 @@ export function ProgressionPanel({
 
         {/* Transpose controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+          <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
             Transpose:
           </span>
           <button
             onClick={() => onTransposeProgression(-1)}
             style={{
               width: 34, height: 34, borderRadius: 0, border: `1px solid ${T.border}`,
-              background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 700,
+              background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 400,
               cursor: 'pointer', lineHeight: 1, borderLeft: '3px solid var(--gc-bar-color)',
             }}
           >−</button>
@@ -256,7 +256,7 @@ export function ProgressionPanel({
             onClick={() => onTransposeProgression(1)}
             style={{
               width: 34, height: 34, borderRadius: 0, border: `1px solid ${T.border}`,
-              background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 700,
+              background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 400,
               cursor: 'pointer', lineHeight: 1, borderLeft: '3px solid var(--gc-bar-color)',
             }}
           >+</button>
@@ -269,7 +269,7 @@ export function ProgressionPanel({
             width: '100%', marginBottom: 10, padding: '10px 0', borderRadius: 0,
             border: `1px solid ${T.coral}`,
             background: T.coralFaint,
-            color: T.coral, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            color: T.coral, fontWeight: 400, fontSize: 13, cursor: 'pointer',
             transition: 'all 0.15s', borderLeft: '4px solid var(--gc-bar-color)',
           }}
         >
@@ -287,7 +287,7 @@ export function ProgressionPanel({
                 background: accent,
                 textAlign: 'center',
               }}>
-                <span style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,0.55)', marginBottom: 3, fontWeight: 700, letterSpacing: '0.08em' }}>{i + 1}</span>
+                <span style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,0.55)', marginBottom: 3, fontWeight: 400, letterSpacing: '0.08em' }}>{i + 1}</span>
                 <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>{formatChordName(item.chord.name)}</span>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 8 }}>
                   <button
@@ -315,7 +315,7 @@ export function ProgressionPanel({
                     style={{
                       display: 'block', width: '100%', marginTop: 6, padding: '7px 0',
                       borderRadius: 0, background: 'rgba(0,0,0,0.22)', border: 'none',
-                      color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                      color: '#fff', fontSize: 16, fontWeight: 400, cursor: 'pointer',
                       minHeight: 36,
                     }}
                   >▶</button>
@@ -342,7 +342,7 @@ export function ProgressionPanel({
               border: `1px solid ${playingAll ? T.coral : T.secondary}`,
               background: playingAll ? T.coralFaint2 : T.secondaryBg,
               color: playingAll ? T.coral : T.secondary,
-              fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
+              fontWeight: 400, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
               borderLeft: '4px solid var(--gc-bar-color)',
             }}
           >
@@ -360,7 +360,7 @@ export function ProgressionPanel({
                   className="gc-pill"
                   style={{
                     padding: '5px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
-                    fontWeight: genre === g.id ? 700 : 400,
+                    fontWeight: genre === g.id ? 500 : 400,
                     background: genre === g.id ? T.primary : T.bgInput,
                     color: genre === g.id ? T.text : T.textMuted,
                     transition: 'filter 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
@@ -393,7 +393,7 @@ export function ProgressionPanel({
               onClick={() => setShowSuggestions(v => !v)}
               style={{
                 width: '100%', padding: '11px 0', borderRadius: 0, border: `1px solid ${T.secondary}`,
-                cursor: 'pointer', fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', fontSize: 14, fontWeight: 400,
                 background: showSuggestions ? T.secondaryBg : T.bgInput,
                 color: T.secondary, transition: 'filter 0.15s',
                 borderLeft: '4px solid var(--gc-bar-color)',

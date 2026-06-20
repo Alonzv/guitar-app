@@ -68,7 +68,7 @@ const SUFFIX_MAP: Record<string, Record<string, string>> = {
 const LABEL_STYLE = {
   margin: '0 0 10px',
   fontSize: 11,
-  fontWeight: 700 as const,
+  fontWeight: 400 as const,
   color: T.textMuted,
   textTransform: 'uppercase' as const,
   letterSpacing: '-0.02em',
@@ -180,7 +180,7 @@ export function ChordPickerTab({
                 style={{
                   padding: '8px 4px', borderRadius: 0,
                   cursor: 'pointer', fontSize: 13,
-                  fontWeight: active ? 700 : 400,
+                  fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? T.text : T.textMuted,
                   transition: 'filter 0.15s, background 0.15s',
@@ -208,7 +208,7 @@ export function ChordPickerTab({
                 style={{
                   padding: '6px 16px', borderRadius: 0,
                   cursor: 'pointer', fontSize: 13,
-                  fontWeight: active ? 700 : 400,
+                  fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? T.text : T.textMuted,
                   transition: 'filter 0.15s, background 0.15s',
@@ -237,7 +237,7 @@ export function ChordPickerTab({
                   style={{
                     padding: '6px 16px', borderRadius: 0,
                     cursor: 'pointer', fontSize: 13,
-                    fontWeight: active ? 700 : 400,
+                    fontWeight: active ? 500 : 400,
                     background: active ? T.secondary : T.bgInput,
                     color: active ? '#fff' : T.textMuted,
                     transition: 'filter 0.15s, background 0.15s',
@@ -254,7 +254,7 @@ export function ChordPickerTab({
 
       {/* ── Tuning selector ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
+        <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <select
             value={tuningName}

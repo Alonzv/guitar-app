@@ -129,7 +129,7 @@ export function IntervalCalculate() {
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#1A1818', lineHeight: 1 }}>
                   {intervalInfo.abbrev}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginTop: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 400, color: '#fff', marginTop: 2 }}>
                   {intervalInfo.name}
                 </div>
                 <div style={{ fontSize: 10, color: '#FFC800', marginTop: 1 }}>
@@ -140,7 +140,7 @@ export function IntervalCalculate() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}>
                 {/* Invert */}
                 <button onClick={() => setInverted(v => !v)} style={{
-                  padding: '4px 10px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 700,
+                  padding: '4px 10px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 400,
                   border: 'none', background: inverted ? '#FFC800' : '#1A1818',
                   color: inverted ? '#1A1818' : '#fff', borderLeft: '3px solid #000',
                 }}>↕ Invert</button>
@@ -149,7 +149,7 @@ export function IntervalCalculate() {
                 <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: '1px solid #1A1818' }}>
                   {(['melodic', 'harmonic'] as const).map(m => (
                     <button key={m} onClick={() => setMode(m)} style={{
-                      padding: '3px 7px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700,
+                      padding: '3px 7px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 400,
                       background: mode === m ? '#1A1818' : 'rgba(0,0,0,0.2)',
                       color: mode === m ? '#FFC800' : '#fff',
                     }}>{m === 'melodic' ? '♩♩' : '♫'}</button>
@@ -158,7 +158,7 @@ export function IntervalCalculate() {
 
                 {/* Play */}
                 <button onClick={handlePlay} style={{
-                  padding: '4px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                  padding: '4px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 400,
                   border: 'none', background: '#1A1818', color: '#FFC800',
                   borderLeft: '3px solid #000',
                 }}>▶ Play</button>

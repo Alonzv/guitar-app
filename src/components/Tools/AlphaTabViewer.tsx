@@ -14,7 +14,7 @@ interface Props {
 }
 
 const BTN: React.CSSProperties = {
-  flex: 1, padding: '11px 8px', borderRadius: 0, fontSize: 13, fontWeight: 700,
+  flex: 1, padding: '11px 8px', borderRadius: 0, fontSize: 13, fontWeight: 400,
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
   transition: 'background 0.15s, color 0.15s',
 };

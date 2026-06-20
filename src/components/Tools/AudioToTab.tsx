@@ -35,7 +35,7 @@ function ClearBtn({ onClear }: { onClear: () => void }) {
       onClick={onClear}
       title="Reset — back to start"
       style={{
-        padding: '7px 14px', borderRadius: 0, cursor: 'pointer', fontWeight: 700,
+        padding: '7px 14px', borderRadius: 0, cursor: 'pointer', fontWeight: 400,
         fontSize: 12, border: `1px solid ${T.border}`,
         background: T.bgInput, color: T.textMuted, flexShrink: 0,
         borderLeft: '3px solid var(--gc-bar-color)',
@@ -257,7 +257,7 @@ const RESPONSIVE_CSS = `
 `;
 
 const LABEL: React.CSSProperties = {
-  margin: '0 0 10px', fontSize: 11, fontWeight: 700,
+  margin: '0 0 10px', fontSize: 11, fontWeight: 400,
   color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em',
 };
 
@@ -569,7 +569,7 @@ export const AudioToTab: React.FC = () => {
           <path d="M14 19l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M12 31c0 1.7 1.3 3 3 3h10c1.7 0 3-1.3 3-3" strokeLinecap="round" />
         </svg>
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.text }}>Drag audio file here</p>
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 400, color: T.text }}>Drag audio file here</p>
         <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>MP3 · WAV · OGG · M4A · up to 5 min</p>
         <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
@@ -595,7 +595,7 @@ export const AudioToTab: React.FC = () => {
           </svg>
         </div>
         <div style={{ textAlign: 'left' }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.text }}>Record from Microphone</p>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 400, color: T.text }}>Record from Microphone</p>
           <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>Play a single line directly into the app</p>
         </div>
       </button>
@@ -613,7 +613,7 @@ export const AudioToTab: React.FC = () => {
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={stopRecording} style={{
             padding: '12px 32px', borderRadius: 0, cursor: 'pointer',
-            background: T.coral, color: '#fff', fontWeight: 700, fontSize: 14,
+            background: T.coral, color: '#fff', fontWeight: 400, fontSize: 14,
             borderLeft: '4px solid var(--gc-bar-color)',
           }}>
             Stop &amp; Process
@@ -661,7 +661,7 @@ export const AudioToTab: React.FC = () => {
       </div>
       <button onClick={reset} style={{
         padding: '12px 0', borderRadius: 0, cursor: 'pointer',
-        background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
+        background: T.primary, color: '#fff', fontWeight: 400, fontSize: 14,
         borderLeft: '4px solid var(--gc-bar-color)',
       }}>
         Try Again
@@ -680,7 +680,7 @@ export const AudioToTab: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.text,
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 400, color: T.text,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
             {fileName}
           </p>
@@ -704,7 +704,7 @@ export const AudioToTab: React.FC = () => {
           onClick={() => exportTabToPDF(tabData)}
           style={{
             flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.secondary, color: '#fff', fontWeight: 700, fontSize: 14,
+            background: T.secondary, color: '#fff', fontWeight: 400, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             borderLeft: '4px solid var(--gc-bar-color)',
           }}
@@ -720,7 +720,7 @@ export const AudioToTab: React.FC = () => {
           onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}
           style={{
             flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.primary, color: '#fff', fontWeight: 700, fontSize: 14,
+            background: T.primary, color: '#fff', fontWeight: 400, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             borderLeft: '4px solid var(--gc-bar-color)',
           }}
@@ -752,7 +752,7 @@ export const AudioToTab: React.FC = () => {
           padding: '9px 13px', background: T.bgInput, borderRadius: 0,
           borderLeft: `3px solid ${T.primary}`,
         }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+          <span style={{ fontSize: 13, fontWeight: 400, color: T.text }}>
             ✎ String {strName(selNote.string)}{' '}
             <span style={{ color: T.primary, fontVariantNumeric: 'tabular-nums' }}>
               {fretInput ? `→ ${fretInput}` : `· Fret ${selNote.fret}`}
