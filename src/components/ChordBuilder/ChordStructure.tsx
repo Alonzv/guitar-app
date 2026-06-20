@@ -72,7 +72,7 @@ export const ChordStructure: React.FC<Props> = ({ chordName }) => {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
               <span style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1 }}>{simplifyNote(note)}</span>
               <span style={{ fontSize: 10, fontWeight: 700, color, opacity: 0.85, lineHeight: 1 }}>{deg}</span>
-              {name && <span style={{ fontSize: 9, color: T.textDim, lineHeight: 1, whiteSpace: 'nowrap' }}>{name}</span>}
+              {name && <span style={{ fontSize: 9, color: T.textDim, lineHeight: 1, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>{name}</span>}
             </div>
           </React.Fragment>
         );

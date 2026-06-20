@@ -27,12 +27,13 @@ interface Props {
   onRedo: () => void;
 }
 
-const LABEL_STYLE = {
+const LABEL_STYLE: React.CSSProperties = {
   margin: '0 0 10px',
-  fontSize: 13,
-  fontWeight: 500,
+  fontSize: 11,
+  fontWeight: 400,
   color: T.textMuted,
-  letterSpacing: '0.01em',
+  letterSpacing: '-0.02em',
+  textTransform: 'uppercase',
 };
 
 const SELECT_STYLE: React.CSSProperties = {
@@ -92,7 +93,7 @@ export function ChordBuilderTab({
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 3, minWidth: 0 }}>
-            <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
+            <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
               <select
                 value={tuning.name}
@@ -108,7 +109,7 @@ export function ChordBuilderTab({
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 2, minWidth: 0 }}>
-            <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Capo</span>
+            <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Capo</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
               <select
                 value={capo}

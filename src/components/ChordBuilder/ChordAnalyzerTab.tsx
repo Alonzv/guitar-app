@@ -119,7 +119,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
       <div style={card({ padding: '14px 16px' })}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+            <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 4 }}>
               Detected Key
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -128,7 +128,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+            <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 4 }}>
               Scale
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end', maxWidth: 160 }}>
@@ -203,7 +203,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
 
       {/* Harmonic function summary */}
       <div style={card({ padding: '12px 14px' })}>
-        <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+        <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 8 }}>
           Harmonic Summary
         </div>
         <div style={{ display: 'flex', gap: 0, borderRadius: 0, overflow: 'hidden', height: 10 }}>

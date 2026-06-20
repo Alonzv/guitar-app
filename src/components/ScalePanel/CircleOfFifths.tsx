@@ -338,13 +338,7 @@ export const CircleOfFifths: React.FC<Props> = () => {
               </>
             )}
           </p>
-        ) : (
-          <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
-            Tap a key in the <span style={{ color: T.text, fontWeight: 700 }}>outer ring</span> for major,
-            or the <span style={{ color: T.text, fontWeight: 700 }}>inner ring</span> for minor —
-            highlights the 7 diatonic chords with Roman numerals.
-          </p>
-        )}
+        ) : null}
       </div>
 
     </div>

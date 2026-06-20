@@ -258,7 +258,7 @@ const RESPONSIVE_CSS = `
 
 const LABEL: React.CSSProperties = {
   margin: '0 0 10px', fontSize: 11, fontWeight: 700,
-  color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em',
+  color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em',
 };
 
 // ── Main component ────────────────────────────────────────────────────────────

@@ -269,7 +269,7 @@ export function TriadsGenerator() {
 
       {/* Root selector */}
       <div style={card()}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Root Note</p>
+        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#'), sel = n === root;
@@ -300,7 +300,7 @@ export function TriadsGenerator() {
           }}
         >
           <span>
-            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Triad Type</span>
+            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Triad Type</span>
             {triadType ? TRIADS[triadType].label : '— Select —'}
           </span>
           <span style={{ fontSize: 11 }}>{triadMenuOpen ? '▲' : '▼'}</span>

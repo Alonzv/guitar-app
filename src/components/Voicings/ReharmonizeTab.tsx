@@ -28,7 +28,7 @@ const LABEL_STYLE: React.CSSProperties = {
   fontWeight: 700,
   color: T.textMuted,
   textTransform: 'uppercase',
-  letterSpacing: '0.06em',
+  letterSpacing: '-0.02em',
 };
 
 // Fret position badge

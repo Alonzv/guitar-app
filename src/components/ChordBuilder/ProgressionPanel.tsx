@@ -47,7 +47,7 @@ const LABEL_STYLE = {
   fontWeight: 700,
   color: T.textMuted,
   textTransform: 'uppercase' as const,
-  letterSpacing: '0.06em',
+  letterSpacing: '-0.02em',
 };
 
 export function ProgressionPanel({
@@ -240,7 +240,7 @@ export function ProgressionPanel({
 
         {/* Transpose controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
             Transpose:
           </span>
           <button

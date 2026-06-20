@@ -109,7 +109,7 @@ export function ScaleExplorer() {
 
       {/* ── Root note ── */}
       <div style={card()}>
-        <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
           Root Note
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 7 }}>
@@ -145,7 +145,7 @@ export function ScaleExplorer() {
           }}
         >
           <span>
-            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Scale Type</span>
+            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Scale Type</span>
             {scaleType
               ? SCALE_GROUPS.flatMap(g => g.scales).find(s => s.id === scaleType)?.label ?? scaleType
               : '— Select —'}

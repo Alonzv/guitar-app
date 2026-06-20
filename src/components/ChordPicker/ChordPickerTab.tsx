@@ -71,7 +71,7 @@ const LABEL_STYLE = {
   fontWeight: 700 as const,
   color: T.textMuted,
   textTransform: 'uppercase' as const,
-  letterSpacing: '0.06em',
+  letterSpacing: '-0.02em',
 };
 
 const SELECT_STYLE: React.CSSProperties = {
@@ -254,7 +254,7 @@ export function ChordPickerTab({
 
       {/* ── Tuning selector ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
+        <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <select
             value={tuningName}

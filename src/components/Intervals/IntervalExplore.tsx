@@ -119,7 +119,7 @@ export function IntervalExplore() {
 
       {/* Root selector */}
       <div style={card({ padding: '10px 12px' })}>
-        <p style={{ margin: '0 0 6px', fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Root Note</p>
+        <p style={{ margin: '0 0 6px', fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#');
@@ -151,7 +151,7 @@ export function IntervalExplore() {
           }}
         >
           <span>
-            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Interval</span>
+            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Interval</span>
             {selectedInterval ? `${selectedInterval.abbrev} · ${selectedInterval.name}` : '— Select —'}
           </span>
           <span style={{ fontSize: 11 }}>{intervalOpen ? '▲' : '▼'}</span>
@@ -170,8 +170,8 @@ export function IntervalExplore() {
                     color: sel ? T.secondary : T.textMuted,
                     transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
                   }}>
-                    <div style={{ fontSize: 9, fontWeight: 700 }}>{iv.abbrev}</div>
-                    <div style={{ fontSize: 9, fontWeight: sel ? 700 : 400, marginTop: 1 }}>{iv.name}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700 }}>{iv.abbrev}</div>
+                    <div style={{ fontSize: 11, fontWeight: sel ? 700 : 400, marginTop: 1 }}>{iv.name}</div>
                   </button>
                 );
               })}
