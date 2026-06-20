@@ -114,8 +114,8 @@ export function IntervalCalculate() {
       <div style={{
         ...card({ padding: '10px 12px' }),
         minHeight: 68, display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        background: has2 ? '#1A1818' : undefined,
-        borderLeft: has2 ? '3px solid #CC1C1C' : undefined,
+        background: has2 ? '#CC1C1C' : undefined,
+        borderLeft: has2 ? '3px solid #1A1818' : undefined,
       }}>
         {has2 && intervalInfo ? (
           <>
@@ -126,7 +126,7 @@ export function IntervalCalculate() {
                   {' → '}
                   {fretToNote(points[inverted ? 0 : 1].string, points[inverted ? 0 : 1].fret)}
                 </div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#CC1C1C', lineHeight: 1 }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#1A1818', lineHeight: 1 }}>
                   {intervalInfo.abbrev}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginTop: 2 }}>
@@ -141,17 +141,17 @@ export function IntervalCalculate() {
                 {/* Invert */}
                 <button onClick={() => setInverted(v => !v)} style={{
                   padding: '4px 10px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 700,
-                  border: `1px solid ${T.border}`, background: inverted ? T.primaryBg : T.bgInput,
-                  color: inverted ? T.primary : T.textMuted, borderLeft: '3px solid var(--gc-bar-color)',
+                  border: 'none', background: inverted ? '#FFC800' : '#1A1818',
+                  color: inverted ? '#1A1818' : '#fff', borderLeft: '3px solid #000',
                 }}>↕ Invert</button>
 
                 {/* Mode toggle */}
-                <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+                <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: '1px solid #1A1818' }}>
                   {(['melodic', 'harmonic'] as const).map(m => (
                     <button key={m} onClick={() => setMode(m)} style={{
-                      padding: '3px 7px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                      background: mode === m ? T.secondary : T.bgInput,
-                      color: mode === m ? '#fff' : T.textMuted,
+                      padding: '3px 7px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700,
+                      background: mode === m ? '#1A1818' : 'rgba(0,0,0,0.2)',
+                      color: mode === m ? '#FFC800' : '#fff',
                     }}>{m === 'melodic' ? '♩♩' : '♫'}</button>
                   ))}
                 </div>
@@ -159,8 +159,8 @@ export function IntervalCalculate() {
                 {/* Play */}
                 <button onClick={handlePlay} style={{
                   padding: '4px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                  border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
-                  borderLeft: '3px solid var(--gc-bar-color)',
+                  border: 'none', background: '#1A1818', color: '#FFC800',
+                  borderLeft: '3px solid #000',
                 }}>▶ Play</button>
               </div>
             </div>
