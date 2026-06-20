@@ -90,30 +90,30 @@ export function ChordBuilderTab({
       <div style={card()}>
         <p style={LABEL_STYLE}>Click a fret to place a note · click again to remove</p>
 
-        <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 3, minWidth: 0 }}>
             <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Tuning</span>
-            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
               <select
                 value={tuning.name}
                 onChange={e => {
                   const t = TUNINGS.find(t => t.name === e.target.value);
                   if (t) onTuningChange(t);
                 }}
-                style={SELECT_STYLE}
+                style={{ ...SELECT_STYLE, width: '100%' }}
               >
                 {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
               </select>
               <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 2, minWidth: 0 }}>
             <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Capo</span>
-            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
               <select
                 value={capo}
                 onChange={e => onCapoChange(Number(e.target.value))}
-                style={SELECT_STYLE}
+                style={{ ...SELECT_STYLE, width: '100%' }}
               >
                 {Array.from({ length: 12 }, (_, n) => (
                   <option key={n} value={n}>{n === 0 ? 'None' : `Fret ${n}`}</option>
