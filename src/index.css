@@ -131,7 +131,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-coral:            #C8A020;
   --gc-text:             #1A1818;
   --gc-text-muted:       #000000;
-  --gc-text-dim:         rgba(0,0,0,0.45);
+  --gc-text-dim:         #000000;
   --gc-white:            #FFFFFF;
   /* Alpha variants */
   --gc-primary-soft:     rgba(204,28,28,0.10);
@@ -155,8 +155,8 @@ body.dark {
   --gc-secondary-bg:     rgba(42,76,200,0.18);
   --gc-coral:            #D4A820;
   --gc-text:             #F0EAD8;
-  --gc-text-muted:       rgba(240,234,216,0.55);
-  --gc-text-dim:         rgba(240,234,216,0.30);
+  --gc-text-muted:       #FFFFFF;
+  --gc-text-dim:         rgba(255,255,255,0.7);
   --gc-white:            #F5EED8;
   /* Alpha variants */
   --gc-primary-soft:     rgba(224,32,32,0.18);
