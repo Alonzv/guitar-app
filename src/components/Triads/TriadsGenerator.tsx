@@ -181,6 +181,7 @@ export function TriadsGenerator() {
 
   // Flat ordered list of every visible card — drives the expand/navigate modal.
   const allVisibleCards = useMemo<ExpandedCard[]>(() => {
+    if (!def) return [];
     const sets      = selectedSet        !== null ? [selectedSet]        : [0, 1, 2, 3];
     const inversions: (0|1|2)[] =
       selectedInversion !== null ? [selectedInversion] : [0, 1, 2];
@@ -208,7 +209,7 @@ export function TriadsGenerator() {
         cards.push({
           globalIdx: cards.length,
           setIdx, inv,
-          chordName: `${root}${def.suffix}`,
+          chordName: `${root}${def!.suffix}`,
           setLabel:  ss.label,
           invLabel:  INVERSION_LABELS[inv],
           fretBadge, minFret, fretPositions, colors, labels, shape,
