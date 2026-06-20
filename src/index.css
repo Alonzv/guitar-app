@@ -286,11 +286,23 @@ body.dark {
 /* Label text always visible (no icon-only mode needed without emoji) */
 .gc-tab-label { display: inline; }
 
+/* Base transition — spring curve makes release feel like a breath */
+.gc-tab {
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.14s;
+}
+
 /* Hover — "pressed into shadow" shift */
 .gc-tab:hover {
   transform: translate(-2px, 0);
   border-left-color: transparent !important;
   filter: brightness(1.12);
+}
+
+/* Click — quick press in, spring breath out */
+.gc-tab:active {
+  transform: scale(0.91) !important;
+  transition: transform 0.06s ease-in, filter 0.06s;
+  filter: brightness(0.92);
 }
 
 button:not(.gc-tab):not(:disabled):hover {
@@ -414,6 +426,13 @@ button:not(.gc-tab):not(:disabled):hover {
   align-items: center;
   justify-content: center;
   font-family: inherit;
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.14s;
+}
+
+.gc-sub-tab:active {
+  transform: scale(0.91) !important;
+  transition: transform 0.06s ease-in, filter 0.06s;
+  filter: brightness(0.92);
 }
 
 /* ─────────────────────────────────────────────────────────────
