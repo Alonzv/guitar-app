@@ -178,16 +178,18 @@ export function IntervalCalculate() {
       </div>
 
       {/* Interactive fretboard */}
-      <div style={card({ padding: '9px 10px 8px' })}>
+      <div style={{ background: 'var(--gc-fretboard-bg)', padding: '9px 10px 8px' }}>
         <div style={{ overflowX: 'auto' }}>
           <svg viewBox={`0 0 ${FB_W} ${FB_H}`} style={{ display: 'block', width: '100%', minWidth: 260 }}>
+
+            {/* Background */}
+            <rect x={0} y={0} width={FB_W} height={FB_H} fill="var(--gc-fretboard-bg)" />
 
             {/* Fret position markers */}
             {FRET_MARKERS.map(f => (
               <circle key={f} cx={NUT + (f - 0.5) * FRET_SP}
                 cy={FB_TOP + 2.5 * STR_SP}
-                r={4} fill={T.border} opacity={0.35}
-              />
+                r={4} fill="rgba(255,255,255,0.15)" />
             ))}
 
             {/* Fret lines */}
@@ -195,8 +197,8 @@ export function IntervalCalculate() {
               <line key={i}
                 x1={NUT + i * FRET_SP} y1={FB_TOP}
                 x2={NUT + i * FRET_SP} y2={FB_TOP + 5 * STR_SP}
-                stroke={i === 0 ? T.text : T.border}
-                strokeWidth={i === 0 ? 3 : 1} opacity={i === 0 ? 0.6 : 0.8}
+                stroke="rgba(255,255,255,1)"
+                strokeWidth={i === 0 ? 0 : 1}
               />
             ))}
 
@@ -204,16 +206,18 @@ export function IntervalCalculate() {
             {Array.from({ length: 6 }).map((_, s) => (
               <line key={s}
                 x1={NUT} y1={strY(s)} x2={NUT + 12 * FRET_SP} y2={strY(s)}
-                stroke={T.textMuted}
+                stroke="rgba(255,255,255,1)"
                 strokeWidth={0.7 + (5 - s) * 0.28}
-                opacity={0.5}
               />
             ))}
+
+            {/* Nut */}
+            <rect x={NUT - 3} y={FB_TOP} width={3} height={5 * STR_SP} fill="var(--gc-fretboard-nut)" />
 
             {/* Fret numbers */}
             {[3, 5, 7, 9, 12].map(f => (
               <text key={f} x={NUT + (f - 0.5) * FRET_SP} y={FB_H - 1}
-                textAnchor="middle" fontSize={7} fill={T.textDim}>{f}</text>
+                textAnchor="middle" fontSize={7} fill="rgba(255,255,255,0.6)">{f}</text>
             ))}
 
             {/* Clickable cells (invisible, covers whole board) */}
