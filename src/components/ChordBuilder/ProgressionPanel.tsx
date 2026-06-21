@@ -168,7 +168,7 @@ export function ProgressionPanel({
               style={{
                 padding: '4px 8px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: canUndo ? T.textMuted : T.textDim,
-                fontSize: 11, cursor: canUndo ? 'pointer' : 'not-allowed', fontWeight: 600,
+                fontSize: 11, cursor: canUndo ? 'pointer' : 'not-allowed', fontWeight: 400,
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}
             >↩</button>
@@ -179,7 +179,7 @@ export function ProgressionPanel({
               style={{
                 padding: '4px 8px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: canRedo ? T.textMuted : T.textDim,
-                fontSize: 11, cursor: canRedo ? 'pointer' : 'not-allowed', fontWeight: 600,
+                fontSize: 11, cursor: canRedo ? 'pointer' : 'not-allowed', fontWeight: 400,
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}
             >↪</button>
@@ -189,7 +189,7 @@ export function ProgressionPanel({
                 padding: '4px 10px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: copied ? T.secondaryBg : T.bgInput,
                 color: copied ? T.secondary : T.textMuted, fontSize: 11,
-                cursor: 'pointer', fontWeight: 600, transition: 'filter 0.15s',
+                cursor: 'pointer', fontWeight: 400, transition: 'filter 0.15s',
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}
             >
@@ -201,7 +201,7 @@ export function ProgressionPanel({
               style={{
                 padding: '4px 10px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: T.textMuted, fontSize: 11,
-                cursor: exporting ? 'not-allowed' : 'pointer', fontWeight: 600,
+                cursor: exporting ? 'not-allowed' : 'pointer', fontWeight: 400,
                 transition: 'filter 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
               }}
             >
@@ -217,7 +217,7 @@ export function ProgressionPanel({
             style={{
               flex: 1, padding: '7px 0', borderRadius: 0, border: `1px solid ${T.border}`,
               background: shared ? T.secondaryBg : T.bgInput,
-              color: shared ? T.secondary : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              color: shared ? T.secondary : T.textMuted, fontSize: 12, fontWeight: 400, cursor: 'pointer',
               transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
             }}
           >

@@ -45,7 +45,7 @@ const SELECT_STYLE: React.CSSProperties = {
   color: T.text,
   fontFamily: 'inherit',
   fontSize: 12,
-  fontWeight: 600,
+  fontWeight: 400,
   padding: '5px 26px 5px 10px',
   cursor: 'pointer',
   outline: 'none',

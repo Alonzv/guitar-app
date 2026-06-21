@@ -363,7 +363,7 @@ function AnalysisCard({
             {analysis.recommendedReason && (
               <p style={{
                 margin: 0, fontSize: 11, color: T.primary,
-                direction: 'rtl', textAlign: 'right', fontWeight: 600,
+                direction: 'rtl', textAlign: 'right', fontWeight: 400,
               }}>
                 ✦ {analysis.recommendedReason}
               </p>
@@ -646,7 +646,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               ))}
               <button
                 onClick={() => setChords([])}
-                style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 600, borderLeft: '3px solid var(--gc-bar-color)' }}
+                style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)' }}
               >Clear</button>
             </div>
           )}
@@ -657,7 +657,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               style={{
                 alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 0,
                 border: `1px solid ${T.border}`, background: T.bgInput,
-                color: T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                color: T.textMuted, fontSize: 12, fontWeight: 400, cursor: 'pointer',
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}
             >
@@ -679,7 +679,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
               padding: '8px 32px 8px 12px', borderRadius: 0,
               border: `1px solid ${T.border}`,
               background: T.bgInput, color: T.text,
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              fontSize: 13, fontWeight: 400, cursor: 'pointer',
               outline: 'none', borderLeft: '3px solid var(--gc-bar-color)',
             }}
           >
@@ -829,7 +829,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
                   {currentPath.description}
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 10, color: T.textDim, fontWeight: 600 }}>Smoothness</span>
+                  <span style={{ fontSize: 10, color: T.textDim, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Smoothness</span>
                   <div style={{ display: 'flex', gap: 2 }}>
                     {[1, 2, 3, 4, 5].map(n => (
                       <span key={n} style={{

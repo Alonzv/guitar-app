@@ -302,14 +302,14 @@ export const CircleOfFifths: React.FC<Props> = () => {
             background: T.bgCard, borderRadius: 0, padding: '4px 10px', border: `1px solid ${T.border}`,
           }}>
             <div style={{ width: 10, height: 10, borderRadius: 0, background: FC[f].fill }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: FC[f].fill, textTransform: 'capitalize' }}>{f}</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: FC[f].fill, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>{f}</span>
           </div>
         ))}
       </div>
 
       {/* Tip */}
-      <div style={card({ padding: '10px 14px' })}>
-        {hasSelection ? (
+      {hasSelection && (
+        <div style={card({ padding: '10px 14px' })}>
           <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
             <span style={{ color: T.text, fontWeight: 400 }}>{centerRoot} {centerLabel}</span>
             {selectedMode === 'major' ? (
@@ -338,8 +338,8 @@ export const CircleOfFifths: React.FC<Props> = () => {
               </>
             )}
           </p>
-        ) : null}
-      </div>
+        </div>
+      )}
 
     </div>
   );
