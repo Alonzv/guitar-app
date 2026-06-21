@@ -4,12 +4,16 @@ import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 import { TheoryTab } from './components/TheoryTab';
 import { ToolsTab } from './components/Tools/ToolsTab';
 import { VoicingsTab } from './components/Voicings/VoicingsTab';
+import { WorkspacePanel } from './components/Workspace/WorkspacePanel';
+import { UserMenu } from './components/Auth/UserMenu';
 import { Onboarding } from './components/Onboarding';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { IconMoon, IconSun } from './components/Icons';
+import { requestOpenTabInBuilder } from './services/handoff';
+import type { TabContent } from './services/types';
 import { T } from './theme';
 
-type Tab = 'theory' | 'voicings' | 'tools';
+type Tab = 'theory' | 'voicings' | 'tools' | 'workspace';
 
 const FLAT_TO_SHARP: Record<string, string> = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
 
@@ -39,9 +43,10 @@ function decodeSharedProgression(): ChordInProgression[] | null {
 
 type TabDef = { id: Tab; label: string };
 const TABS: TabDef[] = [
-  { id: 'theory',   label: 'Theory'   },
-  { id: 'voicings', label: 'Voicings' },
-  { id: 'tools',    label: 'Tools'    },
+  { id: 'theory',    label: 'Theory'    },
+  { id: 'voicings',  label: 'Voicings'  },
+  { id: 'tools',     label: 'Tools'     },
+  { id: 'workspace', label: 'Workspace' },
 ];
 
 export default function App() {
@@ -155,6 +160,16 @@ export default function App() {
     })));
   };
 
+  // ── Workspace "Open in Builder" handlers ───────────────────────────────────
+  const handleOpenProgression = (chords: ChordInProgression[]) => {
+    pushHistory(chords.map((c, i) => ({ ...c, id: `chord-loaded-${Date.now()}-${i}` })));
+    setActiveTab('theory');
+  };
+  const handleOpenTab = (content: TabContent) => {
+    requestOpenTabInBuilder(content);
+    setActiveTab('tools');
+  };
+
   const isElectron = navigator.userAgent.includes('Electron');
 
   // ── Sidebar collapse (desktop only) ────────────────────────────────────────
@@ -200,6 +215,14 @@ export default function App() {
       {activeTab === 'tools' && (
         <ErrorBoundary label="Tools">
           <ToolsTab />
+        </ErrorBoundary>
+      )}
+      {activeTab === 'workspace' && (
+        <ErrorBoundary label="Workspace">
+          <WorkspacePanel
+            onOpenTabInBuilder={handleOpenTab}
+            onOpenProgressionInBuilder={handleOpenProgression}
+          />
         </ErrorBoundary>
       )}
     </>
@@ -291,10 +314,11 @@ export default function App() {
         </aside>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ backgroundColor: T.bgCard, borderBottom: `1px solid ${T.border}`, padding: '14px 24px', flexShrink: 0 }}>
+          <div style={{ backgroundColor: T.bgCard, borderBottom: `1px solid ${T.border}`, padding: '14px 24px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: T.text, letterSpacing: '-0.3px' }}>
               {TABS.find(t => t.id === activeTab)?.label ?? ''}
             </h1>
+            <UserMenu onOpenWorkspace={() => setActiveTab('workspace')} />
           </div>
 
           {showSharedBanner && sharedProgression && (
@@ -339,6 +363,7 @@ export default function App() {
           <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
             <button onClick={() => setDarkMode(d => !d)} style={{ width: 26, height: 26, borderRadius: 0, border: `1px solid ${darkMode ? '#2A4CC8' : '#1235FC'}`, background: darkMode ? '#242220' : '#1235FC', color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '24px', padding: 0, display:'flex', alignItems:'center', justifyContent:'center' }} title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <IconSun size={13} /> : <IconMoon size={13} />}</button>
             <button onClick={() => setShowOnboarding(true)} style={{ width: 26, height: 26, borderRadius: 0, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 13, fontWeight: 400, cursor: 'pointer', lineHeight: '24px', padding: 0 }} title="Help">?</button>
+            <UserMenu compact onOpenWorkspace={() => setActiveTab('workspace')} />
           </div>
         </div>
         <h1 style={{ textAlign: 'center', fontSize: 'var(--gc-tab-title)', fontWeight: 800, fontFamily: 'inherit', color: T.text, margin: '0 0 var(--gc-h1-mb)', letterSpacing: '-0.5px' }}>

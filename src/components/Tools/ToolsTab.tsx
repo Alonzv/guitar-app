@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tuner } from './Tuner';
 import { Metronome } from './Metronome';
 import { AudioToTab } from './AudioToTab';
 import { TabBuilder } from './TabBuilder';
+import { subscribeHandoff, hasPendingTab } from '../../services/handoff';
 import { T } from '../../theme';
 
 type Sub = 'tuner' | 'metronome' | 'audiotab' | 'tabbuilder';
@@ -15,7 +16,12 @@ const SUB_LABELS: Record<Sub, string> = {
 };
 
 export const ToolsTab: React.FC = () => {
-  const [sub, setSub] = useState<Sub>('tuner');
+  const [sub, setSub] = useState<Sub>(() => (hasPendingTab() ? 'tabbuilder' : 'tuner'));
+
+  // When the Workspace pushes a tab to "Open in Builder", jump to that sub-tab.
+  useEffect(() => subscribeHandoff(() => {
+    if (hasPendingTab()) setSub('tabbuilder');
+  }), []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

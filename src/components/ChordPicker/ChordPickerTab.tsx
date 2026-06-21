@@ -5,6 +5,7 @@ import { ChordStructure } from '../ChordBuilder/ChordStructure';
 import { ProgressionPanel } from '../ChordBuilder/ProgressionPanel';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
 
@@ -286,6 +287,21 @@ export function ChordPickerTab({
         >
           {canAdd ? `+ Add ${displayName} to Progression` : 'Select a voicing below'}
         </button>
+      )}
+      {chordName && canAdd && (
+        <SaveToLibraryButton
+          style={{ width: '100%', justifyContent: 'center' }}
+          label="Save voicing to Library"
+          getPayload={() => {
+            const found = identifyChord(pickerDots, tuning);
+            const chord = found.length > 0 ? found[0] : { name: chordName, notes: [], aliases: [] };
+            return {
+              kind: 'progression',
+              name: chordName,
+              chords: [{ id: `chord-${Date.now()}`, chord, fretPositions: [...pickerDots] }],
+            };
+          }}
+        />
       )}
 
       {/* ── Chord structure ── */}

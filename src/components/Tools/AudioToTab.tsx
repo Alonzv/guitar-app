@@ -7,8 +7,23 @@ import {
 } from '../../utils/audioToTab';
 import { unlockAudio } from '../../utils/audioPlayback';
 import { exportNotesMidi } from '../../utils/midiExport';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 
 type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'error';
+
+// Build a 6-line ASCII tab (display order e,B,G,D,A,E) from TabData for storage.
+function tabDataToAscii(td: TabData): string {
+  const rows = [5, 4, 3, 2, 1, 0]; // high-e → low-E
+  const labels = ['e', 'B', 'G', 'D', 'A', 'E'];
+  return rows.map((stringIdx, r) => {
+    const cells: string[] = [];
+    for (let col = 0; col < td.totalColumns; col++) {
+      const ev = td.events.find(e => e.column === col && e.string === stringIdx);
+      cells.push(ev ? String(ev.fret).padStart(2, '-') : '--');
+    }
+    return `${labels[r]}|${cells.join('-')}|`;
+  }).join('\n');
+}
 
 const DEFAULT_MT3_URL = 'https://vipapito-scaleup-transcribe.hf.space';
 const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' };
@@ -283,6 +298,7 @@ export const AudioToTab: React.FC = () => {
   const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioBufRef  = useRef<AudioBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastBlobRef  = useRef<Blob | null>(null);
 
   // Refs for the stable keyboard handler (avoid stale closures)
   const kbSelNote   = useRef<TabEvent | null>(null);
@@ -440,6 +456,7 @@ export const AudioToTab: React.FC = () => {
     setFileName(name);
     setSelNote(null);
     kbSelNote.current = null; kbEditMidi.current = null;
+    lastBlobRef.current = blob; // retained so it can be uploaded on "Save to Library"
 
     const url = URL.createObjectURL(blob);
     setOriginalUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
@@ -733,6 +750,19 @@ export const AudioToTab: React.FC = () => {
           Export to MIDI
         </button>
       </div>
+
+      {/* Save to personal library */}
+      <SaveToLibraryButton
+        style={{ width: '100%', justifyContent: 'center', padding: '13px 0', fontSize: 14 }}
+        getPayload={() => !tabData ? null : ({
+          kind: 'audio',
+          name: (fileName.replace(/\.[^.]+$/, '') || tabData.title || 'Transcription'),
+          tab_content: tabDataToAscii(tabData),
+          audioBlob: lastBlobRef.current,
+          audioExt: (lastBlobRef.current as File | null)?.name?.split('.').pop() || 'webm',
+          duration_seconds: tabData.duration,
+        })}
+      />
 
       {/* Tab — click a note to select, then type to edit */}
       <div>

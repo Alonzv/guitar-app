@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { AuthProvider } from './contexts/AuthContext'
 import { unlockAudio } from './utils/audioPlayback'
 
 // Register a one-time native (non-React) listener so AudioContext is
@@ -12,6 +13,8 @@ document.addEventListener('click',      _earlyUnlock, { once: true, capture: tru
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 )

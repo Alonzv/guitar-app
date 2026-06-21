@@ -3,6 +3,7 @@ import { Key, Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import { detectKey } from '../../utils/progressionHelper';
 import type { ChordInProgression } from '../../types/music';
 import { IconSearch } from '../Icons';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card } from '../../theme';
 
 interface Props {
@@ -114,6 +115,17 @@ export function ChordAnalyzerTab({ progression }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+      <SaveToLibraryButton
+        style={{ width: '100%', justifyContent: 'center' }}
+        label="Save analyzed progression"
+        getPayload={() => ({
+          kind: 'progression',
+          name: key ? `${key} progression` : 'Analyzed progression',
+          chords: progression,
+          detected_key: key || null,
+        })}
+      />
 
       {/* Key card */}
       <div style={card({ padding: '14px 16px' })}>

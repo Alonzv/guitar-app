@@ -47,6 +47,7 @@
     "@coderline/alphatab": "^1.8.3",
     "@coderline/alphatab-vite": "^1.8.3",
     "@spotify/basic-pitch": "^1.0.1",
+    "@supabase/supabase-js": "^2.108.2",
     "@tailwindcss/vite": "^4.2.1",
     "@tonaljs/tonal": "^4.10.0",
     "autoprefixer": "^10.4.27",

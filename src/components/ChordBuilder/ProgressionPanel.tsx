@@ -6,6 +6,7 @@ import { suggestNextChords, suggestCustomChords, detectKey } from '../../utils/p
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { playChord } from '../../utils/audioPlayback';
 import { IconClipboard, IconLink } from '../Icons';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card } from '../../theme';
 
 interface Props {
@@ -223,6 +224,16 @@ export function ProgressionPanel({
           >
             {shared ? '✓ Copied!' : <><IconLink size={12} /> Share Link</>}
           </button>
+          <SaveToLibraryButton
+            size="sm"
+            style={{ flex: 1, justifyContent: 'center', padding: '7px 0' }}
+            getPayload={() => progression.length === 0 ? null : ({
+              kind: 'progression',
+              name: progressionName.trim() || `Progression ${new Date().toLocaleDateString()}`,
+              chords: progression,
+              detected_key: detectedKey || null,
+            })}
+          />
         </div>
 
         {/* Progression name input */}

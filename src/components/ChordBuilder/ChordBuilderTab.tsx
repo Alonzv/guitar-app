@@ -7,6 +7,7 @@ import { VoicingVariations } from './VoicingVariations';
 import { ProgressionPanel } from './ProgressionPanel';
 import { identifyChord } from '../../utils/chordIdentifier';
 import { findChordVoicings } from '../../utils/chordVoicings';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
 
@@ -180,6 +181,17 @@ export function ChordBuilderTab({
           + Add to Progression
         </button>
       </div>
+      {chords.length > 0 && (
+        <SaveToLibraryButton
+          style={{ width: '100%', justifyContent: 'center' }}
+          label="Save voicing to Library"
+          getPayload={() => ({
+            kind: 'progression',
+            name: chords[0].name,
+            chords: [{ id: `chord-${Date.now()}`, chord: chords[0], fretPositions: [...activeDots] }],
+          })}
+        />
+      )}
 
       {/* ── Progression ── */}
       <ProgressionPanel

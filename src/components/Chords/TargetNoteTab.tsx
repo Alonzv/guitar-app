@@ -5,6 +5,7 @@ import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
 import { scalesContainingNotes, getScalePositions, type ScaleFit } from '../../utils/scaleUtils';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card } from '../../theme';
 
 const SEMITONE_DEGREE: Record<number, string> = {
@@ -765,6 +766,20 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 borderLeft: '4px solid var(--gc-bar-color)',
               }}
             >▶ Play</button>
+
+            <SaveToLibraryButton
+              style={{ width: '100%', justifyContent: 'center' }}
+              label="Save voicing to Library"
+              getPayload={() => ({
+                kind: 'progression',
+                name: expandedResult!.chordName,
+                chords: [{
+                  id: `chord-${Date.now()}`,
+                  chord: { name: expandedResult!.chordName, notes: [], aliases: [] },
+                  fretPositions: [...expandedResult!.voicing],
+                }],
+              })}
+            />
 
             {/* Fits in — scales this chord lives in */}
             {fitScales.length > 0 && (

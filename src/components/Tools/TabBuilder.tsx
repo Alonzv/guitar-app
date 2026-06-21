@@ -8,6 +8,9 @@ import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { VerticalScaleFretboard } from '../Fretboard/VerticalScaleFretboard';
+import { subscribeHandoff, consumePendingTab } from '../../services/handoff';
+import type { TabContent } from '../../services/types';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 
 type Lang = 'he' | 'en';
 type ErrKey = 'empty' | 'ai' | 'gen';
@@ -56,6 +59,18 @@ function emptyGrid(cols: number): Cell[][] {
   return STRS.map(() => Array.from({ length: cols }, () => ({ fret: '' })));
 }
 
+// Coerce a stored TabContent (loose `tech?: string`) into the builder's TabState.
+function normalizeTabContent(c: TabContent): TabState {
+  return {
+    title: c.title ?? '',
+    subtitle: c.subtitle ?? '',
+    grid: (c.grid ?? emptyGrid(COLS_PER_LINE * 3)).map(row =>
+      row.map(cell => ({ fret: cell.fret ?? '', tech: cell.tech as Tech | undefined }))
+    ),
+    bars: c.bars ?? [],
+  };
+}
+
 const TECH_BTNS: { id: Tech; label: string; sym: string; key: string }[] = [
   { id: 'h', label: 'Hammer/Pull', sym: 'h/p', key: 'H' },
   { id: '/', label: 'Slide',       sym: '/',   key: '/' },
@@ -91,12 +106,21 @@ function tabHasContent(tab: TabState) {
 
 export const TabBuilder: React.FC = () => {
   const [tab, setTab] = useState<TabState>(() => {
+    // A pending "Open in Builder" handoff wins over the autosaved draft.
+    const pending = consumePendingTab();
+    if (pending) return normalizeTabContent(pending);
     try {
       const s = localStorage.getItem('scaleup_tab');
       if (s) return JSON.parse(s);
     } catch {}
     return { title: '', subtitle: '', grid: emptyGrid(COLS_PER_LINE * 3), bars: [] };
   });
+
+  // Live handoff — if the builder is already mounted when a tab is opened.
+  useEffect(() => subscribeHandoff(() => {
+    const pending = consumePendingTab();
+    if (pending) setTab(normalizeTabContent(pending));
+  }), []);
 
   const [sel, setSel]         = useState<[number, number] | null>(null);
   const [hov, setHov]         = useState<[number, number] | null>(null);
@@ -506,6 +530,16 @@ export const TabBuilder: React.FC = () => {
             }}>
             {busy ? '…' : 'PDF'}
           </button>
+          <SaveToLibraryButton
+            size="sm"
+            label="Save"
+            style={{ flexShrink: 0 }}
+            getPayload={() => tabHasContent(tab) ? ({
+              kind: 'tab',
+              name: tab.title?.trim() || 'Untitled Tab',
+              content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars },
+            }) : null}
+          />
           <button
             onClick={() => {
               if (!window.confirm('Clear all notes? This cannot be undone.')) return;
