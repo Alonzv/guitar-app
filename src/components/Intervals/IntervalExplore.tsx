@@ -126,8 +126,8 @@ export function IntervalExplore() {
             const sel   = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '5px 3px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 9 : 11, fontWeight: sel ? 500 : 400,
+                padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
+                fontSize: sharp ? 11 : 13, fontWeight: sel ? 500 : 400,
                 border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: sel ? T.primary : sharp ? T.textMuted : T.text,

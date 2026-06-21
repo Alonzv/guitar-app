@@ -253,7 +253,7 @@ export function IntervalCalculate() {
           <div style={{ textAlign: 'right', marginTop: 6 }}>
             <button onClick={() => { setPoints([]); setInverted(false); }} style={{
               padding: '3px 10px', borderRadius: 0, border: `1px solid ${T.border}`,
-              background: 'transparent', color: T.textMuted, fontSize: 10, cursor: 'pointer',
+              background: T.bgCard, color: T.textMuted, fontSize: 10, cursor: 'pointer',
               borderLeft: '3px solid var(--gc-bar-color)',
             }}>Clear</button>
           </div>

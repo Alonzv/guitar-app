@@ -188,10 +188,20 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const start = useCallback(async () => {
     setError('');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      // Disable browser audio processing so pitch detection gets a clean signal
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+        video: false,
+      });
       streamRef.current = stream;
       try { (navigator as any).audioSession && ((navigator as any).audioSession.type = 'play-and-record'); } catch { /* ignore */ }
-      const ctx = new AudioContext();
+      const ctx = new AudioContext({ sampleRate: 44100 });
+      // iOS Safari suspends AudioContext until resumed inside a user-gesture callback
+      if (ctx.state === 'suspended') await ctx.resume();
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
