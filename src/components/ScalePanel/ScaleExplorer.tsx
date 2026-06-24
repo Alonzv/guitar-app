@@ -109,7 +109,7 @@ export function ScaleExplorer() {
 
       {/* ── Root note ── */}
       <div style={card()}>
-        <p style={{ margin: '0 0 10px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+        <p className="gc-sec-label" style={{ margin: '0 0 10px' }}>
           Root Note
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 7 }}>
@@ -157,7 +157,7 @@ export function ScaleExplorer() {
           <div style={{ ...card(), marginTop: 2, display: 'flex', flexDirection: 'column', gap: 14 }}>
             {SCALE_GROUPS.map(g => (
               <div key={g.label}>
-                <p style={{ margin: '0 0 7px', fontSize: 10, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                <p className="gc-sec-label" style={{ margin: '0 0 7px' }}>
                   {g.label}
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

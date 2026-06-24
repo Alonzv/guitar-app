@@ -475,7 +475,29 @@ select {
    Tuner note display — scale down on narrow screens
 ───────────────────────────────────────────────────────────── */
 .gc-tuner-note {
-  font-size: clamp(48px, 18vw, 80px);
+  font-size: clamp(64px, 22vw, 96px);
+  font-family: var(--gc-font);
+  font-weight: 600;
+  line-height: 0.9;
+}
+
+/* Section labels — mono uppercase 10px */
+.gc-sec-label {
+  font-family: var(--gc-font);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gc-text-dim);
+}
+
+/* Result card — hairline border + 3px red left stripe */
+.gc-result-card {
+  border: 1px solid var(--gc-border);
+  border-left: 3px solid var(--gc-primary);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* ─────────────────────────────────────────────────────────────

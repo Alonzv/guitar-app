@@ -30,10 +30,10 @@ interface Props {
 
 const LABEL_STYLE: React.CSSProperties = {
   margin: '0 0 10px',
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 400,
-  color: T.textMuted,
-  letterSpacing: '-0.02em',
+  color: T.textDim,
+  letterSpacing: '0.14em',
   textTransform: 'uppercase',
 };
 
@@ -131,7 +131,7 @@ export function ChordBuilderTab({
 
       {/* ── Chord name — hidden until notes are placed ── */}
       {activeDots.length >= 2 && (
-        <div style={card({ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '16px 12px' })}>
+        <div className="gc-result-card" style={{ alignItems: 'center', justifyContent: 'center', gap: 12, padding: '16px 12px' }}>
           <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} />
           {chords.length > 0 && (
             <button

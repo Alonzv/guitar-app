@@ -68,11 +68,11 @@ const SUFFIX_MAP: Record<string, Record<string, string>> = {
 
 const LABEL_STYLE = {
   margin: '0 0 10px',
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 400 as const,
-  color: T.textMuted,
+  color: T.textDim,
   textTransform: 'uppercase' as const,
-  letterSpacing: '-0.02em',
+  letterSpacing: '0.14em',
 };
 
 const SELECT_STYLE: React.CSSProperties = {

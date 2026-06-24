@@ -218,8 +218,8 @@ export const Metronome: React.FC = () => {
         {/* Large BPM display + manual input */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 6 }}>
           <button onClick={() => adjustBpm(-1)} style={{
-            width: 44, height: 44, borderRadius: 0, border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 400, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
+            width: 50, height: 50, borderRadius: 0, border: `1px solid ${T.border}`,
+            background: 'transparent', color: T.text, fontSize: 24, fontWeight: 400, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
           }}>−</button>
           <input
             type="number" min={40} max={240}
@@ -228,19 +228,19 @@ export const Metronome: React.FC = () => {
             onBlur={e => applyBpm(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && applyBpm(bpmInput)}
             style={{
-              width: 140, textAlign: 'center', fontSize: 52, fontWeight: 800,
-              letterSpacing: 0,
+              width: 180, textAlign: 'center', fontSize: 84, fontWeight: 600,
+              letterSpacing: '-0.02em', lineHeight: 0.9,
               color: T.text, background: 'transparent', outline: 'none',
               fontFamily: 'inherit', padding: 0, boxSizing: 'border-box',
               MozAppearance: 'textfield',
             } as React.CSSProperties}
           />
           <button onClick={() => adjustBpm(1)} style={{
-            width: 44, height: 44, borderRadius: 0, border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.text, fontSize: 24, fontWeight: 400, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
+            width: 50, height: 50, borderRadius: 0, border: `1px solid ${T.border}`,
+            background: 'transparent', color: T.text, fontSize: 24, fontWeight: 400, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
           }}>+</button>
         </div>
-        <div style={{ textAlign: 'center', fontSize: 12, color: T.textMuted, marginBottom: 16 }}>BPM</div>
+        <div className="gc-sec-label" style={{ textAlign: 'center', marginBottom: 16 }}>BPM</div>
 
         <input
           type="range" min={40} max={240} value={bpm}

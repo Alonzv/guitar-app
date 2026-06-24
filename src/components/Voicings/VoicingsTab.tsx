@@ -178,11 +178,11 @@ function ChordSpelling({ chordName }: { chordName: string }) {
 
 const LABEL_STYLE: React.CSSProperties = {
   margin: 0,
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 400,
-  color: T.textMuted,
+  color: T.textDim,
   textTransform: 'uppercase',
-  letterSpacing: '-0.02em',
+  letterSpacing: '0.14em',
 };
 
 // Fret position badge: colored pill showing the barre/position fret number
@@ -778,7 +778,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
 
       {/* ── Path results ─────────────────────────────────────────────── */}
       {paths.length > 0 && (
-        <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="gc-result-card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {/* Path selector tabs */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -244,8 +244,8 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       {/* Main display */}
       <div style={card({ textAlign: 'center', padding: '28px 20px' })}>
         <div className="gc-tuner-note" style={{
-          fontWeight: 800, color: tuneColor,
-          lineHeight: 1, marginBottom: 4,
+          color: tuneColor,
+          marginBottom: 8,
           transition: 'color 0.3s', minHeight: 88,
         }}>
           {display ? display.note : '—'}
