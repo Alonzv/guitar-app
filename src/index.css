@@ -91,7 +91,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: -0.02em; text-transform: uppercase; }
+button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: -0.02em; text-transform: uppercase; transition: transform 0.08s ease; }
+button:active { transform: scale(0.96); }
+
+/* Header ghost icon buttons — springy rotate on press */
+.gc-icon-btn:active { transform: scale(0.86) rotate(-8deg); }
+
+/* Heavy/full-width action buttons — gentle press */
+.gc-btn-heavy:active { transform: scale(0.98); }
 
 /* ─────────────────────────────────────────────────────────────
    Responsive design tokens — referenced via var() in inline styles

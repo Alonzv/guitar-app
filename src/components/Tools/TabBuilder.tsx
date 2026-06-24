@@ -642,7 +642,7 @@ export const TabBuilder: React.FC = () => {
           const s1 = Math.min(s0 + colsPerLine, numCols);
 
           return (
-            <div key={sys} style={{ marginBottom: 28, background: 'var(--gc-fretboard-bg)', padding: '8px 4px' }}
+            <div key={sys} style={{ marginBottom: 28, background: T.secondary, padding: '8px 4px' }}
               onMouseLeave={() => setHov(null)}>
               {STRS.map((lbl, si) => (
                 <div key={si} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>

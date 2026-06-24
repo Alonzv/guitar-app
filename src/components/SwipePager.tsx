@@ -64,13 +64,14 @@ export function SwipePager({
   const [dragging, setDragging] = useState(false);
   const [W, setW] = useState(0);
 
-  const areaRef = useRef<HTMLDivElement>(null);
-  const axisRef = useRef<null | 'h' | 'v'>(null);
-  const sxRef   = useRef(0);
-  const syRef   = useRef(0);
-  const pidRef  = useRef(0);
-  const capRef  = useRef(false);
-  const dragRef = useRef(false); // sync ref for events
+  // areaRef measures the content width — nav strip has the same width
+  const areaRef  = useRef<HTMLDivElement>(null);
+  const axisRef  = useRef<null | 'h' | 'v'>(null);
+  const sxRef    = useRef(0);
+  const syRef    = useRef(0);
+  const pidRef   = useRef(0);
+  const capRef   = useRef(false);
+  const dragRef  = useRef(false);
 
   const measure = useCallback(() => {
     if (areaRef.current) {
@@ -85,12 +86,13 @@ export function SwipePager({
     return () => window.removeEventListener('resize', measure);
   }, [measure]);
 
+  // ── Pointer handlers (placed on the full swipe zone) ──────────────────────
   const onDown = (e: React.PointerEvent) => {
-    sxRef.current = e.clientX;
-    syRef.current = e.clientY;
+    sxRef.current  = e.clientX;
+    syRef.current  = e.clientY;
     axisRef.current = null;
-    pidRef.current = e.pointerId;
-    capRef.current = false;
+    pidRef.current  = e.pointerId;
+    capRef.current  = false;
     dragRef.current = true;
     setDragging(true);
   };
@@ -107,14 +109,13 @@ export function SwipePager({
     }
     if (axisRef.current !== 'h') return;
 
-    // Only capture after axis is confirmed horizontal — preserves click on inner controls
+    // Capture only after axis confirmed — preserves taps on inner controls
     if (!capRef.current) {
       try { e.currentTarget.setPointerCapture(pidRef.current); } catch (_) {}
       capRef.current = true;
     }
 
     let d = cdx;
-    // Rubber-band at edges
     if ((tab === 0 && d > 0) || (tab === N_TABS - 1 && d < 0)) d *= 0.35;
     setDx(d);
   };
@@ -135,37 +136,37 @@ export function SwipePager({
     if (t !== tab) onTabChange(t);
   };
 
-  const ww = W || 400;
+  const ww    = W || 400;
   const trans = dragging ? 'none' : 'transform .36s cubic-bezier(0.22,1,0.36,1)';
   const contentX = -tab * ww + (dragging ? dx : 0);
   const titleX   = (ww - TITLE_W) / 2 - tab * TITLE_W + (dragging ? dx * 0.45 : 0);
 
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      height: '100dvh', display: 'flex', flexDirection: 'column',
       backgroundColor: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)',
+      overflow: 'hidden',
     }}>
       {/* ── Shared progression banner (optional) ─────────────────────────── */}
       {sharedBanner}
 
-      {/* ── Header: wordmark + ghost icon buttons ──────────────────────────── */}
+      {/* ── Header: wordmark + ghost icon buttons ─────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '10px 18px 12px',
         backgroundColor: T.bgDeep,
+        flexShrink: 0,
       }}>
-        <span style={{
-          fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 17, lineHeight: 1,
-        }}>
+        <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 17, lineHeight: 1 }}>
           <span style={{ color: T.text }}>Scale</span>
           <span style={{ color: T.primary }}>Up</span>
         </span>
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {/* Dark-mode ghost toggle — 1px border, NOT solid fill */}
           <button
             onClick={onToggleDark}
             title={darkMode ? 'Light mode' : 'Dark mode'}
+            className="gc-icon-btn"
             style={{
               width: 30, height: 30, borderRadius: 0,
               border: `1px solid ${T.border}`,
@@ -177,10 +178,10 @@ export function SwipePager({
             {darkMode ? '☀' : '☾'}
           </button>
 
-          {/* Help ghost button */}
           <button
             onClick={onHelp}
             title="Help"
+            className="gc-icon-btn"
             style={{
               width: 30, height: 30, borderRadius: 0,
               border: `1px solid ${T.border}`,
@@ -192,118 +193,111 @@ export function SwipePager({
             ?
           </button>
 
-          {/* User menu injected from outside */}
           {userMenu}
         </div>
       </div>
 
-      {/* ── Swipe indicator: title strip + dots + hint ──────────────────────── */}
-      <div style={{
-        borderTop: `1px solid ${T.border}`,
-        borderBottom: `1px solid ${T.border}`,
-        padding: '14px 0 11px',
-        flexShrink: 0,
-      }}>
-        {/* Title carousel */}
-        <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: 30 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', height: 30,
-            transform: `translate3d(${titleX}px,0,0)`,
-            transition: trans,
-            willChange: 'transform',
-          }}>
-            {tabTitles.map((t, i) => (
-              <span
-                key={i}
-                onClick={() => onTabChange(i)}
-                style={{
-                  flex: `0 0 ${TITLE_W}px`,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--gc-font)',
-                  letterSpacing: '0.05em',
-                  whiteSpace: 'nowrap',
-                  userSelect: 'none',
-                  fontSize:    i === tab ? 22 : 13,
-                  fontWeight:  i === tab ? 600 : 400,
-                  color:       i === tab ? T.text : 'var(--gc-peek)',
-                  transition: trans,
-                }}
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Dots */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: 7, marginTop: 12,
-        }}>
-          {tabTitles.map((_, i) => (
-            <span
-              key={i}
-              onClick={() => onTabChange(i)}
-              style={{
-                display: 'inline-block',
-                cursor: 'pointer',
-                ...(i === tab
-                  ? { width: 16, height: 5, background: T.primary }
-                  : { width: 5,  height: 5, background: T.border }),
-                transition: trans,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Swipe hint */}
-        <div style={{
-          textAlign: 'center', marginTop: 9,
-          fontFamily: 'var(--gc-font)', fontSize: 9,
-          letterSpacing: '0.28em', color: T.textDim, opacity: 0.7,
-          userSelect: 'none',
-        }}>
-          {'‹  SWIPE  ›'}
-        </div>
-      </div>
-
-      {/* ── Swipe content area ─────────────────────────────────────────────── */}
+      {/* ── Swipe zone: nav strip + content (full-width swipe capture) ────── */}
       <div
-        ref={areaRef}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
         style={{
-          flex: 1, position: 'relative', overflow: 'hidden',
-          touchAction: 'pan-y', cursor: dragging ? 'grabbing' : 'default',
+          flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          touchAction: 'pan-y',
+          cursor: dragging ? 'grabbing' : 'default',
         }}
       >
+        {/* ── Nav strip: title carousel + dots + hint ───────────────────── */}
         <div style={{
-          display: 'flex',
-          width: `${N_TABS * (ww || 400)}px`,
-          height: '100%',
-          transform: `translate3d(${contentX}px,0,0)`,
-          transition: trans,
-          willChange: 'transform',
+          borderTop: `1px solid ${T.border}`,
+          borderBottom: `1px solid ${T.border}`,
+          padding: '14px 0 11px',
+          flexShrink: 0,
         }}>
-          {React.Children.map(children, (child, i) => (
-            <div
-              key={i}
-              style={{
-                width: ww || 400,
-                flexShrink: 0,
-                height: '100%',
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                padding: 18,
-                boxSizing: 'border-box',
-              }}
-            >
-              {child}
+          {/* Title carousel */}
+          <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: 30 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', height: 30,
+              transform: `translate3d(${titleX}px,0,0)`,
+              transition: trans,
+              willChange: 'transform',
+            }}>
+              {tabTitles.map((t, i) => (
+                <span
+                  key={i}
+                  onClick={() => onTabChange(i)}
+                  style={{
+                    flex: `0 0 ${TITLE_W}px`,
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--gc-font)',
+                    letterSpacing: '0.05em',
+                    whiteSpace: 'nowrap',
+                    userSelect: 'none',
+                    fontSize:   i === tab ? 22 : 13,
+                    fontWeight: i === tab ? 600 : 400,
+                    color:      i === tab ? T.text : 'var(--gc-peek)',
+                    transition: trans,
+                  }}
+                >
+                  {t}
+                </span>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* Dots */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 7, marginTop: 12,
+          }}>
+            {tabTitles.map((_, i) => (
+              <span
+                key={i}
+                onClick={() => onTabChange(i)}
+                style={{
+                  display: 'inline-block',
+                  cursor: 'pointer',
+                  ...(i === tab
+                    ? { width: 16, height: 5, background: T.primary }
+                    : { width: 5,  height: 5, background: T.border }),
+                  transition: trans,
+                }}
+              />
+            ))}
+          </div>
+
+        </div>
+
+        {/* ── Content track ─────────────────────────────────────────────── */}
+        <div ref={areaRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          <div style={{
+            display: 'flex',
+            width: `${N_TABS * (ww || 400)}px`,
+            height: '100%',
+            transform: `translate3d(${contentX}px,0,0)`,
+            transition: trans,
+            willChange: 'transform',
+          }}>
+            {React.Children.map(children, (child, i) => (
+              <div
+                key={i}
+                style={{
+                  width: ww || 400,
+                  flexShrink: 0,
+                  height: '100%',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  padding: 18,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {child}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

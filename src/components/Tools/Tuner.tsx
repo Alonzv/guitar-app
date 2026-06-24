@@ -287,6 +287,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
         {error && <p style={{ color: T.coral, fontSize: 12, margin: '0 0 12px' }}>{error}</p>}
         <button
           onClick={listening ? stop : start}
+          className="gc-btn-heavy"
           style={{
             width: '100%', padding: '14px 0', borderRadius: 0,
             background: listening ? T.coral : T.primary,
