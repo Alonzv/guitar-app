@@ -30,8 +30,8 @@ const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' 
 
 // ── Tab visual constants ──────────────────────────────────────────────────────
 
-const TAB_BG   = 'var(--gc-fretboard-bg)';
-const TAB_LINE = 'var(--gc-fretboard-str)';
+const TAB_BG   = T.secondary;
+const TAB_LINE = 'rgba(255,255,255,0.45)';
 const TAB_BAR  = 'rgba(255,255,255,0.9)';
 const TAB_LBL  = 'rgba(255,255,255,0.75)';
 const TAB_SEL  = '#CC1C1C';
@@ -272,8 +272,8 @@ const RESPONSIVE_CSS = `
 `;
 
 const LABEL: React.CSSProperties = {
-  margin: '0 0 10px', fontSize: 11, fontWeight: 400,
-  color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em',
+  margin: '0 0 10px', fontSize: 10, fontWeight: 400,
+  color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.14em',
 };
 
 // ── Main component ────────────────────────────────────────────────────────────

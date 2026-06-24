@@ -199,10 +199,11 @@ export function ScaleExplorer() {
                     ];
                     playScale(midiNotes);
                   }}
+                  className="gc-btn-heavy"
                   style={{
-                    padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`,
-                    background: T.secondaryBg, color: T.secondary, fontSize: 12,
-                    fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)',
+                    padding: '4px 14px', borderRadius: 0,
+                    background: T.primary, color: '#fff', fontSize: 12,
+                    fontWeight: 400, cursor: 'pointer',
                   }}
                 >▶ Play</button>
               </div>

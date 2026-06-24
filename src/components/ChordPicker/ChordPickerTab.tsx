@@ -270,11 +270,13 @@ export function ChordPickerTab({
 
       {/* ── Result name ── */}
       {chordName && (
-        <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted }}>
-          {voicings.length > 0
-            ? `${voicings.length} voicing${voicings.length > 1 ? 's' : ''} found for `
-            : 'No voicings found for '}
-          <span style={{ color: T.text, fontWeight: 800, fontSize: 16 }}>{displayName}</span>
+        <div className="gc-result-card" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 13, color: T.textMuted }}>
+            {voicings.length > 0
+              ? `${voicings.length} voicing${voicings.length > 1 ? 's' : ''}`
+              : 'No voicings found'}
+          </span>
+          <span style={{ color: T.text, fontWeight: 600, fontSize: 22, letterSpacing: '-0.01em' }}>{displayName}</span>
         </div>
       )}
 
