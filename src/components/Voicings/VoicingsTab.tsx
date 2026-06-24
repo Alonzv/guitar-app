@@ -16,9 +16,13 @@ import { TUNINGS } from '../../utils/musicTheory';
 import { T, card } from '../../theme';
 import { ReharmonizeTab } from './ReharmonizeTab';
 
+type VoicingsSub = 'paths' | 'voiceleading' | 'reharmonize';
+
 interface Props {
   globalProgression?: ChordInProgression[];
   tuning?: Tuning;
+  activeSub?: VoicingsSub;
+  onSubChange?: (s: VoicingsSub) => void;
 }
 
 // ── Chord builder data ─────────────────────────────────────────────────────
@@ -383,7 +387,7 @@ function AnalysisCard({
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
+export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub, onSubChange }: Props) {
   // Chord builder
   const [root,  setRoot]  = useState('');
   const [triad, setTriad] = useState('');
@@ -412,8 +416,10 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   // Voice isolator
   const [isolate, setIsolate] = useState<IsolateGroup>(null);
 
-  // Sub-tab
-  const [subTab, setSubTab] = useState<'paths' | 'voiceleading' | 'reharmonize'>('paths');
+  // Sub-tab (can be controlled externally via activeSub/onSubChange)
+  const [internalSubTab, setInternalSubTab] = useState<VoicingsSub>('paths');
+  const subTab = activeSub ?? internalSubTab;
+  const setSubTab = (s: VoicingsSub) => { setInternalSubTab(s); onSubChange?.(s); };
 
   // Derived chord name
   const suffix    = SUFFIX_MAP[triad]?.[ext] ?? '';
@@ -517,13 +523,14 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* ── Sub-tab selector ───────────────────────────────────────── */}
+      {/* ── Sub-tab selector (hidden when externally controlled) ──── */}
+      {!activeSub && (
       <div style={{ display: 'flex', gap: 0 }}>
         {([
           { id: 'paths',        label: 'Paths'         },
           { id: 'voiceleading', label: 'Voice Leading' },
           { id: 'reharmonize',  label: 'Re-Harmonize'  },
-        ] as { id: 'paths' | 'voiceleading' | 'reharmonize'; label: string }[]).map(tab => (
+        ] as { id: VoicingsSub; label: string }[]).map(tab => (
           <button key={tab.id} onClick={() => setSubTab(tab.id)} className="gc-sub-tab" style={{
             flex: 1, padding: '11px 4px', borderRadius: 0,
             background: subTab === tab.id ? T.secondary : T.bgInput,
@@ -536,6 +543,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0] }: Props) {
           </button>
         ))}
       </div>
+      )}
 
       {subTab === 'paths' && <>
 

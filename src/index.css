@@ -140,6 +140,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-secondary-faint:  rgba(26,24,24,0.08);
   --gc-coral-faint:      rgba(26,24,24,0.06);
   --gc-coral-faint2:     rgba(26,24,24,0.10);
+  --gc-peek:             #C9C2B8;
 }
 
 body.dark {
@@ -165,6 +166,7 @@ body.dark {
   --gc-secondary-faint:  rgba(255,255,255,0.08);
   --gc-coral-faint:      rgba(255,255,255,0.06);
   --gc-coral-faint2:     rgba(255,255,255,0.10);
+  --gc-peek:             #4A453E;
   /* Inset right bar — dark mode */
   --gc-offset: none;
   --gc-offset-sm: none;
