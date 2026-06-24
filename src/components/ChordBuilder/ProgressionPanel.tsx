@@ -40,7 +40,7 @@ const GENRES: { id: Genre; label: string }[] = [
   { id: 'custom', label: 'Custom' },
 ];
 
-const CHORD_ACCENTS = ['#CC1C1C', '#1235FC', '#1A7A4A', '#C8A020', '#6B21A8', '#1A1818'];
+const CHORD_ACCENTS = ['#CC1C1C', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
 
 const LABEL_STYLE = {
   margin: '0 0 10px',

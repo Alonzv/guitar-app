@@ -62,7 +62,7 @@ const INTERVAL_DEGREE: Record<string, { num: string; name: string }> = {
 };
 
 const POSITION_WINDOWS = [[0,3],[2,5],[4,8],[6,10],[9,12]] as const;
-const POS_COLORS = [T.primary, T.secondary, '#C8A020', '#6B21A8', '#1A7A4A'];
+const POS_COLORS = [T.primary, T.secondary, '#5C5650', '#8A8378', '#9C958C'];
 
 export function ScaleExplorer() {
   const [root, setRoot]             = useState<Note>('A');
@@ -138,7 +138,7 @@ export function ScaleExplorer() {
           onClick={() => setScaleMenuOpen(o => !o)}
           style={{
             width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
-            background: '#1235FC', color: '#fff',
+            background: T.secondary, color: '#fff',
             fontSize: 13, fontWeight: 400, textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderLeft: '3px solid var(--gc-bar-color)',

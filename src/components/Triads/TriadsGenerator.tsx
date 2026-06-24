@@ -31,7 +31,7 @@ const TRIADS: Record<TriadType, TriadDef> = {
 const DEGREE_COLORS: Record<Degree, string> = {
   root:  T.primary,
   third: T.secondary,
-  fifth: '#C8A020',
+  fifth: '#5C5650',
 };
 
 const DEGREES: Degree[] = ['root', 'third', 'fifth'];
@@ -293,7 +293,7 @@ export function TriadsGenerator() {
           onClick={() => setTriadMenuOpen(o => !o)}
           style={{
             width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
-            background: '#1235FC', color: '#fff',
+            background: T.secondary, color: '#fff',
             fontSize: 13, fontWeight: 400, textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderLeft: '3px solid var(--gc-bar-color)',

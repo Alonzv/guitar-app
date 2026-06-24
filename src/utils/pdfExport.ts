@@ -84,24 +84,24 @@ function fretboardSVGHtml(voicing: FretPosition[]): string {
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
 
   // Fretboard background
-  svg += `<rect x="${LEFT}" y="${topY - 8}" width="${fretCount * fretSp}" height="${(STRING_COUNT - 1) * strSp + 16}" fill="#1235FC"/>`;
+  svg += `<rect x="${LEFT}" y="${topY - 8}" width="${fretCount * fretSp}" height="${(STRING_COUNT - 1) * strSp + 16}" fill="#FFFFFF"/>`;
 
   // Fret lines
   for (let i = 0; i <= fretCount; i++) {
-    svg += `<line x1="${LEFT + i * fretSp}" y1="${topY}" x2="${LEFT + i * fretSp}" y2="${topY + (STRING_COUNT - 1) * strSp}" stroke="rgba(255,255,255,1)" stroke-width="1"/>`;
+    svg += `<line x1="${LEFT + i * fretSp}" y1="${topY}" x2="${LEFT + i * fretSp}" y2="${topY + (STRING_COUNT - 1) * strSp}" stroke="#C9C2B8" stroke-width="1"/>`;
   }
 
   // String lines — graduating thickness
   for (let s = 0; s < STRING_COUNT; s++) {
     const sw = (1.5 + s * 0.22).toFixed(2);
-    svg += `<line x1="${LEFT}" y1="${sy(s)}" x2="${LEFT + fretCount * fretSp}" y2="${sy(s)}" stroke="rgba(255,255,255,1)" stroke-width="${sw}"/>`;
+    svg += `<line x1="${LEFT}" y1="${sy(s)}" x2="${LEFT + fretCount * fretSp}" y2="${sy(s)}" stroke="#C9C2B8" stroke-width="${sw}"/>`;
   }
 
   // Nut — drawn last to cover overlapping lines
   if (displayMin === 0) {
     svg += `<rect x="${LEFT - 1}" y="${topY - 8}" width="4" height="${(STRING_COUNT - 1) * strSp + 16}" fill="#000000"/>`;
   } else {
-    svg += `<text x="${LEFT - 4}" y="${topY + (STRING_COUNT - 1) * strSp / 2 + 4}" text-anchor="end" font-size="7" fill="rgba(255,255,255,0.60)" font-family="'Courier New',monospace">${displayMin + 1}fr</text>`;
+    svg += `<text x="${LEFT - 4}" y="${topY + (STRING_COUNT - 1) * strSp / 2 + 4}" text-anchor="end" font-size="7" fill="rgba(0,0,0,0.45)" font-family="'Courier New',monospace">${displayMin + 1}fr</text>`;
   }
 
   // Dots

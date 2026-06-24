@@ -560,7 +560,7 @@ export const TabBuilder: React.FC = () => {
               onClick={() => setRecoverOpen(true)}
               title="Recover a previous save"
               style={{
-                background: '#1A7A4A', color: '#fff', border: 'none',
+                background: T.secondary, color: '#fff', border: 'none',
                 borderRadius: 0, padding: '7px 9px',
                 cursor: 'pointer', fontSize: 12, fontWeight: 400,
                 borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
@@ -580,7 +580,7 @@ export const TabBuilder: React.FC = () => {
               borderLeft: '3px solid var(--gc-bar-color)',
               flexShrink: 0,
               fontSize: 12, fontWeight: 400,
-              color: '#1235FC',
+              color: T.secondary,
             }}>
             undo
           </button>
@@ -842,7 +842,7 @@ export const TabBuilder: React.FC = () => {
                 }} style={{
                   background: T.bgInput, border: `1px solid ${T.border}`,
                   borderRadius: 0, padding: '10px 14px', cursor: 'pointer', textAlign: 'left',
-                  borderLeft: '4px solid #1A7A4A',
+                  borderLeft: `4px solid ${T.secondary}`,
                 }}>
                   <div style={{ fontSize: 13, fontWeight: 400, color: T.text }}>
                     {b.tab.title || '(untitled)'}{' '}

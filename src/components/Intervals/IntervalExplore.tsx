@@ -144,7 +144,7 @@ export function IntervalExplore() {
           onClick={() => setIntervalOpen(o => !o)}
           style={{
             width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
-            background: '#1235FC', color: '#fff',
+            background: T.secondary, color: '#fff',
             fontSize: 13, fontWeight: 400, textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderLeft: '3px solid var(--gc-bar-color)',

@@ -590,7 +590,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
           onClick={() => setControlsOpen(o => !o)}
           style={{
             width: '100%', padding: '10px 14px',
-            background: '#1235FC', border: 'none', cursor: 'pointer',
+            background: T.secondary, border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}
         >
@@ -673,7 +673,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
           {results.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {results.map((item, idx) => {
-                const RESULT_COLORS = ['#CC1C1C', '#1235FC', '#1A7A4A', '#C8A020', '#6B21A8', '#1A1818'];
+                const RESULT_COLORS = ['#CC1C1C', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
                 const bg = RESULT_COLORS[idx % RESULT_COLORS.length];
                 return (
                   <button

@@ -24,8 +24,8 @@ const INTERVAL_NAME: Record<string, string> = {
   '9m': '♭9th', '11P': '11th', '13M': '13th',
 };
 
-const PURPLE  = '#6B21A8';
-const GREEN   = '#1A7A4A';
+const PURPLE  = '#9C958C';
+const GREEN   = '#1A1818';
 const DARKGRAY = '#3A3A3A';
 
 export const INTERVAL_COLOR: Record<string, string> = {

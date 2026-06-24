@@ -76,12 +76,12 @@ const GENRES: { id: VoicingGenre; label: string; hint: string }[] = [
 ];
 
 const PATH_COLOR: Record<string, string> = {
-  'Open Drones':   '#C8A020',  // gold
-  'Open Position': '#1A7A4A',  // forest green
-  'Lower Neck':    '#1235FC',  // blue
-  'Mid Neck':      '#CC1C1C',  // red
-  'Upper Neck':    '#6B21A8',  // deep purple
-  'High Neck':     '#2D2D2D',  // graphite
+  'Open Drones':   '#1A1818',  // ink
+  'Open Position': '#3A352F',  // graphite
+  'Lower Neck':    '#5C5650',  // slate
+  'Mid Neck':      '#CC1C1C',  // accent red
+  'Upper Neck':    '#8A8378',  // taupe
+  'High Neck':     '#9C958C',  // light taupe
 };
 
 // ── Interval display ──────────────────────────────────────────────────────
@@ -90,12 +90,12 @@ export type IsolateGroup = null | 'root' | '3rd' | '5th' | '7th';
 
 const INTERVAL_COLOR: Record<string, string> = {
   '1P': '#CC1C1C',               // Root — red
-  '3m': '#1A7A4A', '3M': '#1A7A4A', // 3rd — green
-  '5P': T.coral, '5A': T.coral, '5d': T.coral, // 5th — gold
-  '7m': '#3A3A3A', '7M': '#3A3A3A', '7d': '#3A3A3A', // 7th — dark gray
-  '9M': '#6B21A8', '9m': '#6B21A8', '9A': '#6B21A8', // ext — purple
-  '11P': '#6B21A8', '11A': '#6B21A8',
-  '13M': '#6B21A8', '13m': '#6B21A8',
+  '3m': '#1A1818', '3M': '#1A1818', // 3rd — ink
+  '5P': '#5C5650', '5A': '#5C5650', '5d': '#5C5650', // 5th — slate
+  '7m': '#8A8378', '7M': '#8A8378', '7d': '#8A8378', // 7th — taupe
+  '9M': '#9C958C', '9m': '#9C958C', '9A': '#9C958C', // ext — light taupe
+  '11P': '#9C958C', '11A': '#9C958C',
+  '13M': '#9C958C', '13m': '#9C958C',
 };
 
 const INTERVAL_SHORT: Record<string, string> = {

@@ -218,9 +218,9 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
         preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
         <defs>
           <linearGradient id="wv-green" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stopColor="#1A7A4A" />
-            <stop offset="50%"  stopColor="#1A7A4A" />
-            <stop offset="100%" stopColor="#136038" />
+            <stop offset="0%"   stopColor="#5C5650" />
+            <stop offset="50%"  stopColor="#5C5650" />
+            <stop offset="100%" stopColor="#2E2A26" />
           </linearGradient>
         </defs>
         {sampled.map((v, i) => {

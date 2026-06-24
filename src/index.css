@@ -111,12 +111,12 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-offset-sm: none;
   --gc-bar-color: #000;
 
-  /* Fretboard */
-  --gc-fretboard-bg:  #1235FC;
-  --gc-fretboard-nut: #000000;
-  --gc-fretboard-str: rgba(255,255,255,1);
-  --gc-fretboard-fret: rgba(255,255,255,1);
-  --gc-fretboard-pos: rgba(255,255,255,0.20);
+  /* Fretboard — white board, hairline strings (ScaleUp reset) */
+  --gc-fretboard-bg:  #FFFFFF;
+  --gc-fretboard-nut: #1A1818;
+  --gc-fretboard-str: #C9C2B8;
+  --gc-fretboard-fret: #C9C2B8;
+  --gc-fretboard-pos: rgba(0,0,0,0.06);
 
   /* Light mode — white & ink */
   --gc-bg-deep:          #FFFFFF;
@@ -126,9 +126,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-primary:          #CC1C1C;
   --gc-primary-hov:      #E02020;
   --gc-primary-bg:       rgba(204,28,28,0.09);
-  --gc-secondary:        #1235FC;
-  --gc-secondary-bg:     rgba(18,53,252,0.09);
-  --gc-coral:            #C8A020;
+  --gc-secondary:        #1A1818;
+  --gc-secondary-bg:     rgba(26,24,24,0.06);
+  --gc-coral:            #1A1818;
   --gc-text:             #1A1818;
   --gc-text-muted:       #000000;
   --gc-text-dim:         #000000;
@@ -137,9 +137,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-primary-soft:     rgba(204,28,28,0.10);
   --gc-primary-glow:     rgba(204,28,28,0.32);
   --gc-white-soft:       rgba(255,255,255,0.80);
-  --gc-secondary-faint:  rgba(18,53,252,0.10);
-  --gc-coral-faint:      rgba(200,160,32,0.10);
-  --gc-coral-faint2:     rgba(200,160,32,0.16);
+  --gc-secondary-faint:  rgba(26,24,24,0.08);
+  --gc-coral-faint:      rgba(26,24,24,0.06);
+  --gc-coral-faint2:     rgba(26,24,24,0.10);
 }
 
 body.dark {
@@ -151,9 +151,9 @@ body.dark {
   --gc-primary:          #E02020;
   --gc-primary-hov:      #F52828;
   --gc-primary-bg:       rgba(224,32,32,0.18);
-  --gc-secondary:        #2A4CC8;
-  --gc-secondary-bg:     rgba(42,76,200,0.18);
-  --gc-coral:            #D4A820;
+  --gc-secondary:        #6B655C;
+  --gc-secondary-bg:     rgba(255,255,255,0.06);
+  --gc-coral:            #9A938A;
   --gc-text:             #F0EAD8;
   --gc-text-muted:       #FFFFFF;
   --gc-text-dim:         rgba(255,255,255,0.7);
@@ -162,20 +162,20 @@ body.dark {
   --gc-primary-soft:     rgba(224,32,32,0.18);
   --gc-primary-glow:     rgba(224,32,32,0.40);
   --gc-white-soft:       rgba(245,238,216,0.73);
-  --gc-secondary-faint:  rgba(42,76,200,0.22);
-  --gc-coral-faint:      rgba(212,168,32,0.12);
-  --gc-coral-faint2:     rgba(212,168,32,0.18);
+  --gc-secondary-faint:  rgba(255,255,255,0.08);
+  --gc-coral-faint:      rgba(255,255,255,0.06);
+  --gc-coral-faint2:     rgba(255,255,255,0.10);
   /* Inset right bar — dark mode */
   --gc-offset: none;
   --gc-offset-sm: none;
   --gc-bar-color: rgba(255,255,255,0.20);
 
-  /* Fretboard — dark mode (B3: graphite) */
-  --gc-fretboard-bg:  #1A1818;
-  --gc-fretboard-nut: rgba(255,255,255,0.75);
-  --gc-fretboard-str: rgba(255,255,255,1);
-  --gc-fretboard-fret: rgba(255,255,255,1);
-  --gc-fretboard-pos: rgba(255,255,255,0.13);
+  /* Fretboard — dark mode, hairline strings (ScaleUp reset) */
+  --gc-fretboard-bg:  #15140F;
+  --gc-fretboard-nut: rgba(240,234,224,0.80);
+  --gc-fretboard-str: rgba(240,234,224,0.42);
+  --gc-fretboard-fret: rgba(240,234,224,0.42);
+  --gc-fretboard-pos: rgba(240,234,224,0.12);
 
   /* (halftone removed) */
 }
@@ -495,13 +495,12 @@ select {
   position: relative;
 }
 
-/* Brand stamp — sharp, Arturia-style, offset shadow */
+/* Brand stamp — plain wordmark, no box / rotation (ScaleUp reset) */
 .gc-brand-stamp {
   display: inline-block;
-  border: 2px solid var(--gc-coral);
+  border: none;
   border-radius: 0;
-  padding: 1px 8px 2px;
-  transform: rotate(-0.6deg);
-  border-left: 3px solid var(--gc-bar-color);
+  padding: 0;
+  transform: none;
   line-height: 1;
 }

@@ -231,8 +231,8 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const absCents = Math.abs(cents);
   const tuneColor = !display    ? T.border
     : absCents <= 5             ? T.secondary
-    : absCents <= 20            ? '#C8A020'
-    : T.coral;
+    : absCents <= 20            ? '#8A8378'
+    : T.primary;
 
   const needlePct = display
     ? Math.min(100, Math.max(0, 50 + (cents / 50) * 50))
