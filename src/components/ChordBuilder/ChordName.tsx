@@ -22,8 +22,8 @@ export const ChordName: React.FC<Props> = ({ positions, tuning, capo = 0 }) => {
 
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 'var(--gc-chord-big)', fontWeight: 800, color: T.text, letterSpacing: '-0.5px', lineHeight: 1 }}>
-        <span style={{ fontWeight: 700, opacity: 0.35, letterSpacing: 0 }}>_</span>{formatChordName(primary.name)}
+      <div style={{ fontSize: 'var(--gc-chord-big)', fontWeight: 600, color: T.text, letterSpacing: '-0.01em', lineHeight: 1 }}>
+        {formatChordName(primary.name)}
       </div>
       {capo > 0 && (
         <div style={{ fontSize: 11, color: T.secondary, marginTop: 4, fontWeight: 600 }}>

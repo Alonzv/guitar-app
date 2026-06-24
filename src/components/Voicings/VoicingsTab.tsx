@@ -897,16 +897,17 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
               {/* Play button */}
               <button
                 onClick={() => playPath(currentPath)}
+                className="gc-btn-heavy"
                 style={{
-                  padding: '11px 0', borderRadius: 0,
-                  border: isPlaying ? `2px solid ${currentColor}` : '2px solid transparent',
-                  background: isPlaying ? T.bgDeep : currentColor,
-                  color: isPlaying ? currentColor : '#fff',
-                  fontWeight: 800, fontSize: 14, cursor: 'pointer',
-                  transition: 'all 0.2s', borderLeft: '4px solid var(--gc-bar-color)',
+                  width: '100%', padding: '13px 0', borderRadius: 0,
+                  border: 'none',
+                  background: isPlaying ? T.secondary : T.primary,
+                  color: '#fff',
+                  fontWeight: 400, fontSize: 14, letterSpacing: '0.04em', cursor: 'pointer',
+                  transition: 'background 0.2s', borderLeft: `4px solid ${T.secondary}`,
                 }}
               >
-                {isPlaying ? '■  Stop' : `▶  Play — ${currentPath.label}`}
+                {isPlaying ? '■  STOP' : `▶  PLAY — ${currentPath.label.toUpperCase()}`}
               </button>
             </div>
           )}
@@ -1061,10 +1062,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
               return (
                 <>
                   {/* Text: note sequence */}
-                  <div style={{
-                    ...card({ padding: '16px 18px' }),
-                    display: 'flex', flexDirection: 'column', gap: 6,
-                  }}>
+                  <div className="gc-result-card" style={{ gap: 6 }}>
                     <p style={LABEL_STYLE}>Note movement</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       {perChord.map(({ chordName, noteName }, ci) => (

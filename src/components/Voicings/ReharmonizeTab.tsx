@@ -487,21 +487,22 @@ export function ReharmonizeTab({
           {result && (
             <>
               {/* Re-Harmonized progression card */}
-              <div style={{ ...card({ padding: '12px 14px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="gc-result-card" style={{ gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                   <p style={LABEL_STYLE}>Re-Harmonized</p>
                   <button
                     onClick={handlePlay}
+                    className="gc-btn-heavy"
                     style={{
-                      padding: '5px 14px', borderRadius: 0,
-                      cursor: 'pointer', fontSize: 12, fontWeight: 400,
-                      background: isPlaying ? T.bgDeep : T.primary,
-                      color: isPlaying ? T.primary : '#fff',
-                      border: isPlaying ? `1px solid ${T.primary}` : '1px solid transparent',
-                      transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
+                      padding: '7px 16px', borderRadius: 0,
+                      cursor: 'pointer', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em',
+                      background: isPlaying ? T.secondary : T.primary,
+                      color: '#fff',
+                      border: 'none',
+                      transition: 'background 0.15s', borderLeft: `3px solid ${T.secondary}`,
                     }}
                   >
-                    {isPlaying ? 'Stop' : 'Play'}
+                    {isPlaying ? '■  STOP' : '▶  PLAY — REHARM'}
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

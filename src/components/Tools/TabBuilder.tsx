@@ -498,7 +498,7 @@ export const TabBuilder: React.FC = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', rowGap: 5 }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 3,
             background: T.bgInput, borderRadius: 0, padding: '5px 7px', flexShrink: 0,
