@@ -307,7 +307,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     </div>
   ) : desktop ? (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: T.textDim, fontSize: 13, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em' }}>
-      Select root + scale type →
+      ← Select root + scale type
     </div>
   ) : (
     <div style={{ textAlign: 'center', padding: 32, color: T.textDim, fontSize: 13 }}>Scale not found</div>
