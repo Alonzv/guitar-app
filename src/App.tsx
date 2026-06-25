@@ -499,11 +499,10 @@ export default function App() {
           {/* ── Panel 3: PRACTICE ────────────────────────────────────── */}
           {pagerTab === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} />
               <ErrorBoundary label="Practice">
-                <div style={{ maxWidth: 520, margin: '24px auto 0' }}>
-                  {practiceSegment === 'tuner'     && <Tuner />}
-                  {practiceSegment === 'metronome' && <Metronome />}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 24 }}>
+                  <Tuner />
+                  <Metronome />
                 </div>
               </ErrorBoundary>
             </div>
