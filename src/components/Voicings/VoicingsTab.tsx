@@ -1202,7 +1202,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
       })()}
 
       {subTab === 'reharmonize' && (
-        <div style={desktop ? { maxWidth: 920, margin: '0 auto', width: '100%' } : undefined}>
+        <div style={desktop && chords.length === 0 ? { maxWidth: 920, margin: '0 auto', width: '100%' } : undefined}>
           <ReharmonizeTab
             chords={chords}
             mode={mode}
@@ -1210,6 +1210,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
             stringGroup={stringGroup}
             setStringGroup={setStringGroup}
             tuning={tuning}
+            desktop={desktop}
           />
         </div>
       )}

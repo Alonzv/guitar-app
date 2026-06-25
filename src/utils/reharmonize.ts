@@ -2,8 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export interface ReharmonizeResult {
   chords: string[];   // chord names compatible with tonaljs Chord.get()
-  analysis: string;  // 1 sentence Hebrew — harmonic character
-  theory: string;    // 2 sentences Hebrew — substitution techniques used
+  analysis: string;  // 1 sentence English — harmonic character
+  theory: string;    // 2 sentences English — substitution techniques used
 }
 
 export async function reharmonize(
@@ -75,13 +75,13 @@ CRITICAL — Chord name format rules (must be compatible with tonaljs Chord.get(
 - Add9: "Cadd9"
 
 You MUST return exactly ${chords.length} chords — one for each chord in the original progression.
-Write "analysis" and "theory" in fluent, natural Israeli Hebrew — no English loanwords, no transliterations.
+Write "analysis" and "theory" in clear, concise English.
 
 Return valid JSON only, no markdown:
 {
   "chords": [<exactly ${chords.length} chord name strings>],
-  "analysis": "<1 sentence in natural Hebrew describing the harmonic character of the re-harmonization>",
-  "theory": "<2 sentences in natural Hebrew explaining the substitution techniques used>"
+  "analysis": "<1 sentence in English describing the harmonic character of the re-harmonization>",
+  "theory": "<2 sentences in English explaining the substitution techniques used>"
 }`,
         },
       ],

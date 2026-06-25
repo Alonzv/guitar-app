@@ -20,6 +20,7 @@ interface Props {
   stringGroup: StringGroup;
   setStringGroup: (sg: StringGroup) => void;
   tuning: Tuning;
+  desktop?: boolean;
 }
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -203,6 +204,7 @@ export function ReharmonizeTab({
   stringGroup,
   setStringGroup,
   tuning,
+  desktop,
 }: Props) {
   const [genre, setGenre] = useState('jazz');
   const [tension, setTension] = useState(3);
@@ -285,7 +287,7 @@ export function ReharmonizeTab({
 
   const isPlaying = currentPath?.id === playingId;
 
-  return (
+  const leftCol = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* Empty state */}
@@ -469,23 +471,27 @@ export function ReharmonizeTab({
           {/* Spinner animation */}
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-          {/* Error message */}
-          {error && !loading && (
-            <div style={{
-              ...card({ padding: '12px 16px' }),
-              borderLeft: `3px solid ${T.coral}`,
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <span style={{ fontSize: 16 }}>⚠️</span>
-              <p style={{ margin: 0, fontSize: 13, color: T.text, direction: 'rtl', textAlign: 'right' }}>
-                {error}
-              </p>
-            </div>
-          )}
+        </>
+      )}
+    </div>
+  );
 
-          {/* Results section */}
-          {result && (
-            <>
+  const rightCol = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {error && !loading && (
+        <div style={{
+          ...card({ padding: '12px 16px' }),
+          borderLeft: `3px solid ${T.coral}`,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 16 }}>⚠</span>
+          <p style={{ margin: 0, fontSize: 13, color: T.text }}>{error}</p>
+        </div>
+      )}
+
+      {result && (
+        <>
               {/* Re-Harmonized progression card */}
               <div className="gc-result-card" style={{ gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
@@ -532,20 +538,19 @@ export function ReharmonizeTab({
                 borderLeft: `3px solid ${T.secondary}`,
                 display: 'flex', flexDirection: 'column', gap: 8,
               }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: T.text, direction: 'ltr', unicodeBidi: 'isolate' }}>
-                  AI ניתוח הרמוני
+                <span style={{ fontSize: 11, fontFamily: 'var(--gc-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9C958C' }}>
+                  AI Analysis
                 </span>
                 <p style={{
                   margin: 0, fontSize: 12, color: T.text,
-                  lineHeight: 1.8, direction: 'rtl', textAlign: 'right',
+                  lineHeight: 1.7,
                 }}>
                   {result.analysis}
                 </p>
                 <div style={{ paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
                   <p style={{
                     margin: 0, fontSize: 11, color: T.textMuted,
-                    lineHeight: 1.7, direction: 'rtl', textAlign: 'right',
-                    fontStyle: 'italic',
+                    lineHeight: 1.6, fontStyle: 'italic',
                   }}>
                     {result.theory}
                   </p>
@@ -662,8 +667,6 @@ export function ReharmonizeTab({
               >
                 Export MIDI
               </button>
-            </>
-          )}
         </>
       )}
 
@@ -678,6 +681,22 @@ export function ReharmonizeTab({
           onClose={() => setModalIdx(null)}
         />
       )}
+    </div>
+  );
+
+  if (desktop && chords.length > 0) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 36, alignItems: 'start' }}>
+        {leftCol}
+        <div style={{ position: 'sticky', top: 24 }}>{rightCol}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {leftCol}
+      {rightCol}
     </div>
   );
 }
