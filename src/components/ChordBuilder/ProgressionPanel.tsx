@@ -284,7 +284,7 @@ export function ProgressionPanel({
             transition: 'all 0.15s', borderLeft: '4px solid var(--gc-bar-color)',
           }}
         >
-          🗑 Clear All Chords
+          Clear All Chords
         </button>
 
         {/* Chord cards */}
@@ -409,7 +409,7 @@ export function ProgressionPanel({
                 color: T.secondary, transition: 'filter 0.15s',
                 borderLeft: '4px solid var(--gc-bar-color)',
               }}>
-              {showSuggestions ? 'Hide Suggestions' : '✨ Suggest Next Chord'}
+              {showSuggestions ? 'Hide Suggestions' : 'Suggest Next Chord'}
             </button>
           </div>
         )}
