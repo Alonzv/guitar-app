@@ -2,36 +2,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { T, card } from '../../theme';
 import { unlockAudio, getSharedContext, getOutputNode } from '../../utils/audioPlayback';
 
-// ── Inline SVG note icons (currentColor) ──────────────────────────────────
+// ── Inline SVG note icons ──────────────────────────────────────────────────
 const NoteIcons = {
-  whole: (
-    <svg viewBox="0 0 22 14" width="22" height="14" style={{ display: 'block' }}>
-      <ellipse cx="11" cy="7" rx="9" ry="5.5" stroke="currentColor" strokeWidth="2" fill="none"/>
-    </svg>
-  ),
-  half: (
-    <svg viewBox="0 0 16 28" width="14" height="26" style={{ display: 'block' }}>
-      <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" stroke="currentColor" strokeWidth="1.7"
-        fill="none" transform="rotate(-18,7.5,21)"/>
-      <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
-    </svg>
-  ),
   quarter: (
     <svg viewBox="0 0 16 28" width="14" height="26" style={{ display: 'block' }}>
       <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" fill="currentColor" transform="rotate(-18,7.5,21)"/>
       <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
-    </svg>
-  ),
-  triplet: (
-    <svg viewBox="0 0 50 30" width="50" height="30" style={{ display: 'block' }}>
-      <ellipse cx="6.5" cy="23" rx="5.5" ry="4" fill="currentColor" transform="rotate(-18,6.5,23)"/>
-      <line x1="11.5" y1="20" x2="11.5" y2="8" stroke="currentColor" strokeWidth="1.5"/>
-      <ellipse cx="25" cy="23" rx="5.5" ry="4" fill="currentColor" transform="rotate(-18,25,23)"/>
-      <line x1="30" y1="20" x2="30" y2="8" stroke="currentColor" strokeWidth="1.5"/>
-      <ellipse cx="43" cy="23" rx="5.5" ry="4" fill="currentColor" transform="rotate(-18,43,23)"/>
-      <line x1="48" y1="20" x2="48" y2="8" stroke="currentColor" strokeWidth="1.5"/>
-      <line x1="11.5" y1="8" x2="48" y2="8" stroke="currentColor" strokeWidth="2.2"/>
-      <text x="30" y="5.5" textAnchor="middle" fontSize="8" fill="currentColor" fontWeight="800">3</text>
     </svg>
   ),
   eighth: (
@@ -52,9 +28,15 @@ const NoteIcons = {
 };
 
 const SUBDIVISIONS = [
-  { label: 'Quarter', beats: 4,  clicksPerBeat: 1,    icon: NoteIcons.quarter   },
-  { label: 'Eighth',  beats: 8,  clicksPerBeat: 2,    icon: NoteIcons.eighth    },
-  { label: '16th',    beats: 16, clicksPerBeat: 4,    icon: NoteIcons.sixteenth },
+  { label: 'Quarter', clicksPerBeat: 1, icon: NoteIcons.quarter   },
+  { label: 'Eighth',  clicksPerBeat: 2, icon: NoteIcons.eighth    },
+  { label: '16th',    clicksPerBeat: 4, icon: NoteIcons.sixteenth },
+];
+
+const TIME_SIGS = [
+  { label: '4/4', beats: 4 },
+  { label: '3/4', beats: 3 },
+  { label: '6/8', beats: 6 },
 ];
 
 function beep(ctx: AudioContext, time: number, accent: boolean): void {
@@ -70,10 +52,16 @@ function beep(ctx: AudioContext, time: number, accent: boolean): void {
   osc.stop(time + 0.08);
 }
 
+const SECTION: React.CSSProperties = {
+  fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
+  textTransform: 'uppercase', color: '#9C958C', margin: '0 0 14px',
+};
+
 export const Metronome: React.FC = () => {
   const [bpm, setBpm]                   = useState(100);
   const [bpmInput, setBpmInput]         = useState('100');
-  const [subdivision, setSubdivision]   = useState(SUBDIVISIONS[0]); // Quarter default
+  const [subdivision, setSubdivision]   = useState(SUBDIVISIONS[0]);
+  const [timeSig, setTimeSig]           = useState(TIME_SIGS[0]);
   const [playing, setPlaying]           = useState(false);
   const [beat, setBeat]                 = useState(-1);
 
@@ -83,17 +71,15 @@ export const Metronome: React.FC = () => {
   const visualRafRef     = useRef<number | null>(null);
   const noteQueueRef     = useRef<{ beatNum: number; time: number }[]>([]);
   const bpmRef           = useRef(bpm);
-  const beatsRef         = useRef(subdivision.beats);
+  const totalBeatsRef    = useRef(timeSig.beats * subdivision.clicksPerBeat);
   const clicksPerBeatRef = useRef(subdivision.clicksPerBeat);
   const tapTimesRef      = useRef<number[]>([]);
+
   bpmRef.current          = bpm;
-  beatsRef.current        = subdivision.beats;
+  totalBeatsRef.current   = timeSig.beats * subdivision.clicksPerBeat;
   clicksPerBeatRef.current = subdivision.clicksPerBeat;
 
-  // Reset beat counter when subdivision changes
-  useEffect(() => {
-    beatNumRef.current = 0;
-  }, [subdivision]);
+  useEffect(() => { beatNumRef.current = 0; }, [subdivision, timeSig]);
 
   const schedule = useCallback(() => {
     const ctx = getSharedContext();
@@ -102,7 +88,7 @@ export const Metronome: React.FC = () => {
       beep(ctx, nextBeatTimeRef.current, b === 0);
       noteQueueRef.current.push({ beatNum: b, time: nextBeatTimeRef.current });
       nextBeatTimeRef.current += 60 / (bpmRef.current * clicksPerBeatRef.current);
-      beatNumRef.current = (beatNumRef.current + 1) % beatsRef.current;
+      beatNumRef.current = (beatNumRef.current + 1) % totalBeatsRef.current;
     }
   }, []);
 
@@ -116,25 +102,19 @@ export const Metronome: React.FC = () => {
     visualRafRef.current = requestAnimationFrame(visualTick);
   }, []);
 
-  // handleStartStop MUST be the direct onClick so unlockAudio() runs
-  // inside a native user gesture — required for iOS audio + silent mode.
   const handleStartStop = useCallback(() => {
     if (playing) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setBeat(-1);
       setPlaying(false);
     } else {
-      unlockAudio(); // resume shared context + unlock iOS silent mode
+      unlockAudio();
       const ctx = getSharedContext();
-
       const start = () => {
-        // Set start time AFTER the context is confirmed "running" so
-        // ctx.currentTime is a real, advancing value — not frozen at 0.
         nextBeatTimeRef.current = ctx.currentTime + 0.15;
         beatNumRef.current = 0;
         setPlaying(true);
       };
-
       if (ctx.state === 'running') {
         start();
       } else {
@@ -143,14 +123,12 @@ export const Metronome: React.FC = () => {
     }
   }, [playing]);
 
-  // Manage the audio scheduling interval
   useEffect(() => {
     if (!playing) return;
     intervalRef.current = setInterval(schedule, 25);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [playing, schedule]);
 
-  // Manage the visual RAF loop (reads noteQueue, updates beat dot)
   useEffect(() => {
     if (!playing) {
       if (visualRafRef.current) cancelAnimationFrame(visualRafRef.current);
@@ -191,68 +169,122 @@ export const Metronome: React.FC = () => {
     setBpmInput(String(next));
   };
 
-  // Dot sizing — shrink for many beats so they fit
-  const dotSize = subdivision.beats <= 7 ? 44 : subdivision.beats <= 9 ? 34 : 26;
-  const dotGap  = subdivision.beats <= 7 ? 12 : 8;
+  // A beat dot i lights up when the current tick is the i-th main beat
+  const beatDotActive = (i: number) =>
+    playing && beat === i * subdivision.clicksPerBeat;
+
+  const dotSize = timeSig.beats <= 4 ? 32 : 26;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* Beat dots */}
-      <div style={card({ padding: '20px 12px' })}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: dotGap }}>
-          {Array.from({ length: subdivision.beats }).map((_, i) => (
-            <div key={i} style={{
-              width: dotSize, height: dotSize, borderRadius: 0, flexShrink: 0,
-              background: playing && beat === i ? (i === 0 ? T.primary : T.secondary) : T.bgInput,
-              border: `2px solid ${i === 0 ? T.primary : T.border}`,
-              transition: 'background 0.05s, transform 0.05s',
-              transform: playing && beat === i ? 'scale(1.2)' : 'scale(1)',
-            }} />
-          ))}
-        </div>
-      </div>
+      {/* Section label */}
+      <p style={SECTION}>Metronome</p>
 
-      {/* BPM control */}
-      <div style={card()}>
-        {/* Large BPM display + manual input */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 6 }}>
+      {/* BPM + control row */}
+      <div style={card({ padding: '24px 20px 20px', textAlign: 'center' })}>
+
+        {/* Giant BPM */}
+        <input
+          type="number" min={40} max={240}
+          value={bpmInput}
+          onChange={e => setBpmInput(e.target.value)}
+          onBlur={e => applyBpm(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && applyBpm(bpmInput)}
+          style={{
+            display: 'block', margin: '0 auto 4px',
+            width: 200, textAlign: 'center',
+            fontSize: 84, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 0.9,
+            color: T.text, background: 'transparent', outline: 'none',
+            fontFamily: 'inherit', padding: 0, boxSizing: 'border-box',
+            MozAppearance: 'textfield',
+          } as React.CSSProperties}
+        />
+        <div style={{
+          fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
+          textTransform: 'uppercase', color: '#9C958C', marginBottom: 20,
+        }}>BPM</div>
+
+        {/* Control row: − · beat dots · + */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <button onClick={() => adjustBpm(-1)} style={{
-            width: 50, height: 50, borderRadius: 0, border: `1px solid ${T.border}`,
-            background: 'transparent', color: T.text, fontSize: 24, fontWeight: 400, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
+            width: 44, height: 44, flexShrink: 0,
+            border: `1px solid ${T.border}`, background: 'transparent',
+            color: T.text, fontSize: 22, fontWeight: 400, cursor: 'pointer',
           }}>−</button>
-          <input
-            type="number" min={40} max={240}
-            value={bpmInput}
-            onChange={e => setBpmInput(e.target.value)}
-            onBlur={e => applyBpm(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && applyBpm(bpmInput)}
-            style={{
-              width: 180, textAlign: 'center', fontSize: 84, fontWeight: 600,
-              letterSpacing: '-0.02em', lineHeight: 0.9,
-              color: T.text, background: 'transparent', outline: 'none',
-              fontFamily: 'inherit', padding: 0, boxSizing: 'border-box',
-              MozAppearance: 'textfield',
-            } as React.CSSProperties}
-          />
+
+          {/* Beat dots */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
+            {Array.from({ length: timeSig.beats }).map((_, i) => (
+              <div key={i} style={{
+                width: dotSize, height: dotSize, flexShrink: 0,
+                background: beatDotActive(i)
+                  ? (i === 0 ? T.primary : T.secondary)
+                  : T.bgInput,
+                border: `2px solid ${i === 0 ? T.primary : T.border}`,
+                transition: 'background 0.05s, transform 0.05s',
+                transform: beatDotActive(i) ? 'scale(1.2)' : 'scale(1)',
+              }} />
+            ))}
+          </div>
+
           <button onClick={() => adjustBpm(1)} style={{
-            width: 50, height: 50, borderRadius: 0, border: `1px solid ${T.border}`,
-            background: 'transparent', color: T.text, fontSize: 24, fontWeight: 400, cursor: 'pointer', lineHeight: 1, flexShrink: 0,
+            width: 44, height: 44, flexShrink: 0,
+            border: `1px solid ${T.border}`, background: 'transparent',
+            color: T.text, fontSize: 22, fontWeight: 400, cursor: 'pointer',
           }}>+</button>
         </div>
-        <div className="gc-sec-label" style={{ textAlign: 'center', marginBottom: 16 }}>BPM</div>
 
+        {/* BPM slider */}
         <input
           type="range" min={40} max={240} value={bpm}
           onChange={e => { const v = Number(e.target.value); setBpm(v); setBpmInput(String(v)); }}
-          style={{ width: '100%', marginBottom: 12, accentColor: T.primary, cursor: 'pointer' }}
+          style={{ width: '100%', marginTop: 16, accentColor: T.primary, cursor: 'pointer' }}
         />
+      </div>
 
-        {/* Tap Tempo */}
+      {/* Time signature chips */}
+      <div style={card({ padding: '14px 16px' })}>
+        <p style={{ ...SECTION, marginBottom: 10 }}>Time signature</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {TIME_SIGS.map(ts => {
+            const active = timeSig.label === ts.label;
+            return (
+              <button key={ts.label} onClick={() => setTimeSig(ts)} style={{
+                padding: '10px 4px', border: `1.5px solid ${active ? T.secondary : T.border}`,
+                background: active ? T.secondary : T.bgInput,
+                color: active ? '#fff' : T.textMuted,
+                fontFamily: 'var(--gc-mono)', fontSize: 14, fontWeight: active ? 700 : 400,
+                cursor: 'pointer', letterSpacing: '0.04em',
+                transition: 'all 0.15s',
+              }}>
+                {ts.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* START / STOP */}
+      <button
+        onClick={handleStartStop}
+        style={{
+          width: '100%', padding: '18px 0',
+          background: playing ? T.coral : T.primary,
+          color: '#fff', fontWeight: 800, fontSize: 18, cursor: 'pointer',
+          border: 'none', borderLeft: '4px solid var(--gc-bar-color)',
+          transition: 'background 0.2s', letterSpacing: '0.06em',
+        }}
+      >
+        {playing ? '■  STOP' : '▶  START'}
+      </button>
+
+      {/* Tap + Subdivision */}
+      <div style={card({ padding: '14px 16px' })}>
         <button
           onClick={handleTap}
           style={{
-            width: '100%', padding: '10px 0', marginBottom: 20, borderRadius: 0,
+            width: '100%', padding: '10px 0', marginBottom: 16,
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.textMuted, fontWeight: 400, fontSize: 13, cursor: 'pointer',
             transition: 'background 0.1s', borderLeft: '3px solid var(--gc-bar-color)',
@@ -261,24 +293,21 @@ export const Metronome: React.FC = () => {
           Tap Tempo
         </button>
 
-        {/* Subdivision buttons */}
-        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-          Subdivision
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+        <p style={{ ...SECTION, marginBottom: 8 }}>Subdivision</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {SUBDIVISIONS.map(sub => {
-            const active = subdivision.beats === sub.beats;
+            const active = subdivision.clicksPerBeat === sub.clicksPerBeat;
             return (
               <button
                 key={sub.label}
                 onClick={() => setSubdivision(sub)}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 6, padding: '10px 4px', borderRadius: 0,
+                  gap: 6, padding: '10px 4px',
                   border: `1.5px solid ${active ? T.primary : T.border}`,
                   background: active ? T.primaryBg : T.bgInput,
                   color: active ? T.primary : T.textMuted,
-                  cursor: 'pointer', fontSize: 11, fontWeight: active ? 500 : 500,
+                  cursor: 'pointer', fontSize: 11, fontWeight: 500,
                   transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >
@@ -288,18 +317,6 @@ export const Metronome: React.FC = () => {
             );
           })}
         </div>
-
-        <button
-          onClick={handleStartStop}
-          style={{
-            width: '100%', padding: '14px 0', borderRadius: 0,
-            background: playing ? T.coral : T.secondary,
-            color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
-            transition: 'background 0.2s', borderLeft: '4px solid var(--gc-bar-color)',
-          }}
-        >
-          {playing ? '■  Stop' : '▶  Start'}
-        </button>
       </div>
     </div>
   );

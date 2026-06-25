@@ -34,7 +34,6 @@ function detectPitch(buf: Float32Array, sampleRate: number): PitchResult {
   if (tauMin >= tauMax) return { freq: -1, confidence: 0 };
 
   // Step 1 — squared difference function d(tau)
-  // d(tau) = Σ (x[j] - x[j+tau])²  for j = 0..W-1
   const d = new Float32Array(tauMax + 1);
   for (let tau = 1; tau <= tauMax; tau++) {
     for (let j = 0; j < W; j++) {
@@ -44,9 +43,6 @@ function detectPitch(buf: Float32Array, sampleRate: number): PitchResult {
   }
 
   // Step 2 — cumulative mean normalised difference (CMNDF)
-  // d'(0) = 1,  d'(tau) = d(tau) * tau / Σ d(1..tau)
-  // This normalisation is the key improvement over raw autocorrelation —
-  // it removes the bias toward small lags that made the old code go sharp.
   const cmndf = new Float32Array(tauMax + 1);
   cmndf[0] = 1;
   let runningSum = 0;
@@ -55,15 +51,13 @@ function detectPitch(buf: Float32Array, sampleRate: number): PitchResult {
     cmndf[tau] = runningSum > 0 ? (d[tau] * tau) / runningSum : 1;
   }
 
-  // Step 3 — find first local minimum below threshold in guitar range
-  // Threshold 0.12 is conservative: avoids octave errors, rejects noise.
+  // Step 3 — first local minimum below threshold
   const THRESHOLD = 0.12;
   let bestTau = -1;
   let tau = tauMin;
 
   while (tau < tauMax - 1) {
     if (cmndf[tau] < THRESHOLD) {
-      // slide right to the local minimum
       while (tau + 1 < tauMax && cmndf[tau + 1] < cmndf[tau]) tau++;
       bestTau = tau;
       break;
@@ -71,7 +65,6 @@ function detectPitch(buf: Float32Array, sampleRate: number): PitchResult {
     tau++;
   }
 
-  // Nothing below threshold — report confidence for "play louder" hint
   if (bestTau < 0) {
     let minVal = 1;
     for (let t = tauMin; t < tauMax; t++) {
@@ -80,7 +73,7 @@ function detectPitch(buf: Float32Array, sampleRate: number): PitchResult {
     return { freq: -1, confidence: Math.max(0, 1 - minVal) };
   }
 
-  // Step 4 — parabolic interpolation for sub-sample accuracy
+  // Step 4 — parabolic interpolation
   let refinedTau = bestTau;
   if (bestTau > tauMin && bestTau < tauMax - 1) {
     const s0 = cmndf[bestTau - 1];
@@ -109,14 +102,21 @@ function findClosest(freq: number, strings: { name: string; freq: number }[]) {
   return { string: best, cents: bestCents };
 }
 
-const MEDIAN_BUF  = 10;  // ~330 ms at 30 fps — fast but stable
-const OUTLIER_CENTS = 50; // tighter rejection than before
+const MEDIAN_BUF    = 10;
+const OUTLIER_CENTS = 50;
+
+// Standard tuning string labels and open frequencies (low to high)
+const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
+
+const SECTION: React.CSSProperties = {
+  fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
+  textTransform: 'uppercase', color: '#9C958C', margin: '0 0 14px',
+};
 
 export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const stringsRef = useRef(
     tuning.notes.map((note, i) => ({ name: note, freq: tuning.openFreqs[i] }))
   );
-  // Keep stringsRef current when tuning prop changes
   useEffect(() => {
     stringsRef.current = tuning.notes.map((note, i) => ({ name: note, freq: tuning.openFreqs[i] }));
   }, [tuning]);
@@ -137,7 +137,6 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const tick = useCallback(() => {
     if (!analyserRef.current || !ctxRef.current) return;
 
-    // Throttle to ~30 fps
     frameRef.current++;
     if (frameRef.current % 2 === 0) {
       rafRef.current = requestAnimationFrame(tick);
@@ -157,11 +156,9 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       if (ring.length >= 4) {
         const sorted = [...ring].sort((a, b) => a - b);
         const median = sorted[Math.floor(sorted.length / 2)];
-
         const valid = ring.filter(
           f => Math.abs(1200 * Math.log2(f / median)) < OUTLIER_CENTS
         );
-
         if (valid.length >= 3) {
           const mean = valid.reduce((a, b) => a + b, 0) / valid.length;
           lastValidRef.current = Date.now();
@@ -188,25 +185,19 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const start = useCallback(async () => {
     setError('');
     try {
-      // Disable browser audio processing so pitch detection gets a clean signal
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
         video: false,
       });
       streamRef.current = stream;
       try { (navigator as any).audioSession && ((navigator as any).audioSession.type = 'play-and-record'); } catch { /* ignore */ }
       const ctx = new AudioContext({ sampleRate: 44100 });
-      // iOS Safari suspends AudioContext until resumed inside a user-gesture callback
       if (ctx.state === 'suspended') await ctx.resume();
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 4096;              // 4096 samples — enough for YIN at any guitar pitch
-      analyser.smoothingTimeConstant = 0.0; // raw signal; YIN handles its own smoothing
+      analyser.fftSize = 4096;
+      analyser.smoothingTimeConstant = 0.0;
       source.connect(analyser);
       analyserRef.current = analyser;
       setListening(true);
@@ -238,47 +229,98 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
     ? Math.min(100, Math.max(0, 50 + (cents / 50) * 50))
     : 50;
 
+  // Detect which string is currently active (note match)
+  const activeStringIdx = display
+    ? tuning.notes.findIndex(n => n.replace(/\d/g, '') === display.note)
+    : -1;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+      {/* Section label */}
+      <p style={SECTION}>Tuner</p>
+
       {/* Main display */}
-      <div style={card({ textAlign: 'center', padding: '28px 20px' })}>
+      <div style={card({ textAlign: 'center', padding: '24px 20px 20px' })}>
+
+        {/* Giant note */}
         <div className="gc-tuner-note" style={{
           color: tuneColor,
-          marginBottom: 8,
-          transition: 'color 0.3s', minHeight: 88,
+          marginBottom: 4,
+          transition: 'color 0.3s',
+          minHeight: 88,
         }}>
           {display ? display.note : '—'}
         </div>
-        <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 8, minHeight: 18 }}>
-          {display ? `${display.hz} Hz` : 'Play a string…'}
-        </div>
-        <div style={{ fontSize: 12, color: T.secondary, marginBottom: 16, minHeight: 16 }}>
-          {loudnessHint && !display ? 'Play louder for better detection' : ''}
+
+        {/* Hz — red mono */}
+        <div style={{
+          fontFamily: 'var(--gc-mono)', fontSize: 15, fontWeight: 600,
+          color: display ? T.primary : T.textDim,
+          letterSpacing: '0.04em', marginBottom: 18, minHeight: 22,
+          transition: 'color 0.3s',
+        }}>
+          {display ? `${display.hz} Hz` : (loudnessHint ? 'play louder' : 'play a string…')}
         </div>
 
         {/* Needle bar */}
-        <div style={{ position: 'relative', height: 10, borderRadius: 0, background: T.bgInput, marginBottom: 10, overflow: 'visible' }}>
+        <div style={{ position: 'relative', height: 10, background: T.bgInput, marginBottom: 8, overflow: 'visible' }}>
+          {/* Centre mark */}
           <div style={{
             position: 'absolute', left: '50%', top: -6, width: 2, height: 22,
-            background: T.border, transform: 'translateX(-50%)', borderRadius: 0,
+            background: T.border, transform: 'translateX(-50%)',
           }} />
+          {/* Needle */}
           <div style={{
-            position: 'absolute', top: -4, width: 8, height: 18, borderRadius: 0,
+            position: 'absolute', top: -4, width: 8, height: 18,
             background: tuneColor, transform: 'translateX(-50%)',
             left: `${needlePct}%`,
             transition: 'left 0.15s ease-out, background 0.3s',
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 14 }}>
           <span>♭ Flat</span><span>In tune</span><span>Sharp ♯</span>
         </div>
 
-        <div style={{ fontSize: 15, fontWeight: 400, color: tuneColor, transition: 'color 0.3s', minHeight: 22 }}>
+        {/* Status line */}
+        <div style={{ fontSize: 14, fontWeight: 500, color: tuneColor, transition: 'color 0.3s', minHeight: 20 }}>
           {!display ? ''
-            : absCents <= 5  ? '✓ In tune!'
-            : cents > 0 ? `+${cents}¢ — Tune down`
-            : `${cents}¢ — Tune up`}
+            : absCents <= 5  ? '✓ In tune'
+            : cents > 0 ? `+${cents}¢ — tune down`
+            : `${cents}¢ — tune up`}
+        </div>
+      </div>
+
+      {/* String buttons */}
+      <div style={card({ padding: '14px 16px' })}>
+        <p style={{ ...SECTION, marginBottom: 10 }}>String</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+          {STRING_LABELS.map((label, i) => {
+            const active = activeStringIdx === i;
+            return (
+              <div key={label} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                height: 40,
+                background: active ? (absCents <= 5 ? T.secondary : T.primary) : T.bgInput,
+                border: `1.5px solid ${active ? (absCents <= 5 ? T.secondary : T.primary) : T.border}`,
+                color: active ? '#fff' : T.textMuted,
+                fontFamily: 'var(--gc-mono)', fontSize: 13, fontWeight: active ? 700 : 400,
+                transition: 'all 0.15s',
+                userSelect: 'none',
+              }}>
+                {label}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Hebrew helper */}
+        <div style={{
+          marginTop: 12, textAlign: 'center',
+          fontFamily: 'var(--gc-mono)', fontSize: 11, color: T.textDim,
+          direction: 'rtl', letterSpacing: '0.05em',
+        }}>
+          לכוון: ♭ שטוח · בדיוק · ♯ חד
         </div>
       </div>
 
