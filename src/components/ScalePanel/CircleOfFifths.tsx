@@ -110,6 +110,13 @@ const SECTION_LBL: React.CSSProperties = {
   textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
 };
 
+const PROG_TEMPLATES = [
+  { romans: ['I', 'V', 'vi', 'IV'], indices: [0, 4, 5, 3] },
+  { romans: ['ii', 'V', 'I'],       indices: [1, 4, 0]    },
+  { romans: ['I', 'vi', 'IV', 'V'], indices: [0, 5, 3, 4] },
+  { romans: ['vi', 'IV', 'I', 'V'], indices: [5, 3, 0, 4] },
+] as const;
+
 // ── Component ─────────────────────────────────────────────────────────────────
 interface Props {
   onAddToProgression?: (item: never) => void; // kept for prop-compat, unused
@@ -119,6 +126,7 @@ interface Props {
 export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
   const [selectedIdx,  setSelectedIdx]  = useState<number | null>(null);
   const [selectedMode, setSelectedMode] = useState<Mode>('major');
+  const [selectedProgIdx, setSelectedProgIdx] = useState<number | null>(null);
   const [rotation,     setRotation]     = useState(0);
   const [transDur,     setTransDur]     = useState(1.5);
   const [hovOuter,     setHovOuter]     = useState<number | null>(null);
@@ -436,6 +444,39 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
                 <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'var(--gc-mono)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>V · Dominant</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{neighbourRight}</div>
               </div>
+            </div>
+          </div>
+
+          {/* Common Progressions */}
+          <div style={card({ padding: '10px 12px' })}>
+            <p style={SECTION_LBL}>Common Progressions</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {PROG_TEMPLATES.map((prog, pi) => {
+                const chords = prog.indices.map(i => diatonicChords[i]?.chord ?? '?');
+                const label  = prog.romans.join(' – ');
+                const sel    = selectedProgIdx === pi;
+                return (
+                  <button
+                    key={pi}
+                    onClick={() => setSelectedProgIdx(sel ? null : pi)}
+                    style={{
+                      padding: '7px 10px', borderRadius: 0, cursor: 'pointer',
+                      border: `1px solid ${T.border}`,
+                      borderLeft: `3px solid ${sel ? T.primary : 'var(--gc-bar-color)'}`,
+                      background: sel ? '#FBF1F1' : T.bgCard,
+                      textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
+                      width: '100%',
+                    }}
+                  >
+                    <span style={{ fontSize: 9, fontFamily: 'var(--gc-mono)', color: T.textDim, letterSpacing: '0.06em', minWidth: 72, flexShrink: 0 }}>
+                      {label}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>
+                      {chords.join(' – ')}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </>
