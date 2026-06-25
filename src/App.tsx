@@ -29,9 +29,13 @@ import { ToolsTab }    from './components/Tools/ToolsTab';
 
 // ── Shell ──────────────────────────────────────────────────────────────────
 import { SwipePager, Segment } from './components/SwipePager';
+import { DesktopShell }        from './components/desktop/DesktopShell';
 import { UserMenu }            from './components/Auth/UserMenu';
 import { Onboarding }          from './components/Onboarding';
 import { ErrorBoundary }       from './components/ErrorBoundary';
+
+// ── Hooks ──────────────────────────────────────────────────────────────────
+import { useIsDesktop }        from './hooks/useIsDesktop';
 
 // ── Services ───────────────────────────────────────────────────────────────
 import { subscribeHandoff, requestOpenTabInBuilder } from './services/handoff';
@@ -258,6 +262,8 @@ export default function App() {
   useEffect(() => { writeLS('scaleup_sidebar_pinned', sidebarPinned ? '1' : '0'); }, [sidebarPinned]);
 
   const isElectron = navigator.userAgent.includes('Electron');
+  const isDesktop = useIsDesktop();
+  const isDesktopBrowser = !isElectron && isDesktop;
 
   // ── Common progression props ──────────────────────────────────────────────
   const progProps = {
@@ -392,6 +398,127 @@ export default function App() {
           </main>
         </div>
       </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Desktop browser layout — DesktopShell
+  // ══════════════════════════════════════════════════════════════════════════
+  if (isDesktopBrowser) {
+    return (
+      <>
+        {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
+        <DesktopShell
+          tab={pagerTab}
+          onTabChange={handleTabChange}
+          darkMode={darkMode}
+          onToggleDark={() => setDarkMode(d => !d)}
+          onHelp={() => setShowOnboarding(true)}
+          userMenu={<UserMenu onOpenWorkspace={() => { setPagerTab(4); setStudioSegment('library'); writeLS('scaleup_seg_studio', 'library'); }} />}
+          sharedBanner={sharedBanner}
+        >
+          {/* ── Panel 0: CHORDS ──────────────────────────────────────── */}
+          {pagerTab === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} />
+              <ErrorBoundary label="Chords">
+                {chordsSegment === 'builder' && (
+                  <ChordBuilderTab
+                    progression={progression}
+                    onAddToProgression={item => pushHistory([...progression, item])}
+                    onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
+                    onClearProgression={() => pushHistory([])}
+                    onReorderProgression={handleReorderProgression}
+                    onTransposeProgression={handleTransposeProgression}
+                    tuning={tuning} onTuningChange={setTuning}
+                    capo={capo} onCapoChange={setCapo}
+                    canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
+                    onUndo={handleUndo} onRedo={handleRedo}
+                  />
+                )}
+                {chordsSegment === 'finder' && (
+                  <ChordPickerTab
+                    desktop
+                    onAddToProgression={item => pushHistory([...progression, item])}
+                    progression={progression}
+                    onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
+                    onClearProgression={() => pushHistory([])}
+                    onReorderProgression={handleReorderProgression}
+                    onTransposeProgression={handleTransposeProgression}
+                    canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
+                    onUndo={handleUndo} onRedo={handleRedo}
+                    tuning={tuning} capo={capo}
+                  />
+                )}
+                {chordsSegment === 'analyzer' && <ChordAnalyzerTab progression={progression} />}
+                {chordsSegment === 'target'   && <TargetNoteTab tuning={tuning} capo={capo} />}
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* ── Panel 1: SCALES ──────────────────────────────────────── */}
+          {pagerTab === 1 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} />
+              <ErrorBoundary label="Scales">
+                {scalesSegment === 'explorer'  && <ScaleExplorer />}
+                {scalesSegment === 'circle'    && <CircleOfFifths />}
+                {scalesSegment === 'triads'    && <TriadsGenerator />}
+                {scalesSegment === 'intervals' && <IntervalsTab />}
+                {scalesSegment === 'wheel'     && <WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* ── Panel 2: VOICINGS ────────────────────────────────────── */}
+          {pagerTab === 2 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} />
+              <ErrorBoundary label="Voicings">
+                <VoicingsTab
+                  globalProgression={progression}
+                  tuning={tuning}
+                  activeSub={voicingsSegment}
+                  onSubChange={s => handleVoicingsSegChange(s)}
+                />
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* ── Panel 3: PRACTICE ────────────────────────────────────── */}
+          {pagerTab === 3 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} />
+              <ErrorBoundary label="Practice">
+                <div style={{ maxWidth: 520, margin: '24px auto 0' }}>
+                  {practiceSegment === 'tuner'     && <Tuner />}
+                  {practiceSegment === 'metronome' && <Metronome />}
+                </div>
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* ── Panel 4: STUDIO ──────────────────────────────────────── */}
+          {pagerTab === 4 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div style={{ maxWidth: 560 }}>
+                <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} />
+              </div>
+              <ErrorBoundary label="Studio">
+                {studioSegment === 'tabbuilder' && <TabBuilder desktop />}
+                {studioSegment === 'audiotab'   && <AudioToTab />}
+                {studioSegment === 'library'    && (
+                  <WorkspacePanel
+                    onOpenTabInBuilder={handleOpenTab}
+                    onOpenProgressionInBuilder={handleOpenProgression}
+                  />
+                )}
+              </ErrorBoundary>
+            </div>
+          )}
+
+        </DesktopShell>
+      </>
     );
   }
 
