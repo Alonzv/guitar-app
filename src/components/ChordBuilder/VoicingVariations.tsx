@@ -12,9 +12,10 @@ interface Props {
   selectedIndex?: number;
   chordName?: string;
   tuning?: string[];
+  gridColumns?: number;
 }
 
-export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selectedIndex, chordName, tuning }) => {
+export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selectedIndex, chordName, tuning, gridColumns }) => {
   const chromaColors = useMemo(
     () => chordName ? buildChromaColorMap(chordName) : null,
     [chordName]
@@ -27,7 +28,7 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
       <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
         Voicing Variations · tap to load
       </p>
-      <div className="gc-voicing-grid">
+      <div className="gc-voicing-grid" style={gridColumns ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)` } : undefined}>
         {voicings.map((voicing, i) => {
           const isSelected = i === selectedIndex;
 

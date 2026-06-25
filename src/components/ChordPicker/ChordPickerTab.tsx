@@ -22,6 +22,7 @@ interface Props {
   onRedo: () => void;
   tuning: Tuning;
   capo: number;
+  desktop?: boolean;
 }
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -95,7 +96,7 @@ export function ChordPickerTab({
   onAddToProgression, progression,
   onRemoveFromProgression, onClearProgression, onReorderProgression, onTransposeProgression,
   canUndo, canRedo, onUndo, onRedo,
-  tuning: tuningProp, capo,
+  tuning: tuningProp, capo, desktop,
 }: Props) {
   const [selectedRoot,      setSelectedRoot]      = useState<string | null>(null);
   const [selectedTriad,     setSelectedTriad]     = useState<string | null>(null);
@@ -165,13 +166,26 @@ export function ChordPickerTab({
   const displayName = chordName ? formatChordName(chordName) : null;
   const validExt = selectedTriad ? (VALID_EXTENSIONS[selectedTriad] ?? ['']) : [];
 
-  return (
+  const progressionPanel = (
+    <ProgressionPanel
+      progression={progression}
+      onAddToProgression={onAddToProgression}
+      onRemoveFromProgression={onRemoveFromProgression}
+      onClearProgression={onClearProgression}
+      onReorderProgression={onReorderProgression}
+      onTransposeProgression={onTransposeProgression}
+      canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
+      tuning={tuningObj} capo={capo}
+    />
+  );
+
+  const builderPane = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
       {/* ── Root note ── */}
       <div style={card()}>
         <p style={LABEL_STYLE}>Root Note</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: desktop ? 7 : 6 }}>
           {ROOTS.map(root => {
             const active = selectedRoot === root;
             return (
@@ -179,7 +193,7 @@ export function ChordPickerTab({
                 key={root}
                 onClick={() => handleRootSelect(root)}
                 style={{
-                  padding: '8px 4px', borderRadius: 0,
+                  padding: desktop ? '13px 4px' : '8px 4px', borderRadius: 0,
                   cursor: 'pointer', fontSize: 13,
                   fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
@@ -254,7 +268,7 @@ export function ChordPickerTab({
       )}
 
       {/* ── Tuning selector ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, ...(desktop ? { maxWidth: 240 } : {}) }}>
         <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <select
@@ -268,15 +282,22 @@ export function ChordPickerTab({
         </div>
       </div>
 
-      {/* ── Result name ── */}
+      {/* ── Result name (chord summary) ── */}
       {chordName && (
-        <div className="gc-result-card" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, color: T.textMuted }}>
-            {voicings.length > 0
-              ? `${voicings.length} voicing${voicings.length > 1 ? 's' : ''}`
-              : 'No voicings found'}
-          </span>
-          <span style={{ color: T.text, fontWeight: 600, fontSize: 22, letterSpacing: '-0.01em' }}>{displayName}</span>
+        <div style={{ padding: '10px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ color: T.text, fontWeight: 600, fontSize: desktop ? 50 : 22, letterSpacing: '-0.02em', lineHeight: 1 }}>{displayName}</span>
+            <span style={{ fontSize: 13, color: T.textMuted }}>
+              {voicings.length > 0
+                ? `${voicings.length} voicing${voicings.length > 1 ? 's' : ''}`
+                : 'No voicings found'}
+            </span>
+          </div>
+          {chordName && (
+            <div style={{ marginTop: 8 }}>
+              <ChordStructure chordName={chordName} />
+            </div>
+          )}
         </div>
       )}
 
@@ -305,36 +326,50 @@ export function ChordPickerTab({
           }}
         />
       )}
+    </div>
+  );
 
-      {/* ── Chord structure ── */}
-      {chordName && (
-        <div style={{ textAlign: 'center', padding: '4px 0' }}>
-          <ChordStructure chordName={chordName} />
-        </div>
-      )}
-
-      {/* ── Voicings grid ── */}
+  const voicingsPane = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {chordName && voicings.length > 0 && (
-        <VoicingVariations
-          voicings={voicings}
-          selectedIndex={selectedVoicingIndex}
-          chordName={chordName ?? undefined}
-          tuning={tuning}
-          onSelect={handleVoicingSelect}
-        />
+        <>
+          {desktop && (
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+              Voicing Variations · Tap to Load
+            </p>
+          )}
+          <VoicingVariations
+            voicings={voicings}
+            selectedIndex={selectedVoicingIndex}
+            chordName={chordName ?? undefined}
+            tuning={tuning}
+            onSelect={handleVoicingSelect}
+            gridColumns={desktop ? 3 : undefined}
+          />
+        </>
       )}
+    </div>
+  );
 
-      {/* ── Progression ── */}
-      <ProgressionPanel
-        progression={progression}
-        onAddToProgression={onAddToProgression}
-        onRemoveFromProgression={onRemoveFromProgression}
-        onClearProgression={onClearProgression}
-        onReorderProgression={onReorderProgression}
-        onTransposeProgression={onTransposeProgression}
-        canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
-        tuning={tuningObj} capo={capo}
-      />
+  if (desktop) {
+    return (
+      <div style={{ marginTop: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '430px 1fr', gap: 36, alignItems: 'start' }}>
+          {builderPane}
+          {voicingsPane}
+        </div>
+        <div style={{ marginTop: 36, borderTop: `1px solid ${T.border}`, paddingTop: 24 }}>
+          {progressionPanel}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {builderPane}
+      {voicingsPane}
+      {progressionPanel}
     </div>
   );
 }
