@@ -21,6 +21,7 @@ import { Metronome }         from './components/Tools/Metronome';
 import { TabBuilder }        from './components/Tools/TabBuilder';
 import { AudioToTab }        from './components/Tools/AudioToTab';
 import { WorkspacePanel }    from './components/Workspace/WorkspacePanel';
+import { LibraryGrid }       from './components/Workspace/LibraryGrid';
 
 // ── Electron-only ──────────────────────────────────────────────────────────
 import { TheoryTab }   from './components/TheoryTab';
@@ -514,7 +515,7 @@ export default function App() {
                 {studioSegment === 'tabbuilder' && <TabBuilder desktop />}
                 {studioSegment === 'audiotab'   && <AudioToTab desktop />}
                 {studioSegment === 'library'    && (
-                  <WorkspacePanel
+                  <LibraryGrid
                     desktop
                     onOpenTabInBuilder={handleOpenTab}
                     onOpenProgressionInBuilder={handleOpenProgression}
@@ -623,7 +624,7 @@ export default function App() {
             {studioSegment === 'tabbuilder' && <TabBuilder />}
             {studioSegment === 'audiotab'   && <AudioToTab />}
             {studioSegment === 'library'    && (
-              <WorkspacePanel
+              <LibraryGrid
                 onOpenTabInBuilder={handleOpenTab}
                 onOpenProgressionInBuilder={handleOpenProgression}
               />

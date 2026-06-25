@@ -416,19 +416,33 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
             </div>
           </div>
 
-          {/* Diatonic chords */}
+          {/* Diatonic chords — grouped by harmonic function */}
           <div style={card({ padding: '10px 12px' })}>
             <p style={SECTION_LBL}>Diatonic chords</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
-              {diatonicChords.map(({ chord, roman, func }, i) => (
-                <div key={i} style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: 2, padding: '6px 2px', background: FC[func].fill,
-                }}>
-                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.65)', fontWeight: 400 }}>{roman}</div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#fff', textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-all' }}>{chord}</div>
-                </div>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {(['tonic', 'subdominant', 'dominant'] as HarmonicFunc[]).map(f => {
+                const group = diatonicChords.filter(d => d.func === f);
+                if (group.length === 0) return null;
+                return (
+                  <div key={f} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <div style={{
+                      width: 60, fontSize: 9, color: FC[f].fill, fontFamily: 'var(--gc-mono)',
+                      letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0,
+                    }}>{f}</div>
+                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                      {group.map(({ chord, roman }) => (
+                        <div key={roman} style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+                          padding: '5px 8px', background: FC[f].fill,
+                        }}>
+                          <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}>{roman}</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: '#fff', lineHeight: 1 }}>{chord}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -463,7 +477,7 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
                       padding: '7px 10px', borderRadius: 0, cursor: 'pointer',
                       border: `1px solid ${T.border}`,
                       borderLeft: `3px solid ${sel ? T.primary : 'var(--gc-bar-color)'}`,
-                      background: sel ? '#FBF1F1' : T.bgCard,
+                      background: sel ? T.primaryBg : T.bgCard,
                       textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
                       width: '100%',
                     }}
