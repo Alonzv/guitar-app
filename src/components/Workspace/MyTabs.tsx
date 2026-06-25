@@ -9,9 +9,10 @@ import { EmptyState, RenameDialog, formatDate } from './shared';
 interface Props {
   /** Loads a saved tab into the Tab Builder. */
   onOpenInBuilder: (content: TabContent, id: string) => void;
+  desktop?: boolean;
 }
 
-export const MyTabs: React.FC<Props> = ({ onOpenInBuilder }) => {
+export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
   const { user } = useAuth();
   const [items, setItems]       = useState<SavedTab[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -61,9 +62,10 @@ export const MyTabs: React.FC<Props> = ({ onOpenInBuilder }) => {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(150px, 1fr))', gap: desktop ? 14 : 8 }}>
       {items.map(it => (
-        <div key={it.id} style={{ ...card({ padding: '12px 12px 10px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div key={it.id} style={{ ...card({ padding: '12px 12px 10px' }), display: 'flex', flexDirection: 'column', gap: 8, borderLeft: `4px solid ${T.primary}` }}>
+          {desktop && <div style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Tab</div>}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
             <div style={{ fontSize: 14, color: T.text, fontWeight: 500, lineHeight: 1.25, overflow: 'hidden' }}>
               {it.name}

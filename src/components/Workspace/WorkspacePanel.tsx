@@ -20,9 +20,10 @@ const SUBS: { id: Sub; label: string }[] = [
 interface Props {
   onOpenTabInBuilder: (content: TabContent, id: string) => void;
   onOpenProgressionInBuilder: (chords: ChordInProgression[]) => void;
+  desktop?: boolean;
 }
 
-export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProgressionInBuilder }) => {
+export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProgressionInBuilder, desktop }) => {
   const { user, loading, configured } = useAuth();
   const [sub, setSub]           = useState<Sub>('audio');
   const [authOpen, setAuthOpen] = useState(false);
@@ -69,9 +70,9 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
         })}
       </div>
 
-      {sub === 'audio'        && <AudioArchive />}
-      {sub === 'tabs'         && <MyTabs onOpenInBuilder={onOpenTabInBuilder} />}
-      {sub === 'progressions' && <SavedProgressions onOpenInBuilder={onOpenProgressionInBuilder} />}
+      {sub === 'audio'        && <AudioArchive desktop={desktop} />}
+      {sub === 'tabs'         && <MyTabs desktop={desktop} onOpenInBuilder={onOpenTabInBuilder} />}
+      {sub === 'progressions' && <SavedProgressions desktop={desktop} onOpenInBuilder={onOpenProgressionInBuilder} />}
     </div>
   );
 };

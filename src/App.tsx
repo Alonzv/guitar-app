@@ -472,10 +472,10 @@ export default function App() {
               <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} />
               <ErrorBoundary label="Scales">
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
-                {scalesSegment === 'circle'    && <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}><CircleOfFifths /></div>}
+                {scalesSegment === 'circle'    && <CircleOfFifths desktop />}
                 {scalesSegment === 'triads'    && <TriadsGenerator desktop />}
-                {scalesSegment === 'intervals' && <div style={{ maxWidth: 820, margin: '0 auto', width: '100%' }}><IntervalsTab /></div>}
-                {scalesSegment === 'wheel'     && <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}><WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} /></div>}
+                {scalesSegment === 'intervals' && <IntervalsTab desktop />}
+                {scalesSegment === 'wheel'     && <WheelTab desktop tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
               </ErrorBoundary>
             </div>
           )}
@@ -500,9 +500,13 @@ export default function App() {
           {pagerTab === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <ErrorBoundary label="Practice">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 24 }}>
-                  <Tuner />
-                  <Metronome />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginTop: 24 }}>
+                  <div style={{ borderRight: `1px solid ${T.border}`, paddingRight: 40, paddingBottom: 24 }}>
+                    <div style={{ maxWidth: 420, margin: '0 auto' }}><Tuner /></div>
+                  </div>
+                  <div style={{ paddingLeft: 40, paddingBottom: 24 }}>
+                    <div style={{ maxWidth: 420, margin: '0 auto' }}><Metronome /></div>
+                  </div>
                 </div>
               </ErrorBoundary>
             </div>
@@ -516,9 +520,10 @@ export default function App() {
               </div>
               <ErrorBoundary label="Studio">
                 {studioSegment === 'tabbuilder' && <TabBuilder desktop />}
-                {studioSegment === 'audiotab'   && <AudioToTab />}
+                {studioSegment === 'audiotab'   && <AudioToTab desktop />}
                 {studioSegment === 'library'    && (
                   <WorkspacePanel
+                    desktop
                     onOpenTabInBuilder={handleOpenTab}
                     onOpenProgressionInBuilder={handleOpenProgression}
                   />

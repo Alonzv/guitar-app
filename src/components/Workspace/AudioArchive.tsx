@@ -6,7 +6,9 @@ import type { AudioTab } from '../../services/types';
 import { ItemMenu } from './ItemMenu';
 import { EmptyState, RenameDialog, MiniAudioPlayer, formatDate } from './shared';
 
-export const AudioArchive: React.FC = () => {
+const AUDIO_ACCENT = '#6B655C';
+
+export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const { user } = useAuth();
   const [items, setItems]     = useState<AudioTab[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,29 +57,55 @@ export const AudioArchive: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={desktop
+      ? { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }
+      : { display: 'flex', flexDirection: 'column', gap: 8 }
+    }>
       {items.map(it => (
-        <div key={it.id} style={{ ...card({ padding: '12px 14px' }), display: 'flex', alignItems: 'center', gap: 12 }}>
-          {it.original_audio_url
-            ? <MiniAudioPlayer url={it.original_audio_url} />
-            : <span style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, flexShrink: 0 }}>♪</span>}
-
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, color: T.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {it.name}
-            </div>
-            <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>
-              {formatDate(it.updated_at)}
-              {it.duration_seconds ? ` · ${Math.round(it.duration_seconds)}s` : ''}
-            </div>
-          </div>
-
-          <ItemMenu items={[
-            { label: 'Rename',      icon: '✎', onClick: () => setRenaming(it) },
-            { label: 'Duplicate',   icon: '⧉', onClick: () => duplicate(it) },
-            { label: 'Export PDF',  icon: '⤓', onClick: () => exportPdf(it) },
-            { label: 'Delete',      icon: '🗑', onClick: () => remove(it), danger: true },
-          ]} />
+        <div key={it.id} style={{
+          ...card({ padding: '12px 14px' }),
+          display: 'flex',
+          flexDirection: desktop ? 'column' : 'row',
+          alignItems: desktop ? 'flex-start' : 'center',
+          gap: 12,
+          borderLeft: `4px solid ${AUDIO_ACCENT}`,
+        }}>
+          {desktop ? (
+            <>
+              <div style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 2 }}>Audio</div>
+              <div style={{ fontSize: 14, color: T.text, fontWeight: 500, lineHeight: 1.25, width: '100%' }}>{it.name}</div>
+              <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>
+                {formatDate(it.updated_at)}{it.duration_seconds ? ` · ${Math.round(it.duration_seconds)}s` : ''}
+              </div>
+              {it.original_audio_url && <MiniAudioPlayer url={it.original_audio_url} />}
+              <div style={{ display: 'flex', gap: 6, marginTop: 'auto', width: '100%' }}>
+                <ItemMenu items={[
+                  { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
+                  { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
+                  { label: 'Export PDF',icon: '⤓', onClick: () => exportPdf(it) },
+                  { label: 'Delete',    icon: '🗑', onClick: () => remove(it), danger: true },
+                ]} />
+              </div>
+            </>
+          ) : (
+            <>
+              {it.original_audio_url
+                ? <MiniAudioPlayer url={it.original_audio_url} />
+                : <span style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, flexShrink: 0 }}>♪</span>}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, color: T.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
+                <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>
+                  {formatDate(it.updated_at)}{it.duration_seconds ? ` · ${Math.round(it.duration_seconds)}s` : ''}
+                </div>
+              </div>
+              <ItemMenu items={[
+                { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
+                { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
+                { label: 'Export PDF',icon: '⤓', onClick: () => exportPdf(it) },
+                { label: 'Delete',    icon: '🗑', onClick: () => remove(it), danger: true },
+              ]} />
+            </>
+          )}
         </div>
       ))}
 
