@@ -26,6 +26,7 @@ interface Props {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  desktop?: boolean;
 }
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -58,6 +59,7 @@ export function ChordBuilderTab({
   onReorderProgression, onTransposeProgression,
   tuning, onTuningChange, capo, onCapoChange,
   canUndo, canRedo, onUndo, onRedo,
+  desktop,
 }: Props) {
   const [activeDots, setActiveDots] = useState<FretPosition[]>([]);
   const [showVariations, setShowVariations] = useState(false);
@@ -85,9 +87,8 @@ export function ChordBuilderTab({
     ? findChordVoicings(chords[0].name, 6, tuning.notes)
     : [];
 
-  return (
+  const fretboardPanel = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
       {/* ── Fretboard ── */}
       <div style={card()}>
         <p style={LABEL_STYLE}>Click a fret to place a note · click again to remove</p>
@@ -193,17 +194,41 @@ export function ChordBuilderTab({
         />
       )}
 
-      {/* ── Progression ── */}
-      <ProgressionPanel
-        progression={progression}
-        onAddToProgression={onAddToProgression}
-        onRemoveFromProgression={onRemoveFromProgression}
-        onClearProgression={onClearProgression}
-        onReorderProgression={onReorderProgression}
-        onTransposeProgression={onTransposeProgression}
-        canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
-        tuning={tuning} capo={capo}
-      />
+      {/* ── Progression (mobile only) ── */}
+      {!desktop && (
+        <ProgressionPanel
+          progression={progression}
+          onAddToProgression={onAddToProgression}
+          onRemoveFromProgression={onRemoveFromProgression}
+          onClearProgression={onClearProgression}
+          onReorderProgression={onReorderProgression}
+          onTransposeProgression={onTransposeProgression}
+          canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
+          tuning={tuning} capo={capo}
+        />
+      )}
     </div>
   );
+
+  if (desktop) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 32, alignItems: 'start' }}>
+        {fretboardPanel}
+        <div style={{ position: 'sticky', top: 24 }}>
+          <ProgressionPanel
+            progression={progression}
+            onAddToProgression={onAddToProgression}
+            onRemoveFromProgression={onRemoveFromProgression}
+            onClearProgression={onClearProgression}
+            onReorderProgression={onReorderProgression}
+            onTransposeProgression={onTransposeProgression}
+            canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
+            tuning={tuning} capo={capo}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return fretboardPanel;
 }

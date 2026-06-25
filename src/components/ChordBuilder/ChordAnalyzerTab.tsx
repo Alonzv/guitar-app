@@ -8,6 +8,7 @@ import { T, card } from '../../theme';
 
 interface Props {
   progression: ChordInProgression[];
+  desktop?: boolean;
 }
 
 type HarmonicFn = 'T' | 'SD' | 'D' | '?';
@@ -94,7 +95,7 @@ function analyzeProgression(progression: ChordInProgression[]): {
   return { key: keyStr, isMajor, scale, analyses };
 }
 
-export function ChordAnalyzerTab({ progression }: Props) {
+export function ChordAnalyzerTab({ progression, desktop }: Props) {
   const analysis = useMemo(() => analyzeProgression(progression), [progression]);
 
   if (progression.length === 0) {
@@ -113,9 +114,8 @@ export function ChordAnalyzerTab({ progression }: Props) {
   const [keyRoot, ...modeParts] = key.split(' ');
   const modeLabel = modeParts.join(' ');
 
-  return (
+  const keyPanel = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
       <SaveToLibraryButton
         style={{ width: '100%', justifyContent: 'center' }}
         label="Save analyzed progression"
@@ -129,47 +129,45 @@ export function ChordAnalyzerTab({ progression }: Props) {
 
       {/* Key card */}
       <div style={card({ padding: '14px 16px' })}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 4 }}>
-              Detected Key
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span style={{ fontSize: 32, fontWeight: 900, color: T.primary, lineHeight: 1 }}>{keyRoot}</span>
-              <span style={{ fontSize: 16, fontWeight: 400, color: T.textMuted }}>{modeLabel}</span>
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 4 }}>
-              Scale
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end', maxWidth: 160 }}>
-              {scale.map((note, i) => (
-                <span key={i} style={{
-                  padding: '2px 6px', borderRadius: 0, fontSize: 10, fontWeight: 600,
-                  background: i === 0 ? T.primaryBg : T.bgInput,
-                  color: i === 0 ? T.primary : T.textMuted,
-                  border: i === 0 ? `1px solid ${T.primary}44` : `1px solid ${T.border}`,
-                }}>{note}</span>
-              ))}
-            </div>
-          </div>
+        <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 6 }}>
+          Detected Key
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 12 }}>
+          <span style={{ fontSize: 32, fontWeight: 900, color: T.primary, lineHeight: 1 }}>{keyRoot}</span>
+          <span style={{ fontSize: 16, fontWeight: 400, color: T.textMuted }}>{modeLabel}</span>
+        </div>
+        <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 6 }}>
+          Scale
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {scale.map((note, i) => (
+            <span key={i} style={{
+              padding: '2px 6px', borderRadius: 0, fontSize: 10, fontWeight: 600,
+              background: i === 0 ? T.primaryBg : T.bgInput,
+              color: i === 0 ? T.primary : T.textMuted,
+              border: i === 0 ? `1px solid ${T.primary}44` : `1px solid ${T.border}`,
+            }}>{note}</span>
+          ))}
         </div>
       </div>
 
       {/* Chord function legend */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {(['T', 'SD', 'D', '?'] as HarmonicFn[]).map(fn => (
-          <div key={fn} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div key={fn} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{
               width: 10, height: 10, borderRadius: 0,
               background: FN_COLORS[fn], display: 'inline-block', flexShrink: 0,
             }} />
-            <span style={{ fontSize: 10, color: T.textMuted }}>{fn} — {FN_LABELS[fn]}</span>
+            <span style={{ fontSize: 11, color: T.textMuted }}>{fn} — {FN_LABELS[fn]}</span>
           </div>
         ))}
       </div>
+    </div>
+  );
 
+  const analysesPanel = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Chord analyses */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {analyses.map((a, i) => {
@@ -180,27 +178,16 @@ export function ChordAnalyzerTab({ progression }: Props) {
               display: 'flex', alignItems: 'center', gap: 14,
               borderLeft: `4px solid ${color}`,
             }}>
-              {/* Position */}
-              <div style={{ fontSize: 11, color: T.textDim, minWidth: 16, textAlign: 'center' }}>
-                {i + 1}
-              </div>
-
-              {/* Roman numeral */}
-              <div style={{
-                fontSize: 22, fontWeight: 900, color, minWidth: 44, textAlign: 'center', lineHeight: 1,
-              }}>
+              <div style={{ fontSize: 11, color: T.textDim, minWidth: 16, textAlign: 'center' }}>{i + 1}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color, minWidth: 44, textAlign: 'center', lineHeight: 1 }}>
                 {a.romanNumeral}
               </div>
-
-              {/* Chord name */}
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: T.text, lineHeight: 1 }}>{a.chordName}</div>
                 <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>
                   {a.isDiatonic ? `Diatonic to ${keyRoot} ${modeLabel}` : `Outside ${keyRoot} ${modeLabel}`}
                 </div>
               </div>
-
-              {/* Function badge */}
               <div style={{
                 padding: '4px 10px', borderRadius: 0, fontSize: 11, fontWeight: 400,
                 background: `${color}22`, color, border: `1px solid ${color}44`,
@@ -220,9 +207,7 @@ export function ChordAnalyzerTab({ progression }: Props) {
         </div>
         <div style={{ display: 'flex', gap: 0, borderRadius: 0, overflow: 'hidden', height: 10 }}>
           {analyses.map((a, i) => (
-            <div key={i} style={{
-              flex: 1, background: FN_COLORS[a.harmonicFn], opacity: 0.8,
-            }} />
+            <div key={i} style={{ flex: 1, background: FN_COLORS[a.harmonicFn], opacity: 0.8 }} />
           ))}
         </div>
         <div style={{ display: 'flex', marginTop: 6, gap: 0 }}>
@@ -238,6 +223,22 @@ export function ChordAnalyzerTab({ progression }: Props) {
           </div>
         )}
       </div>
+    </div>
+  );
+
+  if (desktop) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 32, alignItems: 'start' }}>
+        {analysesPanel}
+        <div style={{ position: 'sticky', top: 24 }}>{keyPanel}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {keyPanel}
+      {analysesPanel}
     </div>
   );
 }

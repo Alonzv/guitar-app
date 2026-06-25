@@ -72,7 +72,7 @@ interface ResultItem {
   priority: number;
 }
 
-interface Props { tuning: Tuning; capo: number; }
+interface Props { tuning: Tuning; capo: number; desktop?: boolean; }
 
 // ── isPlayable (not exported from chordVoicings) ──────────────────────────
 function isPlayable(voicing: FretPosition[]): boolean {
@@ -483,7 +483,7 @@ const Pill: React.FC<{
 );
 
 // ── Main component ────────────────────────────────────────────────────────
-export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
+export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
   const [targetPos, setTargetPos]             = useState<TargetPos | null>(null);
   const [selectedIntervals, setSelectedIntervals] = useState<Set<string>>(new Set(['1']));
   const [positionLock, setPositionLock]       = useState<'top' | 'bass' | 'anywhere'>('anywhere');
@@ -548,9 +548,8 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
     item.voicing.map((_, i) => i === item.targetVoicingIdx ? T.coral : T.secondary),
   []);
 
-  return (
+  const controlsLeft = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
       {/* Input fretboard */}
       <div style={{ ...card(), padding: '12px 14px' }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 8 }}>
@@ -606,8 +605,6 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
 
         {controlsOpen && (
           <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-            {/* Interval role */}
             <div>
               <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Interval role</div>
               <div style={{ marginBottom: 6 }}>
@@ -629,8 +626,6 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 </div>
               </div>
             </div>
-
-            {/* Position Lock */}
             <div>
               <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Position Lock</div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -643,8 +638,6 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
                 ))}
               </div>
             </div>
-
-            {/* Complexity */}
             <div>
               <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Complexity</div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -660,16 +653,23 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
           </div>
         )}
       </div>
+    </div>
+  );
 
-      {/* Results */}
-      {targetPos && (
-        <div>
+  const resultsPanel = (
+    <div>
+      {!targetPos ? (
+        <div style={{ ...card({ padding: '28px 16px' }), textAlign: 'center', opacity: 0.5 }}>
+          <p style={{ margin: '0 0 6px', fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Results</p>
+          <p style={{ margin: 0, fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)' }}>← Select a note on the fretboard</p>
+        </div>
+      ) : (
+        <>
           <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 8, fontWeight: 600 }}>
             {results.length > 0
               ? `${results.length} chord${results.length !== 1 ? 's' : ''} found`
               : 'No chords found — try different settings'}
           </div>
-
           {results.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {results.map((item, idx) => {
@@ -706,8 +706,21 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
               })}
             </div>
           )}
-        </div>
+        </>
       )}
+    </div>
+  );
+
+  return (
+    <div style={desktop
+      ? { display: 'grid', gridTemplateColumns: '580px 1fr', gap: 32, alignItems: 'start' }
+      : { display: 'flex', flexDirection: 'column', gap: 12 }
+    }>
+      {controlsLeft}
+      {desktop
+        ? <div style={{ position: 'sticky', top: 24 }}>{resultsPanel}</div>
+        : resultsPanel
+      }
 
       {/* Expanded modal */}
       {expandedResult !== null && expandedIdx !== null && (
