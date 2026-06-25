@@ -100,12 +100,23 @@ function computeHighlights(idx: number | null, mode: Mode) {
   return { outer, inner };
 }
 
+// ── Desktop constants ──────────────────────────────────────────────────────────
+const MAJOR_ROMANS = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'] as const;
+const MINOR_ROMANS = ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'] as const;
+const MAJOR_FUNCS: HarmonicFunc[] = ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'tonic', 'dominant'];
+const MINOR_FUNCS: HarmonicFunc[] = ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'subdominant', 'dominant'];
+const SECTION_LBL: React.CSSProperties = {
+  fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
+  textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 interface Props {
   onAddToProgression?: (item: never) => void; // kept for prop-compat, unused
+  desktop?: boolean;
 }
 
-export const CircleOfFifths: React.FC<Props> = () => {
+export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
   const [selectedIdx,  setSelectedIdx]  = useState<number | null>(null);
   const [selectedMode, setSelectedMode] = useState<Mode>('major');
   const [rotation,     setRotation]     = useState(0);
@@ -158,10 +169,27 @@ export const CircleOfFifths: React.FC<Props> = () => {
       : `Rel: ${COF_MAJOR[selectedIdx!]}`
     : null;
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+  // ── Desktop right-panel data ────────────────────────────────────────────────
+  const accidentals = selectedIdx !== null ? Key.majorKey(COF_MAJOR[selectedIdx]).alteration : 0;
+  const keySig = accidentals === 0 ? 'No ♯/♭' : accidentals > 0 ? `${accidentals}♯` : `${Math.abs(accidentals)}♭`;
 
-      <div style={{ width: 'min(400px, 90vw)', margin: '0 auto' }}>
+  const diatonicChords = selectedIdx !== null
+    ? selectedMode === 'major'
+      ? Key.majorKey(COF_MAJOR[selectedIdx]).triads.map((chord, i) => ({
+          chord, roman: MAJOR_ROMANS[i], func: MAJOR_FUNCS[i],
+        }))
+      : Key.minorKey(COF_MINOR_NAMES[selectedIdx].slice(0, -1)).natural.triads.map((chord, i) => ({
+          chord, roman: MINOR_ROMANS[i], func: MINOR_FUNCS[i],
+        }))
+    : [];
+
+  const neighbourLeft  = selectedIdx !== null ? COF_MAJOR[(selectedIdx + 11) % 12] : null;
+  const neighbourRight = selectedIdx !== null ? COF_MAJOR[(selectedIdx + 1)  % 12] : null;
+
+  // ── Shared SVG + legend (used in both desktop and mobile) ───────────────────
+  const wheelContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ width: desktop ? 'min(440px, 100%)' : 'min(400px, 90vw)', margin: '0 auto' }}>
         <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} style={{ display: 'block', width: '100%' }}>
 
           {/* Border ring */}
@@ -307,8 +335,8 @@ export const CircleOfFifths: React.FC<Props> = () => {
         ))}
       </div>
 
-      {/* Tip */}
-      {hasSelection && (
+      {/* Tip — mobile only; desktop has right panel */}
+      {hasSelection && !desktop && (
         <div style={card({ padding: '10px 14px' })}>
           <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
             <span style={{ color: T.text, fontWeight: 400 }}>{centerRoot} {centerLabel}</span>
@@ -341,6 +369,92 @@ export const CircleOfFifths: React.FC<Props> = () => {
         </div>
       )}
 
+    </div>
+  ); // end wheelContent
+
+  // ── Desktop info panel ─────────────────────────────────────────────────────
+  const infoPanel = (
+    <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {!hasSelection ? (
+        <div style={{ ...card({ padding: '20px 18px' }), opacity: 0.55 }}>
+          <p style={{ ...SECTION_LBL, marginBottom: 8 }}>Key Info</p>
+          <p style={{ margin: 0, fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.02em' }}>
+            ← Click a key on the wheel
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Heading */}
+          <div style={{ ...card({ padding: '14px 16px' }), borderLeft: `4px solid ${T.primary}` }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: T.text, lineHeight: 1 }}>
+              {selectedMode === 'major' ? COF_MAJOR[selectedIdx!] : COF_MINOR_NAMES[selectedIdx!].slice(0, -1)}
+            </div>
+            <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
+              {selectedMode === 'major' ? 'Major' : 'Natural minor'}
+            </div>
+          </div>
+
+          {/* Relative + Key Sig */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={card({ padding: '10px 12px' })}>
+              <p style={SECTION_LBL}>{selectedMode === 'major' ? 'Relative minor' : 'Relative major'}</p>
+              <div style={{ fontSize: 16, fontWeight: 600, color: T.text }}>
+                {selectedMode === 'major' ? COF_MINOR_NAMES[selectedIdx!] : COF_MAJOR[selectedIdx!]}
+              </div>
+            </div>
+            <div style={card({ padding: '10px 12px' })}>
+              <p style={SECTION_LBL}>Key signature</p>
+              <div style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{keySig}</div>
+            </div>
+          </div>
+
+          {/* Diatonic chords */}
+          <div style={card({ padding: '10px 12px' })}>
+            <p style={SECTION_LBL}>Diatonic chords</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+              {diatonicChords.map(({ chord, roman, func }, i) => (
+                <div key={i} style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 2, padding: '6px 2px', background: FC[func].fill,
+                }}>
+                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.65)', fontWeight: 400 }}>{roman}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#fff', textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-all' }}>{chord}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Neighbours */}
+          <div style={card({ padding: '10px 12px' })}>
+            <p style={SECTION_LBL}>Neighbours</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ padding: '8px 10px', background: T.bgInput, border: `1px solid ${T.border}` }}>
+                <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'var(--gc-mono)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>IV · Subdominant</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{neighbourLeft}</div>
+              </div>
+              <div style={{ padding: '8px 10px', background: T.bgInput, border: `1px solid ${T.border}` }}>
+                <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'var(--gc-mono)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>V · Dominant</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{neighbourRight}</div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  if (desktop) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '500px 1fr', gap: 48, alignItems: 'start' }}>
+        {wheelContent}
+        {infoPanel}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {wheelContent}
     </div>
   );
 };

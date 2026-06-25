@@ -278,7 +278,7 @@ const LABEL: React.CSSProperties = {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export const AudioToTab: React.FC = () => {
+export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const [stage, setStage]             = useState<Stage>('idle');
   const [progress, setProgress]       = useState(0);
   const [phaseLabel, setPhaseLabel]   = useState('');
@@ -567,7 +567,33 @@ export const AudioToTab: React.FC = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  if (stage === 'idle') return (
+  // Desktop helper: wraps in 440px|1fr grid; on mobile returns left as-is
+  const dt = (left: React.ReactNode, right: React.ReactNode) => {
+    if (!desktop) return <>{left}</>;
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '440px 1fr', gap: 36, alignItems: 'start' }}>
+        <div>{left}</div>
+        <div style={{ position: 'sticky', top: 24 }}>{right}</div>
+      </div>
+    );
+  };
+
+  // Ghost output pane shown before transcription exists
+  const ghostOut = (
+    <div style={{ ...card({ padding: '16px 16px 20px' }) }}>
+      <p style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' as const, margin: '0 0 12px' }}>Transcription output</p>
+      <div style={{ background: TAB_BG, padding: '20px 16px', opacity: 0.35, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {[90, 70, 85, 60].map((w, i) => (
+          <div key={i} style={{ height: 12, background: TAB_LINE, width: `${w}%` }} />
+        ))}
+      </div>
+      <p style={{ margin: '12px 0 0', fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.02em' }}>
+        ← Record or upload audio to transcribe
+      </p>
+    </div>
+  );
+
+  if (stage === 'idle') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <style>{RESPONSIVE_CSS}</style>
       <div
@@ -617,9 +643,9 @@ export const AudioToTab: React.FC = () => {
         </div>
       </button>
     </div>
-  );
+  , ghostOut);
 
-  if (stage === 'recording') return (
+  if (stage === 'recording') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card({ padding: '28px 20px' }), textAlign: 'center' }}>
         <RecordingBars />
@@ -639,9 +665,9 @@ export const AudioToTab: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+  , ghostOut);
 
-  if (stage === 'processing') return (
+  if (stage === 'processing') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={card({ padding: '22px 18px' })}>
         {waveform && waveform.length > 0 && (
@@ -666,9 +692,9 @@ export const AudioToTab: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+  , ghostOut);
 
-  if (stage === 'error') return (
+  if (stage === 'error') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card({ padding: '18px 16px' }), borderLeft: `3px solid ${T.coral}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -684,13 +710,13 @@ export const AudioToTab: React.FC = () => {
         Try Again
       </button>
     </div>
-  );
+  , ghostOut);
 
   if (!tabData) return null;
 
   // ── Result ────────────────────────────────────────────────────────────────
 
-  return (
+  const resultLeft = (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <style>{RESPONSIVE_CSS}</style>
 
@@ -714,7 +740,11 @@ export const AudioToTab: React.FC = () => {
           <Waveform data={waveform} height={72} />
         </div>
       )}
+    </div>
+  );
 
+  const resultRight = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Export buttons */}
       <div style={{ display: 'flex', gap: 10 }}>
         <button
@@ -793,7 +823,8 @@ export const AudioToTab: React.FC = () => {
           </span>
         </div>
       )}
-
     </div>
   );
+
+  return dt(resultLeft, resultRight);
 };
