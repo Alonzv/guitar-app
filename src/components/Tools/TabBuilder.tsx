@@ -475,71 +475,104 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
       {/* ── Header ──────────────────────────────────────── */}
       {desktop ? (
-        /* Desktop: title+toolbar left, techniques card right */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 36, alignItems: 'start', padding: '12px 0 16px' }}>
+        /* Desktop: masthead+toolbar left, techniques card right */
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 36, alignItems: 'start', padding: '12px 0 20px' }}>
+
+          {/* ── Left column ── */}
           <div>
-            <div style={{ minWidth: 0, marginBottom: 10 }}>
+            {/* Masthead */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 16, borderBottom: `1px solid ${T.border}`, marginBottom: 16 }}>
+              <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textDim }}>Studio / Tab</span>
               <input
                 value={title}
-                placeholder="Song's title"
+                placeholder="Untitled Song"
                 onChange={e => setTab(p => ({ ...p, title: e.target.value }))}
-                style={{
-                  background: 'none', border: 'none', outline: 'none',
-                  fontSize: 20, fontWeight: 400, width: '100%',
-                  color: title ? T.text : T.textMuted, fontFamily: 'inherit',
-                }}
+                style={{ border: 'none', background: 'transparent', padding: 0, outline: 'none', fontFamily: 'var(--gc-mono)', fontSize: 26, fontWeight: 600, letterSpacing: '-0.01em', color: T.text, width: '100%' }}
               />
               <input
                 value={subtitle}
-                placeholder="Extra info"
+                placeholder="Tempo · tuning · notes"
                 onChange={e => setTab(p => ({ ...p, subtitle: e.target.value }))}
-                style={{
-                  background: 'none', border: 'none', outline: 'none',
-                  fontSize: 12, width: '100%', marginTop: 2,
-                  color: subtitle ? T.textMuted : T.border, fontFamily: 'inherit',
-                }}
+                style={{ border: 'none', background: 'transparent', padding: 0, outline: 'none', fontFamily: 'var(--gc-font)', fontSize: 13, color: T.textMuted, width: '100%' }}
               />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', rowGap: 5 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: T.bgInput, borderRadius: 0, padding: '5px 7px', flexShrink: 0 }}>
-                <button onClick={() => setZoom(z => Math.max(60, z - 10))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: '0 1px' }}>−</button>
-                <span style={{ fontSize: 11, color: T.textMuted, minWidth: 30, textAlign: 'center' }}>{zoom}%</span>
-                <button onClick={() => setZoom(z => Math.min(150, z + 10))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: '0 1px' }}>+</button>
-              </div>
-              <button onClick={handleAnalyze} style={{ background: T.primary, color: '#fff', border: 'none', borderRadius: 0, padding: '7px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0 }}>Analyze</button>
-              <button onClick={handleExport} disabled={busy} style={{ background: T.secondary, color: '#fff', border: 'none', borderRadius: 0, padding: '7px 10px', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0 }}>{busy ? '…' : 'PDF'}</button>
-              <SaveToLibraryButton size="sm" label="Save" style={{ flexShrink: 0 }} getPayload={() => tabHasContent(tab) ? ({ kind: 'tab', name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null} />
-              <button onClick={() => { if (!window.confirm('Clear all notes? This cannot be undone.')) return; clearGrid(); }} style={{ background: 'transparent', color: T.textMuted, border: `1px solid ${T.border}`, borderRadius: 0, padding: '7px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0 }}>Clear</button>
-              {backups.length > 0 && (
-                <button onClick={() => setRecoverOpen(true)} style={{ background: T.secondary, color: '#fff', border: 'none', borderRadius: 0, padding: '7px 9px', cursor: 'pointer', fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0 }}>↺ Recover</button>
-              )}
-              <button onClick={undo} disabled={!canUndo} style={{ background: '#FFC800', border: 'none', borderRadius: 0, padding: '7px 9px', cursor: canUndo ? 'pointer' : 'default', borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0, fontSize: 12, fontWeight: 400, color: T.secondary }}>undo</button>
-            </div>
+
+            {/* Button row — one red, ghost for everything else, hairline dividers */}
+            {(() => {
+              const ghost: React.CSSProperties = { height: 34, padding: '0 13px', display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em', cursor: 'pointer', borderRadius: 0 };
+              const primary: React.CSSProperties = { ...ghost, border: 'none', background: T.primary, color: '#fff' };
+              const divider: React.CSSProperties = { width: 1, height: 20, background: T.border, margin: '0 4px', flexShrink: 0 };
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {/* Zoom stepper */}
+                  <div style={{ ...ghost, gap: 10, cursor: 'default', paddingLeft: 8, paddingRight: 8 }}>
+                    <button onClick={() => setZoom(z => Math.max(60, z - 10))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: 0 }}>−</button>
+                    <span style={{ color: T.text, minWidth: 30, textAlign: 'center' }}>{zoom}%</span>
+                    <button onClick={() => setZoom(z => Math.min(150, z + 10))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: 0 }}>+</button>
+                  </div>
+
+                  <span style={divider} />
+
+                  {/* Primary cluster */}
+                  <button onClick={handleAnalyze} style={primary}>ANALYZE</button>
+                  <button onClick={handleExport} disabled={busy} style={{ ...ghost, cursor: busy ? 'wait' : 'pointer' }}>{busy ? '…' : 'PDF'}</button>
+                  <SaveToLibraryButton size="sm" label="♡ SAVE" style={{ height: 34, borderRadius: 0, fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em' }} getPayload={() => tabHasContent(tab) ? ({ kind: 'tab', name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null} />
+
+                  <span style={divider} />
+
+                  {/* History cluster */}
+                  <button onClick={undo} disabled={!canUndo} style={{ ...ghost, color: T.textDim, opacity: canUndo ? 1 : 0.4, cursor: canUndo ? 'pointer' : 'default' }}>↶ UNDO</button>
+                  {backups.length > 0 && (
+                    <button onClick={() => setRecoverOpen(true)} style={{ ...ghost, color: T.textDim }}>↺ RECOVER</button>
+                  )}
+                  <button
+                    onClick={() => { if (!window.confirm('Clear all notes? This cannot be undone.')) return; clearGrid(); }}
+                    style={{ ...ghost, color: T.textDim }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = T.primary; (e.currentTarget as HTMLButtonElement).style.borderColor = T.primary; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = T.textDim; (e.currentTarget as HTMLButtonElement).style.borderColor = T.border; }}
+                  >CLEAR</button>
+                </div>
+              );
+            })()}
           </div>
 
-          {/* Techniques legend card */}
-          <div style={{ border: `1px solid ${T.border}`, background: T.bgCard, padding: '12px 14px' }}>
-            <p className="gc-sec-label" style={{ margin: '0 0 10px' }}>Techniques</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, sym, key }) => (
-                <button
-                  key={id}
-                  onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
-                  title={!sel ? 'Select a note first' : `${label} [${key}]`}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '7px 8px', border: `1px solid ${T.border}`,
-                    background: (id === '|' ? (sel && barsSet.has(sel[1])) : selTech === id) ? T.primaryBg : T.bgInput,
-                    cursor: sel ? 'pointer' : 'default',
-                    fontSize: 11, color: T.text,
-                    opacity: sel ? 1 : 0.55,
-                    transition: 'background 0.12s',
-                    borderLeft: '3px solid var(--gc-bar-color)',
-                  }}>
-                  <span>{label}</span>
-                  <span style={{ fontFamily: 'monospace', fontSize: 14, color: T.coral, fontWeight: 600 }}>{sym}</span>
-                </button>
-              ))}
+          {/* ── Techniques card ── */}
+          <div style={{ border: `1px solid ${T.border}`, borderRadius: 0, background: T.bgCard }}>
+            <div style={{ padding: '9px 14px', borderBottom: `1px solid ${T.border}`, fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textDim }}>Techniques</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, key }, i, arr) => {
+                const isArmed = id === '|' ? !!(sel && barsSet.has(sel[1])) : selTech === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
+                    title={!sel ? 'Select a note first' : `${label} [${key}]`}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      gap: 10, padding: '10px 13px', cursor: sel ? 'pointer' : 'default',
+                      borderRadius: 0, textAlign: 'left',
+                      borderTop: 'none',
+                      borderRight: i % 2 === 0 ? `1px solid ${T.border}` : 'none',
+                      borderBottom: i < arr.length - 2 ? `1px solid ${T.border}` : 'none',
+                      borderLeft: isArmed ? `2px solid ${T.primary}` : '2px solid transparent',
+                      background: isArmed ? T.primarySoft : 'transparent',
+                      fontFamily: 'var(--gc-font)', fontSize: 12,
+                      color: isArmed ? T.text : T.textMuted,
+                      opacity: sel ? 1 : 0.6,
+                      transition: 'background 0.12s, color 0.12s',
+                    }}
+                  >
+                    <span>{label}</span>
+                    <kbd style={{
+                      fontFamily: 'var(--gc-mono)', fontSize: 11, lineHeight: 1,
+                      minWidth: 18, textAlign: 'center', padding: '3px 6px', borderRadius: 0,
+                      border: `1px solid ${isArmed ? T.primary : T.border}`,
+                      background: isArmed ? T.primary : T.bgInput,
+                      color: isArmed ? '#fff' : T.text,
+                    }}>{key}</kbd>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
