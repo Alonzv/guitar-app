@@ -335,7 +335,7 @@ const InputFretboard: React.FC<{
           <line key={i}
             x1={FB_NUT_X + i * FB_FRET_SP} y1={FB_TOP_Y}
             x2={FB_NUT_X + i * FB_FRET_SP} y2={FB_BOARD_B}
-            stroke="rgba(255,255,255,1)" strokeWidth={1.2}
+            stroke="var(--gc-fretboard-fret)" strokeWidth={1.2}
           />
         ))}
 
@@ -343,7 +343,7 @@ const InputFretboard: React.FC<{
         {Array.from({ length: STRING_COUNT }).map((_, s) => (
           <line key={s}
             x1={0} y1={strY(s)} x2={FB_BOARD_R} y2={strY(s)}
-            stroke="rgba(255,255,255,1)" strokeWidth={0.9 + s * 0.22}
+            stroke="var(--gc-fretboard-str)" strokeWidth={0.9 + s * 0.22}
           />
         ))}
 
@@ -352,18 +352,18 @@ const InputFretboard: React.FC<{
           <circle key={f}
             cx={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
             cy={FB_TOP_Y + 2.5 * FB_STR_SP}
-            r={4} fill="rgba(255,255,255,0.15)"
+            r={4} fill="var(--gc-fretboard-pos)"
           />
         ))}
-        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 1.5 * FB_STR_SP} r={3.5} fill="rgba(255,255,255,0.15)" />
-        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 3.5 * FB_STR_SP} r={3.5} fill="rgba(255,255,255,0.15)" />
+        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 1.5 * FB_STR_SP} r={3.5} fill="var(--gc-fretboard-pos)" />
+        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 3.5 * FB_STR_SP} r={3.5} fill="var(--gc-fretboard-pos)" />
 
         {/* Fret number labels */}
         {[1,2,3,4,5,6,7,8,9,10,11,12].map(f => (
           <text key={f}
             x={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
             y={FB_BOARD_B + 22}
-            textAnchor="middle" fontSize={10} fill="rgba(255,255,255,0.6)"
+            textAnchor="middle" fontSize={10} fill="var(--gc-fretboard-str)"
           >{f}</text>
         ))}
 
@@ -433,15 +433,15 @@ const ScaleStrip: React.FC<{
 
         {Array.from({ length: 13 }).map((_, i) => (
           <line key={i} x1={SS_NUT + i * SS_FSP} y1={SS_TOP} x2={SS_NUT + i * SS_FSP} y2={SS_B}
-            stroke="rgba(255,255,255,1)" strokeWidth={1} />
+            stroke="var(--gc-fretboard-fret)" strokeWidth={1} />
         ))}
         {Array.from({ length: STRING_COUNT }).map((_, s) => (
           <line key={s} x1={0} y1={ssY(s)} x2={SS_R} y2={ssY(s)}
-            stroke="rgba(255,255,255,1)" strokeWidth={0.8 + s * 0.18} />
+            stroke="var(--gc-fretboard-str)" strokeWidth={0.8 + s * 0.18} />
         ))}
         {[3,5,7,9,12].map(f => (
           <text key={f} x={SS_NUT + (f - 0.5) * SS_FSP} y={SS_H - 3}
-            textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.6)">{f}</text>
+            textAnchor="middle" fontSize={8} fill="var(--gc-fretboard-str)">{f}</text>
         ))}
 
         {positions.map((p, i) => {
@@ -660,34 +660,6 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
           </div>
         )}
       </div>
-
-      {/* Ghost placeholder — shown when no target note is selected */}
-      {!targetPos && (
-        <div style={{ ...card(), padding: '10px 12px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: T.textMuted }}>
-            Results
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, opacity: 0.45 }}>
-            {Array.from({ length: 6 }).map((_, i) => {
-              const GHOST_COLORS = ['#CC1C1C', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
-              return (
-                <div key={i} style={{ borderRadius: 0 }}>
-                  <div style={{ background: GHOST_COLORS[i], padding: '6px 10px 4px' }}>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: '#fff', lineHeight: 1.1 }}>—</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>—</div>
-                  </div>
-                  <div style={{ background: T.bgInput, padding: '6px 10px 8px', border: `1px solid ${T.border}`, borderTop: 'none' }}>
-                    <MiniFretboard voicing={[]} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p style={{ margin: '12px 0 0', fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.02em' }}>
-            ← Select a target note to find chords
-          </p>
-        </div>
-      )}
 
       {/* Results */}
       {targetPos && (
