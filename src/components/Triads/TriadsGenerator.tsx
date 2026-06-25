@@ -4,6 +4,7 @@ import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { playScale } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
+import { TwoPane } from '../desktop/TwoPane';
 import type { Note } from '../../types/music';
 
 const OPEN_MIDI = STANDARD_OPEN_MIDI;
@@ -156,7 +157,7 @@ function pill(active: boolean, onClick: () => void, label: string) {
   );
 }
 
-export function TriadsGenerator() {
+export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
   const [root,               setRoot]               = useState<Note>('C');
   const [triadType,          setTriadType]          = useState<TriadType | null>(null);
   const [triadMenuOpen,      setTriadMenuOpen]      = useState(false);
@@ -264,9 +265,8 @@ export function TriadsGenerator() {
 
   const visibleSets = selectedSet !== null ? [selectedSet] : [0, 1, 2, 3];
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
+  const triadsLeft = (
+    <>
       {/* Root selector */}
       <div style={card()}>
         <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
@@ -328,6 +328,11 @@ export function TriadsGenerator() {
           </div>
         )}
       </div>
+    </>
+  );
+
+  const triadsRight = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
       {/* Chord summary + controls */}
       {def && <div style={card({ padding: '10px 14px' })}>
@@ -642,6 +647,23 @@ export function TriadsGenerator() {
           </div>
         </div>
       )}
+
+      {!def && desktop && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: T.textDim, fontSize: 13, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em' }}>
+          ← Select root + triad type
+        </div>
+      )}
+    </div>
+  );
+
+  if (desktop) {
+    return <TwoPane left={triadsLeft} right={triadsRight} />;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {triadsLeft}
+      {triadsRight}
     </div>
   );
 }

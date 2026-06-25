@@ -423,18 +423,20 @@ export default function App() {
               <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} />
               <ErrorBoundary label="Chords">
                 {chordsSegment === 'builder' && (
-                  <ChordBuilderTab
-                    progression={progression}
-                    onAddToProgression={item => pushHistory([...progression, item])}
-                    onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
-                    onClearProgression={() => pushHistory([])}
-                    onReorderProgression={handleReorderProgression}
-                    onTransposeProgression={handleTransposeProgression}
-                    tuning={tuning} onTuningChange={setTuning}
-                    capo={capo} onCapoChange={setCapo}
-                    canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
-                    onUndo={handleUndo} onRedo={handleRedo}
-                  />
+                  <div style={{ maxWidth: 780, margin: '0 auto', width: '100%' }}>
+                    <ChordBuilderTab
+                      progression={progression}
+                      onAddToProgression={item => pushHistory([...progression, item])}
+                      onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
+                      onClearProgression={() => pushHistory([])}
+                      onReorderProgression={handleReorderProgression}
+                      onTransposeProgression={handleTransposeProgression}
+                      tuning={tuning} onTuningChange={setTuning}
+                      capo={capo} onCapoChange={setCapo}
+                      canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
+                      onUndo={handleUndo} onRedo={handleRedo}
+                    />
+                  </div>
                 )}
                 {chordsSegment === 'finder' && (
                   <ChordPickerTab
@@ -450,8 +452,16 @@ export default function App() {
                     tuning={tuning} capo={capo}
                   />
                 )}
-                {chordsSegment === 'analyzer' && <ChordAnalyzerTab progression={progression} />}
-                {chordsSegment === 'target'   && <TargetNoteTab tuning={tuning} capo={capo} />}
+                {chordsSegment === 'analyzer' && (
+                  <div style={{ maxWidth: 820, margin: '0 auto', width: '100%' }}>
+                    <ChordAnalyzerTab progression={progression} />
+                  </div>
+                )}
+                {chordsSegment === 'target' && (
+                  <div style={{ maxWidth: 860, margin: '0 auto', width: '100%' }}>
+                    <TargetNoteTab tuning={tuning} capo={capo} />
+                  </div>
+                )}
               </ErrorBoundary>
             </div>
           )}
@@ -463,7 +473,7 @@ export default function App() {
               <ErrorBoundary label="Scales">
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
                 {scalesSegment === 'circle'    && <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}><CircleOfFifths /></div>}
-                {scalesSegment === 'triads'    && <div style={{ maxWidth: 820, margin: '0 auto', width: '100%' }}><TriadsGenerator /></div>}
+                {scalesSegment === 'triads'    && <TriadsGenerator desktop />}
                 {scalesSegment === 'intervals' && <div style={{ maxWidth: 820, margin: '0 auto', width: '100%' }}><IntervalsTab /></div>}
                 {scalesSegment === 'wheel'     && <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}><WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} /></div>}
               </ErrorBoundary>
