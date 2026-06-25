@@ -661,6 +661,34 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo }) => {
         )}
       </div>
 
+      {/* Ghost placeholder — shown when no target note is selected */}
+      {!targetPos && (
+        <div style={{ ...card(), padding: '10px 12px' }}>
+          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: T.textMuted }}>
+            Results
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, opacity: 0.45 }}>
+            {Array.from({ length: 6 }).map((_, i) => {
+              const GHOST_COLORS = ['#CC1C1C', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
+              return (
+                <div key={i} style={{ borderRadius: 0 }}>
+                  <div style={{ background: GHOST_COLORS[i], padding: '6px 10px 4px' }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#fff', lineHeight: 1.1 }}>—</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>—</div>
+                  </div>
+                  <div style={{ background: T.bgInput, padding: '6px 10px 8px', border: `1px solid ${T.border}`, borderTop: 'none' }}>
+                    <MiniFretboard voicing={[]} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p style={{ margin: '12px 0 0', fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.02em' }}>
+            ← Select a target note to find chords
+          </p>
+        </div>
+      )}
+
       {/* Results */}
       {targetPos && (
         <div>
