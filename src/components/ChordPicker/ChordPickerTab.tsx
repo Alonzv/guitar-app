@@ -331,7 +331,7 @@ export function ChordPickerTab({
 
   const voicingsPane = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {chordName && voicings.length > 0 && (
+      {chordName && voicings.length > 0 ? (
         <>
           {desktop && (
             <p style={{ margin: 0, fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.14em' }}>
@@ -347,7 +347,16 @@ export function ChordPickerTab({
             gridColumns={desktop ? 3 : undefined}
           />
         </>
-      )}
+      ) : desktop ? (
+        <div style={{ ...card({ padding: '40px 24px' }), textAlign: 'center', opacity: 0.6 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 13, color: T.text, fontWeight: 500 }}>
+            Select a chord
+          </p>
+          <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
+            Pick a root, quality, and extension on the left to see voicing variations here.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 
