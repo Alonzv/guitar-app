@@ -137,7 +137,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const [analyzeProgs, setAnalyzeProgs]   = useState<ProgressionSuggestion[] | null>(null);
   const [analyzeErr, setAnalyzeErr]       = useState<ErrKey | null>(null);
   const [lang, setLang] = useState<Lang>(() => {
-    try { return (localStorage.getItem('scaleup_lang') as Lang) || 'he'; } catch { return 'he'; }
+    try { return (localStorage.getItem('scaleup_lang') as Lang) || 'en'; } catch { return 'en'; }
   });
   const [chordModal, setChordModal]   = useState<string | null>(null); // chord name → diagram
   const [scaleModal, setScaleModal]   = useState(false);               // scale → vertical neck
