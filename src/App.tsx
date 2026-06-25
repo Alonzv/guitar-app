@@ -461,11 +461,11 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} />
               <ErrorBoundary label="Scales">
-                {scalesSegment === 'explorer'  && <ScaleExplorer />}
-                {scalesSegment === 'circle'    && <CircleOfFifths />}
-                {scalesSegment === 'triads'    && <TriadsGenerator />}
-                {scalesSegment === 'intervals' && <IntervalsTab />}
-                {scalesSegment === 'wheel'     && <WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
+                {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
+                {scalesSegment === 'circle'    && <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}><CircleOfFifths /></div>}
+                {scalesSegment === 'triads'    && <div style={{ maxWidth: 820, margin: '0 auto', width: '100%' }}><TriadsGenerator /></div>}
+                {scalesSegment === 'intervals' && <div style={{ maxWidth: 820, margin: '0 auto', width: '100%' }}><IntervalsTab /></div>}
+                {scalesSegment === 'wheel'     && <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}><WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} /></div>}
               </ErrorBoundary>
             </div>
           )}
@@ -476,6 +476,7 @@ export default function App() {
               <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} />
               <ErrorBoundary label="Voicings">
                 <VoicingsTab
+                  desktop
                   globalProgression={progression}
                   tuning={tuning}
                   activeSub={voicingsSegment}

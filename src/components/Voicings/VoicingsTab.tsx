@@ -23,6 +23,7 @@ interface Props {
   tuning?: Tuning;
   activeSub?: VoicingsSub;
   onSubChange?: (s: VoicingsSub) => void;
+  desktop?: boolean;
 }
 
 // ── Chord builder data ─────────────────────────────────────────────────────
@@ -387,7 +388,7 @@ function AnalysisCard({
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub, onSubChange }: Props) {
+export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub, onSubChange, desktop }: Props) {
   // Chord builder
   const [root,  setRoot]  = useState('');
   const [triad, setTriad] = useState('');
@@ -545,7 +546,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
       </div>
       )}
 
-      {subTab === 'paths' && <>
+      {subTab === 'paths' && (() => {
+      const pathsLeft = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* ── Chord builder ──────────────────────────────────────────── */}
       <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -746,6 +749,11 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
           </div>
         </div>
       </div>
+        </div>
+      );
+
+      const pathsRight = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, ...(desktop ? { position: 'sticky' as const, top: 24 } : {}) }}>
 
       {/* ── AI Analysis — always visible when paths exist ───────────── */}
       {paths.length > 0 && (
@@ -914,18 +922,34 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
         </div>
       )}
 
-      </> /* end subTab === 'paths' */}
+        </div>
+      );
 
-      {subTab === 'voiceleading' && <>
+      return desktop ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 36, alignItems: 'start' }}>
+          {pathsLeft}
+          {pathsRight}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {pathsLeft}
+          {pathsRight}
+        </div>
+      );
+      })()}
 
-        {chords.length === 0 ? (
+      {subTab === 'voiceleading' && (() => {
+
+        if (chords.length === 0) return (
           /* ── Empty state ─────────────────────────────────────────── */
           <div style={{ ...card(), textAlign: 'center', padding: '48px 20px' }}>
             <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.7 }}>
               Build a progression in the <b>Paths</b> tab,<br />then come back here to trace any voice.
             </p>
           </div>
-        ) : (
+        );
+
+        const vlLeft = (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {/* ── Progression with optional note names ─────────────── */}
@@ -1036,6 +1060,11 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                 })}
               </div>
             </div>
+          </div>
+        );
+
+        const vlRight = (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, ...(desktop ? { position: 'sticky' as const, top: 24 } : {}) }}>
 
             {/* ── Results ──────────────────────────────────────────── */}
             {isolate && currentPath ? (() => {
@@ -1152,19 +1181,32 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
             )}
 
           </div>
-        )}
+        );
 
-      </> /* end subTab === 'voiceleading' */}
+        return desktop ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 36, alignItems: 'start' }}>
+            {vlLeft}
+            {vlRight}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {vlLeft}
+            {vlRight}
+          </div>
+        );
+      })()}
 
       {subTab === 'reharmonize' && (
-        <ReharmonizeTab
-          chords={chords}
-          mode={mode}
-          setMode={setMode}
-          stringGroup={stringGroup}
-          setStringGroup={setStringGroup}
-          tuning={tuning}
-        />
+        <div style={desktop ? { maxWidth: 920, margin: '0 auto', width: '100%' } : undefined}>
+          <ReharmonizeTab
+            chords={chords}
+            mode={mode}
+            setMode={setMode}
+            stringGroup={stringGroup}
+            setStringGroup={setStringGroup}
+            tuning={tuning}
+          />
+        </div>
       )}
 
       {/* ── Modal ────────────────────────────────────────────────────── */}

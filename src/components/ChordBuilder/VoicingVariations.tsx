@@ -21,7 +21,29 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
     [chordName]
   );
 
-  if (voicings.length === 0) return null;
+  if (voicings.length === 0) return (
+    <div style={card({ marginTop: 0 })}>
+      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+        Voicing Variations
+      </p>
+      <div className="gc-voicing-grid" style={gridColumns ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, opacity: 0.45 } : { opacity: 0.45 }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} style={{
+            borderRadius: 0,
+            border: `1px solid ${T.border}`,
+            borderLeft: '4px solid var(--gc-bar-color)',
+            background: T.bgCard,
+            padding: '6px 4px 2px',
+          }}>
+            <MiniFretboard voicing={[]} />
+          </div>
+        ))}
+      </div>
+      <p style={{ margin: '14px 0 0', fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.02em' }}>
+        ← Pick a root and quality to generate voicings
+      </p>
+    </div>
+  );
 
   return (
     <div style={card({ marginTop: 0 })}>

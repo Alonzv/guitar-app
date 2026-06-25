@@ -64,7 +64,7 @@ const INTERVAL_DEGREE: Record<string, { num: string; name: string }> = {
 const POSITION_WINDOWS = [[0,3],[2,5],[4,8],[6,10],[9,12]] as const;
 const POS_COLORS = [T.primary, T.secondary, '#5C5650', '#8A8378', '#9C958C'];
 
-export function ScaleExplorer() {
+export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   const [root, setRoot]             = useState<Note>('A');
   const [scaleType, setScaleType]   = useState<string | null>(null);
   const [scaleMenuOpen, setScaleMenuOpen] = useState(false);
@@ -104,7 +104,7 @@ export function ScaleExplorer() {
       .join('\n');
   };
 
-  return (
+  const controlsPane = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
       {/* ── Root note ── */}
@@ -182,9 +182,11 @@ export function ScaleExplorer() {
           </div>
         )}
       </div>
+    </div>
+  );
 
-      {!scale.empty ? (
-        <>
+  const outputPane = !scale.empty ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, ...(desktop ? { position: 'sticky' as const, top: 24 } : {}) }}>
           {/* ── Scale info chips ── */}
           <div style={card({ padding: '12px 16px' })}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -302,10 +304,28 @@ export function ScaleExplorer() {
               Scale tones
             </span>
           </div>
-        </>
-      ) : (
-        <div style={{ textAlign: 'center', padding: 32, color: T.textDim, fontSize: 13 }}>Scale not found</div>
-      )}
+    </div>
+  ) : desktop ? (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: T.textDim, fontSize: 13, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em' }}>
+      Select root + scale type →
+    </div>
+  ) : (
+    <div style={{ textAlign: 'center', padding: 32, color: T.textDim, fontSize: 13 }}>Scale not found</div>
+  );
+
+  if (desktop) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 30, alignItems: 'start' }}>
+        {controlsPane}
+        {outputPane}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {controlsPane}
+      {outputPane}
     </div>
   );
 }
