@@ -293,7 +293,7 @@ export const Metronome: React.FC = () => {
           onClick={handleStartStop}
           style={{
             width: '100%', padding: '14px 0', borderRadius: 0,
-            background: playing ? T.coral : T.primary,
+            background: playing ? T.coral : T.secondary,
             color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
             transition: 'background 0.2s', borderLeft: '4px solid var(--gc-bar-color)',
           }}

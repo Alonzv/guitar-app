@@ -568,8 +568,8 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   // ── Render ────────────────────────────────────────────────────────────────
 
   // Desktop helper: wraps in 440px|1fr grid; on mobile returns left as-is
-  const dt = (left: React.ReactNode, right: React.ReactNode) => {
-    if (!desktop) return <>{left}</>;
+  const dt = (left: React.ReactNode, right?: React.ReactNode) => {
+    if (!desktop || !right) return <>{left}</>;
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '440px 1fr', gap: 36, alignItems: 'start' }}>
         <div>{left}</div>
@@ -643,7 +643,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         </div>
       </button>
     </div>
-  , ghostOut);
+  );
 
   if (stage === 'recording') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -665,7 +665,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         </div>
       </div>
     </div>
-  , ghostOut);
+  );
 
   if (stage === 'processing') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

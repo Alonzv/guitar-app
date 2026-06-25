@@ -9,7 +9,6 @@ import { ChordAnalyzerTab }  from './components/ChordBuilder/ChordAnalyzerTab';
 import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
-import { CircleOfFifths }    from './components/ScalePanel/CircleOfFifths';
 import { TriadsGenerator }   from './components/Triads/TriadsGenerator';
 import { IntervalsTab }      from './components/Intervals/IntervalsTab';
 import { WheelTab }          from './components/Tools/WheelTab';
@@ -44,7 +43,7 @@ import { T } from './theme';
 
 // ── Types & constants ──────────────────────────────────────────────────────
 type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target';
-type ScalesSub    = 'explorer' | 'circle' | 'triads' | 'intervals' | 'wheel';
+type ScalesSub    = 'explorer' | 'triads' | 'intervals' | 'wheel';
 type VoicingsSub  = 'paths' | 'voiceleading' | 'reharmonize';
 type PracticeSub  = 'tuner' | 'metronome';
 type StudioSub    = 'tabbuilder' | 'audiotab' | 'library';
@@ -59,7 +58,6 @@ const CHORDS_SEGS    = [
 ];
 const SCALES_SEGS    = [
   { id: 'explorer',  label: 'Explorer' },
-  { id: 'circle',    label: 'Circle'   },
   { id: 'triads',    label: 'Triads'   },
   { id: 'intervals', label: 'Intervals'},
   { id: 'wheel',     label: 'Wheel'    },
@@ -467,7 +465,6 @@ export default function App() {
               <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} />
               <ErrorBoundary label="Scales">
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
-                {scalesSegment === 'circle'    && <CircleOfFifths desktop />}
                 {scalesSegment === 'triads'    && <TriadsGenerator desktop />}
                 {scalesSegment === 'intervals' && <IntervalsTab desktop />}
                 {scalesSegment === 'wheel'     && <WheelTab desktop tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
@@ -591,7 +588,6 @@ export default function App() {
           <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} />
           <ErrorBoundary label="Scales">
             {scalesSegment === 'explorer'  && <ScaleExplorer />}
-            {scalesSegment === 'circle'    && <CircleOfFifths />}
             {scalesSegment === 'triads'    && <TriadsGenerator />}
             {scalesSegment === 'intervals' && <IntervalsTab />}
             {scalesSegment === 'wheel'     && <WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}

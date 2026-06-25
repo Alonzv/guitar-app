@@ -394,8 +394,13 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
   const [triad, setTriad] = useState('');
   const [ext,   setExt]   = useState('');
 
-  // Progression
-  const [chords, setChords] = useState<string[]>([]);
+  // Progression — persisted across tab navigations
+  const [chords, setChords] = useState<string[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem('voicings-chords') ?? '[]'); } catch { return []; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem('voicings-chords', JSON.stringify(chords)); } catch { /* ignore */ }
+  }, [chords]);
 
   // Filters
   const [genre,       setGenre]       = useState<VoicingGenre>('any');

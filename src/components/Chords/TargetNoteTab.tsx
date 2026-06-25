@@ -545,7 +545,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
   }, [expandedResult]);
 
   const dotColors = useCallback((item: ResultItem) =>
-    item.voicing.map((_, i) => i === item.targetVoicingIdx ? T.coral : T.secondary),
+    item.voicing.map((_, i) => i === item.targetVoicingIdx ? T.primary : T.secondary),
   []);
 
   const controlsLeft = (

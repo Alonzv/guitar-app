@@ -256,7 +256,7 @@ export function ReharmonizeTab({
   };
 
   const currentPath: VoicingPath | undefined = reharmPaths[selectedPathIdx];
-  const currentColor = T.primary;
+  const currentColor = T.secondary;
 
   const handlePlay = () => {
     if (!currentPath) return;
@@ -352,7 +352,7 @@ export function ReharmonizeTab({
                       padding: '5px 14px', borderRadius: 0, border: 'none',
                       cursor: 'pointer', fontSize: 12,
                       fontWeight: genre === g.id ? 600 : 400,
-                      background: genre === g.id ? T.primary : T.bgInput,
+                      background: genre === g.id ? T.secondary : T.bgInput,
                       color: genre === g.id ? '#fff' : T.textMuted,
                       transition: 'background 0.15s',
                       whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
@@ -370,7 +370,7 @@ export function ReharmonizeTab({
                 <p style={LABEL_STYLE}>Tension</p>
                 <span style={{
                   padding: '2px 8px', borderRadius: 0,
-                  background: T.primarySoft, color: T.primary,
+                  background: T.secondaryBg, color: T.secondary,
                   fontSize: 11, fontWeight: 400,
                 }}>
                   {tension} — {tensionLabel(tension)}
@@ -443,7 +443,7 @@ export function ReharmonizeTab({
               padding: '13px 0', borderRadius: 0, border: 'none',
               cursor: (chords.length === 0 || loading) ? 'not-allowed' : 'pointer',
               fontWeight: 400, fontSize: 15,
-              background: (chords.length === 0 || loading) ? T.border : T.primary,
+              background: (chords.length === 0 || loading) ? T.border : T.secondary,
               color: (chords.length === 0 || loading) ? T.textDim : '#fff',
               transition: 'background 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -473,7 +473,7 @@ export function ReharmonizeTab({
           {error && !loading && (
             <div style={{
               ...card({ padding: '12px 16px' }),
-              borderLeft: `3px solid ${T.primary}`,
+              borderLeft: `3px solid ${T.coral}`,
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
               <span style={{ fontSize: 16 }}>⚠️</span>
@@ -496,7 +496,7 @@ export function ReharmonizeTab({
                     style={{
                       padding: '7px 16px', borderRadius: 0,
                       cursor: 'pointer', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em',
-                      background: isPlaying ? T.secondary : T.primary,
+                      background: isPlaying ? T.coral : T.secondary,
                       color: '#fff',
                       border: 'none',
                       transition: 'background 0.15s', borderLeft: `3px solid ${T.secondary}`,
@@ -510,9 +510,9 @@ export function ReharmonizeTab({
                     <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <span style={{
                         padding: '5px 12px', borderRadius: 0,
-                        background: T.primarySoft,
-                        border: `1px solid ${T.primary}44`,
-                        fontSize: 13, fontWeight: 400, color: T.primary,
+                        background: T.secondaryBg,
+                        border: `1px solid ${T.secondary}44`,
+                        fontSize: 13, fontWeight: 400, color: T.text,
                       }}>
                         {c}
                       </span>
@@ -529,10 +529,10 @@ export function ReharmonizeTab({
               {/* AI Analysis card */}
               <div style={{
                 ...card({ padding: '14px 16px' }),
-                borderLeft: `3px solid ${T.primary}`,
+                borderLeft: `3px solid ${T.secondary}`,
                 display: 'flex', flexDirection: 'column', gap: 8,
               }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: T.primary, direction: 'ltr', unicodeBidi: 'isolate' }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: T.text, direction: 'ltr', unicodeBidi: 'isolate' }}>
                   AI ניתוח הרמוני
                 </span>
                 <p style={{
@@ -571,7 +571,7 @@ export function ReharmonizeTab({
                               display: 'flex', alignItems: 'center', gap: 6,
                               padding: '6px 12px', borderRadius: 0,
                               border: active ? 'none' : `1px solid ${T.border}`,
-                              background: active ? T.primary : T.bgDeep,
+                              background: active ? T.secondary : T.bgDeep,
                               color: active ? '#fff' : T.textMuted,
                               fontSize: 12, fontWeight: active ? 500 : 400,
                               cursor: 'pointer', transition: 'all 0.15s',
@@ -580,7 +580,7 @@ export function ReharmonizeTab({
                           >
                             <span style={{
                               width: 16, height: 16, borderRadius: 0,
-                              background: active ? 'rgba(255,255,255,0.3)' : T.primary,
+                              background: active ? 'rgba(255,255,255,0.3)' : T.secondary,
                               color: '#fff',
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: 9, fontWeight: 800, flexShrink: 0,
