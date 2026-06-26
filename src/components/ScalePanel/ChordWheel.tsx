@@ -135,7 +135,11 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
 
   const wheelSvg = (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ display: 'block', width: '100%', maxWidth: SIZE }}>
-      <g transform={`rotate(${rotationDeg} ${CX} ${CY})`}>
+      <g style={{
+        transform: `rotate(${rotationDeg}deg)`,
+        transformOrigin: `${CX}px ${CY}px`,
+        transition: 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      }}>
         {Array.from({ length: TOTAL }, (_, i) => {
           const sa        = startAngle(i);
           const outerInfo = outerMap.get(i);
