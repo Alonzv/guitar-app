@@ -203,8 +203,15 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       analyserRef.current = analyser;
       setListening(true);
       rafRef.current = requestAnimationFrame(tick);
-    } catch {
-      setError('Microphone access denied. Please allow it in browser settings.');
+    } catch (e: unknown) {
+      const name = (e instanceof Error) ? e.name : '';
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setError('Microphone blocked. On iPhone: Settings → Privacy → Microphone → enable for this app.');
+      } else if (name === 'NotFoundError') {
+        setError('No microphone found on this device.');
+      } else {
+        setError('Could not access microphone. Check permissions and try again.');
+      }
     }
   }, [tick]);
 
