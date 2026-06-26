@@ -322,6 +322,37 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
     </div>
   );
 
+  const COMPACT_CHORD = (c: typeof diatonic[0]) => (
+    <div key={c.chord} style={{
+      display: 'flex', alignItems: 'center', padding: '8px 10px',
+      background: T.bgCard, border: `1px solid ${T.border}`,
+      borderLeft: `3px solid ${FUNC_COLOR[c.func]}`, gap: 6,
+    }}>
+      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 8, color: T.textDim, minWidth: 20, letterSpacing: '0.06em' }}>
+        {c.roman}
+      </span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: T.text, flex: 1 }}>
+        {c.chord}
+      </span>
+      <button
+        onClick={() => handlePlayChord(c.chord)}
+        style={{ padding: '2px 6px', border: `1px solid ${T.border}`, background: 'transparent',
+          color: T.textMuted, fontSize: 9, cursor: 'pointer' }}
+      >
+        &#9654;
+      </button>
+      {onAddToProgression && (
+        <button
+          onClick={() => handleAddChord(c.chord)}
+          style={{ padding: '2px 6px', border: `1px solid ${T.primary}`, background: 'transparent',
+            color: T.primary, fontSize: 9, cursor: 'pointer' }}
+        >
+          +
+        </button>
+      )}
+    </div>
+  );
+
   // Chord data panel (shared between mobile/desktop)
   const chordDataPanel = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -341,11 +372,15 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
       </div>
       <div>
         <p style={MONO_LBL}>Subdominant</p>
-        {byFunc.subdominant.map(CHORD_ROW)}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
+          {byFunc.subdominant.map(COMPACT_CHORD)}
+        </div>
       </div>
       <div>
         <p style={MONO_LBL}>Dominant</p>
-        {byFunc.dominant.map(CHORD_ROW)}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
+          {byFunc.dominant.map(COMPACT_CHORD)}
+        </div>
       </div>
 
       <div>
@@ -381,18 +416,18 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
 
   // Wheel + controls panel
   const wheelPanel = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Key picker */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Key picker — compact on mobile */}
       <div>
         <p style={MONO_LBL}>Key</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: desktop ? 4 : 3 }}>
           {ALL_ROOTS.map(n => {
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
+                padding: desktop ? '9px 2px' : '6px 2px', borderRadius: 0, cursor: 'pointer',
+                fontSize: sharp ? (desktop ? 10 : 9) : (desktop ? 12 : 11), fontWeight: sel ? 700 : 400,
                 border: `1px solid ${sel ? T.primary : T.border}`,
                 background: sel ? T.primary : sharp ? T.bgInput : T.bgCard,
                 color: sel ? '#fff' : sharp ? T.textMuted : T.text,
@@ -431,9 +466,6 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
         >
           minor
         </span>
-        <span style={{ color: T.textDim, fontSize: 9, fontFamily: 'var(--gc-mono)' }}>
-          outer = major · inner = minor
-        </span>
       </div>
 
       {/* Wheel */}
@@ -441,9 +473,14 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
         <p style={{ ...MONO_LBL, marginBottom: 6 }}>
           Chord Wheel · {root} {mode === 'major' ? 'Major' : 'minor'}
         </p>
-        <div style={{ width: '100%', maxWidth: SIZE }}>
+        <div style={{ width: '100%', maxWidth: desktop ? SIZE : 300, margin: desktop ? undefined : '0 auto' }}>
           {wheelSvg}
         </div>
+        {!desktop && (
+          <p style={{ fontSize: 9, color: T.textDim, fontFamily: 'var(--gc-mono)', marginTop: 6, letterSpacing: '0.06em' }}>
+            TAP OUTER RING FOR MAJOR · INNER FOR MINOR
+          </p>
+        )}
       </div>
     </div>
   );
