@@ -10,14 +10,36 @@ let _masterGain: GainNode | null = null;
 let _unlocking: Promise<void> | null = null;
 
 // iOS 16.4+ Web Audio Session API.
-// 'playback' = ignore the hardware mute/silent switch, like a music app.
-// 'ambient'  = respect the mute switch (default — causes silent phones to be silent).
+// 'playback'        = ignore mute switch; playback-only (default for this app).
+// 'play-and-record' = ignore mute switch; mic + speaker simultaneously (Tuner).
+// Never downgrade from a more permissive mode already set by Tuner.
 function setPlaybackSession(): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const session = (navigator as any).audioSession;
-    if (session && session.type !== 'playback') session.type = 'playback';
+    if (!session) return;
+    if (session.type !== 'playback' && session.type !== 'play-and-record') {
+      session.type = 'playback';
+    }
   } catch { /* not supported on non-Safari or older iOS */ }
+}
+
+/** Called by Tuner when it starts recording mic input. */
+export function setMicSession(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const session = (navigator as any).audioSession;
+    if (session) session.type = 'play-and-record';
+  } catch { /* ignore */ }
+}
+
+/** Called by Tuner when it stops — revert to playback-only. */
+export function clearMicSession(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const session = (navigator as any).audioSession;
+    if (session) session.type = 'playback';
+  } catch { /* ignore */ }
 }
 
 function initAudioGraph(): void {

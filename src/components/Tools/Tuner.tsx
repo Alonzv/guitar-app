@@ -3,6 +3,7 @@ import { T } from '../../theme';
 import type { Tuning } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
 import { IconMic } from '../Icons';
+import { getSharedContext, unlockAudio, setMicSession, clearMicSession } from '../../utils/audioPlayback';
 
 const noteName = (s: string) => s.replace(/\d/g, '');
 
@@ -190,15 +191,15 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
         video: false,
       });
       streamRef.current = stream;
-      try { (navigator as any).audioSession && ((navigator as any).audioSession.type = 'play-and-record'); } catch { /* ignore */ }
-      const ctx = new AudioContext({ sampleRate: 44100 });
-      if (ctx.state === 'suspended') await ctx.resume();
+      setMicSession();
+      const ctx = getSharedContext();
+      await unlockAudio();
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 4096;
       analyser.smoothingTimeConstant = 0.0;
-      source.connect(analyser);
+      source.connect(analyser); // analyser is a dead-end — not connected to output
       analyserRef.current = analyser;
       setListening(true);
       rafRef.current = requestAnimationFrame(tick);
@@ -209,10 +210,12 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    ctxRef.current?.close().catch(() => {});
+    // Disconnect analyser but do NOT close the shared AudioContext
+    try { analyserRef.current?.disconnect(); } catch { /* ignore */ }
     streamRef.current?.getTracks().forEach(t => t.stop());
     ctxRef.current = null; analyserRef.current = null; streamRef.current = null;
     freqBufRef.current = [];
+    clearMicSession();
     setListening(false); setDisplay(null);
   }, []);
 
