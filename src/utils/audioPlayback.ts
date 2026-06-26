@@ -90,21 +90,22 @@ export function unlockAudio(): Promise<void> {
   initAudioGraph();
 
   const ctx = _ctx!;
-  if (ctx.state === 'running') return Promise.resolve();
 
-  // Coalesce concurrent unlock calls into one promise.
-  if (_unlocking) return _unlocking;
-
-  // The classic iOS WebAudio unlock: play a 1-sample silent buffer synchronously
-  // within the gesture handler. Without this, resume() alone doesn't always work
-  // on iOS < 14.5 and on some Android browsers with strict autoplay policies.
+  // Always fire a 1-sample buffer on every call — this is both the iOS gesture
+  // unlock trick AND a heartbeat that keeps the context alive between interactions.
+  // Connect through masterGain to warm up the entire audio graph.
   try {
     const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    src.connect(ctx.destination);
+    src.connect(_masterGain!);
     src.start(0);
-  } catch { /* ignore — best-effort */ }
+  } catch { /* best-effort */ }
+
+  if (ctx.state === 'running') return Promise.resolve();
+
+  // Coalesce concurrent unlock calls into one promise.
+  if (_unlocking) return _unlocking;
 
   _unlocking = ctx.resume().then(() => {
     _unlocking = null;
@@ -161,9 +162,10 @@ export function playScale(midiNotes: number[]): void {
   if (midiNotes.length === 0) return;
   unlockAudio().then(() => {
     const ctx = getSharedContext();
+    // Use 0.3s start offset to give the context time to start after unlock
     midiNotes.forEach((midi, i) => {
       const freq = 440 * Math.pow(2, (midi - 69) / 12);
-      synthesizeScaleNote(ctx, freq, ctx.currentTime + 0.1 + i * 0.35);
+      synthesizeScaleNote(ctx, freq, ctx.currentTime + 0.3 + i * 0.35);
     });
   });
 }
@@ -178,9 +180,10 @@ export function playChord(
   unlockAudio().then(() => {
     const ctx = getSharedContext();
     const sorted = [...fretPositions].sort((a, b) => a.string - b.string);
+    // Use 0.3s start offset to give the context time to start after unlock
     sorted.forEach((pos, i) => {
       const freq = openFreqs[pos.string] * Math.pow(2, (pos.fret + capo) / 12);
-      synthesizeNote(ctx, freq, ctx.currentTime + 0.1 + i * 0.065);
+      synthesizeNote(ctx, freq, ctx.currentTime + 0.3 + i * 0.065);
     });
   });
 }

@@ -63,13 +63,13 @@ const PROG_TEMPLATES = [
 ];
 
 // ── Geometry ───────────────────────────────────────────────────────────────────
-const SIZE   = 320;
+const SIZE   = 380;
 const CX     = SIZE / 2;
 const CY     = SIZE / 2;
-const R_O_O  = 152;
-const R_O_I  = 104;
-const R_I_O  = 100;
-const R_I_I  = 58;
+const R_O_O  = 180;
+const R_O_I  = 124;
+const R_I_O  = 120;
+const R_I_I  = 70;
 const TOTAL  = 12;
 const SLICE  = (2 * Math.PI) / TOTAL;
 const GAP    = 0.013;
@@ -106,7 +106,7 @@ interface Props {
   desktop?: boolean;
 }
 
-export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
+export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => {
   const [root, setRoot] = useState<string>('C');
   const [mode, setMode] = useState<Mode>('major');
 
@@ -166,7 +166,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
         transform: `rotate(${rotationDeg}deg)`,
         transformOrigin: `${CX}px ${CY}px`,
         transformBox: 'view-box',
-        transition: 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        transition: 'transform 0.7s cubic-bezier(0.37, 0, 0.63, 1)',
         willChange: 'transform',
       } as React.CSSProperties}>
         {Array.from({ length: TOTAL }, (_, i) => {
@@ -322,65 +322,9 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
     </div>
   );
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-      {/* Key picker */}
-      <div>
-        <p style={MONO_LBL}>Key</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
-          {ALL_ROOTS.map(n => {
-            const sharp = n.includes('#');
-            const sel   = n === root;
-            return (
-              <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
-                border: `1px solid ${sel ? T.primary : T.border}`,
-                background: sel ? T.primary : sharp ? T.bgInput : T.bgCard,
-                color: sel ? '#fff' : sharp ? T.textMuted : T.text,
-                borderTop: `3px solid ${sel ? T.primary : 'transparent'}`,
-              }}>{n}</button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Mode toggle hint */}
-      <div style={{
-        display: 'flex', gap: 6, fontSize: 10,
-        fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
-        color: T.textDim,
-      }}>
-        <span style={{
-          padding: '3px 8px',
-          background: mode === 'major' ? T.primary : 'transparent',
-          color: mode === 'major' ? '#fff' : T.textMuted,
-          border: `1px solid ${mode === 'major' ? T.primary : T.border}`,
-          cursor: 'pointer',
-        }} onClick={() => setMode('major')}>MAJOR</span>
-        <span style={{
-          padding: '3px 8px',
-          background: mode === 'minor' ? T.secondary : 'transparent',
-          color: mode === 'minor' ? '#fff' : T.textMuted,
-          border: `1px solid ${mode === 'minor' ? T.secondary : T.border}`,
-          cursor: 'pointer',
-        }} onClick={() => setMode('minor')}>minor</span>
-        <span style={{ color: T.textDim, fontSize: 9, alignSelf: 'center' }}>
-          tap outer ring = major · inner ring = minor
-        </span>
-      </div>
-
-      {/* Wheel */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <p style={{ ...MONO_LBL, marginBottom: 6, alignSelf: 'flex-start' }}>
-          Chord Wheel · {root} {mode === 'major' ? 'Major' : 'minor'}
-        </p>
-        <div style={{ width: '100%', maxWidth: SIZE }}>
-          {wheelSvg}
-        </div>
-      </div>
-
+  // Chord data panel (shared between mobile/desktop)
+  const chordDataPanel = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Function legend */}
       <div style={{ display: 'flex', gap: 12, fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>
         {(['tonic', 'subdominant', 'dominant'] as Func[]).map(f => (
@@ -391,25 +335,19 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
         ))}
       </div>
 
-      {/* Tonic chords */}
       <div>
         <p style={MONO_LBL}>Tonic</p>
         {byFunc.tonic.map(CHORD_ROW)}
       </div>
-
-      {/* Subdominant chords */}
       <div>
         <p style={MONO_LBL}>Subdominant</p>
         {byFunc.subdominant.map(CHORD_ROW)}
       </div>
-
-      {/* Dominant chords */}
       <div>
         <p style={MONO_LBL}>Dominant</p>
         {byFunc.dominant.map(CHORD_ROW)}
       </div>
 
-      {/* Common progressions */}
       <div>
         <p style={MONO_LBL}>Common Progressions</p>
         {PROG_TEMPLATES.map(pt => {
@@ -438,6 +376,95 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
           );
         })}
       </div>
+    </div>
+  );
+
+  // Wheel + controls panel
+  const wheelPanel = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Key picker */}
+      <div>
+        <p style={MONO_LBL}>Key</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+          {ALL_ROOTS.map(n => {
+            const sharp = n.includes('#');
+            const sel   = n === root;
+            return (
+              <button key={n} onClick={() => setRoot(n)} style={{
+                padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
+                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
+                border: `1px solid ${sel ? T.primary : T.border}`,
+                background: sel ? T.primary : sharp ? T.bgInput : T.bgCard,
+                color: sel ? '#fff' : sharp ? T.textMuted : T.text,
+                borderTop: `3px solid ${sel ? T.primary : 'transparent'}`,
+              }}>{n}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mode toggle */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <span
+          style={{
+            padding: '4px 10px', fontSize: 10,
+            fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
+            background: mode === 'major' ? T.primary : 'transparent',
+            color: mode === 'major' ? '#fff' : T.textMuted,
+            border: `1px solid ${mode === 'major' ? T.primary : T.border}`,
+            cursor: 'pointer',
+          }}
+          onClick={() => setMode('major')}
+        >
+          MAJOR
+        </span>
+        <span
+          style={{
+            padding: '4px 10px', fontSize: 10,
+            fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
+            background: mode === 'minor' ? T.secondary : 'transparent',
+            color: mode === 'minor' ? '#fff' : T.textMuted,
+            border: `1px solid ${mode === 'minor' ? T.secondary : T.border}`,
+            cursor: 'pointer',
+          }}
+          onClick={() => setMode('minor')}
+        >
+          minor
+        </span>
+        <span style={{ color: T.textDim, fontSize: 9, fontFamily: 'var(--gc-mono)' }}>
+          outer = major · inner = minor
+        </span>
+      </div>
+
+      {/* Wheel */}
+      <div style={{ width: '100%' }}>
+        <p style={{ ...MONO_LBL, marginBottom: 6 }}>
+          Chord Wheel · {root} {mode === 'major' ? 'Major' : 'minor'}
+        </p>
+        <div style={{ width: '100%', maxWidth: SIZE }}>
+          {wheelSvg}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {desktop ? (
+        <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+          <div style={{ flexShrink: 0, width: SIZE + 20 }}>
+            {wheelPanel}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {chordDataPanel}
+          </div>
+        </div>
+      ) : (
+        <>
+          {wheelPanel}
+          {chordDataPanel}
+        </>
+      )}
     </div>
   );
 };

@@ -241,22 +241,23 @@ export function ChordPickerTab({
       {selectedTriad && validExt.length > 1 && (
         <div style={card()}>
           <p style={LABEL_STYLE}>Extension</p>
-          <div className="gc-pills">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
             {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => {
               const active = selectedExtension === e.key;
               return (
                 <button
                   key={e.key}
-                  className="gc-pill"
                   onClick={() => handleExtensionSelect(e.key)}
                   style={{
-                    padding: '6px 16px', borderRadius: 0,
-                    cursor: 'pointer', fontSize: 13,
-                    fontWeight: active ? 500 : 400,
+                    padding: '8px 4px', borderRadius: 0,
+                    cursor: 'pointer', fontSize: 12,
+                    fontWeight: active ? 700 : 400,
                     background: active ? T.secondary : T.bgInput,
                     color: active ? '#fff' : T.textMuted,
-                    transition: 'filter 0.15s, background 0.15s',
-                    borderLeft: '3px solid var(--gc-bar-color)',
+                    transition: 'background 0.15s',
+                    border: `1px solid ${active ? T.secondary : T.border}`,
+                    borderLeft: `3px solid ${active ? T.secondary : 'var(--gc-bar-color)'}`,
+                    minHeight: 36,
                   }}
                 >
                   {e.display}
@@ -286,7 +287,7 @@ export function ChordPickerTab({
       {chordName && (
         <div style={{ padding: '10px 0' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ color: T.text, fontWeight: 600, fontSize: desktop ? 50 : 22, letterSpacing: '-0.02em', lineHeight: 1 }}>{displayName}</span>
+            <span style={{ color: T.text, fontWeight: 700, fontSize: desktop ? 56 : 44, letterSpacing: '-0.02em', lineHeight: 1 }}>{displayName}</span>
             <span style={{ fontSize: 13, color: T.textMuted }}>
               {voicings.length > 0
                 ? `${voicings.length} voicing${voicings.length > 1 ? 's' : ''}`
