@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { T } from '../../theme';
-import { unlockAudio, getSharedContext, getOutputNode } from '../../utils/audioPlayback';
+import { unlockAudio, getSharedContext, getOutputNode, releaseNowPlaying } from '../../utils/audioPlayback';
 
 // ── Inline SVG note icons ──────────────────────────────────────────────────
 const NoteIcons = {
@@ -107,6 +107,7 @@ export const Metronome: React.FC = () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setBeat(-1);
       setPlaying(false);
+      releaseNowPlaying();
     } else {
       // Respond to the tap immediately (UI), then arm the scheduler once
       // the AudioContext is confirmed running. Set nextBeatTime to Infinity
