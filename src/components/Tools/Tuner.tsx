@@ -186,14 +186,17 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const start = useCallback(async () => {
     setError('');
     try {
+      // Both must be called synchronously in the gesture handler, before any await,
+      // so iOS audio session is set while the user gesture is still active.
+      setMicSession();
+      const unlockPromise = unlockAudio();
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
         video: false,
       });
+      await unlockPromise;
       streamRef.current = stream;
-      setMicSession();
       const ctx = getSharedContext();
-      await unlockAudio();
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
