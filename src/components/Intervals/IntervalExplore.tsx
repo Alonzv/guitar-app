@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
-import { playScale, getSharedContext, unlockAudio } from '../../utils/audioPlayback';
+import { playScale, getSharedContext, getOutputNode, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
 interface IntervalInfo {
@@ -83,12 +83,11 @@ export function IntervalExplore() {
 
   const handlePlay = () => {
     if (interval === null) return;
-    unlockAudio();
     if (mode === 'melodic') {
       playScale([rootMidi, intervalMidi]);
     } else {
       const ctx = getSharedContext();
-      const go = () => {
+      unlockAudio().then(() => {
         const t = ctx.currentTime + 0.05;
         [rootMidi, intervalMidi].forEach(midi => {
           const freq = 440 * Math.pow(2, (midi - 69) / 12);
@@ -98,12 +97,10 @@ export function IntervalExplore() {
           osc.frequency.value = freq;
           gain.gain.setValueAtTime(0.2, t);
           gain.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
-          osc.connect(gain); gain.connect(ctx.destination);
+          osc.connect(gain); gain.connect(getOutputNode());
           osc.start(t); osc.stop(t + 1.8);
         });
-      };
-      if (ctx.state === 'running') go();
-      else ctx.resume().then(go).catch(() => {});
+      });
     }
   };
 

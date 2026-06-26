@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
-import { playScale, getSharedContext, unlockAudio } from '../../utils/audioPlayback';
+import { playScale, getSharedContext, getOutputNode, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
 const OPEN_MIDI = STANDARD_OPEN_MIDI;
@@ -74,12 +74,11 @@ export function IntervalCalculate() {
 
   const handlePlay = () => {
     if (!noteA || !noteB || semitones === null) return;
-    unlockAudio();
     const midiA = 60 + CHROMATIC.indexOf(noteA);
     const midiB = midiA + semitones;
     if (mode === 'harmonic') {
       const ctx = getSharedContext();
-      const go = () => {
+      unlockAudio().then(() => {
         const t = ctx.currentTime + 0.05;
         [midiA, midiB].forEach(midi => {
           const freq = 440 * Math.pow(2, (midi - 69) / 12);
@@ -89,12 +88,10 @@ export function IntervalCalculate() {
           osc.frequency.value = freq;
           gain.gain.setValueAtTime(0.22, t);
           gain.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
-          osc.connect(gain); gain.connect(ctx.destination);
+          osc.connect(gain); gain.connect(getOutputNode());
           osc.start(t); osc.stop(t + 1.8);
         });
-      };
-      if (ctx.state === 'running') go();
-      else ctx.resume().then(go).catch(() => {});
+      });
     } else {
       playScale([midiA, midiB]);
     }
