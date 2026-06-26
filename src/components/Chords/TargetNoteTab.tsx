@@ -778,7 +778,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
                 background: T.secondary, color: T.white,
                 borderLeft: '4px solid var(--gc-bar-color)',
               }}
-            >▶ Play</button>
+            >PLAY</button>
 
             <SaveToLibraryButton
               style={{ width: '100%', justifyContent: 'center' }}

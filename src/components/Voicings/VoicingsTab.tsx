@@ -920,7 +920,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                   transition: 'background 0.2s', borderLeft: `4px solid ${T.secondary}`,
                 }}
               >
-                {isPlaying ? '■  STOP' : `▶  PLAY — ${currentPath.label.toUpperCase()}`}
+                {isPlaying ? 'STOP' : 'PLAY'}
               </button>
             </div>
           )}

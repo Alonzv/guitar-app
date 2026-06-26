@@ -241,7 +241,7 @@ export const Metronome: React.FC = () => {
           transition: 'background 0.2s', letterSpacing: '0.06em',
         }}
       >
-        {playing ? '■  STOP' : '▶  START'}
+        {playing ? 'STOP' : 'START'}
       </button>
 
       {/* Time signature chips — below START */}

@@ -207,7 +207,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                     background: T.primary, color: '#fff', fontSize: 12,
                     fontWeight: 400, cursor: 'pointer',
                   }}
-                >▶ Play</button>
+                >PLAY</button>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

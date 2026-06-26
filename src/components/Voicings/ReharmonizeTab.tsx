@@ -508,7 +508,7 @@ export function ReharmonizeTab({
                       transition: 'background 0.15s', borderLeft: `3px solid ${T.secondary}`,
                     }}
                   >
-                    {isPlaying ? '■  STOP' : '▶  PLAY — REHARM'}
+                    {isPlaying ? 'STOP' : 'PLAY'}
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

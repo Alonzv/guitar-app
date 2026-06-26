@@ -99,7 +99,7 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
         display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
         ...style,
       }}>
-        {saved ? <>✓ Saved</> : status === 'saving' ? 'Saving…' : <>♡ {label}</>}
+        {saved ? <>✓ Saved</> : status === 'saving' ? 'Saving…' : <>{label}</>}
       </button>
       {authOpen && <AuthModal onClose={() => { pendingRef.current = false; setAuthOpen(false); }} />}
     </>

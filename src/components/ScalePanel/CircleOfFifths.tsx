@@ -465,7 +465,7 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
             const steps = selectedMode === 'major' ? MAJOR_STEPS : MINOR_STEPS;
             playScale(steps.map(s => rootMidi + s));
           }}>
-            ▶  PLAY SCALE
+            PLAY SCALE
           </button>
 
           {/* Common Progressions */}

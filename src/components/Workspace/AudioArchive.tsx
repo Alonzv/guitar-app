@@ -25,7 +25,7 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   if (loading) return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 20 }}>Loading…</p>;
   if (items.length === 0) return (
-    <EmptyState icon="♪" title="No audio transcriptions yet"
+    <EmptyState icon="" title="No audio transcriptions yet"
       hint="Upload a clip in Tools → Audio→Tab and it will be archived here for quick playback." />
   );
 
@@ -83,7 +83,7 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                   { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
                   { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
                   { label: 'Export PDF',icon: '⤓', onClick: () => exportPdf(it) },
-                  { label: 'Delete',    icon: '🗑', onClick: () => remove(it), danger: true },
+                  { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
                 ]} />
               </div>
             </>
@@ -91,7 +91,7 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
             <>
               {it.original_audio_url
                 ? <MiniAudioPlayer url={it.original_audio_url} />
-                : <span style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, flexShrink: 0 }}>♪</span>}
+                : <span style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, flexShrink: 0 }}></span>}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, color: T.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
                 <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>
@@ -102,7 +102,7 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                 { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
                 { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
                 { label: 'Export PDF',icon: '⤓', onClick: () => exportPdf(it) },
-                { label: 'Delete',    icon: '🗑', onClick: () => remove(it), danger: true },
+                { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
               ]} />
             </>
           )}

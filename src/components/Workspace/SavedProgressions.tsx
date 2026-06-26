@@ -93,7 +93,7 @@ export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop })
                 { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
                 { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
                 { label: 'Export PDF',icon: '⤓', onClick: async () => { const { exportProgressionPDF } = await import('../../utils/pdfExport'); await exportProgressionPDF(it.name, it.chords); } },
-                { label: 'Delete',    icon: '🗑', onClick: () => remove(it), danger: true },
+                { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
               ]} />
             </>
           ) : (
@@ -122,7 +122,7 @@ export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop })
                 { label: 'Rename',          icon: '✎', onClick: () => setRenaming(it) },
                 { label: 'Duplicate',       icon: '⧉', onClick: () => duplicate(it) },
                 { label: 'Export PDF',      icon: '⤓', onClick: async () => { const { exportProgressionPDF } = await import('../../utils/pdfExport'); await exportProgressionPDF(it.name, it.chords); } },
-                { label: 'Delete',          icon: '🗑', onClick: () => remove(it), danger: true },
+                { label: 'Delete',          icon: '', onClick: () => remove(it), danger: true },
               ]} />
             </>
           )}

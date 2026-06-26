@@ -75,7 +75,7 @@ export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
               { label: 'Rename',          icon: '✎', onClick: () => setRenaming(it) },
               { label: 'Duplicate',       icon: '⧉', onClick: () => duplicate(it) },
               { label: 'Export PDF',      icon: '⤓', onClick: () => exportPdf(it) },
-              { label: 'Delete',          icon: '🗑', onClick: () => remove(it), danger: true },
+              { label: 'Delete',          icon: '', onClick: () => remove(it), danger: true },
             ]} />
           </div>
 

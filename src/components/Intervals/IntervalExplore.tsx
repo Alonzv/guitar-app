@@ -220,7 +220,7 @@ export function IntervalExplore() {
                   padding: '5px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
                   border: `1px solid ${T.secondary}`, background: 'transparent', color: T.secondary,
                   borderLeft: '3px solid var(--gc-bar-color)',
-                }}>&#9654; Play</button>
+                }}>PLAY</button>
               </div>
             </div>
           </div>

@@ -111,7 +111,7 @@ export const MiniAudioPlayer: React.FC<{ url: string }> = ({ url }) => {
         border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
         fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
         flexShrink: 0,
-      }}>{playing ? '❙❙' : '▶'}</button>
+      }}>{playing ? 'II' : '>'}</button>
     </>
   );
 };

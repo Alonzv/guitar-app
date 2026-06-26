@@ -344,7 +344,7 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
               title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
               style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 400, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderLeft: '3px solid var(--gc-bar-color)' }}
             >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
-            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>▶</button>
+            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>PLAY</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

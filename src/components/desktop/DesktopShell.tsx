@@ -89,7 +89,7 @@ export function DesktopShell({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            {darkMode ? '☀' : '☾'}
+            {darkMode ? 'L' : 'D'}
           </button>
           <button
             onClick={onHelp}

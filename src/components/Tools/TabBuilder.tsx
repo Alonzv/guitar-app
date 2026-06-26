@@ -516,7 +516,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                   {/* Primary cluster */}
                   <button onClick={handleAnalyze} style={primary}>ANALYZE</button>
                   <button onClick={handleExport} disabled={busy} style={{ ...ghost, cursor: busy ? 'wait' : 'pointer' }}>{busy ? '…' : 'PDF'}</button>
-                  <SaveToLibraryButton size="sm" label="♡ SAVE" style={{ height: 34, borderRadius: 0, fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em' }} getPayload={() => tabHasContent(tab) ? ({ kind: 'tab', name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null} />
+                  <SaveToLibraryButton size="sm" label="SAVE" style={{ height: 34, borderRadius: 0, fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em' }} getPayload={() => tabHasContent(tab) ? ({ kind: 'tab', name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null} />
 
                   <span style={divider} />
 
@@ -1064,7 +1064,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                           borderRadius: 0, padding: '5px 12px', cursor: 'pointer',
                           fontSize: 13, fontWeight: 400, flexShrink: 0,
                           borderLeft: '3px solid var(--gc-bar-color)',
-                        }}>▶ {t.play}</button>
+                        }}>{t.play}</button>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '10px 0' }}>
                       {p.chords.map((c, j) => (

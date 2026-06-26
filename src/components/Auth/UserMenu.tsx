@@ -95,7 +95,7 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact }) => {
               <MenuRow label="My Workspace" icon="▣" onClick={() => { setOpen(false); onOpenWorkspace(); }} />
               <MenuRow label="Sign Out" icon="⤴" onClick={() => { setOpen(false); signOut(); }} />
               <div style={{ height: 1, background: T.border, margin: '6px 0' }} />
-              <MenuRow label="Delete Account" icon="🗑" danger onClick={() => setConfirmDelete(true)} />
+              <MenuRow label="Delete Account" icon="" danger onClick={() => setConfirmDelete(true)} />
             </>
           ) : (
             <div style={{ padding: '4px 8px 8px' }}>

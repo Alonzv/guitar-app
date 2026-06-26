@@ -329,7 +329,7 @@ export function ProgressionPanel({
                       color: '#fff', fontSize: 16, fontWeight: 400, cursor: 'pointer',
                       minHeight: 36,
                     }}
-                  >▶</button>
+                  >PLAY</button>
                 )}
                 <button
                   onClick={() => onRemoveFromProgression(item.id)}
@@ -357,7 +357,7 @@ export function ProgressionPanel({
               borderLeft: '4px solid var(--gc-bar-color)',
             }}
           >
-            {playingAll ? '■  Stop' : '▶▶  Play All'}
+            {playingAll ? 'STOP' : 'PLAY ALL'}
           </button>
         )}
 
