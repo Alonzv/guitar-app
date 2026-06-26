@@ -392,13 +392,11 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
         </div>
       ) : (
         <>
-          {/* Heading */}
-          <div style={{ ...card({ padding: '14px 16px' }), borderLeft: `4px solid ${T.primary}` }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: T.text, lineHeight: 1 }}>
-              {selectedMode === 'major' ? COF_MAJOR[selectedIdx!] : COF_MINOR_NAMES[selectedIdx!].slice(0, -1)}
-            </div>
-            <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
-              {selectedMode === 'major' ? 'Major' : 'Natural minor'}
+          {/* Heading — open section, no card background */}
+          <div style={{ padding: '0 2px 18px' }}>
+            <p style={SECTION_LBL}>KEY OF</p>
+            <div style={{ fontSize: 48, fontWeight: 700, color: T.text, lineHeight: 1 }}>
+              {centerRoot} {selectedMode === 'major' ? 'Major' : 'minor'}
             </div>
           </div>
 
@@ -407,42 +405,38 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
             <div style={card({ padding: '10px 12px' })}>
               <p style={SECTION_LBL}>{selectedMode === 'major' ? 'Relative minor' : 'Relative major'}</p>
               <div style={{ fontSize: 16, fontWeight: 600, color: T.text }}>
-                {selectedMode === 'major' ? COF_MINOR_NAMES[selectedIdx!] : COF_MAJOR[selectedIdx!]}
+                {selectedMode === 'major'
+                  ? COF_MINOR_NAMES[selectedIdx!].replace('m', '') + ' minor'
+                  : COF_MAJOR[selectedIdx!]}
               </div>
             </div>
             <div style={card({ padding: '10px 12px' })}>
               <p style={SECTION_LBL}>Key signature</p>
-              <div style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{keySig}</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: T.text }}>
+                {accidentals === 0 ? '♮  No ♯/♭' : accidentals > 0 ? `${accidentals}♯` : `${Math.abs(accidentals)}♭`}
+              </div>
             </div>
           </div>
 
-          {/* Diatonic chords — grouped by harmonic function */}
+          {/* Diatonic chords — flat 7-chip grid */}
           <div style={card({ padding: '10px 12px' })}>
             <p style={SECTION_LBL}>Diatonic chords</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {(['tonic', 'subdominant', 'dominant'] as HarmonicFunc[]).map(f => {
-                const group = diatonicChords.filter(d => d.func === f);
-                if (group.length === 0) return null;
-                return (
-                  <div key={f} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <div style={{
-                      width: 60, fontSize: 9, color: FC[f].fill, fontFamily: 'var(--gc-mono)',
-                      letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0,
-                    }}>{f}</div>
-                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                      {group.map(({ chord, roman }) => (
-                        <div key={roman} style={{
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-                          padding: '5px 8px', background: FC[f].fill,
-                        }}>
-                          <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}>{roman}</div>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: '#fff', lineHeight: 1 }}>{chord}</div>
-                        </div>
-                      ))}
-                    </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+              {diatonicChords.map(({ chord, roman }, i) => (
+                <div key={roman} style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '8px 4px',
+                  background: i === 0 ? FC['tonic'].fill : T.bgInput,
+                  border: i === 0 ? 'none' : `1px solid ${T.border}`,
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: i === 0 ? '#fff' : T.text }}>
+                    {chord}
                   </div>
-                );
-              })}
+                  <div style={{ fontSize: 9, color: i === 0 ? 'rgba(255,255,255,0.6)' : T.textDim }}>
+                    {roman}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -450,16 +444,27 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
           <div style={card({ padding: '10px 12px' })}>
             <p style={SECTION_LBL}>Neighbours</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div style={{ padding: '8px 10px', background: T.bgInput, border: `1px solid ${T.border}` }}>
-                <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'var(--gc-mono)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>IV · Subdominant</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{neighbourLeft}</div>
+              <div style={{ padding: '8px 10px', background: T.bgInput, borderLeft: `3px solid ${T.primary}` }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: T.text }}>{neighbourLeft}</div>
+                <div style={{ fontSize: 9, color: T.primary, fontFamily: 'var(--gc-mono)', marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>IV · Subdominant</div>
               </div>
-              <div style={{ padding: '8px 10px', background: T.bgInput, border: `1px solid ${T.border}` }}>
-                <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'var(--gc-mono)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>V · Dominant</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{neighbourRight}</div>
+              <div style={{ padding: '8px 10px', background: T.bgInput, borderLeft: `3px solid ${T.primary}` }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: T.text }}>{neighbourRight}</div>
+                <div style={{ fontSize: 9, color: T.primary, fontFamily: 'var(--gc-mono)', marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>V · Dominant</div>
               </div>
             </div>
           </div>
+
+          {/* Play Scale button */}
+          <button style={{
+            width: '100%', padding: '12px 0',
+            background: T.primary, color: '#fff',
+            fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
+            border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--gc-mono)',
+          }} onClick={() => {}}>
+            ▶  PLAY SCALE
+          </button>
 
           {/* Common Progressions */}
           <div style={card({ padding: '10px 12px' })}>

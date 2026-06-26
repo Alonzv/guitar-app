@@ -240,13 +240,13 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       {/* Section label */}
       <p style={SECTION}>Tuner</p>
 
-      {/* Main display */}
-      <div style={card({ textAlign: 'center', padding: '24px 20px 20px' })}>
+      {/* Main display — open, no card */}
+      <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
 
         {/* Giant note */}
         <div className="gc-tuner-note" style={{
           color: tuneColor,
-          marginBottom: 4,
+          marginBottom: 2,
           transition: 'color 0.3s',
           minHeight: 88,
         }}>
@@ -255,44 +255,40 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
         {/* Hz — red mono */}
         <div style={{
-          fontFamily: 'var(--gc-mono)', fontSize: 15, fontWeight: 600,
+          fontFamily: 'var(--gc-mono)', fontSize: 16, fontWeight: 600,
           color: display ? T.primary : T.textDim,
-          letterSpacing: '0.04em', marginBottom: 18, minHeight: 22,
+          letterSpacing: '0.04em', marginBottom: 20, minHeight: 22,
           transition: 'color 0.3s',
         }}>
           {display ? `${display.hz} Hz` : (loudnessHint ? 'play louder' : 'play a string…')}
         </div>
 
         {/* Needle bar */}
-        <div style={{ position: 'relative', height: 10, background: T.bgInput, marginBottom: 8, overflow: 'visible' }}>
+        <div style={{ position: 'relative', height: 2, background: T.border, marginBottom: 10, overflow: 'visible' }}>
           {/* Centre mark */}
           <div style={{
-            position: 'absolute', left: '50%', top: -6, width: 2, height: 22,
+            position: 'absolute', left: '50%', top: -8, width: 1, height: 18,
             background: T.border, transform: 'translateX(-50%)',
           }} />
           {/* Needle */}
           <div style={{
-            position: 'absolute', top: -4, width: 8, height: 18,
+            position: 'absolute', top: -10, width: 4, height: 22,
             background: tuneColor, transform: 'translateX(-50%)',
             left: `${needlePct}%`,
             transition: 'left 0.15s ease-out, background 0.3s',
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 14 }}>
-          <span>♭ Flat</span><span>In tune</span><span>Sharp ♯</span>
-        </div>
-
-        {/* Status line */}
-        <div style={{ fontSize: 14, fontWeight: 500, color: tuneColor, transition: 'color 0.3s', minHeight: 20 }}>
-          {!display ? ''
-            : absCents <= 5  ? '✓ In tune'
-            : cents > 0 ? `+${cents}¢ — tune down`
-            : `${cents}¢ — tune up`}
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 4, letterSpacing: '0.06em', fontFamily: 'var(--gc-mono)' }}>
+          <span>♭</span>
+          <span style={{ color: tuneColor, fontWeight: 600 }}>
+            {!display ? '' : absCents <= 5 ? 'IN TUNE' : cents > 0 ? `+${cents}¢` : `${cents}¢`}
+          </span>
+          <span>♯</span>
         </div>
       </div>
 
-      {/* String buttons */}
-      <div style={card({ padding: '14px 16px' })}>
+      {/* String buttons — open, no card */}
+      <div style={{ padding: '4px 0' }}>
         <p style={{ ...SECTION, marginBottom: 10 }}>String</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
           {STRING_LABELS.map((label, i) => {
@@ -320,26 +316,26 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
           fontFamily: 'var(--gc-mono)', fontSize: 11, color: T.textDim,
           direction: 'rtl', letterSpacing: '0.05em',
         }}>
-          לכוון: ♭ שטוח · בדיוק · ♯ חד
+          נגן את המייתר הפתוח לכוונן
         </div>
       </div>
 
       {/* Start / Stop */}
-      <div style={card()}>
-        {error && <p style={{ color: T.coral, fontSize: 12, margin: '0 0 12px' }}>{error}</p>}
-        <button
-          onClick={listening ? stop : start}
-          className="gc-btn-heavy"
-          style={{
-            width: '100%', padding: '14px 0', borderRadius: 0,
-            background: listening ? T.coral : T.primary,
-            color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
-            transition: 'background 0.2s', borderLeft: '4px solid var(--gc-bar-color)',
-          }}
-        >
-          {listening ? '■  Stop' : <><IconMic size={14} />  Start Tuning</>}
-        </button>
-      </div>
+      {error && <p style={{ color: T.coral, fontSize: 12, margin: 0 }}>{error}</p>}
+      <button
+        onClick={listening ? stop : start}
+        className="gc-btn-heavy"
+        style={{
+          width: '100%', padding: '16px 0', borderRadius: 0,
+          background: listening ? T.coral : T.primary,
+          color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
+          transition: 'background 0.2s', border: 'none',
+          borderLeft: '4px solid var(--gc-bar-color)',
+          letterSpacing: '0.06em',
+        }}
+      >
+        {listening ? '■  STOP' : <><IconMic size={14} />  START TUNING</>}
+      </button>
     </div>
   );
 };

@@ -181,8 +181,8 @@ export const Metronome: React.FC = () => {
       {/* Section label */}
       <p style={SECTION}>Metronome</p>
 
-      {/* BPM + control row */}
-      <div style={card({ padding: '24px 20px 20px', textAlign: 'center' })}>
+      {/* BPM + control row — open, no card */}
+      <div style={{ textAlign: 'center', padding: '8px 0' }}>
 
         {/* Giant BPM */}
         <input
@@ -234,35 +234,6 @@ export const Metronome: React.FC = () => {
             color: T.text, fontSize: 22, fontWeight: 400, cursor: 'pointer',
           }}>+</button>
         </div>
-
-        {/* BPM slider */}
-        <input
-          type="range" min={40} max={240} value={bpm}
-          onChange={e => { const v = Number(e.target.value); setBpm(v); setBpmInput(String(v)); }}
-          style={{ width: '100%', marginTop: 16, accentColor: T.primary, cursor: 'pointer' }}
-        />
-      </div>
-
-      {/* Time signature chips */}
-      <div style={card({ padding: '14px 16px' })}>
-        <p style={{ ...SECTION, marginBottom: 10 }}>Time signature</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          {TIME_SIGS.map(ts => {
-            const active = timeSig.label === ts.label;
-            return (
-              <button key={ts.label} onClick={() => setTimeSig(ts)} style={{
-                padding: '10px 4px', border: `1.5px solid ${active ? T.secondary : T.border}`,
-                background: active ? T.secondary : T.bgInput,
-                color: active ? '#fff' : T.textMuted,
-                fontFamily: 'var(--gc-mono)', fontSize: 14, fontWeight: active ? 700 : 400,
-                cursor: 'pointer', letterSpacing: '0.04em',
-                transition: 'all 0.15s',
-              }}>
-                {ts.label}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* START / STOP */}
@@ -279,12 +250,31 @@ export const Metronome: React.FC = () => {
         {playing ? '■  STOP' : '▶  START'}
       </button>
 
+      {/* Time signature chips — below START */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        {TIME_SIGS.map(ts => {
+          const active = timeSig.label === ts.label;
+          return (
+            <button key={ts.label} onClick={() => setTimeSig(ts)} style={{
+              padding: '10px 4px', border: `1.5px solid ${active ? T.secondary : T.border}`,
+              background: active ? T.secondary : T.bgInput,
+              color: active ? '#fff' : T.textMuted,
+              fontFamily: 'var(--gc-mono)', fontSize: 14, fontWeight: active ? 700 : 400,
+              cursor: 'pointer', letterSpacing: '0.04em',
+              transition: 'all 0.15s',
+            }}>
+              {ts.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Tap + Subdivision */}
-      <div style={card({ padding: '14px 16px' })}>
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <button
           onClick={handleTap}
           style={{
-            width: '100%', padding: '10px 0', marginBottom: 16,
+            width: '100%', padding: '10px 0',
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.textMuted, fontWeight: 400, fontSize: 13, cursor: 'pointer',
             transition: 'background 0.1s', borderLeft: '3px solid var(--gc-bar-color)',
@@ -293,29 +283,31 @@ export const Metronome: React.FC = () => {
           Tap Tempo
         </button>
 
-        <p style={{ ...SECTION, marginBottom: 8 }}>Subdivision</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          {SUBDIVISIONS.map(sub => {
-            const active = subdivision.clicksPerBeat === sub.clicksPerBeat;
-            return (
-              <button
-                key={sub.label}
-                onClick={() => setSubdivision(sub)}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 6, padding: '10px 4px',
-                  border: `1.5px solid ${active ? T.primary : T.border}`,
-                  background: active ? T.primaryBg : T.bgInput,
-                  color: active ? T.primary : T.textMuted,
-                  cursor: 'pointer', fontSize: 11, fontWeight: 500,
-                  transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
-                }}
-              >
-                {sub.icon}
-                <span>{sub.label}</span>
-              </button>
-            );
-          })}
+        <div>
+          <p style={{ ...SECTION, marginBottom: 8 }}>Subdivision</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {SUBDIVISIONS.map(sub => {
+              const active = subdivision.clicksPerBeat === sub.clicksPerBeat;
+              return (
+                <button
+                  key={sub.label}
+                  onClick={() => setSubdivision(sub)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: 6, padding: '10px 4px',
+                    border: `1.5px solid ${active ? T.primary : T.border}`,
+                    background: active ? T.primaryBg : T.bgInput,
+                    color: active ? T.primary : T.textMuted,
+                    cursor: 'pointer', fontSize: 11, fontWeight: 500,
+                    transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
+                  }}
+                >
+                  {sub.icon}
+                  <span>{sub.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
