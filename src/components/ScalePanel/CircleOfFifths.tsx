@@ -1,6 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { Key } from '@tonaljs/tonal';
 import { T, card } from '../../theme';
+import { playScale } from '../../utils/audioPlayback';
+
+const NOTE_PC: Record<string, number> = {
+  C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11,
+};
+const MAJOR_STEPS = [0,2,4,5,7,9,11,12];
+const MINOR_STEPS = [0,2,3,5,7,8,10,12];
 
 // ── Geometry ──────────────────────────────────────────────────────────────────
 const SVG_SIZE  = 360;
@@ -452,7 +459,12 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
             fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
             border: 'none', cursor: 'pointer',
             fontFamily: 'var(--gc-mono)',
-          }} onClick={() => {}}>
+          }} onClick={() => {
+            if (!centerRoot) return;
+            const rootMidi = 60 + (NOTE_PC[centerRoot] ?? 0);
+            const steps = selectedMode === 'major' ? MAJOR_STEPS : MINOR_STEPS;
+            playScale(steps.map(s => rootMidi + s));
+          }}>
             ▶  PLAY SCALE
           </button>
 

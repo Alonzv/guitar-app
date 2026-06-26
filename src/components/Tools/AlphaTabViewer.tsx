@@ -94,21 +94,17 @@ export const AlphaTabViewer: React.FC<Props> = ({ tabData, notes, originalUrl, a
   }, [originalUrl, origPlay, synthPlay, stopSynthPlay]);
 
   const handleSynth = useCallback(() => {
-    unlockAudio();
     if (origPlay) { origRef.current?.pause(); setOrigPlay(false); }
     if (synthPlay) { stopSynthPlay(); return; }
     if (notes.length === 0) return;
 
     const ctx = getSharedContext();
-    const doPlay = () => {
+    unlockAudio().then(() => {
       playSynth(notes, ctx);
       setSynthPlay(true);
       const dur = (audioDuration || 10) + 1.5;
       synthTimerRef.current = setTimeout(stopSynthPlay, dur * 1000);
-    };
-
-    if (ctx.state === 'running') doPlay();
-    else ctx.resume().then(doPlay).catch(e => console.error('[AlphaTabViewer] ctx resume:', e));
+    });
   }, [notes, origPlay, synthPlay, audioDuration, stopSynthPlay]);
 
   // ── Render ────────────────────────────────────────────────────────────────

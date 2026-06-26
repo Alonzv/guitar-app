@@ -108,18 +108,12 @@ export const Metronome: React.FC = () => {
       setBeat(-1);
       setPlaying(false);
     } else {
-      unlockAudio();
       const ctx = getSharedContext();
-      const start = () => {
+      unlockAudio().then(() => {
         nextBeatTimeRef.current = ctx.currentTime + 0.15;
         beatNumRef.current = 0;
         setPlaying(true);
-      };
-      if (ctx.state === 'running') {
-        start();
-      } else {
-        ctx.resume().then(start).catch(start);
-      }
+      });
     }
   }, [playing]);
 
