@@ -1,5 +1,5 @@
 import React from 'react';
-import { CircleOfFifths } from '../ScalePanel/CircleOfFifths';
+import { ChordWheel } from '../ScalePanel/ChordWheel';
 import type { ChordInProgression, Tuning } from '../../types/music';
 
 interface Props {
@@ -9,5 +9,5 @@ interface Props {
 }
 
 export const WheelTab: React.FC<Props> = ({ onAddToProgression, desktop }) => (
-  <CircleOfFifths onAddToProgression={onAddToProgression} desktop={desktop} />
+  <ChordWheel onAddToProgression={onAddToProgression} desktop={desktop} />
 );

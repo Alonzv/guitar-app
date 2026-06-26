@@ -250,8 +250,8 @@ export const Metronome: React.FC = () => {
           const active = timeSig.label === ts.label;
           return (
             <button key={ts.label} onClick={() => setTimeSig(ts)} style={{
-              padding: '10px 4px', border: `1.5px solid ${active ? T.secondary : T.border}`,
-              background: active ? T.secondary : T.bgInput,
+              padding: '10px 4px', border: `1.5px solid ${active ? T.primary : T.border}`,
+              background: active ? T.primary : T.bgInput,
               color: active ? '#fff' : T.textMuted,
               fontFamily: 'var(--gc-mono)', fontSize: 14, fontWeight: active ? 700 : 400,
               cursor: 'pointer', letterSpacing: '0.04em',
@@ -287,17 +287,16 @@ export const Metronome: React.FC = () => {
                   key={sub.label}
                   onClick={() => setSubdivision(sub)}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    gap: 6, padding: '10px 4px',
+                    padding: '10px 4px',
                     border: `1.5px solid ${active ? T.primary : T.border}`,
                     background: active ? T.primaryBg : T.bgInput,
                     color: active ? T.primary : T.textMuted,
-                    cursor: 'pointer', fontSize: 11, fontWeight: 500,
-                    transition: 'all 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
+                    cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400,
+                    fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em',
+                    transition: 'all 0.15s',
                   }}
                 >
-                  {sub.icon}
-                  <span>{sub.label}</span>
+                  {sub.label.toUpperCase()}
                 </button>
               );
             })}

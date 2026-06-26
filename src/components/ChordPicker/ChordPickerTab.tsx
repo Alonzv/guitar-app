@@ -197,9 +197,9 @@ export function ChordPickerTab({
                   cursor: 'pointer', fontSize: 13,
                   fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
-                  color: active ? T.text : T.textMuted,
+                  color: active ? '#fff' : T.textMuted,
                   transition: 'filter 0.15s, background 0.15s',
-                  borderLeft: '3px solid var(--gc-bar-color)',
+                  borderLeft: `3px solid ${active ? T.primary : 'var(--gc-bar-color)'}`,
                 }}
               >
                 {root}
@@ -225,9 +225,9 @@ export function ChordPickerTab({
                   cursor: 'pointer', fontSize: 13,
                   fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
-                  color: active ? T.text : T.textMuted,
+                  color: active ? '#fff' : T.textMuted,
                   transition: 'filter 0.15s, background 0.15s',
-                  borderLeft: '3px solid var(--gc-bar-color)',
+                  borderLeft: `3px solid ${active ? T.primary : 'var(--gc-bar-color)'}`,
                 }}
               >
                 {t.display}

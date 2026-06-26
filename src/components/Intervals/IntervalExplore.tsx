@@ -135,14 +135,14 @@ export function IntervalExplore() {
       {/* Root picker */}
       <div>
         <p style={MONO_LBL}>Root Note</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 2 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '8px 2px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 9 : 11, fontWeight: sel ? 700 : 400,
+                padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
+                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
                 border: `1px solid ${sel ? T.primary : T.border}`,
                 background: sel ? T.primary : sharp ? T.bgInput : T.bgCard,
                 color: sel ? '#fff' : sharp ? T.textMuted : T.text,
@@ -156,7 +156,7 @@ export function IntervalExplore() {
       {/* Interval chips */}
       <div>
         <p style={MONO_LBL}>Interval</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
           {INTERVALS.map(iv => {
             const sel = iv.semitones === interval;
             return (
@@ -164,13 +164,13 @@ export function IntervalExplore() {
                 key={iv.semitones}
                 onClick={() => setInterval(sel ? null : iv.semitones)}
                 style={{
-                  padding: '6px 10px', borderRadius: 0, cursor: 'pointer',
+                  padding: '8px 4px', borderRadius: 0, cursor: 'pointer',
                   border: `1px solid ${sel ? T.primary : T.border}`,
                   background: sel ? T.primary : T.bgCard,
                   color: sel ? '#fff' : T.textMuted,
                   fontSize: 11, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em',
                   fontWeight: sel ? 700 : 400,
-                  borderLeft: `3px solid ${sel ? T.primary : 'var(--gc-bar-color)'}`,
+                  borderTop: `2px solid ${sel ? T.primary : 'transparent'}`,
                 }}
               >
                 {iv.abbrev}
@@ -184,50 +184,44 @@ export function IntervalExplore() {
         <>
           {/* Result card */}
           <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `4px solid ${T.primary}` }}>
-            <p style={{ ...MONO_LBL, margin: '0 0 10px' }}>Interval from {root}</p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 30, fontWeight: 900, color: T.primary, fontFamily: 'var(--gc-mono)', lineHeight: 1 }}>
-                    {selectedInterval.abbrev}
-                  </span>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>
-                    {selectedInterval.name}
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>
-                  {selectedInterval.semitones} semitone{selectedInterval.semitones !== 1 ? 's' : ''}
-                  {' · '}
-                  {CONSONANCE[selectedInterval.semitones]}
-                  {'  ·  '}
-                  <span style={{ fontWeight: 600, color: T.text }}>{root} → {intervalNote}</span>
-                </div>
-                <div style={{ fontSize: 10, color: T.textDim, lineHeight: 1.4 }}>
-                  {selectedInterval.context}
-                </div>
+            <p style={{ ...MONO_LBL, margin: '0 0 8px' }}>Interval from {root}</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 30, fontWeight: 900, color: T.primary, fontFamily: 'var(--gc-mono)', lineHeight: 1 }}>
+                {selectedInterval.abbrev}
+              </span>
+              <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>
+                {selectedInterval.name}
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 10 }}>
+              {selectedInterval.semitones} semitone{selectedInterval.semitones !== 1 ? 's' : ''}
+              {' · '}
+              {CONSONANCE[selectedInterval.semitones]}
+              {'  ·  '}
+              <span style={{ fontWeight: 600, color: T.text }}>{root} → {intervalNote}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${T.border}` }}>
+                {(['melodic', 'harmonic'] as const).map(m => (
+                  <button key={m} onClick={() => setMode(m)} style={{
+                    padding: '5px 10px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                    background: mode === m ? T.secondary : T.bgInput,
+                    color: mode === m ? '#fff' : T.textMuted,
+                  }}>{m === 'melodic' ? 'MEL' : 'HARM'}</button>
+                ))}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', flexShrink: 0 }}>
-                <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${T.border}` }}>
-                  {(['melodic', 'harmonic'] as const).map(m => (
-                    <button key={m} onClick={() => setMode(m)} style={{
-                      padding: '4px 9px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                      background: mode === m ? T.secondary : T.bgInput,
-                      color: mode === m ? '#fff' : T.textMuted,
-                    }}>{m === 'melodic' ? 'MEL' : 'HARM'}</button>
-                  ))}
-                </div>
-                <button onClick={handlePlay} style={{
-                  padding: '5px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
-                  border: `1px solid ${T.secondary}`, background: 'transparent', color: T.secondary,
-                  borderLeft: '3px solid var(--gc-bar-color)',
-                }}>PLAY</button>
-              </div>
+              <button onClick={handlePlay} style={{
+                padding: '5px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                border: `1px solid ${T.secondary}`, background: 'transparent', color: T.secondary,
+                borderLeft: '3px solid var(--gc-bar-color)',
+              }}>PLAY</button>
             </div>
           </div>
 
           {/* Fretboard */}
           <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}` }}>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 6 }}>
+              <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
               {AREAS.map(a => (
                 <button key={a.id} onClick={() => setArea(a.id)} style={{
                   padding: '2px 8px', borderRadius: 0, cursor: 'pointer',
@@ -237,13 +231,13 @@ export function IntervalExplore() {
                   border: 'none', borderLeft: '2px solid var(--gc-bar-color)',
                 }}>{a.label}</button>
               ))}
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, fontSize: 9 }}>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, fontSize: 9, alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 8, height: 8, background: '#CC1C1C', display: 'inline-block' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#CC1C1C', display: 'inline-block' }} />
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Root</span>
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 8, height: 8, background: '#16110F', display: 'inline-block', border: '1px solid rgba(255,255,255,0.3)' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16110F', display: 'inline-block', border: '1px solid rgba(255,255,255,0.3)' }} />
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Interval</span>
                 </span>
               </div>

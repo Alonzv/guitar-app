@@ -120,77 +120,74 @@ export function IntervalCalculate() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* Note pickers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <div style={card({ padding: '10px 12px' })}>
-          <p style={{ ...MONO_LBL, color: '#CC1C1C' }}>Note A</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3 }}>
-            {ALL_NOTES.map(n => {
-              const sel = n === noteA;
-              return (
-                <button key={n} onClick={() => { setNoteA(sel ? null : n); setInverted(false); }} style={{
-                  padding: '7px 2px', borderRadius: 0, cursor: 'pointer',
-                  fontSize: n.includes('#') ? 10 : 12, fontWeight: sel ? 600 : 400,
-                  border: `1px solid ${sel ? '#CC1C1C' : T.border}`,
-                  background: sel ? '#FBF1F1' : T.bgCard,
-                  color: sel ? '#CC1C1C' : T.text,
-                  borderLeft: `2px solid ${sel ? '#CC1C1C' : 'var(--gc-bar-color)'}`,
-                }}>{n}</button>
-              );
-            })}
-          </div>
+      <div>
+        <p style={{ ...MONO_LBL, color: '#CC1C1C' }}>Note A</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+          {ALL_NOTES.map(n => {
+            const sharp = n.includes('#');
+            const sel = n === noteA;
+            return (
+              <button key={n} onClick={() => { setNoteA(sel ? null : n); setInverted(false); }} style={{
+                padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
+                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
+                border: `1px solid ${sel ? T.primary : T.border}`,
+                background: sel ? T.primary : sharp ? T.bgInput : T.bgCard,
+                color: sel ? '#fff' : sharp ? T.textMuted : T.text,
+                borderTop: `3px solid ${sel ? T.primary : 'transparent'}`,
+              }}>{n}</button>
+            );
+          })}
         </div>
+      </div>
 
-        <div style={card({ padding: '10px 12px' })}>
-          <p style={{ ...MONO_LBL }}>Note B</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3 }}>
-            {ALL_NOTES.map(n => {
-              const sel = n === noteB;
-              return (
-                <button key={n} onClick={() => { setNoteB(sel ? null : n); setInverted(false); }} style={{
-                  padding: '7px 2px', borderRadius: 0, cursor: 'pointer',
-                  fontSize: n.includes('#') ? 10 : 12, fontWeight: sel ? 600 : 400,
-                  border: `1px solid ${sel ? '#16110F' : T.border}`,
-                  background: sel ? T.bgDeep : T.bgCard,
-                  color: sel ? '#fff' : T.text,
-                  borderLeft: `2px solid ${sel ? '#16110F' : 'var(--gc-bar-color)'}`,
-                }}>{n}</button>
-              );
-            })}
-          </div>
+      <div>
+        <p style={MONO_LBL}>Note B</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+          {ALL_NOTES.map(n => {
+            const sharp = n.includes('#');
+            const sel = n === noteB;
+            return (
+              <button key={n} onClick={() => { setNoteB(sel ? null : n); setInverted(false); }} style={{
+                padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
+                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
+                border: `1px solid ${sel ? T.secondary : T.border}`,
+                background: sel ? T.secondary : sharp ? T.bgInput : T.bgCard,
+                color: sel ? '#fff' : sharp ? T.textMuted : T.text,
+                borderTop: `3px solid ${sel ? T.secondary : 'transparent'}`,
+              }}>{n}</button>
+            );
+          })}
         </div>
       </div>
 
       {/* Result card */}
       <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `4px solid ${has2 ? T.primary : T.border}`, minHeight: 64 }}>
         {has2 && intervalInfo ? (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 30, fontWeight: 900, color: T.primary, fontFamily: 'var(--gc-mono)', lineHeight: 1 }}>
-                  {intervalInfo.abbrev}
-                </span>
-                <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>
-                  {intervalInfo.name}
-                </span>
-              </div>
-              <div style={{ fontSize: 11, color: T.textMuted }}>
-                {semitones} semitone{semitones !== 1 ? 's' : ''}
-                {'  ·  '}
-                <span style={{ fontWeight: 600, color: T.text }}>{displayA} → {displayB}</span>
-              </div>
+          <>
+            <p style={{ ...MONO_LBL, margin: '0 0 6px' }}>{displayA} → {displayB}</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 30, fontWeight: 900, color: T.primary, fontFamily: 'var(--gc-mono)', lineHeight: 1 }}>
+                {intervalInfo.abbrev}
+              </span>
+              <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>
+                {intervalInfo.name}
+              </span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', flexShrink: 0 }}>
+            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 10 }}>
+              {semitones} semitone{semitones !== 1 ? 's' : ''}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button onClick={() => setInverted(v => !v)} style={{
-                padding: '4px 10px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                padding: '5px 10px', borderRadius: 0, cursor: 'pointer', fontSize: 10, fontWeight: 600,
                 border: `1px solid ${inverted ? T.primary : T.border}`,
                 background: inverted ? T.primaryBg : T.bgCard,
                 color: inverted ? T.primary : T.textMuted,
                 borderLeft: '2px solid var(--gc-bar-color)',
-              }}>↕ Invert</button>
+              }}>INVERT</button>
               <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${T.border}` }}>
                 {(['melodic', 'harmonic'] as const).map(m => (
                   <button key={m} onClick={() => setMode(m)} style={{
-                    padding: '4px 9px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                    padding: '5px 9px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
                     background: mode === m ? T.secondary : T.bgInput,
                     color: mode === m ? '#fff' : T.textMuted,
                   }}>{m === 'melodic' ? 'MEL' : 'HARM'}</button>
@@ -202,7 +199,7 @@ export function IntervalCalculate() {
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}>PLAY</button>
             </div>
-          </div>
+          </>
         ) : (
           <div style={{ textAlign: 'center', color: T.textDim, fontSize: 12, padding: '8px 0' }}>
             {!noteA && !noteB ? 'Select Note A and Note B above' : !noteA ? 'Select Note A' : 'Select Note B'}
@@ -213,17 +210,18 @@ export function IntervalCalculate() {
       {/* Fretboard */}
       {(noteA || noteB) && (
         <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}` }}>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 8, fontSize: 9 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 9 }}>
+            <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
             {noteA && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, background: '#CC1C1C', display: 'inline-block' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>{noteA} (A)</span>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#CC1C1C', display: 'inline-block' }} />
+                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Note A</span>
               </span>
             )}
             {noteB && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, background: '#16110F', display: 'inline-block', border: '1px solid rgba(255,255,255,0.3)' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>{noteB} (B)</span>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16110F', display: 'inline-block', border: '1px solid rgba(255,255,255,0.3)' }} />
+                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Note B</span>
               </span>
             )}
           </div>
