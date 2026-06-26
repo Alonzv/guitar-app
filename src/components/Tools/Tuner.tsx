@@ -220,7 +220,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
   const cents    = display?.cents ?? 0;
   const absCents = Math.abs(cents);
-  const tuneColor = !display    ? T.border
+  const tuneColor = !display    ? T.textDim
     : absCents <= 5             ? T.secondary
     : absCents <= 20            ? '#8A8378'
     : T.primary;
@@ -250,7 +250,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
           transition: 'color 0.3s',
           minHeight: 88,
         }}>
-          {display ? display.note : '—'}
+          {display ? display.note : ''}
         </div>
 
         {/* Hz — red mono */}
@@ -332,7 +332,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
           className="gc-btn-heavy"
           style={{
             width: '100%', padding: '14px 0', borderRadius: 0,
-            background: listening ? T.coral : T.secondary,
+            background: listening ? T.coral : T.primary,
             color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
             transition: 'background 0.2s', borderLeft: '4px solid var(--gc-bar-color)',
           }}
