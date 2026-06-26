@@ -692,53 +692,45 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         </div>
       )}
 
-      {/* ── Techniques toolbar — mobile only ─────── */}
+      {/* ── Techniques card — mobile only ─────── */}
       {!desktop && (
-        <div style={{
-          display: 'flex',
-          marginBottom: 18,
-          borderRadius: 0,
-          overflow: 'hidden',
-          border: `1px solid ${T.border}`,
-          background: T.bgInput,
-        }}>
-          {TECH_BTNS.map(({ id, label, sym, key }) => (
-            <button
-              key={id}
-              onClick={() => applyTech(id)}
-              title={!sel ? 'Select a note first' : `${label} [${key}]`}
-              style={{
-                flex: 1, padding: '8px 4px', border: 'none',
-                borderRight: `1px solid ${T.border}`,
-                background: selTech === id ? T.primaryBg : T.bgInput,
-                cursor: sel ? 'pointer' : 'default',
-                fontSize: 11, fontWeight: 600, color: T.text,
-                opacity: sel ? 1 : 0.5,
-                transition: 'background 0.12s',
-              }}>
-              <div style={{ fontSize: 16, fontFamily: 'monospace', color: T.coral, marginBottom: 3 }}>
-                {sym}
-              </div>
-              <div>{label}</div>
-              <div style={{ fontSize: 9, color: T.textDim, marginTop: 2, fontFamily: 'monospace' }}>[{key}]</div>
-            </button>
-          ))}
-
-          <button
-            onClick={toggleBar}
-            title={!sel ? 'Select a note first' : 'Toggle bar line [|]'}
-            style={{
-              flex: 1, padding: '8px 4px', border: 'none',
-              background: sel && barsSet.has(sel[1]) ? T.primaryBg : T.bgInput,
-              cursor: sel ? 'pointer' : 'default',
-              fontSize: 11, fontWeight: 600, color: T.text,
-              opacity: sel ? 1 : 0.5,
-              transition: 'background 0.12s',
-            }}>
-            <div style={{ fontSize: 16, fontFamily: 'monospace', color: T.coral, marginBottom: 3 }}>|</div>
-            <div>Bar</div>
-            <div style={{ fontSize: 9, color: T.textDim, marginTop: 2, fontFamily: 'monospace' }}>[|]</div>
-          </button>
+        <div style={{ border: `1px solid ${T.border}`, background: T.bgCard, marginBottom: 18 }}>
+          <div style={{ padding: '9px 14px', borderBottom: `1px solid ${T.border}`, fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textDim }}>Techniques</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+            {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }, { id: 'x', label: 'Rest', sym: 'x', key: 'X' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, sym, key }, i, arr) => {
+              const isArmed = id === '|' ? !!(sel && barsSet.has(sel[1])) : selTech === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
+                  title={!sel ? 'Select a note first' : `${label} [${key}]`}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: 10, padding: '10px 13px', cursor: sel ? 'pointer' : 'default',
+                    borderRadius: 0, textAlign: 'left',
+                    borderTop: 'none',
+                    borderRight: i % 2 === 0 ? `1px solid ${T.border}` : 'none',
+                    borderBottom: i < arr.length - 2 ? `1px solid ${T.border}` : 'none',
+                    borderLeft: isArmed ? `2px solid ${T.primary}` : '2px solid transparent',
+                    background: isArmed ? T.primarySoft : 'transparent',
+                    fontFamily: 'var(--gc-font)', fontSize: 12,
+                    color: isArmed ? T.text : T.textMuted,
+                    opacity: sel ? 1 : 0.6,
+                    transition: 'background 0.12s, color 0.12s',
+                  }}
+                >
+                  <span>{label}</span>
+                  <kbd style={{
+                    fontFamily: 'var(--gc-mono)', fontSize: 11, lineHeight: 1,
+                    minWidth: 18, textAlign: 'center', padding: '3px 6px', borderRadius: 0,
+                    border: `1px solid ${isArmed ? T.primary : T.border}`,
+                    background: isArmed ? T.primary : T.bgInput,
+                    color: isArmed ? '#fff' : T.text,
+                  }}>{sym}</kbd>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

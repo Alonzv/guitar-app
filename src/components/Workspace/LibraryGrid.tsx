@@ -177,7 +177,7 @@ export const LibraryGrid: React.FC<Props> = ({ desktop, onOpenTabInBuilder, onOp
     return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 30 }}>Loading…</p>;
   }
 
-  const cols = desktop ? 3 : 1;
+  const cols = desktop ? 3 : 2;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -192,7 +192,7 @@ export const LibraryGrid: React.FC<Props> = ({ desktop, onOpenTabInBuilder, onOp
         {/* Search */}
         <input
           value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search library…"
+          placeholder="# Search library…"
           style={{
             width: '100%', boxSizing: 'border-box',
             padding: '9px 12px', border: `1px solid ${T.border}`,
@@ -206,17 +206,30 @@ export const LibraryGrid: React.FC<Props> = ({ desktop, onOpenTabInBuilder, onOp
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {/* Filter chips */}
           <div style={{ display: 'flex', gap: 4 }}>
-            {(['all', 'audio', 'tab', 'progression'] as FilterType[]).map(f => (
-              <button key={f} onClick={() => setFilter(f)} style={{
-                padding: '4px 10px', border: `1px solid ${filter === f ? T.secondary : T.border}`,
-                background: filter === f ? T.secondary : T.bgInput,
-                color: filter === f ? '#fff' : T.textMuted,
-                fontSize: 11, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em',
-                textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.1s',
-              }}>
-                {f === 'all' ? 'All' : TYPE_LABEL[f]}
-              </button>
-            ))}
+            {(['all', 'audio', 'tab', 'progression'] as FilterType[]).map(f => {
+              const count = f === 'all' ? allItems.length : allItems.filter(x => x.type === f).length;
+              return (
+                <button key={f} onClick={() => setFilter(f)} style={{
+                  padding: '4px 10px', border: `1px solid ${filter === f ? T.secondary : T.border}`,
+                  background: filter === f ? T.secondary : T.bgInput,
+                  color: filter === f ? '#fff' : T.textMuted,
+                  fontSize: 11, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em',
+                  textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.1s',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}>
+                  <span>{f === 'all' ? 'All' : TYPE_LABEL[f]}</span>
+                  {count > 0 && (
+                    <span style={{
+                      fontSize: 9, lineHeight: '14px', minWidth: 14, textAlign: 'center',
+                      padding: '0 3px', background: filter === f ? 'rgba(255,255,255,0.25)' : T.border,
+                      color: filter === f ? '#fff' : T.textDim,
+                    }}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Sort */}

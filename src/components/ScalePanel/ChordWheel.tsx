@@ -140,6 +140,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
           const sa        = startAngle(i);
           const outerInfo = outerMap.get(i);
           const innerInfo = innerMap.get(i);
+          const isSelected = i === cofIdx;
           const oFill = outerInfo ? FUNC_COLOR[outerInfo.func] : '#E4E0D8';
           const iFill = innerInfo ? FUNC_COLOR[innerInfo.func] : '#EAE7E2';
           const oOpacity = outerInfo ? 1 : 0.35;
@@ -148,10 +149,15 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
           const mp_i = midPt(sa, (R_I_O + R_I_I) / 2);
           // Text rotation to keep text upright after group rotation
           const textRot = -rotationDeg;
+          // Map CoF index back to ALL_ROOTS name for key selection
+          const cofNote = COF_ORDER[i];
+          const FLAT_TO_SHARP: Record<string, string> = { 'Db':'C#', 'Eb':'D#', 'Ab':'G#', 'Bb':'A#' };
+          const selectRoot = ALL_ROOTS.includes(cofNote) ? cofNote : (FLAT_TO_SHARP[cofNote] ?? cofNote);
           return (
-            <g key={i}>
+            <g key={i} style={{ cursor: 'pointer' }} onClick={() => setRoot(selectRoot)}>
               {/* Outer arc */}
-              <path d={arcPath(sa, R_O_O, R_O_I)} fill={oFill} opacity={oOpacity} />
+              <path d={arcPath(sa, R_O_O, R_O_I)} fill={oFill} opacity={oOpacity}
+                stroke={isSelected ? '#fff' : 'none'} strokeWidth={isSelected ? 1.5 : 0} />
               {/* Inner arc */}
               <path d={arcPath(sa, R_I_O, R_I_I)} fill={iFill} opacity={iOpacity} />
               {/* Outer text */}
@@ -162,6 +168,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
                 fontWeight={outerInfo ? 700 : 400}
                 fill={outerInfo ? '#fff' : '#9C958C'}
                 transform={`rotate(${textRot} ${mp_o.x} ${mp_o.y})`}
+                style={{ pointerEvents: 'none' }}
               >
                 {COF_ORDER[i]}
               </text>
@@ -173,6 +180,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
                 fontWeight={innerInfo ? 600 : 400}
                 fill={innerInfo ? '#fff' : '#9C958C'}
                 transform={`rotate(${textRot} ${mp_i.x} ${mp_i.y})`}
+                style={{ pointerEvents: 'none' }}
               >
                 {COF_MINOR[i]}
               </text>

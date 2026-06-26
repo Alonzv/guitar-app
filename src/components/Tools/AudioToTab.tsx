@@ -596,73 +596,74 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   if (stage === 'idle') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <style>{RESPONSIVE_CSS}</style>
-      <div
-        onDragOver={e => e.preventDefault()}
-        onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-        onClick={() => fileInputRef.current?.click()}
-        style={{
-          ...card({ padding: '32px 20px' }),
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-          cursor: 'pointer', borderStyle: 'dashed', borderColor: T.primary, textAlign: 'center',
-        }}
-      >
-        <svg viewBox="0 0 40 40" width={40} height={40} fill="none" stroke={T.primary} strokeWidth={2}>
-          <circle cx="20" cy="20" r="18" strokeDasharray="5 3" />
-          <path d="M20 28V13" strokeLinecap="round" />
-          <path d="M14 19l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M12 31c0 1.7 1.3 3 3 3h10c1.7 0 3-1.3 3-3" strokeLinecap="round" />
-        </svg>
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 400, color: T.text }}>Drag audio file here</p>
-        <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>MP3 · WAV · OGG · M4A · up to 5 min</p>
-        <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }}
-          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
-      </div>
 
-      <button
-        onClick={startRecording}
-        style={{
-          ...card({ padding: '14px 16px' }),
-          display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${T.border}`,
-          cursor: 'pointer', background: T.bgCard, width: '100%',
-        }}
-      >
-        <div style={{
-          width: 38, height: 38, borderRadius: 0, background: T.coral, flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="#fff" strokeWidth={2}>
+      {/* Primary: large centered record button */}
+      <div style={{ ...card({ padding: '36px 20px' }), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
+        <button
+          onClick={startRecording}
+          style={{
+            width: 88, height: 88, borderRadius: '50%',
+            background: T.primary, border: '4px solid rgba(204,28,28,0.25)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, outline: 'none',
+          }}
+        >
+          <svg viewBox="0 0 24 24" width={32} height={32} fill="none" stroke="#fff" strokeWidth={2}>
             <rect x="9" y="3" width="6" height="11" rx="3" />
             <path d="M5 11c0 3.9 3.1 7 7 7s7-3.1 7-7" strokeLinecap="round" />
             <line x1="12" y1="18" x2="12" y2="22" />
             <line x1="9" y1="22" x2="15" y2="22" />
           </svg>
+        </button>
+        <div>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 400, color: T.text }}>Tap to Record</p>
+          <p style={{ margin: 0, fontSize: 12, color: T.textMuted, marginTop: 4 }}>Play a single line into the microphone</p>
         </div>
-        <div style={{ textAlign: 'left' }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 400, color: T.text }}>Record from Microphone</p>
-          <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>Play a single line directly into the app</p>
+      </div>
+
+      {/* Secondary: drag / upload */}
+      <div
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+        onClick={() => fileInputRef.current?.click()}
+        style={{
+          ...card({ padding: '16px 20px' }),
+          display: 'flex', alignItems: 'center', gap: 12,
+          cursor: 'pointer', borderStyle: 'dashed', borderColor: T.border,
+        }}
+      >
+        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke={T.textMuted} strokeWidth={2}>
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <div>
+          <p style={{ margin: 0, fontSize: 13, color: T.text }}>Upload audio file</p>
+          <p style={{ margin: 0, fontSize: 11, color: T.textMuted, marginTop: 2 }}>MP3 · WAV · OGG · M4A · up to 5 min</p>
         </div>
-      </button>
+        <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
+      </div>
     </div>
   );
 
   if (stage === 'recording') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ ...card({ padding: '28px 20px' }), textAlign: 'center' }}>
+      <div style={{ ...card({ padding: '36px 20px' }), textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
         <RecordingBars />
-        <p style={{ margin: '16px 0 4px', fontSize: 26, fontWeight: 800, color: T.primary, fontVariantNumeric: 'tabular-nums' }}>
-          {String(Math.floor(recSecs / 60)).padStart(2, '0')}:{String(recSecs % 60).padStart(2, '0')}
+        <p style={{ margin: 0, fontSize: 34, fontWeight: 700, color: T.primary, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+          {String(Math.floor(recSecs / 60)).padStart(1, '0')}:{String(recSecs % 60).padStart(2, '0')}
         </p>
-        <p style={{ margin: '0 0 20px', fontSize: 12, color: T.textMuted }}>Recording…</p>
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-          <button onClick={stopRecording} style={{
-            padding: '12px 32px', borderRadius: 0, cursor: 'pointer',
-            background: T.coral, color: '#fff', fontWeight: 400, fontSize: 14,
-            borderLeft: '4px solid var(--gc-bar-color)',
-          }}>
-            Stop &amp; Process
-          </button>
-          <ClearBtn onClear={reset} />
-        </div>
+        <p style={{ margin: 0, fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Recording</p>
+        <button onClick={stopRecording} style={{
+          width: 88, height: 88, borderRadius: '50%',
+          background: T.primary, border: '4px solid rgba(204,28,28,0.25)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, outline: 'none',
+        }}>
+          <div style={{ width: 28, height: 28, background: '#fff', borderRadius: 2 }} />
+        </button>
+        <p style={{ margin: 0, fontSize: 11, color: T.textDim }}>Tap to stop</p>
       </div>
     </div>
   );
