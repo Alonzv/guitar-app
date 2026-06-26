@@ -8,6 +8,7 @@ const AudioCtxClass: typeof AudioContext = window.AudioContext || (window as any
 let _ctx: AudioContext | null = null;
 let _masterGain: GainNode | null = null;
 let _unlocking: Promise<void> | null = null;
+let _silentPlayed = false;
 
 // iOS 16.4+ Web Audio Session API.
 // 'playback'        = ignore mute switch; playback-only (default for this app).
@@ -22,6 +23,21 @@ function setPlaybackSession(): void {
       session.type = 'playback';
     }
   } catch { /* not supported on non-Safari or older iOS */ }
+}
+
+// Older iOS (< 16.4) fix: play a silent <audio> element synchronously within
+// the user gesture — this switches iOS audio session from "ambient" (muted by
+// silent switch) to "playback" (ignores silent switch). Only needs to run once.
+function playSilentElement(): void {
+  if (_silentPlayed) return;
+  _silentPlayed = true;
+  try {
+    const el = document.createElement('audio');
+    // Minimal valid WAV: 44-byte header, 0 PCM samples, 44100 Hz mono 16-bit.
+    el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    el.volume = 0;
+    el.play().catch(() => { /* autoplay blocked — will retry on next gesture */ _silentPlayed = false; });
+  } catch { _silentPlayed = false; }
 }
 
 /** Called by Tuner when it starts recording mic input. */
@@ -64,7 +80,8 @@ export function getOutputNode(): AudioNode {
 // Must be called synchronously from a user-gesture handler on every play action.
 // Returns a Promise that resolves once the context is actually running.
 export function unlockAudio(): Promise<void> {
-  setPlaybackSession();
+  setPlaybackSession();   // iOS 16.4+ — must be before AudioContext creation
+  playSilentElement();    // older iOS — must be synchronous in gesture handler
   initAudioGraph();
 
   const ctx = _ctx!;
@@ -137,8 +154,8 @@ export interface FretPos { string: number; fret: number; }
 /** Play scale notes sequentially. Call from a user-gesture handler. */
 export function playScale(midiNotes: number[]): void {
   if (midiNotes.length === 0) return;
-  const ctx = getSharedContext();
   unlockAudio().then(() => {
+    const ctx = getSharedContext();
     midiNotes.forEach((midi, i) => {
       const freq = 440 * Math.pow(2, (midi - 69) / 12);
       synthesizeScaleNote(ctx, freq, ctx.currentTime + 0.1 + i * 0.35);
@@ -153,8 +170,8 @@ export function playChord(
   capo = 0,
 ): void {
   if (fretPositions.length === 0) return;
-  const ctx = getSharedContext();
   unlockAudio().then(() => {
+    const ctx = getSharedContext();
     const sorted = [...fretPositions].sort((a, b) => a.string - b.string);
     sorted.forEach((pos, i) => {
       const freq = openFreqs[pos.string] * Math.pow(2, (pos.fret + capo) / 12);

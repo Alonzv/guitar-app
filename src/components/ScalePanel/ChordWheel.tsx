@@ -138,8 +138,10 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
       <g style={{
         transform: `rotate(${rotationDeg}deg)`,
         transformOrigin: `${CX}px ${CY}px`,
+        transformBox: 'view-box',
         transition: 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-      }}>
+        willChange: 'transform',
+      } as React.CSSProperties}>
         {Array.from({ length: TOTAL }, (_, i) => {
           const sa        = startAngle(i);
           const outerInfo = outerMap.get(i);
