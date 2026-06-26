@@ -108,11 +108,15 @@ export const Metronome: React.FC = () => {
       setBeat(-1);
       setPlaying(false);
     } else {
+      // Respond to the tap immediately (UI), then arm the scheduler once
+      // the AudioContext is confirmed running. Set nextBeatTime to Infinity
+      // so schedule() is a no-op until we arm it in the then().
+      nextBeatTimeRef.current = Infinity;
+      beatNumRef.current = 0;
+      setPlaying(true);
       unlockAudio().then(() => {
         const ctx = getSharedContext();
         nextBeatTimeRef.current = ctx.currentTime + 0.15;
-        beatNumRef.current = 0;
-        setPlaying(true);
       });
     }
   }, [playing]);

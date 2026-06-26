@@ -28,7 +28,12 @@ function setPlaybackSession(): void {
 // Older iOS (< 16.4) fix: play a silent <audio> element synchronously within
 // the user gesture — this switches iOS audio session from "ambient" (muted by
 // silent switch) to "playback" (ignores silent switch). Only needs to run once.
+// NOT called on browsers that have navigator.audioSession (iOS 16.4+) because
+// el.play() consumes the user-activation token there, leaving ctx.resume() without
+// one on the same gesture — which silently prevents the AudioContext from starting.
 function playSilentElement(): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((navigator as any).audioSession) return; // handled by setPlaybackSession() instead
   if (_silentPlayed) return;
   _silentPlayed = true;
   try {
@@ -36,7 +41,7 @@ function playSilentElement(): void {
     // Minimal valid WAV: 44-byte header, 0 PCM samples, 44100 Hz mono 16-bit.
     el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
     el.volume = 0;
-    el.play().catch(() => { /* autoplay blocked — will retry on next gesture */ _silentPlayed = false; });
+    el.play().catch(() => { _silentPlayed = false; });
   } catch { _silentPlayed = false; }
 }
 
