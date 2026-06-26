@@ -10,6 +10,28 @@ let _masterGain: GainNode | null = null;
 let _unlocking: Promise<void> | null = null;
 let _silentPlayed = false;
 
+// ── Now Playing suppression ───────────────────────────────────────────────
+// audioSession.type = 'playback' causes iOS to show the app in the Now
+// Playing widget. Telling MediaSession we are not playing hides it once
+// sound finishes. delayMs = 0 applies immediately; > 0 defers.
+let _nowPlayingTimer: ReturnType<typeof setTimeout> | null = null;
+
+function suppressNowPlaying(delayMs = 0): void {
+  if (!('mediaSession' in navigator)) return;
+  if (_nowPlayingTimer) { clearTimeout(_nowPlayingTimer); _nowPlayingTimer = null; }
+  const apply = () => {
+    try {
+      navigator.mediaSession.metadata      = null;
+      navigator.mediaSession.playbackState = 'none';
+    } catch { /* ignore on older browsers */ }
+  };
+  if (delayMs <= 0) { apply(); return; }
+  _nowPlayingTimer = setTimeout(() => { _nowPlayingTimer = null; apply(); }, delayMs);
+}
+
+/** Call when the metronome stops so it releases the Now Playing widget. */
+export function releaseNowPlaying(): void { suppressNowPlaying(); }
+
 // iOS 16.4+ Web Audio Session API.
 // 'playback'        = ignore mute switch; playback-only (default for this app).
 // 'play-and-record' = ignore mute switch; mic + speaker simultaneously (Tuner).
@@ -68,6 +90,7 @@ function initAudioGraph(): void {
   _ctx = new AudioCtxClass();
   _masterGain = _ctx.createGain();
   _masterGain.connect(_ctx.destination);
+  suppressNowPlaying(); // prevent initial context creation from registering Now Playing
 }
 
 export function getSharedContext(): AudioContext {
@@ -167,6 +190,8 @@ export function playScale(midiNotes: number[]): void {
       const freq = 440 * Math.pow(2, (midi - 69) / 12);
       synthesizeScaleNote(ctx, freq, ctx.currentTime + 0.3 + i * 0.35);
     });
+    // Dismiss Now Playing after last note finishes: 0.3 + n*0.35 + 0.4s
+    suppressNowPlaying(midiNotes.length * 350 + 750);
   });
 }
 
@@ -185,5 +210,7 @@ export function playChord(
       const freq = openFreqs[pos.string] * Math.pow(2, (pos.fret + capo) / 12);
       synthesizeNote(ctx, freq, ctx.currentTime + 0.3 + i * 0.065);
     });
+    // Dismiss Now Playing after all strings finish: 0.3 + 5*0.065 + 1.6s ≈ 2.2s
+    suppressNowPlaying(2500);
   });
 }
