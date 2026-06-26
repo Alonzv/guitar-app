@@ -11,15 +11,49 @@ const ALL_ROOTS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const COF_ORDER  = ['C','G','D','A','E','B','F#','Db','Ab','Eb','Bb','F'];
 const COF_MINOR  = ['Am','Em','Bm','F#m','C#m','G#m','Ebm','Bbm','Fm','Cm','Gm','Dm'];
 
-const MAJOR_ROMANS = ['I','ii','iii','IV','V','vi','vii°'] as const;
-const MAJOR_FUNCS  = ['tonic','subdominant','tonic','subdominant','dominant','tonic','dominant'] as const;
 type Func = 'tonic' | 'subdominant' | 'dominant';
+type Mode = 'major' | 'minor';
+
+const MAJOR_ROMANS = ['I','ii','iii','IV','V','vi','vii°'] as const;
+const MINOR_ROMANS = ['i','ii°','III','iv','v','VI','VII'] as const;
+const MAJOR_FUNCS: Func[] = ['tonic','subdominant','tonic','subdominant','dominant','tonic','dominant'];
+const MINOR_FUNCS: Func[] = ['tonic','subdominant','tonic','subdominant','dominant','subdominant','dominant'];
 
 const FUNC_COLOR: Record<Func, string> = {
   tonic:       T.primary,
   subdominant: '#5C5650',
   dominant:    T.secondary,
 };
+
+interface HLInfo { chord: string; roman: string; func: Func }
+
+// Compute outer/inner ring highlights from CoF position + mode.
+// Uses Key.majorKey(COF_ORDER[P]) as the relative-major basis for both modes.
+function computeHighlights(cofIdx: number, mode: Mode) {
+  const outer = new Map<number, HLInfo>();
+  const inner = new Map<number, HLInfo>();
+  const P = cofIdx;
+  const t = Key.majorKey(COF_ORDER[P]).triads;
+
+  if (mode === 'major') {
+    outer.set(P,          { chord: t[0], roman: 'I',    func: 'tonic'       });
+    outer.set((P+11)%12,  { chord: t[3], roman: 'IV',   func: 'subdominant' });
+    outer.set((P+1)%12,   { chord: t[4], roman: 'V',    func: 'dominant'    });
+    inner.set(P,          { chord: t[5], roman: 'vi',   func: 'tonic'       });
+    inner.set((P+11)%12,  { chord: t[1], roman: 'ii',   func: 'subdominant' });
+    inner.set((P+1)%12,   { chord: t[2], roman: 'iii',  func: 'tonic'       });
+    inner.set((P+2)%12,   { chord: t[6], roman: 'vii°', func: 'dominant'    });
+  } else {
+    inner.set(P,          { chord: t[5], roman: 'i',    func: 'tonic'       });
+    inner.set((P+11)%12,  { chord: t[1], roman: 'iv',   func: 'subdominant' });
+    inner.set((P+1)%12,   { chord: t[2], roman: 'v',    func: 'dominant'    });
+    inner.set((P+2)%12,   { chord: t[6], roman: 'ii°',  func: 'subdominant' });
+    outer.set(P,          { chord: t[0], roman: 'III',  func: 'tonic'       });
+    outer.set((P+11)%12,  { chord: t[3], roman: 'VI',   func: 'subdominant' });
+    outer.set((P+1)%12,   { chord: t[4], roman: 'VII',  func: 'dominant'    });
+  }
+  return { outerMap: outer, innerMap: inner };
+}
 
 const PROG_TEMPLATES = [
   { label: 'I – V – vi – IV', indices: [0, 4, 5, 3] },
@@ -32,10 +66,10 @@ const PROG_TEMPLATES = [
 const SIZE   = 320;
 const CX     = SIZE / 2;
 const CY     = SIZE / 2;
-const R_O_O  = 152;  // outer ring outer radius
-const R_O_I  = 104;  // outer ring inner radius
-const R_I_O  = 100;  // inner ring outer radius
-const R_I_I  = 58;   // inner ring inner radius
+const R_O_O  = 152;
+const R_O_I  = 104;
+const R_I_O  = 100;
+const R_I_I  = 58;
 const TOTAL  = 12;
 const SLICE  = (2 * Math.PI) / TOTAL;
 const GAP    = 0.013;
@@ -61,6 +95,12 @@ const MONO_LBL: React.CSSProperties = {
   textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
 };
 
+// Conversion maps
+const SHARP_TO_COF:   Record<string, string> = { 'C#':'Db', 'D#':'Eb', 'G#':'Ab', 'A#':'Bb' };
+const FLAT_TO_SHARP:  Record<string, string> = { 'Db':'C#', 'Eb':'D#', 'Ab':'G#', 'Bb':'A#' };
+// D# → Ebm and A# → Bbm because COF_MINOR uses flat spelling for those
+const SHARP_TO_MINOR: Record<string, string> = { 'D#': 'Ebm', 'A#': 'Bbm' };
+
 interface Props {
   onAddToProgression?: (item: ChordInProgression) => void;
   desktop?: boolean;
@@ -68,37 +108,27 @@ interface Props {
 
 export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
   const [root, setRoot] = useState<string>('C');
+  const [mode, setMode] = useState<Mode>('major');
 
-  // Map display root → CoF canonical name (COF_ORDER uses flats for some enharmonics)
-  const SHARP_TO_COF: Record<string, string> = { 'C#':'Db', 'D#':'Eb', 'G#':'Ab', 'A#':'Bb' };
-  const cofRoot = COF_ORDER.includes(root) ? root : (SHARP_TO_COF[root] ?? root);
+  // CoF position index (0-11)
+  const cofRoot  = COF_ORDER.includes(root) ? root : (SHARP_TO_COF[root] ?? root);
+  const cofIdx   = mode === 'major'
+    ? COF_ORDER.indexOf(cofRoot)
+    : COF_MINOR.indexOf(SHARP_TO_MINOR[root] ?? (root + 'm'));
 
-  const keyData  = Key.majorKey(cofRoot);
-  const triads   = keyData.triads;  // ['C','Dm','Em','F','G','Am','Bdim'] for C major
+  const { outerMap, innerMap } = computeHighlights(Math.max(0, cofIdx), mode);
 
-  // CoF index for the selected key (outer ring)
-  const cofIdx   = COF_ORDER.indexOf(cofRoot);
-
-  // Build position map: CoF position → diatonic info
-  // Outer positions with diatonic chords for this key
-  const outerMap = new Map<number, { chord: string; roman: string; func: Func }>();
-  const innerMap = new Map<number, { chord: string; roman: string; func: Func }>();
-  if (cofIdx >= 0) {
-    outerMap.set(cofIdx,           { chord: triads[0], roman: 'I',    func: 'tonic'       });
-    outerMap.set((cofIdx+11)%12,   { chord: triads[3], roman: 'IV',   func: 'subdominant' });
-    outerMap.set((cofIdx+1)%12,    { chord: triads[4], roman: 'V',    func: 'dominant'    });
-    innerMap.set(cofIdx,           { chord: triads[5], roman: 'vi',   func: 'tonic'       });
-    innerMap.set((cofIdx+11)%12,   { chord: triads[1], roman: 'ii',   func: 'subdominant' });
-    innerMap.set((cofIdx+1)%12,    { chord: triads[2], roman: 'iii',  func: 'tonic'       });
-    innerMap.set((cofIdx+2)%12,    { chord: triads[6], roman: 'vii°', func: 'dominant'    });
-  }
-
-  // Build diatonic chord list with roman/func
-  const diatonic = triads.map((chord, i) => ({
-    chord,
-    roman: MAJOR_ROMANS[i],
-    func:  MAJOR_FUNCS[i] as Func,
-  }));
+  // Diatonic chord list based on mode
+  const diatonic = (() => {
+    if (mode === 'major') {
+      return Key.majorKey(cofRoot).triads.map((chord, i) => ({
+        chord, roman: MAJOR_ROMANS[i], func: MAJOR_FUNCS[i],
+      }));
+    }
+    return Key.minorKey(root).natural.triads.map((chord, i) => ({
+      chord, roman: MINOR_ROMANS[i], func: MINOR_FUNCS[i],
+    }));
+  })();
 
   const byFunc = {
     tonic:       diatonic.filter(c => c.func === 'tonic'),
@@ -106,8 +136,6 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
     dominant:    diatonic.filter(c => c.func === 'dominant'),
   };
 
-  // Rotation: selected key at top (-π/2)
-  // Position 0 (C) is at -π/2 by default; rotate so cofIdx goes to top
   const rotationDeg = cofIdx >= 0 ? -(cofIdx * 30) : 0;
 
   const getVoicing = (chordName: string) => {
@@ -130,7 +158,6 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
     if (fp.length) playChord(fp, OPEN_FREQS, 0);
   };
 
-  // SVG: draw 12 arc slices, rotated so selected key is at top
   const startAngle = (i: number) => -Math.PI / 2 - SLICE / 2 + i * SLICE;
 
   const wheelSvg = (
@@ -146,61 +173,101 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
           const sa        = startAngle(i);
           const outerInfo = outerMap.get(i);
           const innerInfo = innerMap.get(i);
-          const isSelected = i === cofIdx;
-          const oFill = outerInfo ? FUNC_COLOR[outerInfo.func] : '#E4E0D8';
-          const iFill = innerInfo ? FUNC_COLOR[innerInfo.func] : '#EAE7E2';
-          const oOpacity = outerInfo ? 1 : 0.35;
-          const iOpacity = innerInfo ? 1 : 0.25;
-          const mp_o = midPt(sa, (R_O_O + R_O_I) / 2);
-          const mp_i = midPt(sa, (R_I_O + R_I_I) / 2);
-          // Text rotation to keep text upright after group rotation
-          const textRot = -rotationDeg;
-          // Map CoF index back to ALL_ROOTS name for key selection
-          const cofNote = COF_ORDER[i];
-          const FLAT_TO_SHARP: Record<string, string> = { 'Db':'C#', 'Eb':'D#', 'Ab':'G#', 'Bb':'A#' };
-          const selectRoot = ALL_ROOTS.includes(cofNote) ? cofNote : (FLAT_TO_SHARP[cofNote] ?? cofNote);
+          const oFill     = outerInfo ? FUNC_COLOR[outerInfo.func] : '#E4E0D8';
+          const iFill     = innerInfo ? FUNC_COLOR[innerInfo.func] : '#EAE7E2';
+          const oOpacity  = outerInfo ? 1 : 0.35;
+          const iOpacity  = innerInfo ? 1 : 0.25;
+          const mp_o      = midPt(sa, (R_O_O + R_O_I) / 2);
+          const mp_i      = midPt(sa, (R_I_O + R_I_I) / 2);
+          const textRot   = -rotationDeg;
+
+          // Root names for click handlers
+          const cofNote       = COF_ORDER[i];
+          const selectRoot    = ALL_ROOTS.includes(cofNote) ? cofNote : (FLAT_TO_SHARP[cofNote] ?? cofNote);
+          const minorName     = COF_MINOR[i];
+          const minorRootCof  = minorName.slice(0, -1); // strip 'm'
+          const minorSelectRoot = ALL_ROOTS.includes(minorRootCof) ? minorRootCof : (FLAT_TO_SHARP[minorRootCof] ?? minorRootCof);
+
           return (
-            <g key={i} style={{ cursor: 'pointer' }} onClick={() => setRoot(selectRoot)}>
-              {/* Outer arc */}
-              <path d={arcPath(sa, R_O_O, R_O_I)} fill={oFill} opacity={oOpacity}
-                stroke={isSelected ? '#fff' : 'none'} strokeWidth={isSelected ? 1.5 : 0} />
-              {/* Inner arc */}
-              <path d={arcPath(sa, R_I_O, R_I_I)} fill={iFill} opacity={iOpacity} />
-              {/* Outer text */}
-              <text
-                x={mp_o.x} y={mp_o.y}
-                textAnchor="middle" dominantBaseline="middle"
-                fontSize={outerInfo ? 11 : 9}
-                fontWeight={outerInfo ? 700 : 400}
-                fill={outerInfo ? '#fff' : '#9C958C'}
+            <g key={i}>
+              {/* Outer arc — tap to set major key */}
+              <path
+                d={arcPath(sa, R_O_O, R_O_I)} fill={oFill} opacity={oOpacity}
+                stroke={mode === 'major' && i === cofIdx ? '#fff' : 'none'}
+                strokeWidth={mode === 'major' && i === cofIdx ? 1.5 : 0}
+                style={{ cursor: 'pointer' }}
+                onClick={() => { setMode('major'); setRoot(selectRoot); }}
+              />
+              {/* Inner arc — tap to set minor key */}
+              <path
+                d={arcPath(sa, R_I_O, R_I_I)} fill={iFill} opacity={iOpacity}
+                stroke={mode === 'minor' && i === cofIdx ? '#fff' : 'none'}
+                strokeWidth={mode === 'minor' && i === cofIdx ? 1.5 : 0}
+                style={{ cursor: 'pointer' }}
+                onClick={() => { setMode('minor'); setRoot(minorSelectRoot); }}
+              />
+
+              {/* Outer text group — counter-rotated to stay upright */}
+              <g
                 transform={`rotate(${textRot} ${mp_o.x} ${mp_o.y})`}
                 style={{ pointerEvents: 'none' }}
               >
-                {COF_ORDER[i]}
-              </text>
-              {/* Inner text */}
-              <text
-                x={mp_i.x} y={mp_i.y}
-                textAnchor="middle" dominantBaseline="middle"
-                fontSize={innerInfo ? 9 : 8}
-                fontWeight={innerInfo ? 600 : 400}
-                fill={innerInfo ? '#fff' : '#9C958C'}
+                <text
+                  x={mp_o.x} y={outerInfo ? mp_o.y - 4 : mp_o.y}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize={outerInfo ? 11 : 9} fontWeight={outerInfo ? 700 : 400}
+                  fill={outerInfo ? '#fff' : '#9C958C'}
+                >
+                  {cofNote}
+                </text>
+                {outerInfo && (
+                  <text
+                    x={mp_o.x} y={mp_o.y + 6}
+                    textAnchor="middle" dominantBaseline="middle"
+                    fontSize={7} fontWeight={500}
+                    fill="rgba(255,255,255,0.75)"
+                  >
+                    {outerInfo.roman}
+                  </text>
+                )}
+              </g>
+
+              {/* Inner text group — counter-rotated to stay upright */}
+              <g
                 transform={`rotate(${textRot} ${mp_i.x} ${mp_i.y})`}
                 style={{ pointerEvents: 'none' }}
               >
-                {COF_MINOR[i]}
-              </text>
+                <text
+                  x={mp_i.x} y={innerInfo ? mp_i.y - 4 : mp_i.y}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize={innerInfo ? 9 : 8} fontWeight={innerInfo ? 600 : 400}
+                  fill={innerInfo ? '#fff' : '#9C958C'}
+                >
+                  {minorName}
+                </text>
+                {innerInfo && (
+                  <text
+                    x={mp_i.x} y={mp_i.y + 6}
+                    textAnchor="middle" dominantBaseline="middle"
+                    fontSize={6} fontWeight={500}
+                    fill="rgba(255,255,255,0.75)"
+                  >
+                    {innerInfo.roman}
+                  </text>
+                )}
+              </g>
             </g>
           );
         })}
       </g>
 
-      {/* Dashed red arc — tonic sector highlight */}
+      {/* Dashed arc indicator — fixed at top, outer ring for major / inner for minor */}
       {cofIdx >= 0 && (() => {
-        const sa = startAngle(cofIdx) + rotationDeg * Math.PI / 180 - 0.04;
-        const ea = sa + SLICE + 0.08;
-        const arcR = R_O_O + 8;
-        const p1 = polar(sa, arcR), p2 = polar(ea, arcR);
+        const arcR = mode === 'major' ? R_O_O + 8 : R_I_I - 8;
+        const sa   = -Math.PI / 2 - SLICE / 2 - 0.04;
+        const ea   = -Math.PI / 2 + SLICE / 2 + 0.04;
+        const p1   = polar(sa, arcR);
+        const p2   = polar(ea, arcR);
         return (
           <path
             d={`M${p1.x} ${p1.y} A${arcR} ${arcR} 0 0 1 ${p2.x} ${p2.y}`}
@@ -213,7 +280,9 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
       <text x={CX} y={CY - 8} textAnchor="middle" fontSize={22} fontWeight={900}
         fill={T.text} fontFamily="inherit">{root}</text>
       <text x={CX} y={CY + 10} textAnchor="middle" fontSize={9}
-        fill={T.textDim} fontFamily="var(--gc-mono)" letterSpacing="0.1em">MAJOR</text>
+        fill={T.textDim} fontFamily="var(--gc-mono)" letterSpacing="0.1em">
+        {mode === 'major' ? 'MAJOR' : 'minor'}
+      </text>
     </svg>
   );
 
@@ -277,9 +346,36 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression }) => {
         </div>
       </div>
 
+      {/* Mode toggle hint */}
+      <div style={{
+        display: 'flex', gap: 6, fontSize: 10,
+        fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
+        color: T.textDim,
+      }}>
+        <span style={{
+          padding: '3px 8px',
+          background: mode === 'major' ? T.primary : 'transparent',
+          color: mode === 'major' ? '#fff' : T.textMuted,
+          border: `1px solid ${mode === 'major' ? T.primary : T.border}`,
+          cursor: 'pointer',
+        }} onClick={() => setMode('major')}>MAJOR</span>
+        <span style={{
+          padding: '3px 8px',
+          background: mode === 'minor' ? T.secondary : 'transparent',
+          color: mode === 'minor' ? '#fff' : T.textMuted,
+          border: `1px solid ${mode === 'minor' ? T.secondary : T.border}`,
+          cursor: 'pointer',
+        }} onClick={() => setMode('minor')}>minor</span>
+        <span style={{ color: T.textDim, fontSize: 9, alignSelf: 'center' }}>
+          tap outer ring = major · inner ring = minor
+        </span>
+      </div>
+
       {/* Wheel */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <p style={{ ...MONO_LBL, marginBottom: 6, alignSelf: 'flex-start' }}>Chord Wheel · Key of {root}</p>
+        <p style={{ ...MONO_LBL, marginBottom: 6, alignSelf: 'flex-start' }}>
+          Chord Wheel · {root} {mode === 'major' ? 'Major' : 'minor'}
+        </p>
         <div style={{ width: '100%', maxWidth: SIZE }}>
           {wheelSvg}
         </div>

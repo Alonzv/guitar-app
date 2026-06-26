@@ -129,6 +129,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
   const ctxRef       = useRef<AudioContext | null>(null);
   const analyserRef  = useRef<AnalyserNode | null>(null);
+  const sourceRef    = useRef<MediaStreamAudioSourceNode | null>(null);
   const streamRef    = useRef<MediaStream | null>(null);
   const rafRef       = useRef<number | null>(null);
   const freqBufRef   = useRef<number[]>([]);
@@ -199,6 +200,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       const ctx = getSharedContext();
       ctxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
+      sourceRef.current = source;
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 4096;
       analyser.smoothingTimeConstant = 0.0;
@@ -220,10 +222,13 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    // Disconnect analyser but do NOT close the shared AudioContext
+    // Disconnect the source node first — on iOS, keeping a MediaStreamSourceNode
+    // connected can hold the mic indicator on even after stopping the tracks.
+    try { sourceRef.current?.disconnect(); } catch { /* ignore */ }
     try { analyserRef.current?.disconnect(); } catch { /* ignore */ }
     streamRef.current?.getTracks().forEach(t => t.stop());
-    ctxRef.current = null; analyserRef.current = null; streamRef.current = null;
+    ctxRef.current = null; analyserRef.current = null;
+    sourceRef.current = null; streamRef.current = null;
     freqBufRef.current = [];
     clearMicSession();
     setListening(false); setDisplay(null);
