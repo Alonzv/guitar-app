@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
 import { unlockAudio, getSharedContext, getOutputNode } from '../../utils/audioPlayback';
 
 // ── Inline SVG note icons ──────────────────────────────────────────────────

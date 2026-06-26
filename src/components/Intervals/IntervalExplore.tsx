@@ -136,20 +136,20 @@ export function IntervalExplore() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* Root picker */}
-      <div style={card({ padding: '10px 12px' })}>
+      <div>
         <p style={MONO_LBL}>Root Note</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 2 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
               <button key={n} onClick={() => setRoot(n)} style={{
-                padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 11 : 13, fontWeight: sel ? 600 : 400,
+                padding: '8px 2px', borderRadius: 0, cursor: 'pointer',
+                fontSize: sharp ? 9 : 11, fontWeight: sel ? 700 : 400,
                 border: `1px solid ${sel ? T.primary : T.border}`,
-                background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
-                color: sel ? T.primary : sharp ? T.textMuted : T.text,
-                borderLeft: `3px solid ${sel ? T.primary : 'var(--gc-bar-color)'}`,
+                background: sel ? T.primary : sharp ? T.bgInput : T.bgCard,
+                color: sel ? '#fff' : sharp ? T.textMuted : T.text,
+                borderTop: `3px solid ${sel ? T.primary : 'transparent'}`,
               }}>{n}</button>
             );
           })}
@@ -187,6 +187,7 @@ export function IntervalExplore() {
         <>
           {/* Result card */}
           <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `4px solid ${T.primary}` }}>
+            <p style={{ ...MONO_LBL, margin: '0 0 10px' }}>Interval from {root}</p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>

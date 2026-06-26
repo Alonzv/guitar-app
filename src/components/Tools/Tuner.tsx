@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
 import type { Tuning } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
 import { IconMic } from '../Icons';

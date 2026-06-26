@@ -171,15 +171,8 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
     ? selectedMode === 'major' ? COF_MAJOR[selectedIdx!] : minorRoot!
     : null;
   const centerLabel = hasSelection ? (selectedMode === 'major' ? 'Major' : 'minor') : null;
-  const relLabel    = hasSelection
-    ? selectedMode === 'major'
-      ? `Rel: ${Key.majorKey(COF_MAJOR[selectedIdx!]).triads[5]}`
-      : `Rel: ${COF_MAJOR[selectedIdx!]}`
-    : null;
-
   // ── Desktop right-panel data ────────────────────────────────────────────────
   const accidentals = selectedIdx !== null ? Key.majorKey(COF_MAJOR[selectedIdx]).alteration : 0;
-  const keySig = accidentals === 0 ? 'No ♯/♭' : accidentals > 0 ? `${accidentals}♯` : `${Math.abs(accidentals)}♭`;
 
   const diatonicChords = selectedIdx !== null
     ? selectedMode === 'major'
@@ -306,15 +299,12 @@ export const CircleOfFifths: React.FC<Props> = ({ desktop }) => {
           <circle cx={CX} cy={CY} r={R_IN_INNER - 2} fill={T.bgCard} stroke={T.border} strokeWidth="1.5" />
           {hasSelection ? (
             <>
-              <text x={CX} y={CY - 13} textAnchor="middle" dominantBaseline="middle"
+              <text x={CX} y={CY - 8} textAnchor="middle" dominantBaseline="middle"
                 fill={T.text} fontSize={18} fontWeight={800}
                 fontFamily="system-ui, -apple-system, Arial, sans-serif">{centerRoot}</text>
-              <text x={CX} y={CY + 3} textAnchor="middle" dominantBaseline="middle"
-                fill={selectedMode === 'minor' ? T.textMuted : T.textMuted} fontSize={10}
+              <text x={CX} y={CY + 10} textAnchor="middle" dominantBaseline="middle"
+                fill={T.textMuted} fontSize={10}
                 fontFamily="system-ui, -apple-system, Arial, sans-serif">{centerLabel}</text>
-              <text x={CX} y={CY + 19} textAnchor="middle" dominantBaseline="middle"
-                fill={T.textDim} fontSize={9}
-                fontFamily="system-ui, -apple-system, Arial, sans-serif">{relLabel}</text>
             </>
           ) : (
             <>
