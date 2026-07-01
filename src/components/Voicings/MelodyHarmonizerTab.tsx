@@ -6,7 +6,7 @@ import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { detectTabScale } from '../../utils/analyzeTab';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import {
-  harmonizeMelody, HARMONY_STYLES,
+  harmonizeMelody, HARMONY_STYLES, SLOT_MULT,
   labelToLowEIndex, labelToRow, STR_LABELS,
   type HarmonizeStyle, type HarmonizeResult,
 } from '../../utils/harmonizeMelody';
@@ -14,7 +14,7 @@ import { extractTabFromImage } from '../../utils/tabVision';
 
 // ── Grid model ───────────────────────────────────────────────────────────────
 type Tech = 'h' | 'p' | '/' | '\\' | 'b' | '~';
-interface HCell { fret: string; tech?: Tech; added?: boolean }
+interface HCell { fret: string; tech?: Tech; anchor?: boolean; added?: boolean }
 type HGrid = HCell[][];
 
 const ROWS = STR_LABELS;             // e B G D A E  (row 0 = high e)
@@ -206,6 +206,8 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const clearCell = (row: number, col: number) => editCell(row, col, () => ({ fret: '' }));
   const toggleTech = (row: number, col: number, tech: Tech) =>
     editCell(row, col, c => ({ ...c, tech: c.tech === tech ? undefined : tech }));
+  const toggleAnchor = (row: number, col: number) =>
+    editCell(row, col, c => ({ ...c, anchor: !c.anchor }));
 
   // Tap a cell → select it and focus the hidden input to raise the mobile
   // numeric keyboard (no-op on desktop, where it's just an invisible focus).
@@ -224,6 +226,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     if (e.key >= '0' && e.key <= '9') { e.preventDefault(); setFret(r, c, e.key); }
     else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); clearCell(r, c); }
     else if (['h', 'p', 'b', '/', '\\', '~'].includes(e.key)) { e.preventDefault(); toggleTech(r, c, e.key as Tech); }
+    else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); toggleAnchor(r, c); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); setSel([r, Math.min(numCols - 1, c + 1)]); }
     else if (e.key === 'ArrowLeft')  { e.preventDefault(); setSel([r, Math.max(0, c - 1)]); }
     else if (e.key === 'ArrowUp')    { e.preventDefault(); setSel([Math.max(0, r - 1), c]); }
@@ -237,7 +240,8 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   useEffect(() => {
     if (!sel) return;
     const handler = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       handleEditKey(e);
     };
     document.addEventListener('keydown', handler);
@@ -280,7 +284,18 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     harmonizeMelody(grid, scaleName, styles, tuning, seed)
       .then(r => {
         setLoadingKind(null);
-        if (r) { setResult(r); setSavedResult(r); }
+        if (r) {
+          // No manual anchors were marked — the AI picked them itself.
+          // Reflect its choices back onto the grid so the user sees (and
+          // can edit) exactly which notes it treated as anchors.
+          if (r.autoAnchorSlots && r.autoAnchorSlots.length > 0) {
+            const anchorCols = new Set(r.autoAnchorSlots.map(slot => Math.round(slot / SLOT_MULT)));
+            setGrid(g => g.map(row => row.map((c, col) =>
+              (anchorCols.has(col) && c.fret !== '') ? { ...c, anchor: true } : c
+            )));
+          }
+          setResult(r); setSavedResult(r);
+        }
         else setError('לא ניתן להרמן כרגע. ודא שמפתח ה-API מוגדר ושיש מלודיה בטאב.');
       })
       .catch(() => { setLoadingKind(null); setError('שגיאת רשת — נסה שוב.'); });
@@ -383,6 +398,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                 {cell.added && cell.fret !== '' && (
                   <div style={{ position: 'absolute', width: 22, height: 22, background: COLOR_ADDED + '1f', border: `1px solid ${COLOR_ADDED}55`, top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
                 )}
+                {cell.anchor && cell.fret !== '' && (
+                  <span style={{ position: 'absolute', top: -2, left: 2, fontSize: 12, fontWeight: 700, color: T.secondary, lineHeight: 1, zIndex: 2, pointerEvents: 'none' }}>
+                    ›
+                  </span>
+                )}
                 {cell.fret !== '' && (
                   <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 12, fontFamily: 'monospace', fontWeight: cell.added ? 700 : 400, color, lineHeight: 1, zIndex: 1 }}>{cell.fret}</span>
                 )}
@@ -424,16 +444,30 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     />
   );
 
-  // ── Selected-cell toolbar — technique entry only. Fret digits are typed
-  // via the native keyboard (hiddenFretInput above / physical keyboard);
-  // Backspace/Delete already clears a fret through handleEditKey, so no
-  // separate on-screen "Clear fret" button is needed here.
+  // ── Selected-cell toolbar — technique entry + Harmonize Anchor toggle.
+  // Fret digits are typed via the native keyboard (hiddenFretInput above /
+  // physical keyboard); Backspace/Delete already clears a fret through
+  // handleEditKey, so no separate on-screen "Clear fret" button is needed.
   const cellToolbar = sel && !result && (
     <div style={{ ...card({ padding: '10px 12px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={LABEL_STYLE}>Cell {ROWS[sel[0]]} · col {sel[1] + 1}</p>
         <button onClick={() => { setSel(null); fretInputRef.current?.blur(); }} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
       </div>
+      <button
+        onClick={() => toggleAnchor(sel[0], sel[1])}
+        disabled={grid[sel[0]][sel[1]].fret === ''}
+        style={{
+          width: '100%', padding: '7px 0',
+          border: `1.5px solid ${grid[sel[0]][sel[1]].anchor ? T.secondary : T.border}`,
+          background: grid[sel[0]][sel[1]].anchor ? T.secondaryBg : T.bgInput,
+          color: grid[sel[0]][sel[1]].anchor ? T.secondary : T.textMuted,
+          fontSize: 11, fontWeight: grid[sel[0]][sel[1]].anchor ? 700 : 400, cursor: 'pointer',
+          opacity: grid[sel[0]][sel[1]].fret === '' ? 0.5 : 1,
+        }}
+      >
+        › {grid[sel[0]][sel[1]].anchor ? 'Harmonize Anchor ✓' : 'Harmonize Anchor'}
+      </button>
       <div style={{ display: 'flex', gap: 4 }}>
         {TECH_BTNS.map(t => {
           const active = grid[sel[0]][sel[1]].tech === t.id;
@@ -502,12 +536,17 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         {renderGrid(result ? displayGrid : grid, !result)}
 
         {!result && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addColumns} style={{ ...secBtn(false), flex: 1 }}>+ Columns</button>
-            <span style={{ fontSize: 10, color: T.textDim, alignSelf: 'center', flex: 2 }}>
-              Tap a cell, then type frets / techniques
-            </span>
-          </div>
+          <>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={addColumns} style={{ ...secBtn(false), flex: 1 }}>+ Columns</button>
+              <span style={{ fontSize: 10, color: T.textDim, alignSelf: 'center', flex: 2 }}>
+                Tap a cell, then type frets / techniques
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: 10, color: T.textDim, lineHeight: 1.5 }}>
+              <span style={{ color: T.secondary, fontWeight: 700 }}>›</span> marks a "Harmonize Anchor" — only anchored notes get chords/intervals; the rest stay single notes with connecting material woven between anchors. Leave none marked and the AI will choose anchors for you.
+            </p>
+          </>
         )}
       </div>
 
