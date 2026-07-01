@@ -38,7 +38,7 @@ export function DesktopShell({
         {/* Left: wordmark */}
         <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 19, lineHeight: 1 }}>
           <span style={{ color: T.text }}>Scale</span>
-          <span style={{ color: T.primary }}>Up</span>
+          <span style={{ color: T.brandAccent }}>Up</span>
         </span>
 
         {/* Center: horizontal tab nav */}

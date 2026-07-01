@@ -130,6 +130,8 @@ button:active { transform: scale(0.96); }
   --gc-bg-card:          #FFFFFF;
   --gc-bg-input:         #F0F0F0;
   --gc-border:           #D0D0D0;
+  /* Wordmark-only accent — NOT used for buttons, see --gc-primary below */
+  --gc-brand-accent:     #110CF0;
   --gc-primary:          #1A1818;
   --gc-primary-hov:      #322F2F;
   --gc-primary-bg:       rgba(26,24,24,0.09);
@@ -151,11 +153,13 @@ button:active { transform: scale(0.96); }
 }
 
 body.dark {
-  /* Dark mode — midnight stage: black + gold + cobalt */
+  /* Dark mode — midnight stage: black + cobalt wordmark + gold */
   --gc-bg-deep:          #111110;
   --gc-bg-card:          #1A1918;
   --gc-bg-input:         #242220;
   --gc-border:           #383530;
+  /* Wordmark-only accent — NOT used for buttons, see --gc-primary below */
+  --gc-brand-accent:     #110CF0;
   --gc-primary:          #6B655C;
   --gc-primary-hov:      #7D766B;
   --gc-primary-bg:       rgba(107,101,92,0.18);
