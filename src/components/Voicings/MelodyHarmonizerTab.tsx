@@ -562,6 +562,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             Melodic adds an independent moving harmony line with its own passing notes between your melody notes — not just stacked chords.
           </p>
         )}
+        {styles.includes('chordmelody') && (
+          <p style={{ margin: 0, fontSize: 10, color: T.textDim, lineHeight: 1.5 }}>
+            Chord-Melody keeps your original notes as the top voice — every harmony/bass note is placed below it, relocating the melody to a higher string if needed to make room.
+          </p>
+        )}
       </div>
 
       {/* Harmonize / Regenerate */}
