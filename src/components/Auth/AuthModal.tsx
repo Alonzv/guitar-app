@@ -105,7 +105,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <span style={{ fontSize: 17, fontWeight: 800, color: T.text, letterSpacing: '-0.5px' }}>
-            <span style={{ color: T.secondary }}>Scale</span><span style={{ color: T.primary }}>Up</span>
+            <span style={{ color: T.secondary }}>Scale</span><span style={{ color: T.brandAccent }}>Up</span>
           </span>
           <button onClick={onClose} aria-label="Close" style={{
             width: 28, height: 28, borderRadius: 0, border: `1px solid ${T.border}`,

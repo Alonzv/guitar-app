@@ -6,6 +6,9 @@ export const T = {
   bgCard:          'var(--gc-bg-card)',
   bgInput:         'var(--gc-bg-input)',
   border:          'var(--gc-border)',
+  // Wordmark-only red accent — deliberately separate from `primary` so
+  // action/confirm buttons stay black while the logo keeps its red "Up".
+  brandAccent:     'var(--gc-brand-accent)',
   primary:         'var(--gc-primary)',
   primaryHov:      'var(--gc-primary-hov)',
   primaryBg:       'var(--gc-primary-bg)',

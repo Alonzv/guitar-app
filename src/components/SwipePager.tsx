@@ -159,7 +159,7 @@ export function SwipePager({
       }}>
         <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 17, lineHeight: 1 }}>
           <span style={{ color: T.text }}>Scale</span>
-          <span style={{ color: T.primary }}>Up</span>
+          <span style={{ color: T.brandAccent }}>Up</span>
         </span>
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
