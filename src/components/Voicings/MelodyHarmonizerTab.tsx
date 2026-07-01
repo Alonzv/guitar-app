@@ -210,6 +210,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   const addColumns = () => setGrid(g => g.map(r => [...r, ...Array.from({ length: 4 }, () => ({ fret: '' as string }))]));
   const clearGrid = () => { setResult(null); setGrid(emptyGrid()); setSel(null); };
+  const editMelody = () => { setResult(null); setError(null); };
 
   // ── Display grid (melody + harmony merged) ─────────────────────────────────
   const displayGrid: HGrid = useMemo(() => {
@@ -390,20 +391,31 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Input stage */}
       <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <p style={LABEL_STYLE}>Melody Input</p>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => fileRef.current?.click()} disabled={visionLoading} style={secBtn(visionLoading)}>
-              {visionLoading ? 'Reading…' : 'Image'}
-            </button>
-            <button onClick={() => setPasteOpen(p => !p)} style={secBtn(false)}>Paste</button>
+            {result ? (
+              <button onClick={editMelody} style={editBtn}>✎ Edit Melody</button>
+            ) : (
+              <>
+                <button onClick={() => fileRef.current?.click()} disabled={visionLoading} style={secBtn(visionLoading)}>
+                  {visionLoading ? 'Reading…' : 'Image'}
+                </button>
+                <button onClick={() => setPasteOpen(p => !p)} style={secBtn(false)}>Paste</button>
+              </>
+            )}
             <button onClick={clearGrid} style={secBtn(false)}>Clear</button>
           </div>
         </div>
+        {result && (
+          <p style={{ margin: 0, fontSize: 10, color: T.textDim }}>
+            Editing removes the harmony notes so you can change the original riff — harmonize again when ready.
+          </p>
+        )}
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) onImageFile(f); e.target.value = ''; }} />
 
-        {pasteOpen && (
+        {pasteOpen && !result && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <textarea
               value={pasteText} onChange={e => setPasteText(e.target.value)}
@@ -605,6 +617,11 @@ function secBtn(disabled: boolean): React.CSSProperties {
     borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
   };
 }
+const editBtn: React.CSSProperties = {
+  padding: '5px 12px', border: 'none', background: T.secondary, color: '#fff',
+  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+  borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
+};
 const selectStyle: React.CSSProperties = {
   flex: 1, padding: '8px 10px', background: T.bgInput, border: `1px solid ${T.border}`,
   color: T.text, fontSize: 13, cursor: 'pointer', borderRadius: 0,
