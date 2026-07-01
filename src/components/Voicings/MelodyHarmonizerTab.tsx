@@ -370,11 +370,22 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   // ── Tab grid renderer ──────────────────────────────────────────────────────
   const renderGrid = (g: HGrid, editable: boolean) => (
-    <div style={{
-      background: 'var(--gc-fretboard-bg)', padding: '8px 6px',
-      border: `1px solid ${T.border}`, overflowX: 'auto',
-      width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
-    }}>
+    <div
+      // Mobile's SwipePager wraps the whole tab panel in its own pointer
+      // handlers to detect horizontal swipes between VOICINGS/PRACTICE/etc.
+      // Without this, a finger dragging horizontally to scroll THIS grid
+      // can get intermittently captured by that outer swipe detector mid-
+      // gesture — the native scroll stutters/interrupts. Stopping the
+      // pointerdown from bubbling keeps SwipePager from ever seeing a
+      // gesture that started inside the grid, while leaving this element's
+      // own native scrolling completely untouched.
+      onPointerDownCapture={e => e.stopPropagation()}
+      style={{
+        background: 'var(--gc-fretboard-bg)', padding: '8px 6px',
+        border: `1px solid ${T.border}`, overflowX: 'auto',
+        width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
+      }}
+    >
       {ROWS.map((lbl, row) => (
         <div key={row} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
           <span style={{ width: 14, fontSize: 12, fontFamily: 'monospace', color: T.textMuted, textAlign: 'right', paddingRight: 3, flexShrink: 0 }}>{lbl}</span>
@@ -536,17 +547,12 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         {renderGrid(result ? displayGrid : grid, !result)}
 
         {!result && (
-          <>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={addColumns} style={{ ...secBtn(false), flex: 1 }}>+ Columns</button>
-              <span style={{ fontSize: 10, color: T.textDim, alignSelf: 'center', flex: 2 }}>
-                Tap a cell, then type frets / techniques
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: 10, color: T.textDim, lineHeight: 1.5 }}>
-              <span style={{ color: T.secondary, fontWeight: 700 }}>›</span> marks a "Harmonize Anchor" — only anchored notes get chords/intervals; the rest stay single notes with connecting material woven between anchors. Leave none marked and the AI will choose anchors for you.
-            </p>
-          </>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={addColumns} style={{ ...secBtn(false), flex: 1 }}>+ Columns</button>
+            <span style={{ fontSize: 10, color: T.textDim, alignSelf: 'center', flex: 2 }}>
+              Tap a cell, then type frets / techniques
+            </span>
+          </div>
         )}
       </div>
 
@@ -705,7 +711,10 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         </>
       )}
 
-      {!result && !error && (
+      {/* Desktop only — fills the otherwise-empty right column before a
+          result exists. On mobile this would just repeat the form the
+          user is already looking at, right below it, so it's skipped. */}
+      {desktop && !result && !error && (
         <div style={{ ...card({ padding: '40px 16px' }), textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
             {savedResult
