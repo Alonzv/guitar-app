@@ -564,7 +564,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         )}
         {styles.includes('chordmelody') && (
           <p style={{ margin: 0, fontSize: 10, color: T.textDim, lineHeight: 1.5 }}>
-            Chord-Melody keeps your original notes as the top voice — every harmony/bass note is placed below it, relocating the melody to a higher string if needed to make room.
+            Chord-Melody keeps your original notes as the top voice — every harmony/bass note is placed below it, relocating the melody to a higher string if needed to make room. It also bridges chord changes with bass walk-ups/downs and approach notes, timed and fingered to flow smoothly between positions.
           </p>
         )}
       </div>

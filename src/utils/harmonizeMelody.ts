@@ -19,6 +19,11 @@ const VALID_LABELS = new Set<string>(STR_LABELS);
 // instead of only ever stacking notes vertically under existing melody columns.
 export const SLOT_MULT = 4;
 
+// Max average-fret distance (in frets) a Chord-Melody connecting note may sit
+// from the chord it's leaving or the chord it's approaching before it reads
+// as an awkward jump rather than a smooth bridge, and gets dropped.
+const MAX_CONNECT_JUMP = 7;
+
 export type HarmonizeStyle = 'vertical' | 'melodic' | '3rds' | '4ths5ths' | 'chordmelody';
 
 export const HARMONY_STYLES: { id: HarmonizeStyle; label: string; hint: string }[] = [
@@ -105,6 +110,9 @@ export async function harmonizeMelody(
   const maxSlot = originalSlots[originalSlots.length - 1];
   const wantsMelodic = styles.includes('melodic');
   const wantsChordMelody = styles.includes('chordmelody');
+  // Chord-Melody also needs the gap slots — that's where connecting/passing
+  // notes between chord positions live — not just Melodic style.
+  const wantsGapFill = wantsMelodic || wantsChordMelody;
 
   const styleLines = styles
     .map(s => `- ${HARMONY_STYLES.find(h => h.id === s)?.label}: ${HARMONY_STYLES.find(h => h.id === s)?.hint}`)
@@ -126,7 +134,10 @@ export async function harmonizeMelody(
     : `7. Original melody slots are spaced ${SLOT_MULT} apart purely so column numbers aren't sequential — don't add notes in the gaps between them, stay aligned to the melody's own columns for the requested style(s).`;
 
   const chordMelodyRule = wantsChordMelody
-    ? `\n8. CHORD-MELODY (requested — CRITICAL, this is a hard physical/musical constraint, not a style preference): the melody note MUST be the TOP VOICE — the single highest-pitched note — in every column. EVERY added:true harmony or bass note you place must sound STRICTLY LOWER in pitch than the melody note in that same column, with no exceptions. If the melody's current string doesn't leave physical room underneath it for a full chord, relocate the melody note itself (per rule 3) to a thinner/higher string at the EXACT SAME pitch — freeing the thicker strings below for harmony — rather than compromise and let any harmony note outrank it. The melody must end up literally above every other note in pitch, not merely listed first.`
+    ? `\n8. CHORD-MELODY (requested — CRITICAL, this is a hard physical/musical constraint, not a style preference): the melody note MUST be the TOP VOICE — the single highest-pitched note — in every column. EVERY added:true harmony or bass note you place must sound STRICTLY LOWER in pitch than the melody note in that same column, with no exceptions. If the melody's current string doesn't leave physical room underneath it for a full chord, relocate the melody note itself (per rule 3) to a thinner/higher string at the EXACT SAME pitch — freeing the thicker strings below for harmony — rather than compromise and let any harmony note outrank it. The melody must end up literally above every other note in pitch, not merely listed first.
+9. CHORD-MELODY CONNECTING NOTES (requested — makes it sound like a real guitarist, not stacked blocks): between two consecutive chord positions (consecutive original melody slots), don't just leave silence — most of the time, use the empty gap slots (see rule 7's numbering — spaced ${SLOT_MULT} apart) to bridge the two positions with a short bass walk-up/walk-down, a chromatic or diatonic approach note into the next chord's bass note, or a tiny melodic fill. These connecting notes are added:true, on LOWER strings than the melody (never violating rule 8), and should feel like they belong to the same phrase, not random filler:
+   - RHYTHMIC PLACEMENT: space connecting notes EVENLY across the available gap slots between the two anchoring melody slots — e.g. one note roughly in the middle of the gap reads as an eighth-note pickup, two evenly-spaced notes read as sixteenth-note motion. Don't cram every gap slot full, and don't place connecting notes at random uneven offsets.
+   - PHYSICAL CONNECTIVITY (critical): every connecting note's fret must sit within a comfortable stretch of BOTH the chord position it's leaving and the chord position it's arriving at — think of it as a physical bridge the fretting hand walks across, not a jump. Avoid any connecting note more than a few frets from both neighbours; if you can't connect smoothly, it's better to leave that particular gap empty than force an awkward jump.`
     : '';
 
   try {
@@ -195,7 +206,7 @@ Return VALID JSON only, no markdown:
     for (const slot of [...allSlots].sort((a, b) => a - b)) {
       if (slot < minSlot || slot > maxSlot) continue; // ignore out-of-range hallucinated slots
       const isOriginalSlot = originalBySlot.has(slot);
-      if (!isOriginalSlot && !wantsMelodic) continue; // inserted slot but melodic style wasn't requested
+      if (!isOriginalSlot && !wantsGapFill) continue; // inserted slot but no style requests gap content
 
       const origNotes = originalBySlot.get(slot) ?? [];
       const aiNotes = aiBySlot.get(slot) ?? [];
@@ -254,6 +265,27 @@ Return VALID JSON only, no markdown:
       }
 
       const notes = [...perString.values()].slice(0, 6);
+
+      // CHORD-MELODY CONNECTING NOTES guardrail — a gap-filler is only a
+      // bridge if it's actually close to both the chord it's leaving and
+      // the chord it's approaching. If it jumps too far from either
+      // neighbour, drop it rather than keep an unplayable-feeling leap.
+      if (wantsChordMelody && !isOriginalSlot && notes.length > 0) {
+        const avgFret = notes.reduce((s, n) => s + n.fret, 0) / notes.length;
+        const prevCol = cleaned[cleaned.length - 1];
+        const prevAvgFret = prevCol
+          ? prevCol.notes.reduce((s, n) => s + n.fret, 0) / prevCol.notes.length
+          : null;
+        const nextOriginalSlot = originalSlots.find(s => s > slot);
+        const nextOriginalNotes = nextOriginalSlot !== undefined ? originalBySlot.get(nextOriginalSlot) : undefined;
+        const nextAvgFret = nextOriginalNotes?.length
+          ? nextOriginalNotes.reduce((s, n) => s + n.fret, 0) / nextOriginalNotes.length
+          : null;
+        const tooFarFromPrev = prevAvgFret !== null && Math.abs(avgFret - prevAvgFret) > MAX_CONNECT_JUMP;
+        const tooFarFromNext = nextAvgFret !== null && Math.abs(avgFret - nextAvgFret) > MAX_CONNECT_JUMP;
+        if (tooFarFromPrev || tooFarFromNext) continue;
+      }
+
       if (notes.length > 0) cleaned.push({ col: slot, notes });
     }
 
