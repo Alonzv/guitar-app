@@ -174,6 +174,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const [muteHarmony, setMuteHarmony] = useState(false);
   const playTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const fretInputRef = useRef<HTMLInputElement | null>(null);
 
   const scaleName = scaleRoot ? `${scaleRoot} ${scaleType}` : '';
   const numCols = grid[0]?.length ?? DEFAULT_COLS;
@@ -193,7 +194,8 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     setGrid(g => g.map((r, ri) => ri === row ? r.map((c, ci) => ci === col ? mutate(c) : c) : r));
   }, []);
 
-  // Keyboard digit-by-digit entry (append then clamp to 24).
+  // Digit-by-digit entry (append then clamp to 24) — shared by desktop
+  // keydown and the mobile hidden-input's onChange.
   const setFret = (row: number, col: number, digit: string) => {
     editCell(row, col, c => {
       const next = (c.fret + digit).slice(-2);
@@ -201,30 +203,46 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       return { ...c, fret: (!Number.isNaN(n) && n <= 24) ? String(n) : digit };
     });
   };
-  // Quick-tap toolbar entry — sets the fret to the exact tapped value.
-  const setFretExact = (row: number, col: number, n: number) =>
-    editCell(row, col, c => ({ ...c, fret: String(n) }));
   const clearCell = (row: number, col: number) => editCell(row, col, () => ({ fret: '' }));
   const toggleTech = (row: number, col: number, tech: Tech) =>
     editCell(row, col, c => ({ ...c, tech: c.tech === tech ? undefined : tech }));
 
-  // Desktop keyboard entry on the selected cell.
+  // Tap a cell → select it and focus the hidden input to raise the mobile
+  // numeric keyboard (no-op on desktop, where it's just an invisible focus).
+  const selectCell = (row: number, col: number) => {
+    setSel([row, col]);
+    fretInputRef.current?.focus();
+  };
+
+  // Shared by the global keydown listener (desktop) and the hidden input's
+  // own onKeyDown (arrow nav / backspace / tech hotkeys while it has focus).
+  const handleEditKey = useCallback((e: {
+    key: string; preventDefault: () => void;
+  }) => {
+    if (!sel) return;
+    const [r, c] = sel;
+    if (e.key >= '0' && e.key <= '9') { e.preventDefault(); setFret(r, c, e.key); }
+    else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); clearCell(r, c); }
+    else if (['h', 'p', 'b', '/', '\\', '~'].includes(e.key)) { e.preventDefault(); toggleTech(r, c, e.key as Tech); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); setSel([r, Math.min(numCols - 1, c + 1)]); }
+    else if (e.key === 'ArrowLeft')  { e.preventDefault(); setSel([r, Math.max(0, c - 1)]); }
+    else if (e.key === 'ArrowUp')    { e.preventDefault(); setSel([Math.max(0, r - 1), c]); }
+    else if (e.key === 'ArrowDown')  { e.preventDefault(); setSel([Math.min(5, r + 1), c]); }
+    else if (e.key === 'Escape')     { setSel(null); fretInputRef.current?.blur(); }
+  }, [sel, numCols]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Desktop keyboard entry on the selected cell — skipped while the hidden
+  // input has focus, since its own onKeyDown already calls handleEditKey
+  // (avoids handling the same keystroke twice).
   useEffect(() => {
     if (!sel) return;
     const handler = (e: KeyboardEvent) => {
-      const [r, c] = sel;
-      if (e.key >= '0' && e.key <= '9') { e.preventDefault(); setFret(r, c, e.key); }
-      else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); clearCell(r, c); }
-      else if (['h', 'p', 'b', '/', '\\', '~'].includes(e.key)) { e.preventDefault(); toggleTech(r, c, e.key as Tech); }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); setSel([r, Math.min(numCols - 1, c + 1)]); }
-      else if (e.key === 'ArrowLeft')  { e.preventDefault(); setSel([r, Math.max(0, c - 1)]); }
-      else if (e.key === 'ArrowUp')    { e.preventDefault(); setSel([Math.max(0, r - 1), c]); }
-      else if (e.key === 'ArrowDown')  { e.preventDefault(); setSel([Math.min(5, r + 1), c]); }
-      else if (e.key === 'Escape')     setSel(null);
+      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      handleEditKey(e);
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [sel, numCols]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sel, handleEditKey]);
 
   const addColumns = () => setGrid(g => g.map(r => [...r, ...Array.from({ length: 4 }, () => ({ fret: '' as string }))]));
   const clearGrid = () => { setResult(null); setSavedResult(null); setGrid(emptyGrid()); setSel(null); };
@@ -352,7 +370,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             return (
               <div
                 key={col}
-                onClick={editable ? () => setSel([row, col]) : undefined}
+                onClick={editable ? () => selectCell(row, col) : undefined}
                 style={{
                   width: CW, height: CH, flexShrink: 0, position: 'relative',
                   cursor: editable ? 'pointer' : 'default',
@@ -382,20 +400,37 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     </div>
   );
 
-  // ── Selected-cell toolbar (mobile-friendly entry) ──────────────────────────
+  // Hidden numeric input — drives the mobile soft keyboard for fret entry,
+  // exactly like Tab Builder. font-size:16 stops iOS auto-zooming on focus.
+  const hiddenFretInput = (
+    <input
+      ref={fretInputRef}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value=""
+      aria-hidden="true"
+      onChange={e => {
+        if (!sel) return;
+        const d = e.target.value.replace(/[^0-9]/g, '').slice(-1);
+        if (d) setFret(sel[0], sel[1], d);
+      }}
+      onKeyDown={handleEditKey}
+      style={{
+        position: 'fixed', top: 0, left: 0,
+        width: 1, height: 1, opacity: 0, pointerEvents: 'none',
+        fontSize: 16, border: 'none', padding: 0, background: 'transparent',
+      }}
+    />
+  );
+
+  // ── Selected-cell toolbar — technique entry, no digit grid (typing the
+  // fret now raises the native numeric keyboard via hiddenFretInput above).
   const cellToolbar = sel && !result && (
     <div style={{ ...card({ padding: '10px 12px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={LABEL_STYLE}>Cell {ROWS[sel[0]]} · col {sel[1] + 1}</p>
-        <button onClick={() => setSel(null)} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-        {Array.from({ length: 25 }, (_, n) => (
-          <button key={n} onClick={() => setFretExact(sel[0], sel[1], n)} style={{
-            padding: '7px 0', border: `1px solid ${T.border}`, background: T.bgInput,
-            color: T.text, fontSize: 12, fontFamily: 'monospace', cursor: 'pointer',
-          }}>{n}</button>
-        ))}
+        <button onClick={() => { setSel(null); fretInputRef.current?.blur(); }} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
       </div>
       <button onClick={() => clearCell(sel[0], sel[1])} style={{
         width: '100%', padding: '7px 0', border: `1px solid ${T.border}`, background: T.bgInput,
@@ -419,6 +454,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   // ── Left column: input + controls ──────────────────────────────────────────
   const leftCol = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+      {hiddenFretInput}
       {/* Input stage */}
       <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
