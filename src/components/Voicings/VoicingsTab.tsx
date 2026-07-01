@@ -15,8 +15,9 @@ import { analyzeProgression, type MusicalAnalysis } from '../../utils/musicalAna
 import { TUNINGS } from '../../utils/musicTheory';
 import { T, card } from '../../theme';
 import { ReharmonizeTab } from './ReharmonizeTab';
+import { MelodyHarmonizerTab } from './MelodyHarmonizerTab';
 
-type VoicingsSub = 'paths' | 'voiceleading' | 'reharmonize';
+type VoicingsSub = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
 
 interface Props {
   globalProgression?: ChordInProgression[];
@@ -535,6 +536,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
         {([
           { id: 'paths',        label: 'Paths'         },
           { id: 'voiceleading', label: 'Voice Leading' },
+          { id: 'harmonizer',   label: 'Harmonize'     },
           { id: 'reharmonize',  label: 'Re-Harmonize'  },
         ] as { id: VoicingsSub; label: string }[]).map(tab => (
           <button key={tab.id} onClick={() => setSubTab(tab.id)} className="gc-sub-tab" style={{
@@ -1200,6 +1202,10 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
           </div>
         );
       })()}
+
+      {subTab === 'harmonizer' && (
+        <MelodyHarmonizerTab tuning={tuning} desktop={desktop} />
+      )}
 
       {subTab === 'reharmonize' && (
         <div style={desktop && chords.length === 0 ? { maxWidth: 920, margin: '0 auto', width: '100%' } : undefined}>

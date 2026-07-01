@@ -45,7 +45,7 @@ import { T } from './theme';
 // ── Types & constants ──────────────────────────────────────────────────────
 type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target';
 type ScalesSub    = 'explorer' | 'triads' | 'intervals' | 'wheel';
-type VoicingsSub  = 'paths' | 'voiceleading' | 'reharmonize';
+type VoicingsSub  = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
 type PracticeSub  = 'tuner' | 'metronome';
 type StudioSub    = 'tabbuilder' | 'audiotab' | 'library';
 
@@ -66,6 +66,7 @@ const SCALES_SEGS    = [
 const VOICINGS_SEGS  = [
   { id: 'paths',        label: 'Paths'      },
   { id: 'voiceleading', label: 'Voice Lead' },
+  { id: 'harmonizer',   label: 'Harmonize'  },
   { id: 'reharmonize',  label: 'Reharm'     },
 ];
 const PRACTICE_SEGS  = [
