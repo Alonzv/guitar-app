@@ -19,13 +19,14 @@ const VALID_LABELS = new Set<string>(STR_LABELS);
 // instead of only ever stacking notes vertically under existing melody columns.
 export const SLOT_MULT = 4;
 
-export type HarmonizeStyle = 'vertical' | 'melodic' | '3rds' | '4ths5ths';
+export type HarmonizeStyle = 'vertical' | 'melodic' | '3rds' | '4ths5ths' | 'chordmelody';
 
 export const HARMONY_STYLES: { id: HarmonizeStyle; label: string; hint: string }[] = [
-  { id: 'vertical', label: 'Vertical Chords', hint: 'Full chordal harmony under each melody note' },
-  { id: 'melodic',  label: 'Melodic',         hint: 'Horizontal voice-leading — an independent moving harmony line, with its own passing notes between melody notes' },
-  { id: '3rds',     label: '3rds',            hint: 'Diatonic thirds below the melody' },
-  { id: '4ths5ths', label: '4ths / 5ths',     hint: 'Quartal / power-interval harmony' },
+  { id: 'vertical',    label: 'Vertical Chords', hint: 'Full chordal harmony under each melody note' },
+  { id: 'melodic',     label: 'Melodic',         hint: 'Horizontal voice-leading — an independent moving harmony line, with its own passing notes between melody notes' },
+  { id: '3rds',        label: '3rds',            hint: 'Diatonic thirds below the melody' },
+  { id: '4ths5ths',    label: '4ths / 5ths',     hint: 'Quartal / power-interval harmony' },
+  { id: 'chordmelody', label: 'Chord-Melody',    hint: 'The melody is always the top (highest-pitched) note — every harmony/bass note sounds below it' },
 ];
 
 export interface HarmNote {
@@ -103,6 +104,7 @@ export async function harmonizeMelody(
   const minSlot = originalSlots[0];
   const maxSlot = originalSlots[originalSlots.length - 1];
   const wantsMelodic = styles.includes('melodic');
+  const wantsChordMelody = styles.includes('chordmelody');
 
   const styleLines = styles
     .map(s => `- ${HARMONY_STYLES.find(h => h.id === s)?.label}: ${HARMONY_STYLES.find(h => h.id === s)?.hint}`)
@@ -122,6 +124,10 @@ export async function harmonizeMelody(
   const melodicRule = wantsMelodic
     ? `7. HORIZONTAL/MELODIC MOTION (requested — this is important): original melody slots are spaced ${SLOT_MULT} apart (${originalSlots.join(', ')}) specifically to leave room between them. Use that room: add EXTRA columns with integer "col" values strictly BETWEEN two consecutive original slots (never below ${minSlot} or above ${maxSlot}) containing ONLY added:true notes. These extra columns are an independent, horizontally-moving harmony voice — passing tones, neighbor tones, counter-melody motion that has its own rhythm and doesn't just double the melody vertically. Do not put an added:true note in EVERY gap between EVERY pair of melody notes — use them where they make musical sense, like a real second voice would move.`
     : `7. Original melody slots are spaced ${SLOT_MULT} apart purely so column numbers aren't sequential — don't add notes in the gaps between them, stay aligned to the melody's own columns for the requested style(s).`;
+
+  const chordMelodyRule = wantsChordMelody
+    ? `\n8. CHORD-MELODY (requested — CRITICAL, this is a hard physical/musical constraint, not a style preference): the melody note MUST be the TOP VOICE — the single highest-pitched note — in every column. EVERY added:true harmony or bass note you place must sound STRICTLY LOWER in pitch than the melody note in that same column, with no exceptions. If the melody's current string doesn't leave physical room underneath it for a full chord, relocate the melody note itself (per rule 3) to a thinner/higher string at the EXACT SAME pitch — freeing the thicker strings below for harmony — rather than compromise and let any harmony note outrank it. The melody must end up literally above every other note in pitch, not merely listed first.`
+    : '';
 
   try {
     const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
@@ -152,7 +158,7 @@ RULES — follow every one:
 4. TECHNIQUES: if an original note has a tech of "b" (bend), "~" (vibrato), "h"/"p" (hammer/pull), or "/"/"\\" (slide), the harmony notes you add in that column must be STATIC pedal-points — do NOT imitate the bend/slide. Keep added notes on frozen frets so the hand can still execute the technique. Carry the original tech only on the original note.
 5. Keep the ORIGINAL melody note present at every original slot (added:false), reproducing its exact "str"/"fret" unless relocating per rule 3 (same pitch, different string).
 6. Original slot numbers are fixed: ${originalSlots.join(', ')}. Do not change these numbers or drop any of them.
-${melodicRule}${regenNote}
+${melodicRule}${chordMelodyRule}${regenNote}
 
 Return VALID JSON only, no markdown:
 {
@@ -229,6 +235,22 @@ Return VALID JSON only, no markdown:
         const existing = perString.get(str);
         if (existing && !existing.added) continue;
         if (!existing) perString.set(str, { str, fret, added: true, tech: n.tech });
+      }
+
+      // CHORD-MELODY guardrail — do not rely on the model to actually keep
+      // the melody on top; enforce it. Any harmony note whose pitch equals
+      // or exceeds the melody's (possibly relocated, per rule 3) pitch in
+      // this column is dropped rather than allowed to outrank the melody.
+      if (wantsChordMelody) {
+        const melodyPitches = [...perString.values()]
+          .filter(n => !n.added)
+          .map(n => noteMidi(n.str, n.fret, tuning));
+        if (melodyPitches.length > 0) {
+          const topMidi = Math.max(...melodyPitches);
+          for (const [str, n] of perString) {
+            if (n.added && noteMidi(n.str, n.fret, tuning) >= topMidi) perString.delete(str);
+          }
+        }
       }
 
       const notes = [...perString.values()].slice(0, 6);
