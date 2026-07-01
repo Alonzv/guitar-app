@@ -85,7 +85,7 @@ const PATH_COLOR: Record<string, string> = {
   'Open Drones':   '#1A1818',  // ink
   'Open Position': '#3A352F',  // graphite
   'Lower Neck':    '#5C5650',  // slate
-  'Mid Neck':      '#CC1C1C',  // accent red
+  'Mid Neck':      '#110CF0',  // accent blue
   'Upper Neck':    '#8A8378',  // taupe
   'High Neck':     '#9C958C',  // light taupe
 };
@@ -95,7 +95,7 @@ const PATH_COLOR: Record<string, string> = {
 export type IsolateGroup = null | 'root' | '3rd' | '5th' | '7th';
 
 const INTERVAL_COLOR: Record<string, string> = {
-  '1P': '#CC1C1C',               // Root — red
+  '1P': '#110CF0',               // Root — blue
   '3m': '#1A1818', '3M': '#1A1818', // 3rd — ink
   '5P': '#5C5650', '5A': '#5C5650', '5d': '#5C5650', // 5th — slate
   '7m': '#8A8378', '7M': '#8A8378', '7d': '#8A8378', // 7th — taupe

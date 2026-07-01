@@ -34,7 +34,7 @@ const TAB_BG   = T.secondary;
 const TAB_LINE = 'rgba(255,255,255,0.45)';
 const TAB_BAR  = 'rgba(255,255,255,0.9)';
 const TAB_LBL  = 'rgba(255,255,255,0.75)';
-const TAB_SEL  = '#CC1C1C';
+const TAB_SEL  = '#110CF0';
 
 const COL_W        = 16;
 const STR_GAP      = 16;
@@ -603,7 +603,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
           onClick={startRecording}
           style={{
             width: 88, height: 88, borderRadius: '50%',
-            background: T.primary, border: '4px solid rgba(204,28,28,0.25)',
+            background: T.primary, border: '4px solid rgba(17,12,240,0.25)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, outline: 'none',
           }}
@@ -657,7 +657,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         <p style={{ margin: 0, fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Recording</p>
         <button onClick={stopRecording} style={{
           width: 88, height: 88, borderRadius: '50%',
-          background: T.primary, border: '4px solid rgba(204,28,28,0.25)',
+          background: T.primary, border: '4px solid rgba(17,12,240,0.25)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0, outline: 'none',
         }}>

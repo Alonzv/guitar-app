@@ -121,7 +121,7 @@ export function IntervalCalculate() {
 
       {/* Note pickers */}
       <div>
-        <p style={{ ...MONO_LBL, color: '#CC1C1C' }}>Note A</p>
+        <p style={{ ...MONO_LBL, color: '#110CF0' }}>Note A</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#');
@@ -214,7 +214,7 @@ export function IntervalCalculate() {
             <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
             {noteA && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#CC1C1C', display: 'inline-block' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#110CF0', display: 'inline-block' }} />
                 <span style={{ color: 'rgba(255,255,255,0.7)' }}>Note A</span>
               </span>
             )}
@@ -261,7 +261,7 @@ export function IntervalCalculate() {
                 <line key={`conn-${i}`}
                   x1={noteX(p.aFret)} y1={strY(p.string)}
                   x2={noteX(p.bFret)} y2={strY(p.string)}
-                  stroke="#CC1C1C" strokeWidth={1.5} strokeDasharray="5 3" opacity={0.7} />
+                  stroke="#110CF0" strokeWidth={1.5} strokeDasharray="5 3" opacity={0.7} />
               ))}
 
               {bDots.map((p, i) => (
@@ -274,7 +274,7 @@ export function IntervalCalculate() {
 
               {aDots.map((p, i) => (
                 <g key={`a-${i}`}>
-                  <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill="#CC1C1C" />
+                  <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill="#110CF0" />
                   <text x={noteX(p.fret)} y={strY(p.string) + 3.5}
                     textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{noteA}</text>
                 </g>
@@ -292,11 +292,11 @@ export function IntervalCalculate() {
                 const lbl   = `${intervalInfo.name.toUpperCase()} · ${frets} FRET${frets !== 1 ? 'S' : ''}`;
                 return (
                   <g>
-                    <line x1={xL} y1={bY} x2={xL} y2={bY + bH} stroke="#CC1C1C" strokeWidth={1.5} />
-                    <line x1={xL} y1={bY + bH} x2={xR} y2={bY + bH} stroke="#CC1C1C" strokeWidth={1.5} />
-                    <line x1={xR} y1={bY} x2={xR} y2={bY + bH} stroke="#CC1C1C" strokeWidth={1.5} />
+                    <line x1={xL} y1={bY} x2={xL} y2={bY + bH} stroke="#110CF0" strokeWidth={1.5} />
+                    <line x1={xL} y1={bY + bH} x2={xR} y2={bY + bH} stroke="#110CF0" strokeWidth={1.5} />
+                    <line x1={xR} y1={bY} x2={xR} y2={bY + bH} stroke="#110CF0" strokeWidth={1.5} />
                     <text x={cX} y={bY + bH + 11} textAnchor="middle" fontSize={7}
-                      fill="#CC1C1C" fontFamily="monospace" letterSpacing="0.08em">{lbl}</text>
+                      fill="#110CF0" fontFamily="monospace" letterSpacing="0.08em">{lbl}</text>
                   </g>
                 );
               })()}

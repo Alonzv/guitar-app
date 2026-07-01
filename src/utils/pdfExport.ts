@@ -55,7 +55,7 @@ function buildProgressionHTML(
       box-sizing: border-box;
     ">
       <h1 style="font-size:20px;font-weight:800;margin:0 0 8px;">${escapeHtml(name || 'Chord Progression')}</h1>
-      <div style="height:2px;background:#CC1C1C;margin-bottom:20px;"></div>
+      <div style="height:2px;background:#110CF0;margin-bottom:20px;"></div>
       <div>${cards}</div>
     </div>`;
 }
@@ -108,7 +108,7 @@ function fretboardSVGHtml(voicing: FretPosition[]): string {
   for (const p of voicing) {
     const cx = fx(p.fret), cy = sy(p.string);
     const note = fretToNote(p.string, p.fret);
-    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#CC1C1C" stroke="#fff" stroke-width="1.25" opacity="0.92"/>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#110CF0" stroke="#fff" stroke-width="1.25" opacity="0.92"/>`;
     svg += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700" font-family="'Courier New',monospace">${note}</text>`;
   }
 
@@ -236,7 +236,7 @@ function buildAnalysisHTML(a: TabPDFAnalysis): string {
   }).join('');
 
   return `
-    <div dir="${dir}" style="text-align:${align};margin-top:34px;padding-top:24px;border-top:2px solid #CC1C1C;">
+    <div dir="${dir}" style="text-align:${align};margin-top:34px;padding-top:24px;border-top:2px solid #110CF0;">
       <h2 style="font-size:18px;font-weight:800;margin:0 0 14px;color:#111110;">${escapeHtml(a.heading)}</h2>
       <div style="background:#1A1918;border-radius:0;padding:12px 16px;margin-bottom:18px;color:#F0EAD8;">
         <div style="font-size:11px;opacity:0.7;margin-bottom:2px;">${escapeHtml(a.scaleLabel)}</div>
@@ -327,7 +327,7 @@ export async function exportTabPDF(
     ">
       ${title ? `<h1 style="font-size:24px;font-weight:800;margin:0 0 6px;">${escapeHtml(title)}</h1>` : ''}
       ${subtitle ? `<p style="font-size:13px;color:#3A3A3A;margin:0 0 18px;">${escapeHtml(subtitle)}</p>` : ''}
-      <div style="height:2px;background:#CC1C1C;margin-bottom:30px;"></div>
+      <div style="height:2px;background:#110CF0;margin-bottom:30px;"></div>
       ${systemsHTML || '<p style="color:#3A3A3A;font-size:13px;">Empty tab</p>'}
       ${analysis ? buildAnalysisHTML(analysis) : ''}
       <div style="margin-top:36px;font-size:10px;color:#D0D0D0;text-align:right;">Created with ScaleUp</div>
