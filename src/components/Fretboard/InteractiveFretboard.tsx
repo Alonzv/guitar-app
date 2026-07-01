@@ -94,7 +94,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
               {muted && (
                 <text x={NUT_X - 14} y={strY(s) + 5}
                   textAnchor="middle" fontSize={14} fontWeight="700"
-                  fill="#CC1C1C">
+                  fill="#110CF0">
                   ×
                 </text>
               )}
