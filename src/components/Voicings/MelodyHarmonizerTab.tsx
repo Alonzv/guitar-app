@@ -6,7 +6,7 @@ import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { detectTabScale } from '../../utils/analyzeTab';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import {
-  harmonizeMelody, HARMONY_STYLES,
+  harmonizeMelody, HARMONY_STYLES, SLOT_MULT,
   labelToLowEIndex, labelToRow, STR_LABELS,
   type HarmonizeStyle, type HarmonizeResult,
 } from '../../utils/harmonizeMelody';
@@ -24,6 +24,10 @@ const CH = 28;
 
 function emptyGrid(cols = DEFAULT_COLS): HGrid {
   return ROWS.map(() => Array.from({ length: cols }, () => ({ fret: '' })));
+}
+
+function emptyDisplayGrid(cols: number): HGrid {
+  return ROWS.map(() => Array.from({ length: cols }, () => ({ fret: '' } as HCell)));
 }
 
 function gridHasNotes(g: HGrid): boolean {
@@ -144,6 +148,8 @@ interface Props {
 const COLOR_ORIG  = T.text;
 const COLOR_ADDED = T.secondary;
 
+type LoadingKind = 'harmonize' | 'regenerate' | null;
+
 export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const [grid, setGrid]         = useState<HGrid>(() => emptyGrid());
   const [sel, setSel]           = useState<[number, number] | null>(null);
@@ -151,8 +157,12 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const [scaleType, setScaleType] = useState('major');
 
   const [styles, setStyles]     = useState<HarmonizeStyle[]>(['3rds']);
-  const [result, setResult]     = useState<HarmonizeResult | null>(null);
-  const [loading, setLoading]   = useState(false);
+  // `result` is what's currently displayed; `savedResult` is the last
+  // harmonization computed for the CURRENT melody, kept even while `result`
+  // is temporarily hidden by "Edit Melody" so the user can jump back to it.
+  const [result, setResult]         = useState<HarmonizeResult | null>(null);
+  const [savedResult, setSavedResult] = useState<HarmonizeResult | null>(null);
+  const [loadingKind, setLoadingKind] = useState<LoadingKind>(null);
   const [error, setError]       = useState<string | null>(null);
   const [regenSeed, setRegenSeed] = useState(0);
 
@@ -174,11 +184,16 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   useEffect(() => () => { playTimers.current.forEach(clearTimeout); }, []);
 
   // ── Editing ──────────────────────────────────────────────────────────────
+  // Any real edit to the melody invalidates BOTH the shown result and the
+  // remembered one — a harmonization only ever matches the melody it was
+  // computed from.
   const editCell = useCallback((row: number, col: number, mutate: (c: HCell) => HCell) => {
-    setResult(null);            // any edit invalidates the harmonization
+    setResult(null);
+    setSavedResult(null);
     setGrid(g => g.map((r, ri) => ri === row ? r.map((c, ci) => ci === col ? mutate(c) : c) : r));
   }, []);
 
+  // Keyboard digit-by-digit entry (append then clamp to 24).
   const setFret = (row: number, col: number, digit: string) => {
     editCell(row, col, c => {
       const next = (c.fret + digit).slice(-2);
@@ -186,6 +201,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       return { ...c, fret: (!Number.isNaN(n) && n <= 24) ? String(n) : digit };
     });
   };
+  // Quick-tap toolbar entry — sets the fret to the exact tapped value.
+  const setFretExact = (row: number, col: number, n: number) =>
+    editCell(row, col, c => ({ ...c, fret: String(n) }));
   const clearCell = (row: number, col: number) => editCell(row, col, () => ({ fret: '' }));
   const toggleTech = (row: number, col: number, tech: Tech) =>
     editCell(row, col, c => ({ ...c, tech: c.tech === tech ? undefined : tech }));
@@ -209,16 +227,24 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   }, [sel, numCols]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addColumns = () => setGrid(g => g.map(r => [...r, ...Array.from({ length: 4 }, () => ({ fret: '' as string }))]));
-  const clearGrid = () => { setResult(null); setGrid(emptyGrid()); setSel(null); };
-  const editMelody = () => { setResult(null); setError(null); };
+  const clearGrid = () => { setResult(null); setSavedResult(null); setGrid(emptyGrid()); setSel(null); };
 
-  // ── Display grid (melody + harmony merged) ─────────────────────────────────
+  // Hide the harmony overlay and go back to editing the raw melody — the last
+  // harmonization is kept in `savedResult` so the user can return to it.
+  const editMelody = () => { setResult(null); setError(null); };
+  const backToHarmonized = () => { if (savedResult) setResult(savedResult); };
+
+  // ── Display grid (melody + harmony merged onto the slot timeline) ─────────
+  // Every original melody slot is guaranteed present in result.columns by the
+  // guardrail in harmonizeMelody.ts, so the display grid is built entirely
+  // from the result — no need to separately overlay the raw editing grid.
   const displayGrid: HGrid = useMemo(() => {
     if (!result) return grid;
-    const g: HGrid = grid.map(r => r.map(c => ({ ...c, added: false })));
+    const maxResultCol = result.columns.reduce((m, c) => Math.max(m, c.col), 0);
+    const width = Math.max(numCols * SLOT_MULT, maxResultCol + 1);
+    const g: HGrid = emptyDisplayGrid(width);
     for (const col of result.columns) {
-      if (col.col < 0 || col.col >= numCols) continue;
-      for (let row = 0; row < 6; row++) g[row][col.col] = { fret: '' };  // clear the column
+      if (col.col < 0 || col.col >= width) continue;
       for (const n of col.notes) {
         const row = labelToRow(n.str);
         g[row][col.col] = { fret: String(n.fret), tech: n.tech as Tech | undefined, added: n.added };
@@ -228,19 +254,19 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   }, [result, grid, numCols]);
 
   // ── Harmonize ──────────────────────────────────────────────────────────────
-  const runHarmonize = (seed: number) => {
-    if (!gridHasNotes(grid) || !scaleName || styles.length === 0 || loading) return;
-    setLoading(true); setError(null);
+  const runHarmonize = (seed: number, kind: 'harmonize' | 'regenerate') => {
+    if (!gridHasNotes(grid) || !scaleName || styles.length === 0 || loadingKind) return;
+    setLoadingKind(kind); setError(null);
     harmonizeMelody(grid, scaleName, styles, tuning, seed)
       .then(r => {
-        setLoading(false);
-        if (r) setResult(r);
+        setLoadingKind(null);
+        if (r) { setResult(r); setSavedResult(r); }
         else setError('לא ניתן להרמן כרגע. ודא שמפתח ה-API מוגדר ושיש מלודיה בטאב.');
       })
-      .catch(() => { setLoading(false); setError('שגיאת רשת — נסה שוב.'); });
+      .catch(() => { setLoadingKind(null); setError('שגיאת רשת — נסה שוב.'); });
   };
-  const handleHarmonize = () => { setRegenSeed(0); runHarmonize(0); };
-  const handleRegenerate = () => { const s = regenSeed + 1; setRegenSeed(s); runHarmonize(s); };
+  const handleHarmonize = () => { setRegenSeed(0); runHarmonize(0, 'harmonize'); };
+  const handleRegenerate = () => { const s = regenSeed + 1; setRegenSeed(s); runHarmonize(s, 'regenerate'); };
 
   // ── Image / paste import ────────────────────────────────────────────────────
   const onImageFile = (file: File) => {
@@ -255,7 +281,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       extractTabFromImage(base64, mt)
         .then(tc => {
           setVisionLoading(false);
-          if (tc) { setResult(null); setGrid(fromTabContent(tc)); }
+          if (tc) { setResult(null); setSavedResult(null); setGrid(fromTabContent(tc)); }
           else setError('לא ניתן לחלץ טאב מהתמונה. נסה תמונה ברורה יותר.');
         })
         .catch(() => { setVisionLoading(false); setError('שגיאה בעיבוד התמונה.'); });
@@ -265,7 +291,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   const loadPaste = () => {
     const g = parseAsciiTab(pasteText);
-    if (g) { setResult(null); setGrid(g); setPasteOpen(false); setPasteText(''); setError(null); }
+    if (g) { setResult(null); setSavedResult(null); setGrid(g); setPasteOpen(false); setPasteText(''); setError(null); }
     else setError('לא זוהה טאב בטקסט. הדבק 6 שורות טאב תקינות.');
   };
 
@@ -275,8 +301,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const handlePlay = () => {
     if (playing) { stopPlayback(); return; }
     const g = displayGrid;
+    const gWidth = g[0]?.length ?? 0;
     const cols: { fret: number; string: number }[][] = [];
-    for (let c = 0; c < numCols; c++) {
+    for (let c = 0; c < gWidth; c++) {
       const notes: { fret: number; string: number }[] = [];
       for (let row = 0; row < 6; row++) {
         const cell = g[row][c];
@@ -291,7 +318,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     if (!cols.length) return;
     setPlaying(true);
     unlockAudio();
-    const STEP = 460;
+    const STEP = 380;
     cols.forEach((notes, i) => {
       const t = setTimeout(() => {
         playChord(notes, tuning.openFreqs);
@@ -304,7 +331,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     });
   };
 
-  const canHarmonize = gridHasNotes(grid) && !!scaleName && styles.length > 0 && !loading;
+  const canHarmonize = gridHasNotes(grid) && !!scaleName && styles.length > 0 && !loadingKind;
 
   // ── Tab grid renderer ──────────────────────────────────────────────────────
   const renderGrid = (g: HGrid, editable: boolean) => (
@@ -360,17 +387,17 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         <button onClick={() => setSel(null)} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-        {Array.from({ length: 13 }, (_, n) => (
-          <button key={n} onClick={() => setFret(sel[0], sel[1], String(n))} style={{
+        {Array.from({ length: 25 }, (_, n) => (
+          <button key={n} onClick={() => setFretExact(sel[0], sel[1], n)} style={{
             padding: '7px 0', border: `1px solid ${T.border}`, background: T.bgInput,
-            color: T.text, fontSize: 13, fontFamily: 'monospace', cursor: 'pointer',
+            color: T.text, fontSize: 12, fontFamily: 'monospace', cursor: 'pointer',
           }}>{n}</button>
         ))}
-        <button onClick={() => clearCell(sel[0], sel[1])} style={{
-          padding: '7px 0', border: `1px solid ${T.border}`, background: T.bgInput,
-          color: T.coral, fontSize: 13, cursor: 'pointer', gridColumn: 'span 1',
-        }}>⌫</button>
       </div>
+      <button onClick={() => clearCell(sel[0], sel[1])} style={{
+        width: '100%', padding: '7px 0', border: `1px solid ${T.border}`, background: T.bgInput,
+        color: T.coral, fontSize: 12, cursor: 'pointer',
+      }}>⌫ Clear fret</button>
       <div style={{ display: 'flex', gap: 4 }}>
         {TECH_BTNS.map(t => {
           const active = grid[sel[0]][sel[1]].tech === t.id;
@@ -398,6 +425,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
               <button onClick={editMelody} style={editBtn}>✎ Edit Melody</button>
             ) : (
               <>
+                {savedResult && (
+                  <button onClick={backToHarmonized} style={editBtn}>▸ Back to Harmonized</button>
+                )}
                 <button onClick={() => fileRef.current?.click()} disabled={visionLoading} style={secBtn(visionLoading)}>
                   {visionLoading ? 'Reading…' : 'Image'}
                 </button>
@@ -409,7 +439,12 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         </div>
         {result && (
           <p style={{ margin: 0, fontSize: 10, color: T.textDim }}>
-            Editing removes the harmony notes so you can change the original riff — harmonize again when ready.
+            Editing removes the harmony overlay so you can change the original riff — your last harmonization is kept, tap "Back to Harmonized" to see it again.
+          </p>
+        )}
+        {!result && savedResult && (
+          <p style={{ margin: 0, fontSize: 10, color: T.textDim }}>
+            Showing the original riff. Tap "Back to Harmonized" to see your last result, or edit further and Harmonize again.
           </p>
         )}
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
@@ -485,6 +520,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             );
           })}
         </div>
+        {styles.includes('melodic') && (
+          <p style={{ margin: 0, fontSize: 10, color: T.textDim, lineHeight: 1.5 }}>
+            Melodic adds an independent moving harmony line with its own passing notes between your melody notes — not just stacked chords.
+          </p>
+        )}
       </div>
 
       {/* Harmonize / Regenerate */}
@@ -497,16 +537,17 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           borderLeft: '4px solid var(--gc-bar-color)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
-          {loading ? (<><span style={spinner} /> Harmonizing…</>) : 'Harmonize'}
+          {loadingKind === 'harmonize' ? (<><span style={spinnerStyle('#fff')} /> Harmonizing…</>) : 'Harmonize'}
         </button>
-        <button onClick={handleRegenerate} disabled={!result || loading} style={{
+        <button onClick={handleRegenerate} disabled={!result || !!loadingKind} style={{
           flex: 1, padding: '13px 0', border: `1.5px solid ${T.secondary}`,
-          cursor: (!result || loading) ? 'not-allowed' : 'pointer',
-          background: 'transparent', color: (!result || loading) ? T.textDim : T.secondary,
-          fontSize: 14, opacity: (!result || loading) ? 0.5 : 1,
+          cursor: (!result || !!loadingKind) ? 'not-allowed' : 'pointer',
+          background: 'transparent', color: (!result || !!loadingKind) ? T.textDim : T.secondary,
+          fontSize: 14, opacity: (!result || !!loadingKind) ? 0.5 : 1,
           borderLeft: '4px solid var(--gc-bar-color)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
-          Regenerate
+          {loadingKind === 'regenerate' ? (<><span style={spinnerStyle(T.secondary)} /> Regenerating…</>) : 'Regenerate'}
         </button>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -586,7 +627,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       {!result && !error && (
         <div style={{ ...card({ padding: '40px 16px' }), textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
-            Enter a melody, pick a scale, choose harmony types, then Harmonize.
+            {savedResult
+              ? 'Editing the riff — tap "Back to Harmonized" to see your last result.'
+              : 'Enter a melody, pick a scale, choose harmony types, then Harmonize.'}
           </p>
         </div>
       )}
@@ -626,7 +669,9 @@ const selectStyle: React.CSSProperties = {
   flex: 1, padding: '8px 10px', background: T.bgInput, border: `1px solid ${T.border}`,
   color: T.text, fontSize: 13, cursor: 'pointer', borderRadius: 0,
 };
-const spinner: React.CSSProperties = {
-  display: 'inline-block', width: 14, height: 14, border: `2px solid ${T.textDim}`,
-  borderTopColor: '#fff', borderRadius: 0, animation: 'spin 0.7s linear infinite',
-};
+function spinnerStyle(color: string): React.CSSProperties {
+  return {
+    display: 'inline-block', width: 14, height: 14, border: `2px solid ${T.textDim}`,
+    borderTopColor: color, borderRadius: 0, animation: 'spin 0.7s linear infinite',
+  };
+}
