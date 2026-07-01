@@ -130,9 +130,9 @@ button:active { transform: scale(0.96); }
   --gc-bg-card:          #FFFFFF;
   --gc-bg-input:         #F0F0F0;
   --gc-border:           #D0D0D0;
-  --gc-primary:          #CC1C1C;
-  --gc-primary-hov:      #E02020;
-  --gc-primary-bg:       rgba(204,28,28,0.09);
+  --gc-primary:          #1A1818;
+  --gc-primary-hov:      #322F2F;
+  --gc-primary-bg:       rgba(26,24,24,0.09);
   --gc-secondary:        #1A1818;
   --gc-secondary-bg:     rgba(26,24,24,0.06);
   --gc-coral:            #1A1818;
@@ -141,8 +141,8 @@ button:active { transform: scale(0.96); }
   --gc-text-dim:         #000000;
   --gc-white:            #FFFFFF;
   /* Alpha variants */
-  --gc-primary-soft:     rgba(204,28,28,0.10);
-  --gc-primary-glow:     rgba(204,28,28,0.32);
+  --gc-primary-soft:     rgba(26,24,24,0.10);
+  --gc-primary-glow:     rgba(26,24,24,0.32);
   --gc-white-soft:       rgba(255,255,255,0.80);
   --gc-secondary-faint:  rgba(26,24,24,0.08);
   --gc-coral-faint:      rgba(26,24,24,0.06);
@@ -151,14 +151,14 @@ button:active { transform: scale(0.96); }
 }
 
 body.dark {
-  /* Dark mode — midnight stage: black + crimson + gold + cobalt */
+  /* Dark mode — midnight stage: black + gold + cobalt */
   --gc-bg-deep:          #111110;
   --gc-bg-card:          #1A1918;
   --gc-bg-input:         #242220;
   --gc-border:           #383530;
-  --gc-primary:          #E02020;
-  --gc-primary-hov:      #F52828;
-  --gc-primary-bg:       rgba(224,32,32,0.18);
+  --gc-primary:          #6B655C;
+  --gc-primary-hov:      #7D766B;
+  --gc-primary-bg:       rgba(107,101,92,0.18);
   --gc-secondary:        #6B655C;
   --gc-secondary-bg:     rgba(255,255,255,0.06);
   --gc-coral:            #9A938A;
@@ -167,8 +167,8 @@ body.dark {
   --gc-text-dim:         rgba(255,255,255,0.7);
   --gc-white:            #F5EED8;
   /* Alpha variants */
-  --gc-primary-soft:     rgba(224,32,32,0.18);
-  --gc-primary-glow:     rgba(224,32,32,0.40);
+  --gc-primary-soft:     rgba(107,101,92,0.18);
+  --gc-primary-glow:     rgba(107,101,92,0.40);
   --gc-white-soft:       rgba(245,238,216,0.73);
   --gc-secondary-faint:  rgba(255,255,255,0.08);
   --gc-coral-faint:      rgba(255,255,255,0.06);

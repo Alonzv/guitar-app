@@ -6,7 +6,7 @@ import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { detectTabScale } from '../../utils/analyzeTab';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import {
-  harmonizeMelody, HARMONY_STYLES, SLOT_MULT,
+  harmonizeMelody, HARMONY_STYLES,
   labelToLowEIndex, labelToRow, STR_LABELS,
   type HarmonizeStyle, type HarmonizeResult,
 } from '../../utils/harmonizeMelody';
@@ -234,24 +234,26 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const editMelody = () => { setResult(null); setError(null); };
   const backToHarmonized = () => { if (savedResult) setResult(savedResult); };
 
-  // ── Display grid (melody + harmony merged onto the slot timeline) ─────────
-  // Every original melody slot is guaranteed present in result.columns by the
-  // guardrail in harmonizeMelody.ts, so the display grid is built entirely
-  // from the result — no need to separately overlay the raw editing grid.
+  // ── Display grid (melody + harmony collapsed onto consecutive columns) ────
+  // result.columns lives on a sparse "slot" timeline (see SLOT_MULT in
+  // harmonizeMelody.ts) that leaves room for inserted melodic passing tones —
+  // but most of those slots are empty even for a melodic result, and ALWAYS
+  // empty for a purely vertical one. Rendering that raw timeline made the tab
+  // absurdly wide (mostly blank columns). We only care about chronological
+  // order for display/playback, so compact to just the populated columns.
   const displayGrid: HGrid = useMemo(() => {
     if (!result) return grid;
-    const maxResultCol = result.columns.reduce((m, c) => Math.max(m, c.col), 0);
-    const width = Math.max(numCols * SLOT_MULT, maxResultCol + 1);
+    const sortedCols = [...result.columns].sort((a, b) => a.col - b.col);
+    const width = Math.max(sortedCols.length, 1);
     const g: HGrid = emptyDisplayGrid(width);
-    for (const col of result.columns) {
-      if (col.col < 0 || col.col >= width) continue;
+    sortedCols.forEach((col, i) => {
       for (const n of col.notes) {
         const row = labelToRow(n.str);
-        g[row][col.col] = { fret: String(n.fret), tech: n.tech as Tech | undefined, added: n.added };
+        g[row][i] = { fret: String(n.fret), tech: n.tech as Tech | undefined, added: n.added };
       }
-    }
+    });
     return g;
-  }, [result, grid, numCols]);
+  }, [result, grid]);
 
   // ── Harmonize ──────────────────────────────────────────────────────────────
   const runHarmonize = (seed: number, kind: 'harmonize' | 'regenerate') => {
@@ -338,6 +340,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     <div style={{
       background: 'var(--gc-fretboard-bg)', padding: '8px 6px',
       border: `1px solid ${T.border}`, overflowX: 'auto',
+      width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
     }}>
       {ROWS.map((lbl, row) => (
         <div key={row} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
@@ -415,9 +418,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   // ── Left column: input + controls ──────────────────────────────────────────
   const leftCol = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
       {/* Input stage */}
-      <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <p style={LABEL_STYLE}>Melody Input</p>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -556,7 +559,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   // ── Right column: result + player ──────────────────────────────────────────
   const rightCol = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
       {error && (
         <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `3px solid ${T.coral}`, display: 'flex', gap: 10, alignItems: 'center' }}>
           <span style={{ fontSize: 16 }}>⚠</span>
@@ -566,7 +569,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
       {result && (
         <>
-          <div className="gc-result-card" style={{ gap: 10 }}>
+          <div className="gc-result-card" style={{ gap: 10, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <p style={LABEL_STYLE}>Harmonized</p>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -638,14 +641,18 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   if (desktop) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: 36, alignItems: 'start' }}>
+      // minmax(0, 1fr) — NOT bare 1fr — stops the harmonized tab grid's
+      // min-content width from forcing this whole track (and the page) to
+      // blow out sideways; the tab grid's own overflow-x:auto then scrolls
+      // inside its own box as intended instead.
+      <div style={{ display: 'grid', gridTemplateColumns: '400px minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
         {leftCol}
-        <div style={{ position: 'sticky', top: 24 }}>{rightCol}</div>
+        <div style={{ position: 'sticky', top: 24, minWidth: 0 }}>{rightCol}</div>
       </div>
     );
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
       {leftCol}
       {rightCol}
     </div>
