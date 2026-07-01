@@ -137,7 +137,8 @@ export async function harmonizeMelody(
     ? `\n8. CHORD-MELODY (requested — CRITICAL, this is a hard physical/musical constraint, not a style preference): the melody note MUST be the TOP VOICE — the single highest-pitched note — in every column. EVERY added:true harmony or bass note you place must sound STRICTLY LOWER in pitch than the melody note in that same column, with no exceptions. If the melody's current string doesn't leave physical room underneath it for a full chord, relocate the melody note itself (per rule 3) to a thinner/higher string at the EXACT SAME pitch — freeing the thicker strings below for harmony — rather than compromise and let any harmony note outrank it. The melody must end up literally above every other note in pitch, not merely listed first.
 9. CHORD-MELODY CONNECTING NOTES (requested — makes it sound like a real guitarist, not stacked blocks): between two consecutive chord positions (consecutive original melody slots), don't just leave silence — most of the time, use the empty gap slots (see rule 7's numbering — spaced ${SLOT_MULT} apart) to bridge the two positions with a short bass walk-up/walk-down, a chromatic or diatonic approach note into the next chord's bass note, or a tiny melodic fill. These connecting notes are added:true, on LOWER strings than the melody (never violating rule 8), and should feel like they belong to the same phrase, not random filler:
    - RHYTHMIC PLACEMENT: space connecting notes EVENLY across the available gap slots between the two anchoring melody slots — e.g. one note roughly in the middle of the gap reads as an eighth-note pickup, two evenly-spaced notes read as sixteenth-note motion. Don't cram every gap slot full, and don't place connecting notes at random uneven offsets.
-   - PHYSICAL CONNECTIVITY (critical): every connecting note's fret must sit within a comfortable stretch of BOTH the chord position it's leaving and the chord position it's arriving at — think of it as a physical bridge the fretting hand walks across, not a jump. Avoid any connecting note more than a few frets from both neighbours; if you can't connect smoothly, it's better to leave that particular gap empty than force an awkward jump.`
+   - PHYSICAL CONNECTIVITY (critical): every connecting note's fret must sit within a comfortable stretch of BOTH the chord position it's leaving and the chord position it's arriving at — think of it as a physical bridge the fretting hand walks across, not a jump. Avoid any connecting note more than a few frets from both neighbours; if you can't connect smoothly, it's better to leave that particular gap empty than force an awkward jump.
+10. CHORD-MELODY VOICING STYLE (requested): favor light, open voicings over dense blocks — most columns should use only 3-4 notes TOTAL (melody + 2-3 harmony/bass notes), not a full 5-6 string block. Reach for Shell voicings (Root-3rd-7th, sometimes dropping the root entirely) for a minimal, airy sound, and Drop 2 / Drop 3 voicings (take a close-position chord and move the note a 2nd or a 3rd from the top down an octave) for a wider, idiomatic guitar spread across non-adjacent strings with real space between the melody and the harmony under it. Use the CAGED system only as a mental map to stay in one coherent, connected neck region/position as the melody moves — you are NOT restricted to full CAGED barre shapes; pick whichever notes within that region best serve the shell/drop voicing, the top-voice rule, and the connecting-note rules above. An occasional fuller chord for emphasis is fine, but it should be the exception, not the default.`
     : '';
 
   try {
@@ -264,7 +265,11 @@ Return VALID JSON only, no markdown:
         }
       }
 
-      const notes = [...perString.values()].slice(0, 6);
+      // Chord-Melody favors open, 3-4 note voicings (shells/drop voicings)
+      // over dense 6-string blocks — melody notes were inserted into
+      // perString before harmony notes above, so this never truncates the
+      // melody itself, only trims excess harmony notes off the tail.
+      const notes = [...perString.values()].slice(0, wantsChordMelody ? 5 : 6);
 
       // CHORD-MELODY CONNECTING NOTES guardrail — a gap-filler is only a
       // bridge if it's actually close to both the chord it's leaving and
