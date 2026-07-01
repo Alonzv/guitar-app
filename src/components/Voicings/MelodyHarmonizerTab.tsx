@@ -424,18 +424,16 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     />
   );
 
-  // ── Selected-cell toolbar — technique entry, no digit grid (typing the
-  // fret now raises the native numeric keyboard via hiddenFretInput above).
+  // ── Selected-cell toolbar — technique entry only. Fret digits are typed
+  // via the native keyboard (hiddenFretInput above / physical keyboard);
+  // Backspace/Delete already clears a fret through handleEditKey, so no
+  // separate on-screen "Clear fret" button is needed here.
   const cellToolbar = sel && !result && (
     <div style={{ ...card({ padding: '10px 12px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={LABEL_STYLE}>Cell {ROWS[sel[0]]} · col {sel[1] + 1}</p>
         <button onClick={() => { setSel(null); fretInputRef.current?.blur(); }} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
       </div>
-      <button onClick={() => clearCell(sel[0], sel[1])} style={{
-        width: '100%', padding: '7px 0', border: `1px solid ${T.border}`, background: T.bgInput,
-        color: T.coral, fontSize: 12, cursor: 'pointer',
-      }}>⌫ Clear fret</button>
       <div style={{ display: 'flex', gap: 4 }}>
         {TECH_BTNS.map(t => {
           const active = grid[sel[0]][sel[1]].tech === t.id;
