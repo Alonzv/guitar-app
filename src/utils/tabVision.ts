@@ -65,7 +65,8 @@ no markdown:
           ],
         },
       ],
-    });
+      // A hung request would otherwise leave the UI spinner running forever.
+    }, { signal: AbortSignal.timeout(60_000) });
 
     const text = (msg.content[0] as { type: string; text: string }).text.trim();
     const start = text.indexOf('{');

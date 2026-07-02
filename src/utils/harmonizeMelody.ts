@@ -166,6 +166,8 @@ export async function harmonizeMelody(
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
+      // A hung request would otherwise leave the UI spinner running forever —
+      // 90s is generous for a 4k-token completion, then we fail visibly.
       messages: [
         {
           role: 'user',
@@ -201,7 +203,7 @@ Return VALID JSON only, no markdown:
 }`,
         },
       ],
-    });
+    }, { signal: AbortSignal.timeout(90_000) });
 
     const text = (msg.content[0] as { type: string; text: string }).text.trim();
     const start = text.indexOf('{');
