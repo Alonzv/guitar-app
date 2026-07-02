@@ -16,6 +16,8 @@ import { TUNINGS } from '../../utils/musicTheory';
 import { T, card } from '../../theme';
 import { ReharmonizeTab } from './ReharmonizeTab';
 import { MelodyHarmonizerTab } from './MelodyHarmonizerTab';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
+import { consumePendingVoicings, subscribeVoicingsHandoff, type VoicingsHandoff } from '../../services/handoff';
 
 type VoicingsSub = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
 
@@ -423,6 +425,33 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
   // Voice isolator
   const [isolate, setIsolate] = useState<IsolateGroup>(null);
 
+  // ── Library handoff (Open in Paths / Open in Reharm) ──────────────────────
+  // Restores a saved progression + filters; for Paths also re-selects the
+  // saved path once paths recompute; for Reharm seeds the saved AI result
+  // (passed down to ReharmonizeTab so no API call is needed).
+  const [reharmSeed, setReharmSeed] = useState<VoicingsHandoff['reharm'] | null>(null);
+  const pendingPathLabel = useRef<string | null>(null);
+  const skipAutoSelectOnce = useRef(false);
+
+  const applyVoicingsHandoff = useCallback((h: VoicingsHandoff) => {
+    setChords(h.chords);
+    if (h.settings?.genre)       setGenre(h.settings.genre as VoicingGenre);
+    if (h.settings?.mode)        setMode(h.settings.mode as VoicingMode);
+    if (h.settings?.stringGroup) setStringGroup(h.settings.stringGroup as StringGroup);
+    pendingPathLabel.current = h.pathLabel ?? null;
+    skipAutoSelectOnce.current = !!h.pathLabel;
+    setReharmSeed(h.reharm ?? null);
+  }, []);
+
+  useEffect(() => {
+    const p = consumePendingVoicings();
+    if (p) applyVoicingsHandoff(p);
+    return subscribeVoicingsHandoff(() => {
+      const q = consumePendingVoicings();
+      if (q) applyVoicingsHandoff(q);
+    });
+  }, [applyVoicingsHandoff]);
+
   // Sub-tab (can be controlled externally via activeSub/onSubChange)
   const [internalSubTab, setInternalSubTab] = useState<VoicingsSub>('paths');
   const subTab = activeSub ?? internalSubTab;
@@ -440,9 +469,17 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
     return findVoicingPaths(chords, { genre, mode, stringGroup, tuning: tuning.notes });
   }, [chords, genre, mode, stringGroup, tuning]);
 
-  // Reset state when paths change
+  // Reset state when paths change — unless a saved path is waiting to be
+  // re-selected (library handoff), in which case pick it by label.
   useEffect(() => {
-    setSelectedIdx(0);
+    const wanted = pendingPathLabel.current;
+    if (wanted) {
+      pendingPathLabel.current = null;
+      const idx = paths.findIndex(p => p.label === wanted);
+      setSelectedIdx(idx >= 0 ? idx : 0);
+    } else {
+      setSelectedIdx(0);
+    }
     playTimers.current.forEach(clearTimeout);
     playTimers.current = [];
     setPlayingId(null);
@@ -466,8 +503,10 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
       if (!cancelled) {
         setAnalysis(result);
         setAnalysisLoading(false);
-        // Auto-select the AI-recommended path
-        if (result) setSelectedIdx(result.recommendedPath);
+        // Auto-select the AI-recommended path — but never override a
+        // selection that was just restored from the library.
+        if (result && !skipAutoSelectOnce.current) setSelectedIdx(result.recommendedPath);
+        skipAutoSelectOnce.current = false;
       }
     });
     return () => { cancelled = true; };
@@ -924,6 +963,23 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
               >
                 {isPlaying ? 'STOP' : 'PLAY'}
               </button>
+
+              <SaveToLibraryButton
+                label="Save to Library"
+                getPayload={() => currentPath ? ({
+                  kind: 'voicing',
+                  name: `${chords.join(' – ')} · ${currentPath.label}`,
+                  chords,
+                  path: {
+                    label: currentPath.label,
+                    description: currentPath.description,
+                    smoothness: currentPath.smoothness,
+                    voicings: currentPath.voicings,
+                  },
+                  settings: { genre, mode, stringGroup },
+                }) : null}
+                style={{ width: '100%', justifyContent: 'center', padding: '11px 0' }}
+              />
             </div>
           )}
         </div>
@@ -1217,6 +1273,8 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
             setStringGroup={setStringGroup}
             tuning={tuning}
             desktop={desktop}
+            restored={reharmSeed}
+            onRestoredConsumed={() => setReharmSeed(null)}
           />
         </div>
       )}

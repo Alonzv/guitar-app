@@ -125,6 +125,43 @@ drop policy if exists "Users crud own saved_harmonizations" on public.saved_harm
 create policy "Users crud own saved_harmonizations" on public.saved_harmonizations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- ── Saved voicing paths (VOICINGS → Paths) ──────────────────────────────────
+-- A chord progression + the specific voicing path the user picked for it,
+-- plus the filters that produced it, so it can be reopened as-was.
+create table if not exists public.saved_voicings (
+  id          uuid default gen_random_uuid() primary key,
+  user_id     uuid references public.profiles(id) on delete cascade not null,
+  name        text not null default 'Voicing Path',
+  chords      jsonb not null default '[]',   -- chord names, string[]
+  path        jsonb not null default '{}',   -- { label, description, smoothness, voicings }
+  settings    jsonb not null default '{}',   -- { genre, mode, stringGroup }
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+
+alter table public.saved_voicings enable row level security;
+drop policy if exists "Users crud own saved_voicings" on public.saved_voicings;
+create policy "Users crud own saved_voicings" on public.saved_voicings
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ── Saved re-harmonizations (VOICINGS → Reharm) ─────────────────────────────
+create table if not exists public.saved_reharms (
+  id          uuid default gen_random_uuid() primary key,
+  user_id     uuid references public.profiles(id) on delete cascade not null,
+  name        text not null default 'Re-Harmonization',
+  original    jsonb not null default '[]',   -- original chord names, string[]
+  result      jsonb not null default '{}',   -- { chords, analysis, theory }
+  genre       text,
+  tension     integer,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+
+alter table public.saved_reharms enable row level security;
+drop policy if exists "Users crud own saved_reharms" on public.saved_reharms;
+create policy "Users crud own saved_reharms" on public.saved_reharms
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- ── Keep updated_at fresh on every UPDATE ───────────────────────────────────
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
@@ -138,6 +175,8 @@ drop trigger if exists touch_audio_tabs            on public.audio_tabs;
 drop trigger if exists touch_saved_tabs            on public.saved_tabs;
 drop trigger if exists touch_saved_progressions    on public.saved_progressions;
 drop trigger if exists touch_saved_harmonizations  on public.saved_harmonizations;
+drop trigger if exists touch_saved_voicings        on public.saved_voicings;
+drop trigger if exists touch_saved_reharms         on public.saved_reharms;
 create trigger touch_audio_tabs         before update on public.audio_tabs
   for each row execute procedure public.touch_updated_at();
 create trigger touch_saved_tabs         before update on public.saved_tabs
@@ -146,12 +185,18 @@ create trigger touch_saved_progressions before update on public.saved_progressio
   for each row execute procedure public.touch_updated_at();
 create trigger touch_saved_harmonizations before update on public.saved_harmonizations
   for each row execute procedure public.touch_updated_at();
+create trigger touch_saved_voicings     before update on public.saved_voicings
+  for each row execute procedure public.touch_updated_at();
+create trigger touch_saved_reharms      before update on public.saved_reharms
+  for each row execute procedure public.touch_updated_at();
 
 -- ── Indexes for the per-user library queries ────────────────────────────────
 create index if not exists idx_audio_tabs_user            on public.audio_tabs(user_id, updated_at desc);
 create index if not exists idx_saved_tabs_user            on public.saved_tabs(user_id, updated_at desc);
 create index if not exists idx_saved_progressions_user    on public.saved_progressions(user_id, updated_at desc);
 create index if not exists idx_saved_harmonizations_user  on public.saved_harmonizations(user_id, updated_at desc);
+create index if not exists idx_saved_voicings_user        on public.saved_voicings(user_id, updated_at desc);
+create index if not exists idx_saved_reharms_user         on public.saved_reharms(user_id, updated_at desc);
 
 -- ── Storage bucket for original audio clips ─────────────────────────────────
 -- (Create via dashboard: Storage → New bucket → "audio" → public.

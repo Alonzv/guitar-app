@@ -21,7 +21,7 @@ import { Metronome }         from './components/Tools/Metronome';
 import { TabBuilder }        from './components/Tools/TabBuilder';
 import { AudioToTab }        from './components/Tools/AudioToTab';
 import { WorkspacePanel }    from './components/Workspace/WorkspacePanel';
-import { LibraryGrid }       from './components/Workspace/LibraryGrid';
+import { WorkspaceOverlay }  from './components/Workspace/WorkspaceOverlay';
 
 // ── Electron-only ──────────────────────────────────────────────────────────
 import { TheoryTab }   from './components/TheoryTab';
@@ -37,7 +37,7 @@ import { ErrorBoundary }       from './components/ErrorBoundary';
 import { useIsDesktop }        from './hooks/useIsDesktop';
 
 // ── Services ───────────────────────────────────────────────────────────────
-import { subscribeHandoff, requestOpenTabInBuilder, subscribeHarmonizationHandoff } from './services/handoff';
+import { subscribeHandoff, requestOpenTabInBuilder, subscribeHarmonizationHandoff, subscribeVoicingsHandoff } from './services/handoff';
 import type { TabContent } from './services/types';
 import { T } from './theme';
 
@@ -46,7 +46,7 @@ type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target';
 type ScalesSub    = 'explorer' | 'triads' | 'intervals' | 'wheel';
 type VoicingsSub  = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
 type PracticeSub  = 'tuner' | 'metronome';
-type StudioSub    = 'tabbuilder' | 'audiotab' | 'library';
+type StudioSub    = 'tabbuilder' | 'audiotab';
 
 const PANEL_TITLES = ['CHORDS', 'SCALES', 'VOICINGS', 'PRACTICE', 'STUDIO'];
 
@@ -75,7 +75,6 @@ const PRACTICE_SEGS  = [
 const STUDIO_SEGS    = [
   { id: 'tabbuilder', label: 'Tab Builder' },
   { id: 'audiotab',   label: 'Audio→Tab'  },
-  { id: 'library',    label: 'Library'    },
 ];
 
 // ── Electron sidebar tabs ─────────────────────────────────────────────────
@@ -129,6 +128,9 @@ export default function App() {
     document.body.classList.toggle('dark', darkMode);
     writeLS('scaleup_dark', darkMode ? '1' : '0');
   }, [darkMode]);
+
+  // ── My Workspace (dedicated full-screen personal area) ────────────────────
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
   // ── Progression + undo/redo ───────────────────────────────────────────────
   const [progression, setProgression] = useState<ChordInProgression[]>(() => {
@@ -217,7 +219,10 @@ export default function App() {
   const [scalesSegment, setScalesSegment]   = useState<ScalesSub>(() => readLS('scaleup_seg_scales', 'explorer') as ScalesSub);
   const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => readLS('scaleup_seg_voicings', 'paths') as VoicingsSub);
   const [practiceSegment, setPracticeSegment] = useState<PracticeSub>(() => readLS('scaleup_seg_practice', 'tuner') as PracticeSub);
-  const [studioSegment, setStudioSegment]   = useState<StudioSub>(() => readLS('scaleup_seg_studio', 'tabbuilder') as StudioSub);
+  const [studioSegment, setStudioSegment]   = useState<StudioSub>(() => {
+    const v = readLS('scaleup_seg_studio', 'tabbuilder');
+    return (v === 'tabbuilder' || v === 'audiotab') ? v : 'tabbuilder';
+  });
 
   const handleTabChange = (t: number) => { setPagerTab(t); writeLS('scaleup_pager_tab', String(t)); };
   const handleChordsSegChange   = (s: string) => { setChordsSegment(s as ChordsSub);   writeLS('scaleup_seg_chords',   s); };
@@ -228,6 +233,7 @@ export default function App() {
 
   // ── Handoff: Workspace "Open in Builder" → STUDIO/Tab Builder ─────────────
   useEffect(() => subscribeHandoff(() => {
+    setWorkspaceOpen(false);
     setPagerTab(4);
     setStudioSegment('tabbuilder');
     writeLS('scaleup_pager_tab', '4');
@@ -236,11 +242,22 @@ export default function App() {
 
   // ── Handoff: Library "Open in Harmonizer" → VOICINGS/Harmonize ────────────
   useEffect(() => subscribeHarmonizationHandoff(() => {
+    setWorkspaceOpen(false);
     setPagerTab(2);
     setVoicingsSegment('harmonizer');
     writeLS('scaleup_pager_tab', '2');
     writeLS('scaleup_seg_voicings', 'harmonizer');
     setElTab('voicings'); // Electron layout — the tool consumes on its mount
+  }), []);
+
+  // ── Handoff: Library "Open in Paths / Reharm" → VOICINGS/<sub> ────────────
+  useEffect(() => subscribeVoicingsHandoff(h => {
+    setWorkspaceOpen(false);
+    setPagerTab(2);
+    setVoicingsSegment(h.sub);
+    writeLS('scaleup_pager_tab', '2');
+    writeLS('scaleup_seg_voicings', h.sub);
+    setElTab('voicings');
   }), []);
 
   // ── Workspace handlers ─────────────────────────────────────────────────────
@@ -410,12 +427,20 @@ export default function App() {
   if (isDesktopBrowser) {
     return (
       <>
+        {workspaceOpen && (
+          <WorkspaceOverlay
+            desktop
+            onClose={() => setWorkspaceOpen(false)}
+            onOpenTabInBuilder={handleOpenTab}
+            onOpenProgressionInBuilder={(chords) => { handleOpenProgression(chords); setWorkspaceOpen(false); }}
+          />
+        )}
         <DesktopShell
           tab={pagerTab}
           onTabChange={handleTabChange}
           darkMode={darkMode}
           onToggleDark={() => setDarkMode(d => !d)}
-          userMenu={<UserMenu onOpenWorkspace={() => { setPagerTab(4); setStudioSegment('library'); writeLS('scaleup_seg_studio', 'library'); }} />}
+          userMenu={<UserMenu onOpenWorkspace={() => setWorkspaceOpen(true)} />}
           sharedBanner={sharedBanner}
         >
           {/* ── Panel 0: CHORDS ──────────────────────────────────────── */}
@@ -516,13 +541,6 @@ export default function App() {
               <ErrorBoundary label="Studio">
                 {studioSegment === 'tabbuilder' && <TabBuilder desktop />}
                 {studioSegment === 'audiotab'   && <AudioToTab desktop />}
-                {studioSegment === 'library'    && (
-                  <LibraryGrid
-                    desktop
-                    onOpenTabInBuilder={handleOpenTab}
-                    onOpenProgressionInBuilder={handleOpenProgression}
-                  />
-                )}
               </ErrorBoundary>
             </div>
           )}
@@ -537,6 +555,13 @@ export default function App() {
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <>
+      {workspaceOpen && (
+        <WorkspaceOverlay
+          onClose={() => setWorkspaceOpen(false)}
+          onOpenTabInBuilder={handleOpenTab}
+          onOpenProgressionInBuilder={(chords) => { handleOpenProgression(chords); setWorkspaceOpen(false); }}
+        />
+      )}
 
       <SwipePager
         tab={pagerTab}
@@ -544,7 +569,7 @@ export default function App() {
         tabTitles={PANEL_TITLES}
         darkMode={darkMode}
         onToggleDark={() => setDarkMode(d => !d)}
-        userMenu={<UserMenu compact onOpenWorkspace={() => { setPagerTab(4); setStudioSegment('library'); }} />}
+        userMenu={<UserMenu compact onOpenWorkspace={() => setWorkspaceOpen(true)} />}
         sharedBanner={sharedBanner}
       >
 
@@ -623,12 +648,6 @@ export default function App() {
           <ErrorBoundary label="Studio">
             {studioSegment === 'tabbuilder' && <TabBuilder />}
             {studioSegment === 'audiotab'   && <AudioToTab />}
-            {studioSegment === 'library'    && (
-              <LibraryGrid
-                onOpenTabInBuilder={handleOpenTab}
-                onOpenProgressionInBuilder={handleOpenProgression}
-              />
-            )}
           </ErrorBoundary>
         </div>
 

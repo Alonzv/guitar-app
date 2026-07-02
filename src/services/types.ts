@@ -62,6 +62,38 @@ export interface SavedHarmonization {
   updated_at: string;
 }
 
+/** VOICINGS → Paths: a progression + the chosen voicing path + filters. */
+export interface VoicingPathData {
+  label: string;
+  description: string;
+  smoothness: number;
+  voicings: { string: number; fret: number }[][];
+}
+export interface SavedVoicing {
+  id: string;
+  user_id: string;
+  name: string;
+  chords: string[];
+  path: VoicingPathData;
+  settings: { genre?: string; mode?: string; stringGroup?: string };
+  created_at: string;
+  updated_at: string;
+}
+
+/** VOICINGS → Reharm: original progression + AI re-harmonization. */
+export interface ReharmData { chords: string[]; analysis: string; theory: string }
+export interface SavedReharm {
+  id: string;
+  user_id: string;
+  name: string;
+  original: string[];
+  result: ReharmData;
+  genre: string | null;
+  tension: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SavedProgression {
   id: string;
   user_id: string;

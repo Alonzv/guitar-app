@@ -116,6 +116,8 @@ export async function deleteAccountData(userId: string) {
     c.from('saved_tabs').delete().eq('user_id', userId),
     c.from('saved_progressions').delete().eq('user_id', userId),
     c.from('saved_harmonizations').delete().eq('user_id', userId),
+    c.from('saved_voicings').delete().eq('user_id', userId),
+    c.from('saved_reharms').delete().eq('user_id', userId),
   ]);
 
   // Purge uploaded audio clips too — rows alone would leave the user's

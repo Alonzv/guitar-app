@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import type {
   AudioTab, SavedTab, SavedProgression, SavedHarmonization,
   HarmonizationMelody, HarmonizationResult, TabContent,
+  SavedVoicing, VoicingPathData, SavedReharm, ReharmData,
 } from './types';
 import type { ChordInProgression } from '../types/music';
 
@@ -172,6 +173,104 @@ export const savedHarmonizations = {
       bpm: item.bpm,
       melody: item.melody,
       result: item.result,
+    });
+  },
+};
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Saved voicing paths (VOICINGS → Paths)
+// ════════════════════════════════════════════════════════════════════════════
+
+export const savedVoicings = {
+  async list(userId: string): Promise<SavedVoicing[]> {
+    const { data, error } = await client()
+      .from('saved_voicings')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as SavedVoicing[];
+  },
+
+  async create(
+    userId: string,
+    input: { name: string; chords: string[]; path: VoicingPathData; settings?: SavedVoicing['settings'] },
+  ): Promise<SavedVoicing> {
+    const { data, error } = await client()
+      .from('saved_voicings')
+      .insert({ user_id: userId, ...input })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as SavedVoicing;
+  },
+
+  async rename(id: string, name: string) {
+    const { error } = await client().from('saved_voicings').update({ name }).eq('id', id);
+    if (error) throw error;
+  },
+
+  async remove(id: string) {
+    const { error } = await client().from('saved_voicings').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async duplicate(userId: string, item: SavedVoicing): Promise<SavedVoicing> {
+    return this.create(userId, {
+      name: `${item.name} (copy)`,
+      chords: item.chords,
+      path: item.path,
+      settings: item.settings,
+    });
+  },
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Saved re-harmonizations (VOICINGS → Reharm)
+// ════════════════════════════════════════════════════════════════════════════
+
+export const savedReharms = {
+  async list(userId: string): Promise<SavedReharm[]> {
+    const { data, error } = await client()
+      .from('saved_reharms')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as SavedReharm[];
+  },
+
+  async create(
+    userId: string,
+    input: { name: string; original: string[]; result: ReharmData; genre?: string | null; tension?: number | null },
+  ): Promise<SavedReharm> {
+    const { data, error } = await client()
+      .from('saved_reharms')
+      .insert({ user_id: userId, ...input })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as SavedReharm;
+  },
+
+  async rename(id: string, name: string) {
+    const { error } = await client().from('saved_reharms').update({ name }).eq('id', id);
+    if (error) throw error;
+  },
+
+  async remove(id: string) {
+    const { error } = await client().from('saved_reharms').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async duplicate(userId: string, item: SavedReharm): Promise<SavedReharm> {
+    return this.create(userId, {
+      name: `${item.name} (copy)`,
+      original: item.original,
+      result: item.result,
+      genre: item.genre,
+      tension: item.tension,
     });
   },
 };

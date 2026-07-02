@@ -11,6 +11,8 @@ import {
 } from '../../utils/voicingPaths';
 import { reharmonize, type ReharmonizeResult } from '../../utils/reharmonize';
 import { exportMidi } from '../../utils/midiExport';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
+import type { ReharmData } from '../../services/types';
 import { T, card } from '../../theme';
 
 interface Props {
@@ -21,6 +23,9 @@ interface Props {
   setStringGroup: (sg: StringGroup) => void;
   tuning: Tuning;
   desktop?: boolean;
+  /** Library handoff: a saved reharm to restore without an API call. */
+  restored?: { result: ReharmData; genre?: string | null; tension?: number | null } | null;
+  onRestoredConsumed?: () => void;
 }
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -205,6 +210,8 @@ export function ReharmonizeTab({
   setStringGroup,
   tuning,
   desktop,
+  restored,
+  onRestoredConsumed,
 }: Props) {
   const [genre, setGenre] = useState('jazz');
   const [tension, setTension] = useState(3);
@@ -222,6 +229,21 @@ export function ReharmonizeTab({
   const keyRoot = chords.length > 0
     ? (TonalChord.get(chords[0]).tonic ?? TonalChord.get(chords[0]).notes[0] ?? 'C')
     : 'C';
+
+  // ── Restore a saved reharm from the library (no API call) ─────────────────
+  useEffect(() => {
+    if (!restored) return;
+    const r = restored.result;
+    setResult({ chords: r.chords, analysis: r.analysis, theory: r.theory });
+    if (restored.genre && GENRES.some(g => g.id === restored.genre)) setGenre(restored.genre);
+    if (typeof restored.tension === 'number') setTension(Math.min(5, Math.max(1, restored.tension)));
+    setError(null);
+    const paths = findVoicingPaths(r.chords, { genre: 'any', mode, stringGroup, tuning: tuning.notes });
+    setReharmPaths(paths);
+    setSelectedPathIdx(0);
+    onRestoredConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restored]);
 
   const handleReharmonize = () => {
     if (chords.length === 0 || loading) return;
@@ -653,20 +675,34 @@ export function ReharmonizeTab({
                 </div>
               )}
 
-              {/* Export MIDI button */}
-              <button
-                onClick={() => exportMidi(result.chords)}
-                style={{
-                  width: '100%',
-                  padding: '11px 0', borderRadius: 0,
-                  border: `1.5px solid ${T.secondary}`,
-                  cursor: 'pointer', fontWeight: 400, fontSize: 14,
-                  background: 'transparent', color: T.secondary,
-                  transition: 'background 0.15s', borderLeft: '4px solid var(--gc-bar-color)',
-                }}
-              >
-                Export MIDI
-              </button>
+              {/* Actions: save + MIDI */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <SaveToLibraryButton
+                  label="Save to Library"
+                  getPayload={() => ({
+                    kind: 'reharm',
+                    name: `Reharm — ${GENRES.find(g => g.id === genre)?.label ?? genre} (${chords.length} chords)`,
+                    original: chords,
+                    result: { chords: result.chords, analysis: result.analysis, theory: result.theory },
+                    genre,
+                    tension,
+                  })}
+                  style={{ flex: 1, justifyContent: 'center', padding: '11px 0' }}
+                />
+                <button
+                  onClick={() => exportMidi(result.chords)}
+                  style={{
+                    flex: 1,
+                    padding: '11px 0', borderRadius: 0,
+                    border: `1.5px solid ${T.secondary}`,
+                    cursor: 'pointer', fontWeight: 400, fontSize: 14,
+                    background: 'transparent', color: T.secondary,
+                    transition: 'background 0.15s', borderLeft: '4px solid var(--gc-bar-color)',
+                  }}
+                >
+                  Export MIDI
+                </button>
+              </div>
         </>
       )}
 
