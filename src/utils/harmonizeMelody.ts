@@ -24,14 +24,12 @@ export const SLOT_MULT = 4;
 // awkward jump rather than a smooth bridge, and gets dropped.
 const MAX_CONNECT_JUMP = 7;
 
-export type HarmonizeStyle = 'vertical' | 'melodic' | '3rds' | '4ths5ths' | 'chordmelody';
+export type HarmonizeStyle = 'melodic' | '3rds' | 'chordmelody';
 
 export const HARMONY_STYLES: { id: HarmonizeStyle; label: string; hint: string }[] = [
-  { id: 'vertical',    label: 'Vertical Chords', hint: 'Full chordal harmony under each melody note' },
-  { id: 'melodic',     label: 'Melodic',         hint: 'Horizontal voice-leading — an independent moving harmony line, with its own passing notes between melody notes' },
-  { id: '3rds',        label: '3rds',            hint: 'Diatonic thirds below the melody' },
-  { id: '4ths5ths',    label: '4ths / 5ths',     hint: 'Quartal / power-interval harmony' },
-  { id: 'chordmelody', label: 'Chord-Melody',    hint: 'The melody is always the top (highest-pitched) note — every harmony/bass note sounds below it' },
+  { id: 'melodic',     label: 'Melodic',      hint: 'Horizontal voice-leading — an independent moving harmony line, with its own passing notes between melody notes' },
+  { id: '3rds',        label: '3rds',         hint: 'Diatonic thirds below the melody' },
+  { id: 'chordmelody', label: 'Chord-Melody', hint: 'Master-class solo-guitar arrangement — melody always on top, airy shell/triad voicings, bass anchored to the marked beats' },
 ];
 
 export interface HarmNote {
@@ -153,8 +151,13 @@ export async function harmonizeMelody(
    - PHYSICAL CONNECTIVITY (critical): every connecting note's fret must sit within a comfortable stretch of BOTH the anchor position it's leaving and the anchor position it's arriving at — think of it as a physical bridge the fretting hand walks across, not a jump. If you can't connect smoothly, it's better to leave that particular gap empty than force an awkward jump.`;
 
   const chordMelodyRule = wantsChordMelody
-    ? `\n9. CHORD-MELODY (requested — CRITICAL, this is a hard physical/musical constraint, not a style preference): the melody note MUST be the TOP VOICE — the single highest-pitched note — in every harmonized column. EVERY added:true harmony or bass note you place must sound STRICTLY LOWER in pitch than the melody note in that same column, with no exceptions. If the melody's current string doesn't leave physical room underneath it for a full chord, relocate the melody note itself (per rule 3) to a thinner/higher string at the EXACT SAME pitch — freeing the thicker strings below for harmony — rather than compromise and let any harmony note outrank it. The melody must end up literally above every other note in pitch, not merely listed first.
-10. CHORD-MELODY VOICING STYLE (requested): favor light, open voicings over dense blocks — most harmonized columns should use only 3-4 notes TOTAL (melody + 2-3 harmony/bass notes), not a full 5-6 string block. Reach for Shell voicings (Root-3rd-7th, sometimes dropping the root entirely) for a minimal, airy sound, and Drop 2 / Drop 3 voicings (take a close-position chord and move the note a 2nd or a 3rd from the top down an octave) for a wider, idiomatic guitar spread across non-adjacent strings with real space between the melody and the harmony under it. Use the CAGED system only as a mental map to stay in one coherent, connected neck region/position as the melody moves — you are NOT restricted to full CAGED barre shapes; pick whichever notes within that region best serve the shell/drop voicing, the top-voice rule, and the connecting-note rules above. An occasional fuller chord for emphasis is fine, but it should be the exception, not the default.`
+    ? `\n9. CHORD-MELODY TOP VOICE (requested — CRITICAL, a hard physical/musical constraint, not a style preference): the melody note MUST be the TOP VOICE — the single highest-pitched note — in every harmonized column. EVERY added:true harmony or bass note must sound STRICTLY LOWER in pitch than the melody note in that same column, no exceptions. If the melody's current string doesn't leave physical room underneath it, relocate the melody note itself (per rule 3) to a thinner/higher string at the EXACT SAME pitch rather than let any harmony note outrank it.
+10. NOTE ECONOMY & GUIDE TONES (hard rule): NEVER produce full 5-6 string barre-chord blocks. Every harmonized column uses AT MOST 4 notes total: the melody (mandatory, on top), a root in the bass, and the GUIDE TONES — the 3rd and the 7th. OMIT the 5th unless it IS the melody note or the chord is diminished/augmented (where the altered 5th defines the quality). Prefer triads and their inversions voiced on the upper string set (strings 1-4: e B G D); use the CAGED system only as a positional map of the neck region, never as full grip shapes.
+11. BASS RHYTHMIC ANCHORING: bass notes land ONLY on the harmonize-anchor slots (the strong beats the user marked or you selected). Under the melody notes that flow BETWEEN anchors, add NO new bass note — the previous anchor's bass keeps ringing (sustain), which creates the rhythmic separation between the chord and the melody floating above it. Gap-slot connecting material (rule 8) in Chord-Melody mode is limited to a brief approach note leading INTO the next anchor's bass — not a continuous walking line under the melody.
+12. CAMPANELLA & PEDAL POINTS: when choosing fingerings, give TOP priority to voicings that incorporate OPEN STRINGS — let notes ring into each other harp-like. If a bass note repeats or an open string (E, A, D in this tuning where applicable) fits the harmony across consecutive anchors, reuse it as a ringing PEDAL POINT under several chords instead of changing bass every time.
+13. STRICT VOICE LEADING: the physical fret distance of the INNER VOICES from one anchor chord to the next must be minimal — prefer half-step or whole-step motion (e.g. the 3rd of one chord becoming the 7th of the next). The result should feel like choir-style continuous part-writing, with no unnecessary geographic jumps of the fretting hand.
+14. POLY-CHORDS / SLASH VOICINGS: to get rich extensions (7ths, 9ths, 11ths) without finger overload, build a SIMPLE TRIAD on the upper strings and pair it with an independent, different bass note below — e.g. a C major triad over an A bass yields an open, airy Am7. Reach for this technique instead of stacking a literal extended-chord grip.
+15. REHARMONIZE STATIC MELODY: if the same melody pitch repeats or sustains across several consecutive anchors, do NOT repeat the same chord — change the harmony UNDERNEATH the static note (a descending bass line, a II-V-I motion, or another progression the held note is a chord tone of) so the arrangement keeps moving even when the melody doesn't.`
     : '';
 
   try {
@@ -308,11 +311,11 @@ Return VALID JSON only, no markdown:
         }
       }
 
-      // Chord-Melody favors open, 3-4 note voicings (shells/drop voicings)
-      // over dense 6-string blocks — melody notes were inserted into
-      // perString before harmony notes above, so this never truncates the
-      // melody itself, only trims excess harmony notes off the tail.
-      const notes = [...perString.values()].slice(0, wantsChordMelody ? 5 : 6);
+      // Chord-Melody hard cap: max 4 notes per column (melody + root +
+      // guide tones) — matches prompt rule 10. Melody notes were inserted
+      // into perString before harmony notes above, so this never truncates
+      // the melody itself, only trims excess harmony notes off the tail.
+      const notes = [...perString.values()].slice(0, wantsChordMelody ? 4 : 6);
 
       // CONNECTING NOTES guardrail — a gap-filler is only a bridge if it's
       // actually close to both the position it's leaving and the position
