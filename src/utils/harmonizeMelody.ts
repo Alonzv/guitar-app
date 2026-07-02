@@ -64,7 +64,8 @@ interface MelodyEvent {
   notes: OriginalNote[];
 }
 
-function noteMidi(str: StrLabel, fret: number, tuning: Tuning): number {
+/** MIDI pitch of a fret on a labeled string under the given tuning. */
+export function noteMidi(str: StrLabel, fret: number, tuning: Tuning): number {
   const openMidi = TonalNote.midi(tuning.notes[LABEL_TO_LOWE[str]]) ?? 40;
   return openMidi + fret;
 }
