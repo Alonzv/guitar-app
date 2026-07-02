@@ -29,6 +29,13 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Without these, a freshly deployed service worker sits in "waiting"
+        // until every tab closes — users kept getting the previous build from
+        // cache (e.g. the email-confirmation link opened a stale app with no
+        // Supabase config baked in). Take over immediately instead.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
       },
     }),
   ],
