@@ -31,14 +31,13 @@ import { ToolsTab }    from './components/Tools/ToolsTab';
 import { SwipePager, Segment } from './components/SwipePager';
 import { DesktopShell }        from './components/desktop/DesktopShell';
 import { UserMenu }            from './components/Auth/UserMenu';
-import { Onboarding }          from './components/Onboarding';
 import { ErrorBoundary }       from './components/ErrorBoundary';
 
 // ── Hooks ──────────────────────────────────────────────────────────────────
 import { useIsDesktop }        from './hooks/useIsDesktop';
 
 // ── Services ───────────────────────────────────────────────────────────────
-import { subscribeHandoff, requestOpenTabInBuilder } from './services/handoff';
+import { subscribeHandoff, requestOpenTabInBuilder, subscribeHarmonizationHandoff } from './services/handoff';
 import type { TabContent } from './services/types';
 import { T } from './theme';
 
@@ -193,9 +192,6 @@ export default function App() {
     history.replaceState(null, '', window.location.pathname);
   };
 
-  // ── Onboarding ─────────────────────────────────────────────────────────────
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('scaleup_onboarded'));
-  const handleDoneOnboarding = () => { localStorage.setItem('scaleup_onboarded', '1'); setShowOnboarding(false); };
 
   // ── Progression handlers ───────────────────────────────────────────────────
   const handleReorderProgression = (id: string, dir: -1 | 1) => {
@@ -236,6 +232,15 @@ export default function App() {
     setStudioSegment('tabbuilder');
     writeLS('scaleup_pager_tab', '4');
     writeLS('scaleup_seg_studio', 'tabbuilder');
+  }), []);
+
+  // ── Handoff: Library "Open in Harmonizer" → VOICINGS/Harmonize ────────────
+  useEffect(() => subscribeHarmonizationHandoff(() => {
+    setPagerTab(2);
+    setVoicingsSegment('harmonizer');
+    writeLS('scaleup_pager_tab', '2');
+    writeLS('scaleup_seg_voicings', 'harmonizer');
+    setElTab('voicings'); // Electron layout — the tool consumes on its mount
   }), []);
 
   // ── Workspace handlers ─────────────────────────────────────────────────────
@@ -325,7 +330,6 @@ export default function App() {
 
     return (
       <div style={{ display: 'flex', height: '100vh', position: 'relative', backgroundColor: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', overflow: 'hidden' }}>
-        {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 
         {!sidebarPinned && (
           <div style={{ position: 'absolute', left: 0, top: 28, bottom: 0, width: 12, zIndex: 30 }} onMouseEnter={() => setSidebarHovered(true)} />
@@ -375,7 +379,6 @@ export default function App() {
             <button onClick={() => setDarkMode(d => !d)} style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textDim, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Toggle dark mode">
               {darkMode ? '☀' : '☾'}
             </button>
-            <button onClick={() => setShowOnboarding(true)} style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Help">?</button>
             {sidebarPinned
               ? <button onClick={() => setSidebarPinned(false)} title="Hide sidebar" style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
               : <button onClick={() => { setSidebarPinned(true); setSidebarHovered(false); }} title="Pin sidebar" style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
@@ -407,13 +410,11 @@ export default function App() {
   if (isDesktopBrowser) {
     return (
       <>
-        {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
         <DesktopShell
           tab={pagerTab}
           onTabChange={handleTabChange}
           darkMode={darkMode}
           onToggleDark={() => setDarkMode(d => !d)}
-          onHelp={() => setShowOnboarding(true)}
           userMenu={<UserMenu onOpenWorkspace={() => { setPagerTab(4); setStudioSegment('library'); writeLS('scaleup_seg_studio', 'library'); }} />}
           sharedBanner={sharedBanner}
         >
@@ -536,7 +537,6 @@ export default function App() {
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <>
-      {showOnboarding && <Onboarding onDone={handleDoneOnboarding} />}
 
       <SwipePager
         tab={pagerTab}
@@ -544,7 +544,6 @@ export default function App() {
         tabTitles={PANEL_TITLES}
         darkMode={darkMode}
         onToggleDark={() => setDarkMode(d => !d)}
-        onHelp={() => setShowOnboarding(true)}
         userMenu={<UserMenu compact onOpenWorkspace={() => { setPagerTab(4); setStudioSegment('library'); }} />}
         sharedBanner={sharedBanner}
       >

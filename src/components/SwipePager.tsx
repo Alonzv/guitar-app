@@ -46,7 +46,6 @@ interface SwipePagerProps {
   tabTitles: string[];
   darkMode: boolean;
   onToggleDark: () => void;
-  onHelp: () => void;
   userMenu?: React.ReactNode;
   sharedBanner?: React.ReactNode;
   children: React.ReactNode;
@@ -57,7 +56,7 @@ const TITLE_W = 150; // px per title cell
 
 export function SwipePager({
   tab, onTabChange, tabTitles,
-  darkMode, onToggleDark, onHelp,
+  darkMode, onToggleDark,
   userMenu, sharedBanner, children,
 }: SwipePagerProps) {
   const [dx, setDx] = useState(0);
@@ -176,21 +175,6 @@ export function SwipePager({
             }}
           >
             {darkMode ? '☀' : '☾'}
-          </button>
-
-          <button
-            onClick={onHelp}
-            title="Help"
-            className="gc-icon-btn"
-            style={{
-              width: 30, height: 30, borderRadius: 0,
-              border: `1px solid ${T.border}`,
-              background: 'transparent',
-              color: T.textDim, fontSize: 14, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            ?
           </button>
 
           {userMenu}
