@@ -8,7 +8,6 @@ interface Props {
   onTabChange: (t: number) => void;
   darkMode: boolean;
   onToggleDark: () => void;
-  onHelp: () => void;
   userMenu?: React.ReactNode;
   sharedBanner?: React.ReactNode;
   children: React.ReactNode;
@@ -16,7 +15,7 @@ interface Props {
 
 export function DesktopShell({
   tab, onTabChange,
-  darkMode, onToggleDark, onHelp,
+  darkMode, onToggleDark,
   userMenu, sharedBanner,
   children,
 }: Props) {
@@ -91,18 +90,6 @@ export function DesktopShell({
           >
             {darkMode ? 'L' : 'D'}
           </button>
-          <button
-            onClick={onHelp}
-            title="Help"
-            className="gc-icon-btn"
-            style={{
-              width: 34, height: 34, borderRadius: 0,
-              border: `1px solid ${T.border}`,
-              background: 'transparent',
-              color: T.textDim, fontSize: 14, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >?</button>
           {userMenu}
         </div>
       </header>
