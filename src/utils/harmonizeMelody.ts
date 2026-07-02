@@ -181,6 +181,8 @@ String labels used in the data: e = high e (1st string), then B G D A E = low E 
 Melody events (each is an original grid column — a "slot" — that already contains original note(s)):
 ${melodyJson}
 
+TIMING SEMANTICS: slot numbers are a TIME GRID — every ${SLOT_MULT} slot units equal ONE eighth-note column of the user's tab. Consecutive melody slots ${SLOT_MULT} apart are straight eighth notes; a larger gap means the previous note is HELD (or followed by a rest) for that long, making it rhythmically heavier — treat such notes as strong-beat/phrase-end candidates. Gap-slot notes you insert land proportionally in time (halfway between two slots = the "&" between their beats).
+
 Requested harmony style(s) — combine them tastefully:
 ${styleLines}
 
