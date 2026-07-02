@@ -28,6 +28,9 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
   const [busy, setBusy]         = useState(false);
   const [error, setError]       = useState('');
   const [notice, setNotice]     = useState('');
+  // Set after a successful signup — swaps the whole form for a clear
+  // "check your inbox" confirmation panel instead of a one-line notice.
+  const [signupDone, setSignupDone] = useState<string | null>(null);
 
   const validate = (): string | null => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address.';
@@ -48,8 +51,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
         onClose();
       } else {
         await signUp(email, password, name.trim());
-        setNotice('Account created. Check your inbox to confirm, then sign in.');
-        setMode('signin');
+        setSignupDone(email);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -113,6 +115,38 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
           }}>✕</button>
         </div>
 
+        {signupDone ? (
+          /* Post-signup confirmation — a clear state, not a buried notice */
+          <div style={{ textAlign: 'center', padding: '14px 4px 8px' }}>
+            <div style={{ fontSize: 42, lineHeight: 1, marginBottom: 14 }}>✉</div>
+            <h3 style={{ margin: '0 0 10px', fontSize: 17, fontWeight: 700, color: T.text }}>
+              Check your inbox
+            </h3>
+            <p style={{ margin: '0 0 4px', fontSize: 13, lineHeight: 1.6, color: T.textMuted }}>
+              We sent a confirmation link to
+            </p>
+            <p style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: T.text, wordBreak: 'break-all' }}>
+              {signupDone}
+            </p>
+            <p style={{ margin: '0 0 20px', fontSize: 12, lineHeight: 1.6, color: T.textDim }}>
+              Click the link in that email to activate your account, then come
+              back and sign in. Can&apos;t find it? Check your spam folder.
+            </p>
+            <button
+              onClick={() => { setSignupDone(null); setMode('signin'); setError(''); setNotice(''); }}
+              style={{
+                width: '100%', padding: '12px 0', borderRadius: 0, cursor: 'pointer',
+                background: T.primary, color: T.white, border: 'none',
+                fontSize: 14, fontFamily: 'inherit', fontWeight: 400,
+                textTransform: 'uppercase', letterSpacing: '-0.02em',
+                borderLeft: '4px solid var(--gc-bar-color)',
+              }}
+            >
+              Got it — Sign In
+            </button>
+          </div>
+        ) : (
+        <>
         {/* Mode switch */}
         <div style={{ display: 'flex', gap: 0, marginBottom: 18 }}>
           {(['signin', 'signup'] as Mode[]).map(m => {
@@ -212,6 +246,8 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
             {busy ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
+        </>
+        )}
       </div>
     </div>
   );
