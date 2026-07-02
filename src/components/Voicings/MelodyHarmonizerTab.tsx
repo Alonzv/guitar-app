@@ -104,15 +104,47 @@ const MELODY_MARK = 'rgba(255, 210, 0, 0.45)';
 
 type LoadingKind = 'harmonize' | 'regenerate' | null;
 
+// Autosave keys — the component unmounts whenever the user switches to
+// another VOICINGS sub-tab, so without persistence a moment in Paths would
+// silently wipe the melody. Same localStorage pattern as Tab Builder.
+const LS_MELODY = 'scaleup_harmonizer_melody';
+const LS_PREFS  = 'scaleup_harmonizer_prefs';
+
+function loadSavedMelody(): MelodyState {
+  try {
+    const s = localStorage.getItem(LS_MELODY);
+    if (s) {
+      const p = JSON.parse(s) as MelodyState;
+      if (Array.isArray(p?.grid) && p.grid.length === 6 && Array.isArray(p.grid[0])) {
+        return { grid: p.grid, bars: Array.isArray(p.bars) ? p.bars : [] };
+      }
+    }
+  } catch { /* corrupted autosave — start fresh */ }
+  return { grid: emptyGrid(), bars: [] };
+}
+
+interface SavedPrefs { scaleRoot?: string; scaleType?: string; styles?: string[] }
+function loadSavedPrefs(): SavedPrefs {
+  try { return JSON.parse(localStorage.getItem(LS_PREFS) ?? '{}') as SavedPrefs; }
+  catch { return {}; }
+}
+
 export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
-  const [melody, setMelody] = useState<MelodyState>(() => ({ grid: emptyGrid(), bars: [] }));
+  const [melody, setMelody] = useState<MelodyState>(loadSavedMelody);
   const [sel, setSel]           = useState<[number, number] | null>(null);
   const [hov, setHov]           = useState<[number, number] | null>(null);
   const [canUndo, setCanUndo]   = useState(false);
-  const [scaleRoot, setScaleRoot] = useState('');
-  const [scaleType, setScaleType] = useState('major');
+  const [scaleRoot, setScaleRoot] = useState(() => loadSavedPrefs().scaleRoot ?? '');
+  const [scaleType, setScaleType] = useState(() => {
+    const t = loadSavedPrefs().scaleType;
+    return t && SCALE_TYPES.includes(t) ? t : 'major';
+  });
 
-  const [styles, setStyles]     = useState<HarmonizeStyle[]>(['3rds']);
+  const [styles, setStyles]     = useState<HarmonizeStyle[]>(() => {
+    const valid = new Set(HARMONY_STYLES.map(s => s.id));
+    const saved = (loadSavedPrefs().styles ?? []).filter((s): s is HarmonizeStyle => valid.has(s as HarmonizeStyle));
+    return saved.length > 0 ? saved : ['3rds'];
+  });
   // The harmonized result, shown only in the result panel — the input grid
   // always keeps showing the user's original, editable tab. Any melody edit
   // invalidates the result (it no longer matches what's on screen).
@@ -139,6 +171,14 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const detected = useMemo(() => (gridHasNotes(grid) ? detectTabScale(grid, tuning.notes) : null), [grid, tuning]);
 
   useEffect(() => () => { playTimers.current.forEach(clearTimeout); }, []);
+
+  // Autosave — melody on every edit, prefs on change.
+  useEffect(() => {
+    try { localStorage.setItem(LS_MELODY, JSON.stringify(melody)); } catch { /* quota — ignore */ }
+  }, [melody]);
+  useEffect(() => {
+    try { localStorage.setItem(LS_PREFS, JSON.stringify({ scaleRoot, scaleType, styles })); } catch { /* ignore */ }
+  }, [scaleRoot, scaleType, styles]);
 
   // ── Editing — same history + mutation pattern as Tab Builder ─────────────
   const melodyRef = useRef<MelodyState>(melody);
@@ -200,11 +240,28 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     }));
   }, [sel, withHistory]);
 
+  // Anchors are a COLUMN property (the engine harmonizes whole time-slots),
+  // so toggling marks/unmarks every filled note in the selected column —
+  // matching what the AI will actually do with it.
+  const colIsAnchored = useCallback(
+    (c: number) => grid.some(r => r[c].fret !== '' && r[c].anchor),
+    [grid],
+  );
+  const colHasNotes = useCallback(
+    (c: number) => grid.some(r => r[c].fret !== ''),
+    [grid],
+  );
   const toggleAnchor = useCallback(() => {
     if (!sel) return;
-    const [s, c] = sel;
-    setCell(s, c, { anchor: !grid[s][c].anchor });
-  }, [sel, grid, setCell]);
+    const c = sel[1];
+    const next = !colIsAnchored(c);
+    withHistory(p => ({
+      ...p,
+      grid: p.grid.map(row => row.map((cell, ci) =>
+        ci === c && cell.fret !== '' ? { ...cell, anchor: next } : cell,
+      )),
+    }));
+  }, [sel, colIsAnchored, withHistory]);
 
   // Shared by the global keydown listener (desktop) and the hidden input
   // (mobile) — identical key map to Tab Builder, plus 'a' for the
@@ -288,17 +345,25 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     const sortedCols = [...result.columns].sort((a, b) => a.col - b.col);
     const width = Math.max(sortedCols.length, 1);
     const g: HGrid = emptyDisplayGrid(width);
-    const slotToIndex = new Map<number, number>();
     sortedCols.forEach((col, i) => {
-      slotToIndex.set(col.col, i);
       for (const n of col.notes) {
         const row = labelToRow(n.str);
         g[row][i] = { fret: String(n.fret), tech: n.tech as Tech | undefined, added: n.added };
       }
     });
-    const b = bars
-      .map(c => slotToIndex.get(c * SLOT_MULT))
-      .filter((i): i is number => i !== undefined);
+    // A bar after input column c sits after slot c*SLOT_MULT. That exact slot
+    // may be unpopulated (bar drawn after an empty/rest column) — anchor the
+    // bar after the LAST populated column at or before it instead of dropping
+    // it, so barlines survive compaction into the result view and the PDF.
+    const slots = sortedCols.map(sc => sc.col);
+    const b = [...new Set(
+      bars.map(c => {
+        const target = c * SLOT_MULT;
+        let idx = -1;
+        for (let i = 0; i < slots.length && slots[i] <= target; i++) idx = i;
+        return idx;
+      }).filter(i => i >= 0),
+    )].sort((x, y) => x - y);
     return { displayGrid: g, displayBars: b };
   }, [result, grid, bars]);
 
@@ -315,6 +380,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           // can edit) exactly which notes it treated as anchors. Direct
           // setMelody: an AI annotation, not a user edit — no history push,
           // no result invalidation.
+          //
+          // DELIBERATE consequence: once written, these anchors count as
+          // manual on the next request, so Regenerate keeps the SAME anchor
+          // choice and only re-voices the harmony. To get a fresh anchor
+          // selection, clear the › marks (or Clear) and Harmonize again.
           if (r.autoAnchorSlots && r.autoAnchorSlots.length > 0) {
             const anchorCols = new Set(r.autoAnchorSlots.map(slot => Math.round(slot / SLOT_MULT)));
             setMelody(m => ({
@@ -415,6 +485,20 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   // ── Tab grid renderer — cell visuals copied from Tab Builder ──────────────
   const renderGrid = (g: HGrid, gridBars: number[], editable: boolean) => {
     const gBarsSet = new Set(gridBars);
+    // Anchors are per-column — draw the › marker once per anchored column,
+    // above its topmost filled note, instead of on every anchored cell.
+    const anchorMarkRow = new Map<number, number>();
+    const gWidth = g[0]?.length ?? 0;
+    for (let c = 0; c < gWidth; c++) {
+      let top = -1, anchored = false;
+      for (let r = 0; r < 6; r++) {
+        if (g[r][c].fret !== '') {
+          if (top === -1) top = r;
+          if (g[r][c].anchor) anchored = true;
+        }
+      }
+      if (anchored && top >= 0) anchorMarkRow.set(c, top);
+    }
     return (
       <div
         // Mobile's SwipePager wraps the whole tab panel in its own pointer
@@ -486,8 +570,8 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                       <div style={{ position: 'absolute', width: CIRCLE_D, height: CIRCLE_D, background: MELODY_MARK, top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
                     )}
 
-                    {/* Harmonizer: anchor marker */}
-                    {cell.anchor && cell.fret !== '' && (
+                    {/* Harmonizer: anchor marker — one per anchored column */}
+                    {anchorMarkRow.get(col) === row && (
                       <span style={{ position: 'absolute', top: -2, left: 2, fontSize: 12, fontWeight: 700, color: T.secondary, lineHeight: 1, zIndex: 2, pointerEvents: 'none' }}>
                         ›
                       </span>
@@ -605,20 +689,27 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         <p style={LABEL_STYLE}>Cell {ROWS[sel[0]]} · col {sel[1] + 1}</p>
         <button onClick={() => { setSel(null); fretInputRef.current?.blur(); }} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
       </div>
-      <button
-        onClick={toggleAnchor}
-        disabled={grid[sel[0]][sel[1]].fret === ''}
-        style={{
-          width: '100%', padding: '7px 0',
-          border: `1.5px solid ${grid[sel[0]][sel[1]].anchor ? T.secondary : T.border}`,
-          background: grid[sel[0]][sel[1]].anchor ? T.secondaryBg : T.bgInput,
-          color: grid[sel[0]][sel[1]].anchor ? T.secondary : T.textMuted,
-          fontSize: 11, fontWeight: grid[sel[0]][sel[1]].anchor ? 700 : 400, cursor: 'pointer',
-          opacity: grid[sel[0]][sel[1]].fret === '' ? 0.5 : 1,
-        }}
-      >
-        › {grid[sel[0]][sel[1]].anchor ? 'Harmonize Anchor ✓' : 'Harmonize Anchor'}
-      </button>
+      {(() => {
+        const anchored = colIsAnchored(sel[1]);
+        const hasNotes = colHasNotes(sel[1]);
+        return (
+          <button
+            onClick={toggleAnchor}
+            disabled={!hasNotes}
+            title="Marks the whole column (time-slot) as a harmonic anchor"
+            style={{
+              width: '100%', padding: '7px 0',
+              border: `1.5px solid ${anchored ? T.secondary : T.border}`,
+              background: anchored ? T.secondaryBg : T.bgInput,
+              color: anchored ? T.secondary : T.textMuted,
+              fontSize: 11, fontWeight: anchored ? 700 : 400, cursor: 'pointer',
+              opacity: hasNotes ? 1 : 0.5,
+            }}
+          >
+            › {anchored ? 'Harmonize Anchor ✓' : 'Harmonize Anchor'}
+          </button>
+        );
+      })()}
       <div style={{ display: 'flex', gap: 4 }}>
         {TECH_BTNS.map(t => {
           const isArmed = t.id === '|' ? barsSet.has(sel[1]) : selTech === t.id;
@@ -702,7 +793,16 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             const active = styles.includes(s.id);
             return (
               <button key={s.id}
-                onClick={() => setStyles(cur => active ? cur.filter(x => x !== s.id) : [...cur, s.id])}
+                // Chord-Melody is a complete arrangement style whose rules
+                // (bass only at anchors, sustain between them) directly
+                // contradict Melodic's free counter-line — selecting it
+                // stands alone, and selecting anything else drops it.
+                onClick={() => setStyles(cur => {
+                  if (active) return cur.filter(x => x !== s.id);
+                  if (s.id === 'chordmelody') return ['chordmelody'];
+                  return [...cur.filter(x => x !== 'chordmelody'), s.id];
+                })}
+                title={s.id === 'chordmelody' ? 'Standalone style — replaces other selections' : undefined}
                 style={{
                   padding: '9px 8px', border: `1.5px solid ${active ? T.secondary : T.border}`,
                   background: active ? T.secondaryBg : T.bgInput,
@@ -740,7 +840,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         }}>
           {loadingKind === 'harmonize' ? (<><span style={spinnerStyle('#fff')} /> Harmonizing…</>) : 'Harmonize'}
         </button>
-        <button onClick={handleRegenerate} disabled={!result || !!loadingKind} style={{
+        <button
+          onClick={handleRegenerate}
+          disabled={!result || !!loadingKind}
+          title="Same melody and anchors, fresh voicing — edit the › anchor marks to change which notes get chords"
+          style={{
           flex: 1, padding: '13px 0', border: `1.5px solid ${T.secondary}`,
           cursor: (!result || !!loadingKind) ? 'not-allowed' : 'pointer',
           background: 'transparent', color: (!result || !!loadingKind) ? T.textDim : T.secondary,
