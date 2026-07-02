@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { createAIMessage } from './aiClient';
 
 export interface ReharmonizeResult {
   chords: string[];   // chord names compatible with tonaljs Chord.get()
@@ -11,12 +11,7 @@ export async function reharmonize(
   genre: string,
   tension: number, // 1–5
 ): Promise<ReharmonizeResult | null> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-
   try {
-    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
     const tensionInstructions =
       tension <= 2
         ? 'Tension level: LOW (1-2). Use simple extensions only: add7, add9, sus2, sus4. Keep it close to the original harmony.'
@@ -42,7 +37,7 @@ export async function reharmonize(
       }
     })();
 
-    const msg = await client.messages.create({
+    const msg = await createAIMessage({
       model: 'claude-haiku-4-5',
       max_tokens: 500,
       messages: [
@@ -85,7 +80,7 @@ Return valid JSON only, no markdown:
 }`,
         },
       ],
-    });
+    }, { signal: AbortSignal.timeout(60_000) });
 
     const text = (msg.content[0] as { type: string; text: string }).text.trim();
     const start = text.indexOf('{');

@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { createAIMessage } from './aiClient';
 
 export interface PathInfo {
   label: string;
@@ -19,18 +19,12 @@ export async function analyzeProgression(
   genre: string,
   paths: PathInfo[],
 ): Promise<MusicalAnalysis | null> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  console.log('[musicalAnalysis] apiKey present:', !!apiKey, '| first chars:', apiKey ? apiKey.slice(0, 8) : 'none');
-  if (!apiKey) return null;
-
   try {
-    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
     const pathLines = paths
       .map((p, i) => `  ${i}: "${p.label}" — smooth:${p.smoothness}/5 — ${p.description}`)
       .join('\n');
 
-    const msg = await client.messages.create({
+    const msg = await createAIMessage({
       model: 'claude-haiku-4-5',
       max_tokens: 400,
       messages: [{
