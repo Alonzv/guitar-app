@@ -13,14 +13,21 @@ import {
 import { extractTabFromImage } from '../../utils/tabVision';
 
 // ── Grid model ───────────────────────────────────────────────────────────────
+// The editor deliberately mirrors Tab Builder's model and editing rules
+// (TabBuilder.tsx) so building a melody here feels identical to building a
+// tab there. `anchor`/`added` are harmonizer-only extensions.
 type Tech = 'h' | 'p' | '/' | '\\' | 'b' | '~';
 interface HCell { fret: string; tech?: Tech; anchor?: boolean; added?: boolean }
 type HGrid = HCell[][];
+interface MelodyState { grid: HGrid; bars: number[] }
 
 const ROWS = STR_LABELS;             // e B G D A E  (row 0 = high e)
 const DEFAULT_COLS = 16;
-const CW = 30;
-const CH = 28;
+// Cell metrics — Tab Builder's BASE_CW/BASE_CH/font at 100% zoom.
+const CW = 28;
+const CH = 30;
+const FS = 13;
+const CIRCLE_D = Math.round(CH * 0.72);
 
 function emptyGrid(cols = DEFAULT_COLS): HGrid {
   return ROWS.map(() => Array.from({ length: cols }, () => ({ fret: '' })));
@@ -34,23 +41,26 @@ function gridHasNotes(g: HGrid): boolean {
   return g.some(r => r.some(c => c.fret !== ''));
 }
 
-// TabContent (loose tech:string) → working HGrid
-function fromTabContent(c: TabContent): HGrid {
+// TabContent (loose tech:string) → working melody state
+function fromTabContent(c: TabContent): MelodyState {
   const cols = c.grid[0]?.length ?? DEFAULT_COLS;
-  return ROWS.map((_, row) =>
-    Array.from({ length: cols }, (_, col) => {
-      const cell = c.grid[row]?.[col];
-      return cell?.tech ? { fret: cell.fret ?? '', tech: cell.tech as Tech } : { fret: cell?.fret ?? '' };
-    }),
-  );
+  return {
+    grid: ROWS.map((_, row) =>
+      Array.from({ length: cols }, (_, col) => {
+        const cell = c.grid[row]?.[col];
+        return cell?.tech ? { fret: cell.fret ?? '', tech: cell.tech as Tech } : { fret: cell?.fret ?? '' };
+      }),
+    ),
+    bars: (c.bars ?? []).filter(b => typeof b === 'number'),
+  };
 }
 
-// HGrid → TabContent (strip the `added` flag for storage)
-function toTabContent(g: HGrid, title: string): TabContent {
+// Display grid + bars → TabContent (strips harmonizer-only flags for storage)
+function toTabContent(g: HGrid, bars: number[], title: string): TabContent {
   return {
     title, subtitle: '',
     grid: g.map(row => row.map(c => (c.tech ? { fret: c.fret, tech: c.tech } : { fret: c.fret }))),
-    bars: [],
+    bars,
   };
 }
 
@@ -124,11 +134,13 @@ const SCALE_TYPES = [
   'minor pentatonic', 'major pentatonic', 'blues', 'harmonic minor', 'melodic minor',
 ];
 
-const TECH_BTNS: { id: Tech; label: string }[] = [
-  { id: 'h', label: 'h/p' },
-  { id: '/', label: '/' },
-  { id: 'b', label: 'bend' },
-  { id: '~', label: '~' },
+// Same technique set (labels, symbols, hotkeys) as Tab Builder, plus Bar.
+const TECH_BTNS: { id: Tech | '|'; label: string; sym: string; key: string }[] = [
+  { id: 'h', label: 'Hammer/Pull', sym: 'h/p', key: 'H' },
+  { id: '/', label: 'Slide',       sym: '/',   key: '/' },
+  { id: 'b', label: 'Bend',        sym: 'b',   key: 'B' },
+  { id: '~', label: 'Vibrato',     sym: '~',   key: '~' },
+  { id: '|', label: 'Bar',         sym: '|',   key: '|' },
 ];
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -151,8 +163,10 @@ const COLOR_ADDED = T.secondary;
 type LoadingKind = 'harmonize' | 'regenerate' | null;
 
 export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
-  const [grid, setGrid]         = useState<HGrid>(() => emptyGrid());
+  const [melody, setMelody] = useState<MelodyState>(() => ({ grid: emptyGrid(), bars: [] }));
   const [sel, setSel]           = useState<[number, number] | null>(null);
+  const [hov, setHov]           = useState<[number, number] | null>(null);
+  const [canUndo, setCanUndo]   = useState(false);
   const [scaleRoot, setScaleRoot] = useState('');
   const [scaleType, setScaleType] = useState('major');
 
@@ -176,6 +190,8 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const fretInputRef = useRef<HTMLInputElement | null>(null);
 
+  const { grid, bars } = melody;
+  const barsSet = useMemo(() => new Set(bars), [bars]);
   const scaleName = scaleRoot ? `${scaleRoot} ${scaleType}` : '';
   const numCols = grid[0]?.length ?? DEFAULT_COLS;
 
@@ -184,30 +200,130 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   useEffect(() => () => { playTimers.current.forEach(clearTimeout); }, []);
 
-  // ── Editing ──────────────────────────────────────────────────────────────
-  // Any real edit to the melody invalidates BOTH the shown result and the
-  // remembered one — a harmonization only ever matches the melody it was
-  // computed from.
-  const editCell = useCallback((row: number, col: number, mutate: (c: HCell) => HCell) => {
+  // ── Editing — same history + mutation pattern as Tab Builder ─────────────
+  const melodyRef = useRef<MelodyState>(melody);
+  useEffect(() => { melodyRef.current = melody; }, [melody]);
+  const histRef = useRef<MelodyState[]>([]);
+
+  // Push current state to history, apply updater. Any melody edit also
+  // invalidates BOTH the shown result and the remembered one — a
+  // harmonization only ever matches the melody it was computed from.
+  const withHistory = useCallback((fn: (p: MelodyState) => MelodyState) => {
+    histRef.current = [...histRef.current.slice(-30), melodyRef.current];
+    setCanUndo(true);
     setResult(null);
     setSavedResult(null);
-    setGrid(g => g.map((r, ri) => ri === row ? r.map((c, ci) => ci === col ? mutate(c) : c) : r));
+    setMelody(fn);
   }, []);
 
-  // Digit-by-digit entry (append then clamp to 24) — shared by desktop
-  // keydown and the mobile hidden-input's onChange.
-  const setFret = (row: number, col: number, digit: string) => {
-    editCell(row, col, c => {
-      const next = (c.fret + digit).slice(-2);
-      const n = parseInt(next, 10);
-      return { ...c, fret: (!Number.isNaN(n) && n <= 24) ? String(n) : digit };
+  const undo = useCallback(() => {
+    if (!histRef.current.length) return;
+    const prev = histRef.current[histRef.current.length - 1];
+    histRef.current = histRef.current.slice(0, -1);
+    setCanUndo(histRef.current.length > 0);
+    setResult(null);
+    setSavedResult(null);
+    setMelody(prev);
+  }, []);
+
+  const setCell = useCallback((s: number, c: number, patch: Partial<HCell>) => {
+    withHistory(p => {
+      const g = p.grid.map(r => [...r]);
+      g[s][c] = { ...g[s][c], ...patch };
+      return { ...p, grid: g };
     });
-  };
-  const clearCell = (row: number, col: number) => editCell(row, col, () => ({ fret: '' }));
-  const toggleTech = (row: number, col: number, tech: Tech) =>
-    editCell(row, col, c => ({ ...c, tech: c.tech === tech ? undefined : tech }));
-  const toggleAnchor = (row: number, col: number) =>
-    editCell(row, col, c => ({ ...c, anchor: !c.anchor }));
+  }, [withHistory]);
+
+  // Digit entry — Tab Builder's exact rule: append to a 1-digit fret when
+  // the combination stays ≤ 24, otherwise start over with the new digit.
+  const applyDigit = useCallback((d: string) => {
+    if (!sel) return;
+    const [s, c] = sel;
+    const cur = grid[s][c].fret;
+    if (cur.length === 1 && parseInt(cur + d) <= 24) setCell(s, c, { fret: cur + d });
+    else setCell(s, c, { fret: d });
+  }, [sel, grid, setCell]);
+
+  // Toggle a technique and advance to the next column, like Tab Builder.
+  const applyTech = useCallback((tech: Tech) => {
+    if (!sel) return;
+    const [s, c] = sel;
+    const toggled = grid[s][c].tech === tech ? undefined : tech;
+    setCell(s, c, { tech: toggled });
+    if (toggled && c + 1 < numCols) setSel([s, c + 1]);
+  }, [sel, grid, numCols, setCell]);
+
+  const toggleBar = useCallback(() => {
+    if (!sel) return;
+    const c = sel[1];
+    withHistory(p => ({
+      ...p,
+      bars: p.bars.includes(c) ? p.bars.filter(b => b !== c) : [...p.bars, c],
+    }));
+  }, [sel, withHistory]);
+
+  const toggleAnchor = useCallback(() => {
+    if (!sel) return;
+    const [s, c] = sel;
+    setCell(s, c, { anchor: !grid[s][c].anchor });
+  }, [sel, grid, setCell]);
+
+  // Shared by the global keydown listener (desktop) and the hidden input
+  // (mobile) — identical key map to Tab Builder, plus 'a' for the
+  // harmonizer's anchor tool.
+  const handleEditKey = useCallback((e: {
+    key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; preventDefault: () => void;
+  }) => {
+    if (!sel) return;
+    const [s, c] = sel;
+
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      applyDigit(e.key);
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      setCell(s, c, { fret: '', tech: undefined, anchor: undefined });
+    } else if (e.key === 'ArrowRight' || e.key === 'Tab') {
+      e.preventDefault();
+      if (c + 1 < numCols) setSel([s, c + 1]);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (c > 0) setSel([s, c - 1]);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (s < 5) setSel([s + 1, c]);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (s > 0) setSel([s - 1, c]);
+    } else if (e.key === 'Escape') {
+      setSel(null);
+      fretInputRef.current?.blur();
+    } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    } else if (['h', '/', 'b', '~'].includes(e.key)) {
+      e.preventDefault();
+      applyTech(e.key as Tech);
+    } else if (e.key === '|') {
+      e.preventDefault();
+      toggleBar();
+    } else if (e.key === 'a' || e.key === 'A') {
+      e.preventDefault();
+      toggleAnchor();
+    }
+  }, [sel, numCols, applyDigit, setCell, undo, applyTech, toggleBar, toggleAnchor]);
+
+  // Desktop keyboard entry — skipped while a real form control has focus
+  // (the hidden fret input's own onKeyDown already routes to handleEditKey).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      handleEditKey(e);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleEditKey]);
 
   // Tap a cell → select it and focus the hidden input to raise the mobile
   // numeric keyboard (no-op on desktop, where it's just an invisible focus).
@@ -216,40 +332,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     fretInputRef.current?.focus();
   };
 
-  // Shared by the global keydown listener (desktop) and the hidden input's
-  // own onKeyDown (arrow nav / backspace / tech hotkeys while it has focus).
-  const handleEditKey = useCallback((e: {
-    key: string; preventDefault: () => void;
-  }) => {
-    if (!sel) return;
-    const [r, c] = sel;
-    if (e.key >= '0' && e.key <= '9') { e.preventDefault(); setFret(r, c, e.key); }
-    else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); clearCell(r, c); }
-    else if (['h', 'p', 'b', '/', '\\', '~'].includes(e.key)) { e.preventDefault(); toggleTech(r, c, e.key as Tech); }
-    else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); toggleAnchor(r, c); }
-    else if (e.key === 'ArrowRight') { e.preventDefault(); setSel([r, Math.min(numCols - 1, c + 1)]); }
-    else if (e.key === 'ArrowLeft')  { e.preventDefault(); setSel([r, Math.max(0, c - 1)]); }
-    else if (e.key === 'ArrowUp')    { e.preventDefault(); setSel([Math.max(0, r - 1), c]); }
-    else if (e.key === 'ArrowDown')  { e.preventDefault(); setSel([Math.min(5, r + 1), c]); }
-    else if (e.key === 'Escape')     { setSel(null); fretInputRef.current?.blur(); }
-  }, [sel, numCols]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Desktop keyboard entry on the selected cell — skipped while the hidden
-  // input has focus, since its own onKeyDown already calls handleEditKey
-  // (avoids handling the same keystroke twice).
-  useEffect(() => {
-    if (!sel) return;
-    const handler = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      handleEditKey(e);
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [sel, handleEditKey]);
-
-  const addColumns = () => setGrid(g => g.map(r => [...r, ...Array.from({ length: 4 }, () => ({ fret: '' as string }))]));
-  const clearGrid = () => { setResult(null); setSavedResult(null); setGrid(emptyGrid()); setSel(null); };
+  const addColumns = () => withHistory(p => ({
+    ...p,
+    grid: p.grid.map(r => [...r, ...Array.from({ length: 4 }, () => ({ fret: '' }))]),
+  }));
+  const clearGrid = () => { withHistory(() => ({ grid: emptyGrid(), bars: [] })); setSel(null); };
 
   // Hide the harmony overlay and go back to editing the raw melody — the last
   // harmonization is kept in `savedResult` so the user can return to it.
@@ -259,23 +346,28 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   // ── Display grid (melody + harmony collapsed onto consecutive columns) ────
   // result.columns lives on a sparse "slot" timeline (see SLOT_MULT in
   // harmonizeMelody.ts) that leaves room for inserted melodic passing tones —
-  // but most of those slots are empty even for a melodic result, and ALWAYS
-  // empty for a purely vertical one. Rendering that raw timeline made the tab
-  // absurdly wide (mostly blank columns). We only care about chronological
-  // order for display/playback, so compact to just the populated columns.
-  const displayGrid: HGrid = useMemo(() => {
-    if (!result) return grid;
+  // but most of those slots are empty even for a melodic result. We only care
+  // about chronological order for display/playback, so compact to just the
+  // populated columns, and remap the input grid's bar positions onto the
+  // compacted indices (a bar after input column c follows slot c*SLOT_MULT).
+  const { displayGrid, displayBars } = useMemo(() => {
+    if (!result) return { displayGrid: grid, displayBars: bars };
     const sortedCols = [...result.columns].sort((a, b) => a.col - b.col);
     const width = Math.max(sortedCols.length, 1);
     const g: HGrid = emptyDisplayGrid(width);
+    const slotToIndex = new Map<number, number>();
     sortedCols.forEach((col, i) => {
+      slotToIndex.set(col.col, i);
       for (const n of col.notes) {
         const row = labelToRow(n.str);
         g[row][i] = { fret: String(n.fret), tech: n.tech as Tech | undefined, added: n.added };
       }
     });
-    return g;
-  }, [result, grid]);
+    const b = bars
+      .map(c => slotToIndex.get(c * SLOT_MULT))
+      .filter((i): i is number => i !== undefined);
+    return { displayGrid: g, displayBars: b };
+  }, [result, grid, bars]);
 
   // ── Harmonize ──────────────────────────────────────────────────────────────
   const runHarmonize = (seed: number, kind: 'harmonize' | 'regenerate') => {
@@ -287,12 +379,17 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         if (r) {
           // No manual anchors were marked — the AI picked them itself.
           // Reflect its choices back onto the grid so the user sees (and
-          // can edit) exactly which notes it treated as anchors.
+          // can edit) exactly which notes it treated as anchors. Direct
+          // setMelody: an AI annotation, not a user edit — no history push,
+          // no result invalidation.
           if (r.autoAnchorSlots && r.autoAnchorSlots.length > 0) {
             const anchorCols = new Set(r.autoAnchorSlots.map(slot => Math.round(slot / SLOT_MULT)));
-            setGrid(g => g.map(row => row.map((c, col) =>
-              (anchorCols.has(col) && c.fret !== '') ? { ...c, anchor: true } : c
-            )));
+            setMelody(m => ({
+              ...m,
+              grid: m.grid.map(row => row.map((c, col) =>
+                (anchorCols.has(col) && c.fret !== '') ? { ...c, anchor: true } : c
+              )),
+            }));
           }
           setResult(r); setSavedResult(r);
         }
@@ -316,7 +413,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       extractTabFromImage(base64, mt)
         .then(tc => {
           setVisionLoading(false);
-          if (tc) { setResult(null); setSavedResult(null); setGrid(fromTabContent(tc)); }
+          if (tc) withHistory(() => fromTabContent(tc));
           else setError('לא ניתן לחלץ טאב מהתמונה. נסה תמונה ברורה יותר.');
         })
         .catch(() => { setVisionLoading(false); setError('שגיאה בעיבוד התמונה.'); });
@@ -326,7 +423,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   const loadPaste = () => {
     const g = parseAsciiTab(pasteText);
-    if (g) { setResult(null); setSavedResult(null); setGrid(g); setPasteOpen(false); setPasteText(''); setError(null); }
+    if (g) { withHistory(() => ({ grid: g, bars: [] })); setPasteOpen(false); setPasteText(''); setError(null); }
     else setError('לא זוהה טאב בטקסט. הדבק 6 שורות טאב תקינות.');
   };
 
@@ -368,68 +465,163 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   const canHarmonize = gridHasNotes(grid) && !!scaleName && styles.length > 0 && !loadingKind;
 
-  // ── Tab grid renderer ──────────────────────────────────────────────────────
-  const renderGrid = (g: HGrid, editable: boolean) => (
-    <div
-      // Mobile's SwipePager wraps the whole tab panel in its own pointer
-      // handlers to detect horizontal swipes between VOICINGS/PRACTICE/etc.
-      // Without this, a finger dragging horizontally to scroll THIS grid
-      // can get intermittently captured by that outer swipe detector mid-
-      // gesture — the native scroll stutters/interrupts. Stopping the
-      // pointerdown from bubbling keeps SwipePager from ever seeing a
-      // gesture that started inside the grid, while leaving this element's
-      // own native scrolling completely untouched.
-      onPointerDownCapture={e => e.stopPropagation()}
-      style={{
-        background: 'var(--gc-fretboard-bg)', padding: '8px 6px',
-        border: `1px solid ${T.border}`, overflowX: 'auto',
-        width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
-      }}
-    >
-      {ROWS.map((lbl, row) => (
-        <div key={row} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
-          <span style={{ width: 14, fontSize: 12, fontFamily: 'monospace', color: T.textMuted, textAlign: 'right', paddingRight: 3, flexShrink: 0 }}>{lbl}</span>
-          <span style={{ fontSize: 12, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
-          {g[row].map((cell, col) => {
-            const isSel = editable && sel?.[0] === row && sel?.[1] === col;
-            const color = cell.added ? COLOR_ADDED : COLOR_ORIG;
-            return (
-              <div
-                key={col}
-                onClick={editable ? () => selectCell(row, col) : undefined}
-                style={{
-                  width: CW, height: CH, flexShrink: 0, position: 'relative',
-                  cursor: editable ? 'pointer' : 'default',
-                }}
-              >
-                <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 0, borderTop: `2px solid ${T.border}`, transform: 'translateY(-0.5px)', pointerEvents: 'none' }} />
-                {isSel && (
-                  <div style={{ position: 'absolute', width: 22, height: 22, background: 'rgba(255,210,0,0.55)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
-                )}
-                {cell.added && cell.fret !== '' && (
-                  <div style={{ position: 'absolute', width: 22, height: 22, background: COLOR_ADDED + '1f', border: `1px solid ${COLOR_ADDED}55`, top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
-                )}
-                {cell.anchor && cell.fret !== '' && (
-                  <span style={{ position: 'absolute', top: -2, left: 2, fontSize: 12, fontWeight: 700, color: T.secondary, lineHeight: 1, zIndex: 2, pointerEvents: 'none' }}>
-                    ›
-                  </span>
-                )}
-                {cell.fret !== '' && (
-                  <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 12, fontFamily: 'monospace', fontWeight: cell.added ? 700 : 400, color, lineHeight: 1, zIndex: 1 }}>{cell.fret}</span>
-                )}
-                {cell.tech && (
-                  <span style={{ position: 'absolute', top: -2, right: 0, transform: 'translateX(50%)', fontSize: 11, fontFamily: 'monospace', fontStyle: cell.tech === 'h' || cell.tech === 'p' ? 'italic' : 'normal', color: T.coral, lineHeight: 1, zIndex: 2, pointerEvents: 'none' }}>
-                    {cell.tech === 'b' ? 'b' : cell.tech}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-          <span style={{ fontSize: 12, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
-        </div>
-      ))}
-    </div>
-  );
+  // ── Tab grid renderer — cell visuals copied from Tab Builder ──────────────
+  const renderGrid = (g: HGrid, gridBars: number[], editable: boolean) => {
+    const gBarsSet = new Set(gridBars);
+    return (
+      <div
+        // Mobile's SwipePager wraps the whole tab panel in its own pointer
+        // handlers to detect horizontal swipes between VOICINGS/PRACTICE/etc.
+        // Without this, a finger dragging horizontally to scroll THIS grid
+        // can get intermittently captured by that outer swipe detector mid-
+        // gesture — the native scroll stutters/interrupts. Stopping the
+        // pointerdown from bubbling keeps SwipePager from ever seeing a
+        // gesture that started inside the grid, while leaving this element's
+        // own native scrolling completely untouched.
+        onPointerDownCapture={e => e.stopPropagation()}
+        onMouseLeave={() => setHov(null)}
+        style={{
+          background: 'var(--gc-fretboard-bg)', padding: '8px 4px',
+          border: `1px solid ${T.border}`, overflowX: 'auto',
+          width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
+        }}
+      >
+        {ROWS.map((lbl, row) => (
+          <div key={row} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
+            <span style={{ width: 14, fontSize: FS, fontFamily: 'monospace', color: T.textMuted, textAlign: 'right', paddingRight: 3, flexShrink: 0 }}>{lbl}</span>
+            <span style={{ fontSize: FS, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
+            {g[row].map((cell, col) => {
+              const isSel = editable && sel?.[0] === row && sel?.[1] === col;
+              const isHov = editable && hov?.[0] === row && hov?.[1] === col;
+              const isBar = gBarsSet.has(col);
+              const color = cell.added ? COLOR_ADDED : COLOR_ORIG;
+
+              return (
+                <React.Fragment key={col}>
+                  <div
+                    onClick={editable ? () => selectCell(row, col) : undefined}
+                    onMouseEnter={editable ? () => setHov([row, col]) : undefined}
+                    style={{
+                      width: CW, height: CH, flexShrink: 0, position: 'relative',
+                      cursor: editable ? 'pointer' : 'default',
+                    }}
+                  >
+                    {/* String line through vertical center */}
+                    <div style={{
+                      position: 'absolute', top: '50%', left: 0, right: 0, height: 0,
+                      borderTop: `2px solid ${T.border}`, transform: 'translateY(-0.5px)',
+                      pointerEvents: 'none',
+                    }} />
+
+                    {/* Hover circle (light) */}
+                    {isHov && !isSel && (
+                      <div style={{
+                        position: 'absolute', width: CIRCLE_D, height: CIRCLE_D, borderRadius: 0,
+                        background: 'rgba(255, 220, 80, 0.32)',
+                        top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                        pointerEvents: 'none',
+                      }} />
+                    )}
+
+                    {/* Selected circle (solid) */}
+                    {isSel && (
+                      <div style={{
+                        position: 'absolute', width: CIRCLE_D, height: CIRCLE_D, borderRadius: 0,
+                        background: 'rgba(255, 210, 0, 0.60)',
+                        top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                        pointerEvents: 'none',
+                      }} />
+                    )}
+
+                    {/* Harmonizer: AI-added note highlight */}
+                    {cell.added && cell.fret !== '' && (
+                      <div style={{ position: 'absolute', width: CIRCLE_D, height: CIRCLE_D, background: COLOR_ADDED + '1f', border: `1px solid ${COLOR_ADDED}55`, top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
+                    )}
+
+                    {/* Harmonizer: anchor marker */}
+                    {cell.anchor && cell.fret !== '' && (
+                      <span style={{ position: 'absolute', top: -2, left: 2, fontSize: 12, fontWeight: 700, color: T.secondary, lineHeight: 1, zIndex: 2, pointerEvents: 'none' }}>
+                        ›
+                      </span>
+                    )}
+
+                    {/* Fret number */}
+                    {cell.fret !== '' && (
+                      <span style={{
+                        position: 'absolute', top: '50%', left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: FS, fontFamily: 'monospace',
+                        fontWeight: cell.added ? 700 : 400, color,
+                        lineHeight: 1, zIndex: 1,
+                      }}>
+                        {cell.fret}
+                      </span>
+                    )}
+
+                    {/* Technique marks — identical to Tab Builder */}
+                    {(cell.tech === '/' || cell.tech === '\\') && (
+                      <span style={{
+                        position: 'absolute', top: '50%', right: 0,
+                        transform: 'translate(50%, -50%)',
+                        fontSize: Math.round(FS * 1.5), fontFamily: 'monospace',
+                        fontWeight: 400, color: T.coral,
+                        lineHeight: 1, zIndex: 2, pointerEvents: 'none',
+                      }}>
+                        {cell.tech}
+                      </span>
+                    )}
+                    {(cell.tech === 'h' || cell.tech === 'p') && (
+                      <span style={{
+                        position: 'absolute', top: -2, right: 0,
+                        transform: 'translateX(50%)',
+                        fontSize: Math.round(FS * 1.1), fontFamily: 'monospace',
+                        fontWeight: 400, fontStyle: 'italic', color: T.coral,
+                        lineHeight: 1, zIndex: 2, pointerEvents: 'none',
+                      }}>
+                        {cell.tech}
+                      </span>
+                    )}
+                    {cell.tech === 'b' && (
+                      <svg
+                        width={Math.round(CW * 0.7)} height={Math.round(CH * 0.32)}
+                        viewBox="0 0 20 8"
+                        style={{
+                          position: 'absolute', top: 0, right: 0,
+                          transform: 'translateX(50%)',
+                          zIndex: 2, pointerEvents: 'none',
+                        }}>
+                        <path d="M 1 7 Q 10 -3 19 7" fill="none"
+                          stroke="currentColor" strokeWidth="1.6"
+                          strokeLinecap="round" style={{ color: T.coral }} />
+                      </svg>
+                    )}
+                    {cell.tech === '~' && (
+                      <span style={{
+                        position: 'absolute', top: -1, left: '50%',
+                        transform: 'translateX(-50%)',
+                        fontSize: Math.round(FS * 1.3), fontFamily: 'monospace',
+                        fontWeight: 400, color: T.coral,
+                        lineHeight: 1, zIndex: 2, pointerEvents: 'none',
+                        letterSpacing: -1,
+                      }}>
+                        ~
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bar line */}
+                  {isBar && (
+                    <div style={{ width: 2, height: CH, background: T.border, flexShrink: 0 }} />
+                  )}
+                </React.Fragment>
+              );
+            })}
+            <span style={{ fontSize: FS, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   // Hidden numeric input — drives the mobile soft keyboard for fret entry,
   // exactly like Tab Builder. font-size:16 stops iOS auto-zooming on focus.
@@ -442,9 +634,8 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       value=""
       aria-hidden="true"
       onChange={e => {
-        if (!sel) return;
         const d = e.target.value.replace(/[^0-9]/g, '').slice(-1);
-        if (d) setFret(sel[0], sel[1], d);
+        if (d) applyDigit(d);
       }}
       onKeyDown={handleEditKey}
       style={{
@@ -455,10 +646,10 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     />
   );
 
-  // ── Selected-cell toolbar — technique entry + Harmonize Anchor toggle.
-  // Fret digits are typed via the native keyboard (hiddenFretInput above /
-  // physical keyboard); Backspace/Delete already clears a fret through
-  // handleEditKey, so no separate on-screen "Clear fret" button is needed.
+  // ── Selected-cell toolbar — Tab Builder's technique set (+ Bar), plus the
+  // harmonizer's Anchor toggle. Fret digits are typed via the native
+  // keyboard; Backspace/Delete clears through handleEditKey.
+  const selTech = sel ? grid[sel[0]][sel[1]].tech : undefined;
   const cellToolbar = sel && !result && (
     <div style={{ ...card({ padding: '10px 12px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -466,7 +657,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         <button onClick={() => { setSel(null); fretInputRef.current?.blur(); }} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
       </div>
       <button
-        onClick={() => toggleAnchor(sel[0], sel[1])}
+        onClick={toggleAnchor}
         disabled={grid[sel[0]][sel[1]].fret === ''}
         style={{
           width: '100%', padding: '7px 0',
@@ -481,13 +672,18 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       </button>
       <div style={{ display: 'flex', gap: 4 }}>
         {TECH_BTNS.map(t => {
-          const active = grid[sel[0]][sel[1]].tech === t.id;
+          const isArmed = t.id === '|' ? barsSet.has(sel[1]) : selTech === t.id;
           return (
-            <button key={t.id} onClick={() => toggleTech(sel[0], sel[1], t.id)} style={{
-              flex: 1, padding: '6px 0', border: `1px solid ${active ? T.coral : T.border}`,
-              background: active ? T.coral : T.bgInput, color: active ? '#fff' : T.textMuted,
-              fontSize: 11, fontFamily: 'monospace', cursor: 'pointer',
-            }}>{t.label}</button>
+            <button
+              key={t.id}
+              onClick={() => t.id === '|' ? toggleBar() : applyTech(t.id as Tech)}
+              title={`${t.label} [${t.key}]`}
+              style={{
+                flex: 1, padding: '6px 0', border: `1px solid ${isArmed ? T.coral : T.border}`,
+                background: isArmed ? T.coral : T.bgInput, color: isArmed ? '#fff' : T.textMuted,
+                fontSize: 11, fontFamily: 'monospace', cursor: 'pointer',
+              }}
+            >{t.sym}</button>
           );
         })}
       </div>
@@ -544,11 +740,12 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           </div>
         )}
 
-        {renderGrid(result ? displayGrid : grid, !result)}
+        {renderGrid(result ? displayGrid : grid, result ? displayBars : bars, !result)}
 
         {!result && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={addColumns} style={{ ...secBtn(false), flex: 1 }}>+ Columns</button>
+            <button onClick={undo} disabled={!canUndo} style={{ ...secBtn(!canUndo), flex: 1, opacity: canUndo ? 1 : 0.5 }}>↺ Undo</button>
             <span style={{ fontSize: 10, color: T.textDim, alignSelf: 'center', flex: 2 }}>
               Tap a cell, then type frets / techniques
             </span>
@@ -688,7 +885,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
               </span>
             </div>
 
-            {renderGrid(displayGrid, false)}
+            {renderGrid(displayGrid, displayBars, false)}
           </div>
 
           {result.analysis && (
@@ -703,7 +900,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             getPayload={() => ({
               kind: 'tab',
               name: scaleName ? `Harmonized — ${scaleName}` : 'Harmonized melody',
-              content: toTabContent(displayGrid, scaleName ? `Harmonized · ${scaleName}` : 'Harmonized melody'),
+              content: toTabContent(displayGrid, displayBars, scaleName ? `Harmonized · ${scaleName}` : 'Harmonized melody'),
               music_key: scaleName || null,
             })}
             style={{ width: '100%', justifyContent: 'center', padding: '12px 0' }}
