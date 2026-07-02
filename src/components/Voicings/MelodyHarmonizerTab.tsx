@@ -7,10 +7,12 @@ import { detectTabScale } from '../../utils/analyzeTab';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import {
   harmonizeMelody, HARMONY_STYLES, SLOT_MULT,
-  labelToLowEIndex, labelToRow, STR_LABELS,
+  labelToLowEIndex, labelToRow, noteMidi, STR_LABELS,
   type HarmonizeStyle, type HarmonizeResult,
 } from '../../utils/harmonizeMelody';
 import { extractTabFromImage, fileToVisionPayload } from '../../utils/tabVision';
+import { exportNotesMidi } from '../../utils/midiExport';
+import { requestOpenTabInBuilder } from '../../services/handoff';
 
 // ── Grid model ───────────────────────────────────────────────────────────────
 // The editor deliberately mirrors Tab Builder's model and editing rules
@@ -482,6 +484,40 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     }
   };
 
+  // ── MIDI export — timed notes matching the in-app playback pacing ─────────
+  const handleExportMidi = () => {
+    if (!result) return;
+    const STEP_S = 0.38; // same 380ms-per-column grid the PLAY button uses
+    const notes: { startTime: number; endTime: number; midiNote: number }[] = [];
+    const gW = displayGrid[0]?.length ?? 0;
+    for (let c = 0; c < gW; c++) {
+      for (let r = 0; r < 6; r++) {
+        const cell = displayGrid[r][c];
+        if (cell.fret === '') continue;
+        const f = parseInt(cell.fret, 10);
+        if (Number.isNaN(f)) continue;
+        notes.push({
+          startTime: c * STEP_S,
+          endTime: c * STEP_S + STEP_S * 0.95,
+          midiNote: noteMidi(ROWS[r], f, tuning),
+        });
+      }
+    }
+    if (notes.length === 0) return;
+    const name = (scaleName ? `harmonized-${scaleName}` : 'harmonized').replace(/[^a-zA-Z0-9# ]/g, '_');
+    exportNotesMidi(notes, `${name}.mid`);
+  };
+
+  // ── Open the arrangement in the full Tab Builder ───────────────────────────
+  // requestOpenTabInBuilder queues the payload; App's handoff subscription
+  // navigates to STUDIO → Tab Builder, which consumes it on mount.
+  const handleOpenInBuilder = () => {
+    if (!result) return;
+    requestOpenTabInBuilder(
+      toTabContent(displayGrid, displayBars, scaleName ? `Harmonized · ${scaleName}` : 'Harmonized melody'),
+    );
+  };
+
   // ── Tab grid renderer — cell visuals copied from Tab Builder ──────────────
   const renderGrid = (g: HGrid, gridBars: number[], editable: boolean) => {
     const gBarsSet = new Set(gridBars);
@@ -916,7 +952,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <SaveToLibraryButton
               label="Save to Library"
               getPayload={() => ({
@@ -925,21 +961,20 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                 content: toTabContent(displayGrid, displayBars, scaleName ? `Harmonized · ${scaleName}` : 'Harmonized melody'),
                 music_key: scaleName || null,
               })}
-              style={{ flex: 1, justifyContent: 'center', padding: '12px 0' }}
+              style={{ justifyContent: 'center', padding: '12px 0' }}
             />
-            <button
-              onClick={handleExportPdf}
-              disabled={pdfBusy}
-              style={{
-                flex: 1, padding: '12px 0',
-                border: `1.5px solid ${T.secondary}`, background: 'transparent',
-                color: T.secondary, fontSize: 12.5, fontWeight: 400,
-                textTransform: 'uppercase', letterSpacing: '-0.02em',
-                cursor: pdfBusy ? 'wait' : 'pointer',
-                borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
-              }}
-            >
+            <button onClick={handleExportPdf} disabled={pdfBusy} style={actionBtn(pdfBusy)}>
               {pdfBusy ? 'Exporting…' : 'Export PDF'}
+            </button>
+            <button onClick={handleExportMidi} style={actionBtn(false)}>
+              Export MIDI
+            </button>
+            <button
+              onClick={handleOpenInBuilder}
+              title="Continue editing the arrangement in the full Tab Builder"
+              style={actionBtn(false)}
+            >
+              Open in Builder
             </button>
           </div>
         </>
@@ -983,6 +1018,17 @@ function secBtn(disabled: boolean): React.CSSProperties {
   return {
     padding: '5px 12px', border: `1px solid ${T.border}`, background: T.bgInput,
     color: disabled ? T.textDim : T.textMuted, fontSize: 11, cursor: disabled ? 'wait' : 'pointer',
+    borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
+  };
+}
+// Result-panel action buttons (Export PDF / MIDI / Open in Builder)
+function actionBtn(busy: boolean): React.CSSProperties {
+  return {
+    padding: '12px 0',
+    border: `1.5px solid ${T.secondary}`, background: 'transparent',
+    color: T.secondary, fontSize: 12.5, fontWeight: 400,
+    textTransform: 'uppercase', letterSpacing: '-0.02em',
+    cursor: busy ? 'wait' : 'pointer',
     borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
   };
 }
