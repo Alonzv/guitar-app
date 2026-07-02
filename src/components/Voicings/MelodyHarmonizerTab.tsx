@@ -12,7 +12,7 @@ import {
 } from '../../utils/harmonizeMelody';
 import { extractTabFromImage, fileToVisionPayload } from '../../utils/tabVision';
 import { exportNotesMidi } from '../../utils/midiExport';
-import { requestOpenTabInBuilder } from '../../services/handoff';
+import { requestOpenTabInBuilder, consumePendingHarmonization, subscribeHarmonizationHandoff, type HarmonizationHandoff } from '../../services/handoff';
 import { TabNoteCell } from '../Tabs/TabNoteCell';
 
 // ── Grid model ───────────────────────────────────────────────────────────────
@@ -197,6 +197,39 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   useEffect(() => {
     try { localStorage.setItem(LS_PREFS, JSON.stringify({ scaleRoot, scaleType, styles, bpm })); } catch { /* ignore */ }
   }, [scaleRoot, scaleType, styles, bpm]);
+
+  // ── Library handoff: reopen a saved harmonization exactly as saved ────────
+  const loadHarmonization = useCallback((h: HarmonizationHandoff) => {
+    const grid6 = Array.isArray(h.melody?.grid) && h.melody.grid.length === 6 ? h.melody.grid as HGrid : emptyGrid();
+    setMelody({ grid: grid6, bars: Array.isArray(h.melody?.bars) ? h.melody.bars : [] });
+    histRef.current = [];
+    setCanUndo(false);
+    if (h.scale) {
+      const sp = h.scale.indexOf(' ');
+      const root = sp === -1 ? h.scale : h.scale.slice(0, sp);
+      const type = sp === -1 ? 'major' : h.scale.slice(sp + 1);
+      if (SCALE_ROOTS.includes(root)) setScaleRoot(root);
+      if (SCALE_TYPES.includes(type)) setScaleType(type);
+    }
+    const valid = new Set(HARMONY_STYLES.map(x => x.id));
+    const st = (h.styles ?? []).filter((x): x is HarmonizeStyle => valid.has(x as HarmonizeStyle));
+    if (st.length) setStyles(st.includes('chordmelody') ? ['chordmelody'] : st);
+    if (typeof h.bpm === 'number' && h.bpm >= 40 && h.bpm <= 240) setBpm(h.bpm);
+    setResults([h.result as HarmonizeResult]);
+    setActiveIdx(0);
+    setRevoiceSlot(null);
+    setSel(null);
+    setError(null);
+  }, []);
+
+  useEffect(() => {
+    const pending = consumePendingHarmonization();
+    if (pending) loadHarmonization(pending);
+    return subscribeHarmonizationHandoff(() => {
+      const p = consumePendingHarmonization();
+      if (p) loadHarmonization(p);
+    });
+  }, [loadHarmonization]);
 
   // ── Editing — same history + mutation pattern as Tab Builder ─────────────
   const melodyRef = useRef<MelodyState>(melody);
@@ -985,12 +1018,17 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <SaveToLibraryButton
               label="Save to Library"
-              getPayload={() => ({
-                kind: 'tab',
+              getPayload={() => result ? ({
+                kind: 'harmonization',
                 name: scaleName ? `Harmonized — ${scaleName}` : 'Harmonized melody',
-                content: toTabContent(displayGrid, displayBars, scaleName ? `Harmonized · ${scaleName}` : 'Harmonized melody'),
-                music_key: scaleName || null,
-              })}
+                scale: scaleName || null,
+                styles,
+                bpm,
+                // Full working state — melody incl. anchors + the ACTIVE
+                // variation — so the library can reopen it exactly as-is.
+                melody: { grid, bars },
+                result,
+              }) : null}
               style={{ justifyContent: 'center', padding: '12px 0' }}
             />
             <button onClick={handleExportPdf} disabled={pdfBusy} style={actionBtn(pdfBusy)}>

@@ -18,10 +18,15 @@ alter table public.profiles enable row level security;
 
 drop policy if exists "Users read own profile"   on public.profiles;
 drop policy if exists "Users update own profile"  on public.profiles;
+drop policy if exists "Users insert own profile"  on public.profiles;
 create policy "Users read own profile"  on public.profiles
   for select using (auth.uid() = id);
 create policy "Users update own profile" on public.profiles
   for update using (auth.uid() = id);
+-- Lets the client self-heal a missing profile row (e.g. users created before
+-- the signup trigger existed) — the trigger below stays the normal path.
+create policy "Users insert own profile" on public.profiles
+  for insert with check (auth.uid() = id);
 
 -- Auto-create a profile row whenever a new auth user signs up.
 create or replace function public.handle_new_user()
@@ -97,6 +102,29 @@ drop policy if exists "Users crud own saved_progressions" on public.saved_progre
 create policy "Users crud own saved_progressions" on public.saved_progressions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- ── Saved harmonizations (Melody Harmonizer arrangements) ───────────────────
+-- Stores the full working state — the user's original melody (grid + bars +
+-- anchors), the AI arrangement (columns with added-note flags), and the
+-- settings (scale, styles, bpm) — so a harmonization can be reopened in the
+-- Harmonizer exactly as it was saved, not just as a flattened tab.
+create table if not exists public.saved_harmonizations (
+  id          uuid default gen_random_uuid() primary key,
+  user_id     uuid references public.profiles(id) on delete cascade not null,
+  name        text not null default 'Harmonization',
+  scale       text,                          -- e.g. "A minor pentatonic"
+  styles      jsonb not null default '[]',   -- HarmonizeStyle[]
+  bpm         integer,
+  melody      jsonb not null default '{}',   -- { grid, bars } incl. anchors
+  result      jsonb not null default '{}',   -- HarmonizeResult (active variation)
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+
+alter table public.saved_harmonizations enable row level security;
+drop policy if exists "Users crud own saved_harmonizations" on public.saved_harmonizations;
+create policy "Users crud own saved_harmonizations" on public.saved_harmonizations
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- ── Keep updated_at fresh on every UPDATE ───────────────────────────────────
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
@@ -106,20 +134,24 @@ begin
 end;
 $$;
 
-drop trigger if exists touch_audio_tabs          on public.audio_tabs;
-drop trigger if exists touch_saved_tabs          on public.saved_tabs;
-drop trigger if exists touch_saved_progressions  on public.saved_progressions;
+drop trigger if exists touch_audio_tabs            on public.audio_tabs;
+drop trigger if exists touch_saved_tabs            on public.saved_tabs;
+drop trigger if exists touch_saved_progressions    on public.saved_progressions;
+drop trigger if exists touch_saved_harmonizations  on public.saved_harmonizations;
 create trigger touch_audio_tabs         before update on public.audio_tabs
   for each row execute procedure public.touch_updated_at();
 create trigger touch_saved_tabs         before update on public.saved_tabs
   for each row execute procedure public.touch_updated_at();
 create trigger touch_saved_progressions before update on public.saved_progressions
   for each row execute procedure public.touch_updated_at();
+create trigger touch_saved_harmonizations before update on public.saved_harmonizations
+  for each row execute procedure public.touch_updated_at();
 
 -- ── Indexes for the per-user library queries ────────────────────────────────
-create index if not exists idx_audio_tabs_user          on public.audio_tabs(user_id, updated_at desc);
-create index if not exists idx_saved_tabs_user          on public.saved_tabs(user_id, updated_at desc);
-create index if not exists idx_saved_progressions_user  on public.saved_progressions(user_id, updated_at desc);
+create index if not exists idx_audio_tabs_user            on public.audio_tabs(user_id, updated_at desc);
+create index if not exists idx_saved_tabs_user            on public.saved_tabs(user_id, updated_at desc);
+create index if not exists idx_saved_progressions_user    on public.saved_progressions(user_id, updated_at desc);
+create index if not exists idx_saved_harmonizations_user  on public.saved_harmonizations(user_id, updated_at desc);
 
 -- ── Storage bucket for original audio clips ─────────────────────────────────
 -- (Create via dashboard: Storage → New bucket → "audio" → public.

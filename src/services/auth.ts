@@ -67,6 +67,25 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data as Profile;
 }
 
+/**
+ * Self-heal a missing profile row (users created before the signup trigger
+ * existed, or a trigger hiccup). Requires the "Users insert own profile"
+ * RLS policy from schema.sql.
+ */
+export async function ensureProfile(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }): Promise<Profile | null> {
+  const existing = await getProfile(user.id);
+  if (existing) return existing;
+  const meta = user.user_metadata ?? {};
+  const { error } = await client().from('profiles').insert({
+    id: user.id,
+    email: user.email ?? null,
+    display_name: (meta.full_name as string) ?? (meta.name as string) ?? null,
+    avatar_url: (meta.avatar_url as string) ?? null,
+  });
+  if (error && error.code !== '23505') throw error; // ignore duplicate races
+  return getProfile(user.id);
+}
+
 export async function updateDisplayName(userId: string, displayName: string) {
   const { error } = await client()
     .from('profiles')
@@ -96,7 +115,18 @@ export async function deleteAccountData(userId: string) {
     c.from('audio_tabs').delete().eq('user_id', userId),
     c.from('saved_tabs').delete().eq('user_id', userId),
     c.from('saved_progressions').delete().eq('user_id', userId),
+    c.from('saved_harmonizations').delete().eq('user_id', userId),
   ]);
+
+  // Purge uploaded audio clips too — rows alone would leave the user's
+  // recordings orphaned (and publicly reachable) in the storage bucket.
+  try {
+    const { data: files } = await c.storage.from('audio').list(userId, { limit: 1000 });
+    if (files && files.length > 0) {
+      await c.storage.from('audio').remove(files.map(f => `${userId}/${f.name}`));
+    }
+  } catch { /* best-effort — table data is already gone */ }
+
   await c.from('profiles').delete().eq('id', userId);
 
   // If a server-side delete function is deployed, call it to remove the auth row.

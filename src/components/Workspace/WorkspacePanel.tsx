@@ -6,15 +6,17 @@ import { SignInPrompt } from './shared';
 import { AudioArchive } from './AudioArchive';
 import { MyTabs } from './MyTabs';
 import { SavedProgressions } from './SavedProgressions';
+import { Harmonizations } from './Harmonizations';
 import type { TabContent } from '../../services/types';
 import type { ChordInProgression } from '../../types/music';
 
-type Sub = 'audio' | 'tabs' | 'progressions';
+type Sub = 'audio' | 'tabs' | 'harmonizations' | 'progressions';
 
 const SUBS: { id: Sub; label: string }[] = [
-  { id: 'audio',        label: 'Audio Archive' },
-  { id: 'tabs',         label: 'My Tabs'       },
-  { id: 'progressions', label: 'Progressions'  },
+  { id: 'audio',          label: 'Audio Archive' },
+  { id: 'tabs',           label: 'My Tabs'       },
+  { id: 'harmonizations', label: 'Harmonized'    },
+  { id: 'progressions',   label: 'Progressions'  },
 ];
 
 interface Props {
@@ -70,9 +72,10 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
         })}
       </div>
 
-      {sub === 'audio'        && <AudioArchive desktop={desktop} />}
-      {sub === 'tabs'         && <MyTabs desktop={desktop} onOpenInBuilder={onOpenTabInBuilder} />}
-      {sub === 'progressions' && <SavedProgressions desktop={desktop} onOpenInBuilder={onOpenProgressionInBuilder} />}
+      {sub === 'audio'          && <AudioArchive desktop={desktop} />}
+      {sub === 'tabs'           && <MyTabs desktop={desktop} onOpenInBuilder={onOpenTabInBuilder} />}
+      {sub === 'harmonizations' && <Harmonizations desktop={desktop} />}
+      {sub === 'progressions'   && <SavedProgressions desktop={desktop} onOpenInBuilder={onOpenProgressionInBuilder} />}
     </div>
   );
 };
