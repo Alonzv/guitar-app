@@ -126,7 +126,7 @@ function loadSavedMelody(): MelodyState {
   return { grid: emptyGrid(), bars: [] };
 }
 
-interface SavedPrefs { scaleRoot?: string; scaleType?: string; styles?: string[] }
+interface SavedPrefs { scaleRoot?: string; scaleType?: string; styles?: string[]; bpm?: number }
 function loadSavedPrefs(): SavedPrefs {
   try { return JSON.parse(localStorage.getItem(LS_PREFS) ?? '{}') as SavedPrefs; }
   catch { return {}; }
@@ -147,6 +147,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     const valid = new Set(HARMONY_STYLES.map(s => s.id));
     const saved = (loadSavedPrefs().styles ?? []).filter((s): s is HarmonizeStyle => valid.has(s as HarmonizeStyle));
     return saved.length > 0 ? saved : ['3rds'];
+  });
+  // Tempo for playback + MIDI: one input-grid column = one eighth note.
+  const [bpm, setBpm] = useState(() => {
+    const b = loadSavedPrefs().bpm;
+    return typeof b === 'number' && b >= 40 && b <= 240 ? b : 120;
   });
   // Harmonized results, shown only in the result panel — the input grid
   // always keeps showing the user's original, editable tab. Harmonize starts
@@ -187,8 +192,8 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     try { localStorage.setItem(LS_MELODY, JSON.stringify(melody)); } catch { /* quota — ignore */ }
   }, [melody]);
   useEffect(() => {
-    try { localStorage.setItem(LS_PREFS, JSON.stringify({ scaleRoot, scaleType, styles })); } catch { /* ignore */ }
-  }, [scaleRoot, scaleType, styles]);
+    try { localStorage.setItem(LS_PREFS, JSON.stringify({ scaleRoot, scaleType, styles, bpm })); } catch { /* ignore */ }
+  }, [scaleRoot, scaleType, styles, bpm]);
 
   // ── Editing — same history + mutation pattern as Tab Builder ─────────────
   const melodyRef = useRef<MelodyState>(melody);
@@ -453,35 +458,34 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   // ── A/B playback ────────────────────────────────────────────────────────────
   const stopPlayback = () => { playTimers.current.forEach(clearTimeout); playTimers.current = []; setPlaying(false); };
 
+  // Rhythm-aware playback: the slot timeline IS the rhythm — one input-grid
+  // column (SLOT_MULT slot units) = one eighth note at the chosen BPM, so
+  // rests the user wrote as empty columns are heard as real time, and
+  // gap-slot connecting notes land proportionally between beats.
   const handlePlay = () => {
     if (playing) { stopPlayback(); return; }
-    const g = displayGrid;
-    const gWidth = g[0]?.length ?? 0;
-    const cols: { fret: number; string: number }[][] = [];
-    for (let c = 0; c < gWidth; c++) {
-      const notes: { fret: number; string: number }[] = [];
-      for (let row = 0; row < 6; row++) {
-        const cell = g[row][c];
-        if (cell.fret === '') continue;
-        if (muteHarmony && cell.added) continue;
-        const f = parseInt(cell.fret, 10);
-        if (Number.isNaN(f)) continue;
-        notes.push({ fret: f, string: labelToLowEIndex(ROWS[row]) });
-      }
-      if (notes.length) cols.push(notes);
-    }
-    if (!cols.length) return;
+    if (!result) return;
+    const stepMs = 30_000 / bpm; // one eighth note
+    const events = [...result.columns]
+      .sort((a, b) => a.col - b.col)
+      .map(c => ({
+        t: (c.col / SLOT_MULT) * stepMs,
+        notes: c.notes
+          .filter(n => !(muteHarmony && n.added))
+          .map(n => ({ fret: n.fret, string: labelToLowEIndex(n.str) })),
+      }))
+      .filter(e => e.notes.length > 0);
+    if (!events.length) return;
     setPlaying(true);
     unlockAudio();
-    const STEP = 380;
-    cols.forEach((notes, i) => {
+    events.forEach((ev, i) => {
       const t = setTimeout(() => {
-        playChord(notes, tuning.openFreqs);
-        if (i === cols.length - 1) {
+        playChord(ev.notes, tuning.openFreqs);
+        if (i === events.length - 1) {
           const done = setTimeout(() => setPlaying(false), 1200);
           playTimers.current.push(done);
         }
-      }, i * STEP);
+      }, ev.t);
       playTimers.current.push(t);
     });
   };
@@ -508,28 +512,26 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     }
   };
 
-  // ── MIDI export — timed notes matching the in-app playback pacing ─────────
+  // ── MIDI export — slot-timeline rhythm, chords ring until the next strum ──
+  // Matches the PLAY button's timing exactly (one column = one eighth note at
+  // the chosen BPM). Each chord sustains until the next event, so anchors
+  // audibly ring through the rests between them.
   const handleExportMidi = () => {
     if (!result) return;
-    const STEP_S = 0.38; // same 380ms-per-column grid the PLAY button uses
+    const stepSec = 30 / bpm; // one eighth note
+    const sorted = [...result.columns].sort((a, b) => a.col - b.col);
     const notes: { startTime: number; endTime: number; midiNote: number }[] = [];
-    const gW = displayGrid[0]?.length ?? 0;
-    for (let c = 0; c < gW; c++) {
-      for (let r = 0; r < 6; r++) {
-        const cell = displayGrid[r][c];
-        if (cell.fret === '') continue;
-        const f = parseInt(cell.fret, 10);
-        if (Number.isNaN(f)) continue;
-        notes.push({
-          startTime: c * STEP_S,
-          endTime: c * STEP_S + STEP_S * 0.95,
-          midiNote: noteMidi(ROWS[r], f, tuning),
-        });
+    sorted.forEach((c, i) => {
+      const start = (c.col / SLOT_MULT) * stepSec;
+      const next = sorted[i + 1];
+      const end = next ? (next.col / SLOT_MULT) * stepSec : start + stepSec * 2;
+      for (const n of c.notes) {
+        notes.push({ startTime: start, endTime: Math.max(end, start + 0.05), midiNote: noteMidi(n.str, n.fret, tuning) });
       }
-    }
+    });
     if (notes.length === 0) return;
     const name = (scaleName ? `harmonized-${scaleName}` : 'harmonized').replace(/[^a-zA-Z0-9# ]/g, '_');
-    exportNotesMidi(notes, `${name}.mid`);
+    exportNotesMidi(notes, `${name}.mid`, bpm);
   };
 
   // ── Open the arrangement in the full Tab Builder ───────────────────────────
@@ -867,6 +869,22 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <p style={LABEL_STYLE}>Harmonized</p>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: T.textMuted, fontFamily: 'var(--gc-mono)' }}>
+                  ♩
+                  <input
+                    type="number" min={40} max={240} value={bpm}
+                    onChange={e => {
+                      const v = parseInt(e.target.value, 10);
+                      if (!Number.isNaN(v)) setBpm(Math.min(240, Math.max(40, v)));
+                    }}
+                    title="Tempo — one tab column = one eighth note"
+                    style={{
+                      width: 52, padding: '5px 4px', fontSize: 12, textAlign: 'center',
+                      background: T.bgInput, border: `1px solid ${T.border}`, color: T.text,
+                    }}
+                  />
+                  BPM
+                </label>
                 <button
                   onClick={() => setMuteHarmony(m => !m)}
                   style={{
