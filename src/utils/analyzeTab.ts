@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { createAIMessage } from './aiClient';
 import { Scale, Note as TonalNote } from '@tonaljs/tonal';
 import { fretToNote, CHROMATIC } from './musicTheory';
 
@@ -119,18 +119,13 @@ export async function suggestTabProgressions(
   scaleName: string,
   melodyNotes: string[],
 ): Promise<TabProgressionsResult | null> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-
   // Keep prompt compact — sample the melody if very long
   const melody = melodyNotes.length > 40
     ? melodyNotes.slice(0, 40).join(' ') + ' …'
     : melodyNotes.join(' ');
 
   try {
-    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
-    const msg = await client.messages.create({
+    const msg = await createAIMessage({
       model: 'claude-sonnet-4-6',
       max_tokens: 1100,
       messages: [
@@ -163,7 +158,7 @@ Return valid JSON only, no markdown:
 }`,
         },
       ],
-    });
+    }, { signal: AbortSignal.timeout(60_000) });
 
     const text = (msg.content[0] as { type: string; text: string }).text.trim();
     const start = text.indexOf('{');

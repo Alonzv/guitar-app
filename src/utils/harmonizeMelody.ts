@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { Note as TonalNote } from '@tonaljs/tonal';
+import { createAIMessage } from './aiClient';
 import type { Tuning } from '../types/music';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -99,12 +99,9 @@ export async function harmonizeMelody(
   tuning: Tuning,
   regenerateSeed = 0,
   // Lets the Node-based eval harness (scripts/evalHarmonizer.ts) supply a key
-  // directly — import.meta.env only exists under Vite, and ?? short-circuits
-  // so it's never touched when an override is provided.
+  // directly, bypassing the /api/anthropic proxy.
   apiKeyOverride?: string,
 ): Promise<HarmonizeResult | null> {
-  const apiKey = apiKeyOverride ?? import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
 
   const events = extractMelodyEvents(grid, tuning);
   if (events.length === 0) return null;
@@ -166,9 +163,7 @@ export async function harmonizeMelody(
     : '';
 
   try {
-    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
-    const msg = await client.messages.create({
+    const msg = await createAIMessage({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       // A hung request would otherwise leave the UI spinner running forever —
@@ -208,7 +203,7 @@ Return VALID JSON only, no markdown:
 }`,
         },
       ],
-    }, { signal: AbortSignal.timeout(90_000) });
+    }, { signal: AbortSignal.timeout(90_000), apiKeyOverride });
 
     const text = (msg.content[0] as { type: string; text: string }).text.trim();
     const start = text.indexOf('{');

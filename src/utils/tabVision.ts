@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { createAIMessage } from './aiClient';
 import type { TabContent } from '../services/types';
 
 type ImgMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
@@ -83,13 +83,8 @@ export async function extractTabFromImage(
   base64Data: string,
   mediaType: ImgMediaType,
 ): Promise<TabContent | null> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-
   try {
-    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
-    const msg = await client.messages.create({
+    const msg = await createAIMessage({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       messages: [

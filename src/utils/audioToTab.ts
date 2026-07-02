@@ -4,7 +4,7 @@ import {
   outputToNotesPoly,
   addPitchBendsToNoteEvents,
 } from '@spotify/basic-pitch';
-import Anthropic from '@anthropic-ai/sdk';
+import { createAIMessage } from './aiClient';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -407,8 +407,7 @@ export async function refineNotesWithAI(
   notes: DetectedNote[],
   onProgress?: (pct: number) => void,
 ): Promise<DetectedNote[]> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey || notes.length === 0) {
+  if (notes.length === 0) {
     onProgress?.(100);
     return notes;
   }
@@ -418,8 +417,6 @@ export async function refineNotesWithAI(
   const allCleaned: DetectedNote[] = [];
 
   try {
-    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
     for (let offset = 0; offset < notes.length; offset += SLICE) {
       const slice = notes.slice(offset, offset + SLICE);
 
@@ -432,7 +429,7 @@ export async function refineNotesWithAI(
         Math.round(n.confidence * 100) / 100,
       ]);
 
-      const msg = await client.messages.create({
+      const msg = await createAIMessage({
         model: 'claude-sonnet-4-6',
         max_tokens: 4096,
         messages: [{
@@ -470,7 +467,7 @@ Rules:
 Output format — JSON array only:
 [[startTime, midiNote, duration], ...]`,
         }],
-      });
+      }, { signal: AbortSignal.timeout(90_000) });
 
       const text = (msg.content[0] as { type: string; text: string }).text.trim();
       const s = text.indexOf('[');
