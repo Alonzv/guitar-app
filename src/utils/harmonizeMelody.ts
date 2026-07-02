@@ -354,6 +354,119 @@ Return VALID JSON only, no markdown:
   }
 }
 
+// ── Single-column re-voice ───────────────────────────────────────────────────
+// Replaces the harmony of ONE existing arrangement column, keeping everything
+// else untouched — a scalpel next to Regenerate's sledgehammer. Same
+// trust-but-verify treatment as the full pass: the melody at that slot is
+// re-injected pitch-exact and the chord-melody caps are enforced in code.
+export async function revoiceColumn(
+  grid: Cell[][],
+  scaleName: string,
+  styles: HarmonizeStyle[],
+  tuning: Tuning,
+  current: HarmonizeResult,
+  targetSlot: number,
+  apiKeyOverride?: string,
+): Promise<HarmColumn | null> {
+  const events = extractMelodyEvents(grid, tuning);
+  const origNotes = events.find(e => e.col === targetSlot)?.notes;
+  if (!origNotes || origNotes.length === 0) return null; // only original melody slots are re-voicable
+
+  const wantsChordMelody = styles.includes('chordmelody');
+  const targetCol = current.columns.find(c => c.col === targetSlot);
+  const arrangementJson = JSON.stringify(current.columns.map(c => ({
+    col: c.col,
+    notes: c.notes.map(n => ({ str: n.str, fret: n.fret, added: n.added })),
+  })));
+
+  const styleLines = styles
+    .map(s => `- ${HARMONY_STYLES.find(h => h.id === s)?.label}: ${HARMONY_STYLES.find(h => h.id === s)?.hint}`)
+    .join('\n');
+
+  try {
+    const msg = await createAIMessage({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: `You are refining ONE chord inside an existing solo-guitar arrangement. Do not touch anything else.
+
+Tuning (low→high): ${tuning.notes.join(' ')} (${tuning.label})
+Key/mode: ${scaleName}
+String labels: e = high e (1st string) … E = low E (6th string).
+
+Full arrangement (added:true = harmony, added:false = the user's melody):
+${arrangementJson}
+
+TARGET: slot ${targetSlot}. Its current notes: ${JSON.stringify(targetCol?.notes ?? [])}
+
+Task: propose a DIFFERENT voicing for slot ${targetSlot} ONLY — fresh harmonic color or fingering, not a trivial reshuffle.
+
+Style(s) in effect:
+${styleLines}
+
+Hard rules:
+1. Keep every added:false note of the target slot at its EXACT pitch (you may relocate it to another string producing the same pitch).
+2. ${wantsChordMelody
+    ? 'CHORD-MELODY: the melody must remain the single highest pitch; MAX 4 notes total (melody + root + guide tones, omit the 5th); prefer open, shell-style spacing.'
+    : 'At most 6 notes; the harmony should sit below the melody note.'}
+3. One note per string, frets 0-24, within a ~4-fret hand span.
+4. Voice-lead smoothly from the previous column and into the next one — stay physically close to both.
+
+Return VALID JSON only, no markdown:
+{ "notes": [ { "str": "e|B|G|D|A|E", "fret": <int>, "added": <bool> } ] }`,
+      }],
+    }, { signal: AbortSignal.timeout(60_000), apiKeyOverride });
+
+    const text = (msg.content[0] as { type: string; text: string }).text.trim();
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1) return null;
+    const parsed = JSON.parse(text.slice(start, end + 1)) as { notes?: { str: string; fret: number; added: boolean; tech?: string }[] };
+    if (!Array.isArray(parsed.notes)) return null;
+
+    // Deterministic guardrails — same rules as the full harmonize pass.
+    const perString = new Map<StrLabel, HarmNote>();
+    const consumed = new Set<number>();
+    for (const n of parsed.notes) {
+      if (n.added) continue;
+      if (!VALID_LABELS.has(n.str)) continue;
+      const fret = Math.round(Number(n.fret));
+      if (Number.isNaN(fret) || fret < 0 || fret > 24) continue;
+      const str = n.str as StrLabel;
+      const midi = noteMidi(str, fret, tuning);
+      const matchIdx = origNotes.findIndex((o, i) => !consumed.has(i) && o.midi === midi);
+      if (matchIdx === -1) continue;
+      consumed.add(matchIdx);
+      perString.set(str, { str, fret, added: false, tech: origNotes[matchIdx].tech });
+    }
+    origNotes.forEach((o, i) => {
+      if (consumed.has(i)) return;
+      if (!perString.has(o.str)) perString.set(o.str, { str: o.str, fret: o.fret, added: false, tech: o.tech });
+    });
+    for (const n of parsed.notes) {
+      if (!n.added) continue;
+      if (!VALID_LABELS.has(n.str)) continue;
+      const fret = Math.round(Number(n.fret));
+      if (Number.isNaN(fret) || fret < 0 || fret > 24) continue;
+      const str = n.str as StrLabel;
+      if (!perString.has(str)) perString.set(str, { str, fret, added: true });
+    }
+    if (wantsChordMelody) {
+      const topMidi = Math.max(...[...perString.values()].filter(n => !n.added).map(n => noteMidi(n.str, n.fret, tuning)));
+      for (const [str, n] of perString) {
+        if (n.added && noteMidi(n.str, n.fret, tuning) >= topMidi) perString.delete(str);
+      }
+    }
+    const notes = [...perString.values()].slice(0, wantsChordMelody ? 4 : 6);
+    if (notes.length === 0) return null;
+    return { col: targetSlot, notes };
+  } catch (err) {
+    console.error('[revoiceColumn] API error:', err);
+    return null;
+  }
+}
+
 /** Map a string label back to the low-E-based index (0 = low E … 5 = high e). */
 export function labelToLowEIndex(str: StrLabel): number {
   return LABEL_TO_LOWE[str];

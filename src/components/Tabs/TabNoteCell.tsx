@@ -43,11 +43,13 @@ export function TabNoteCell({
 }: Props) {
   return (
     <div
-      onClick={editable ? onClick : undefined}
+      // onClick isn't gated on `editable` — result views pass a click handler
+      // for revoicable columns while staying non-editable.
+      onClick={onClick}
       onMouseEnter={editable ? onMouseEnter : undefined}
       style={{
         width: cw, height: ch, flexShrink: 0, position: 'relative',
-        cursor: editable ? 'pointer' : 'default',
+        cursor: editable || onClick ? 'pointer' : 'default',
       }}
     >
       {/* String line through vertical center */}

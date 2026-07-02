@@ -6,7 +6,7 @@ import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { detectTabScale } from '../../utils/analyzeTab';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import {
-  harmonizeMelody, HARMONY_STYLES, SLOT_MULT,
+  harmonizeMelody, revoiceColumn, HARMONY_STYLES, SLOT_MULT,
   labelToLowEIndex, labelToRow, noteMidi, STR_LABELS,
   type HarmonizeStyle, type HarmonizeResult,
 } from '../../utils/harmonizeMelody';
@@ -148,14 +148,21 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     const saved = (loadSavedPrefs().styles ?? []).filter((s): s is HarmonizeStyle => valid.has(s as HarmonizeStyle));
     return saved.length > 0 ? saved : ['3rds'];
   });
-  // The harmonized result, shown only in the result panel — the input grid
-  // always keeps showing the user's original, editable tab. Any melody edit
-  // invalidates the result (it no longer matches what's on screen).
-  const [result, setResult]         = useState<HarmonizeResult | null>(null);
+  // Harmonized results, shown only in the result panel — the input grid
+  // always keeps showing the user's original, editable tab. Harmonize starts
+  // a fresh list; each Regenerate APPENDS a variation (V1, V2, …) instead of
+  // discarding the previous one, so good takes are never lost. Any melody
+  // edit invalidates all of them (they no longer match what's on screen).
+  const [results, setResults]     = useState<HarmonizeResult[]>([]);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const result: HarmonizeResult | null = results[Math.min(activeIdx, results.length - 1)] ?? null;
   const [loadingKind, setLoadingKind] = useState<LoadingKind>(null);
   const [pdfBusy, setPdfBusy]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [regenSeed, setRegenSeed] = useState(0);
+  // Per-chord re-voice: the slot the user tapped in the result grid.
+  const [revoiceSlot, setRevoiceSlot] = useState<number | null>(null);
+  const [revoiceBusy, setRevoiceBusy] = useState(false);
 
   const [visionLoading, setVisionLoading] = useState(false);
 
@@ -194,7 +201,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const withHistory = useCallback((fn: (p: MelodyState) => MelodyState) => {
     histRef.current = [...histRef.current.slice(-30), melodyRef.current];
     setCanUndo(true);
-    setResult(null);
+    setResults([]);
+    setActiveIdx(0);
+    setRevoiceSlot(null);
     setMelody(fn);
   }, []);
 
@@ -203,7 +212,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     const prev = histRef.current[histRef.current.length - 1];
     histRef.current = histRef.current.slice(0, -1);
     setCanUndo(histRef.current.length > 0);
-    setResult(null);
+    setResults([]);
+    setActiveIdx(0);
+    setRevoiceSlot(null);
     setMelody(prev);
   }, []);
 
@@ -343,8 +354,8 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   // about chronological order for display/playback, so compact to just the
   // populated columns, and remap the input grid's bar positions onto the
   // compacted indices (a bar after input column c follows slot c*SLOT_MULT).
-  const { displayGrid, displayBars } = useMemo(() => {
-    if (!result) return { displayGrid: grid, displayBars: bars };
+  const { displayGrid, displayBars, displayMeta } = useMemo(() => {
+    if (!result) return { displayGrid: grid, displayBars: bars, displayMeta: [] as { slot: number; revoicable: boolean }[] };
     const sortedCols = [...result.columns].sort((a, b) => a.col - b.col);
     const width = Math.max(sortedCols.length, 1);
     const g: HGrid = emptyDisplayGrid(width);
@@ -367,7 +378,14 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         return idx;
       }).filter(i => i >= 0),
     )].sort((x, y) => x - y);
-    return { displayGrid: g, displayBars: b };
+    // Per-display-column metadata for the re-voice interaction: a column is
+    // re-voicable when it contains both the user's melody AND added harmony
+    // (i.e. it's a harmonized anchor — gap columns and bare melody aren't).
+    const meta = sortedCols.map(sc => ({
+      slot: sc.col,
+      revoicable: sc.notes.some(n => !n.added) && sc.notes.some(n => n.added),
+    }));
+    return { displayGrid: g, displayBars: b, displayMeta: meta };
   }, [result, grid, bars]);
 
   // ── Harmonize ──────────────────────────────────────────────────────────────
@@ -397,7 +415,12 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
               )),
             }));
           }
-          setResult(r);
+          // Harmonize starts fresh; Regenerate appends a variation (cap 5,
+          // oldest dropped) and jumps to it.
+          const next = kind === 'regenerate' ? [...results, r].slice(-5) : [r];
+          setResults(next);
+          setActiveIdx(next.length - 1);
+          setRevoiceSlot(null);
         }
         else setError('לא ניתן להרמן כרגע. ודא שמפתח ה-API מוגדר ושיש מלודיה בטאב.');
       })
@@ -519,6 +542,27 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     );
   };
 
+  // ── Per-chord re-voice — replace ONE column's harmony, keep the rest ──────
+  const handleRevoice = async () => {
+    if (!result || revoiceSlot == null || revoiceBusy) return;
+    setRevoiceBusy(true); setError(null);
+    try {
+      const col = await revoiceColumn(grid, scaleName, styles, tuning, result, revoiceSlot);
+      if (!col) {
+        setError('לא ניתן להחליף את האקורד כרגע — נסה שוב.');
+        return;
+      }
+      setResults(rs => rs.map((r, i) =>
+        i === activeIdx
+          ? { ...r, columns: r.columns.map(c => (c.col === col.col ? col : c)) }
+          : r,
+      ));
+      setRevoiceSlot(null);
+    } finally {
+      setRevoiceBusy(false);
+    }
+  };
+
   // ── Tab grid renderer — cell visuals copied from Tab Builder ──────────────
   const renderGrid = (g: HGrid, gridBars: number[], editable: boolean) => {
     const gBarsSet = new Set(gridBars);
@@ -559,9 +603,20 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             <span style={{ width: 14, fontSize: FS, fontFamily: 'monospace', color: T.textMuted, textAlign: 'right', paddingRight: 3, flexShrink: 0 }}>{lbl}</span>
             <span style={{ fontSize: FS, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
             {g[row].map((cell, col) => {
-              const isSel = editable && sel?.[0] === row && sel?.[1] === col;
-              const isHov = editable && hov?.[0] === row && hov?.[1] === col;
               const isBar = gBarsSet.has(col);
+              // Result view: tapping a harmonized (melody+harmony) column
+              // arms the per-chord re-voice flow; the armed column shows the
+              // same selection ring the editor uses.
+              const meta = editable ? undefined : displayMeta[col];
+              const isSel = editable
+                ? sel?.[0] === row && sel?.[1] === col
+                : meta?.revoicable === true && meta.slot === revoiceSlot;
+              const isHov = editable && hov?.[0] === row && hov?.[1] === col;
+              const onCellClick = editable
+                ? () => selectCell(row, col)
+                : meta?.revoicable
+                  ? () => setRevoiceSlot(cur => (cur === meta.slot ? null : meta.slot))
+                  : undefined;
 
               return (
                 <React.Fragment key={col}>
@@ -569,7 +624,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                     cell={cell}
                     cw={CW} ch={CH} fs={FS} circleD={CIRCLE_D}
                     isSel={isSel} isHov={isHov} editable={editable}
-                    onClick={() => selectCell(row, col)}
+                    onClick={onCellClick}
                     onMouseEnter={() => setHov([row, col])}
                     // Result view: the ORIGINAL melody is the emphasized
                     // voice (bold + highlighter), AI harmony stays light blue
@@ -843,7 +898,60 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
               </span>
             </div>
 
+            {/* Variation selector — each Regenerate adds one */}
+            {results.length > 1 && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>VARIATION</span>
+                {results.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setActiveIdx(i); setRevoiceSlot(null); }}
+                    style={{
+                      padding: '4px 10px', fontSize: 11,
+                      fontWeight: i === activeIdx ? 700 : 400,
+                      border: `1px solid ${i === activeIdx ? T.secondary : T.border}`,
+                      background: i === activeIdx ? T.secondaryBg : T.bgInput,
+                      color: i === activeIdx ? T.secondary : T.textMuted,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    V{i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {renderGrid(displayGrid, displayBars, false)}
+
+            <p style={{ margin: 0, fontSize: 10, color: T.textDim }}>
+              Tap a harmonized chord to re-voice just that column.
+            </p>
+
+            {/* Re-voice action for the tapped column */}
+            {revoiceSlot != null && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  onClick={handleRevoice}
+                  disabled={revoiceBusy}
+                  style={{
+                    flex: 1, padding: '9px 0', border: 'none',
+                    background: revoiceBusy ? T.border : T.secondary, color: '#fff',
+                    fontSize: 12, fontWeight: 600, cursor: revoiceBusy ? 'wait' : 'pointer',
+                    borderLeft: '3px solid var(--gc-bar-color)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
+                >
+                  {revoiceBusy ? (<><span style={spinnerStyle('#fff')} /> Re-voicing…</>) : `Re-voice selected chord`}
+                </button>
+                <button
+                  onClick={() => setRevoiceSlot(null)}
+                  disabled={revoiceBusy}
+                  style={{ ...secBtn(revoiceBusy), padding: '9px 14px' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
 
           {result.analysis && (
