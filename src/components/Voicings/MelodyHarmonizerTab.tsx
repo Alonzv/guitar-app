@@ -10,7 +10,7 @@ import {
   labelToLowEIndex, labelToRow, STR_LABELS,
   type HarmonizeStyle, type HarmonizeResult,
 } from '../../utils/harmonizeMelody';
-import { extractTabFromImage } from '../../utils/tabVision';
+import { extractTabFromImage, fileToVisionPayload } from '../../utils/tabVision';
 
 // ── Grid model ───────────────────────────────────────────────────────────────
 // The editor deliberately mirrors Tab Builder's model and editing rules
@@ -404,24 +404,24 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const handleRegenerate = () => { const s = regenSeed + 1; setRegenSeed(s); runHarmonize(s, 'regenerate'); };
 
   // ── Image import ────────────────────────────────────────────────────────────
-  const onImageFile = (file: File) => {
+  const onImageFile = async (file: File) => {
     setVisionLoading(true); setError(null);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result);
-      const comma = dataUrl.indexOf(',');
-      const base64 = dataUrl.slice(comma + 1);
-      const mt = (dataUrl.slice(5, comma).split(';')[0] || 'image/png') as
-        'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
-      extractTabFromImage(base64, mt)
-        .then(tc => {
-          setVisionLoading(false);
-          if (tc) withHistory(() => fromTabContent(tc));
-          else setError('לא ניתן לחלץ טאב מהתמונה. נסה תמונה ברורה יותר.');
-        })
-        .catch(() => { setVisionLoading(false); setError('שגיאה בעיבוד התמונה.'); });
-    };
-    reader.readAsDataURL(file);
+    try {
+      // Downscales oversized photos to vision-friendly dimensions first —
+      // a raw phone camera image would blow the API request size limit.
+      const payload = await fileToVisionPayload(file);
+      if (!payload) {
+        setError('לא ניתן לקרוא את קובץ התמונה — נסה JPG או PNG.');
+        return;
+      }
+      const tc = await extractTabFromImage(payload.data, payload.mediaType);
+      if (tc) withHistory(() => fromTabContent(tc));
+      else setError('לא ניתן לחלץ טאב מהתמונה. נסה תמונה ברורה יותר.');
+    } catch {
+      setError('שגיאה בעיבוד התמונה.');
+    } finally {
+      setVisionLoading(false);
+    }
   };
 
   // ── A/B playback ────────────────────────────────────────────────────────────
