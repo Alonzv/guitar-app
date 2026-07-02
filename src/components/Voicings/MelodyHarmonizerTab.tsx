@@ -64,69 +64,6 @@ function toTabContent(g: HGrid, bars: number[], title: string): TabContent {
   };
 }
 
-// ── ASCII tab paste parser ─────────────────────────────────────────────────────
-// Accepts a pasted 6-line ASCII tab; aligns notes by character column, then
-// collapses all-empty columns. Rows are matched by leading label when present,
-// otherwise assumed top→bottom = e B G D A E.
-function parseAsciiTab(text: string): HGrid | null {
-  const rawLines = text.split(/\r?\n/).map(l => l.replace(/\s+$/, ''));
-  const tabLines = rawLines.filter(l => /[-–]/.test(l) && /[|\-]/.test(l) && /[0-9\-]/.test(l));
-  if (tabLines.length < 6) return null;
-
-  // Take the last 6 tab-looking lines (handles headers above).
-  const six = tabLines.slice(-6);
-  const LABEL_ROW: Record<string, number> = { e: 0, b: 1, g: 2, d: 3, a: 4, E: 5 };
-
-  // Strip a leading "e|" / "E|" style label+bar; keep body strings char-aligned.
-  const bodies = six.map(line => {
-    let s = line;
-    const m = s.match(/^\s*([eEbBgGdDaA])\s*[|]?/);
-    if (m) s = s.slice(m[0].length);
-    else if (s.startsWith('|')) s = s.slice(1);
-    return s;
-  });
-
-  const width = Math.max(...bodies.map(b => b.length));
-  const rows: HCell[][] = ROWS.map(() => Array.from({ length: width }, () => ({ fret: '' } as HCell)));
-
-  bodies.forEach((body, i) => {
-    // Determine which grid row this line maps to.
-    const lbl = six[i].match(/^\s*([eEbBgGdDaA])/)?.[1];
-    let row = i;
-    if (lbl) {
-      row = lbl === 'E' ? 5 : lbl === 'e' ? 0 : LABEL_ROW[lbl.toLowerCase()] ?? i;
-    }
-    if (row < 0 || row > 5) row = i;
-
-    for (let ci = 0; ci < body.length; ci++) {
-      const ch = body[ci];
-      if (ch >= '0' && ch <= '9') {
-        // start of a fret number unless we're mid-number
-        if (ci > 0 && body[ci - 1] >= '0' && body[ci - 1] <= '9') continue;
-        let num = ch;
-        if (body[ci + 1] >= '0' && body[ci + 1] <= '9') num += body[ci + 1];
-        const techCh = body[ci + num.length];
-        const tech = (['h', 'p', 'b', '/', '\\', '~'] as string[]).includes(techCh) ? (techCh as Tech) : undefined;
-        rows[row][ci] = tech ? { fret: num, tech } : { fret: num };
-      }
-    }
-  });
-
-  // Collapse columns that are empty across all 6 rows.
-  const keep: number[] = [];
-  for (let c = 0; c < width; c++) {
-    if (rows.some(r => r[c].fret !== '')) keep.push(c);
-  }
-  if (keep.length === 0) return null;
-  const grid: HGrid = rows.map(r => keep.map(c => r[c]));
-  // pad to at least DEFAULT_COLS for editing headroom
-  if (grid[0].length < DEFAULT_COLS) {
-    const pad = DEFAULT_COLS - grid[0].length;
-    grid.forEach(r => { for (let k = 0; k < pad; k++) r.push({ fret: '' }); });
-  }
-  return grid;
-}
-
 // ── Scale dropdown data ────────────────────────────────────────────────────────
 const SCALE_ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const SCALE_TYPES = [
@@ -185,8 +122,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const [error, setError]       = useState<string | null>(null);
   const [regenSeed, setRegenSeed] = useState(0);
 
-  const [pasteOpen, setPasteOpen] = useState(false);
-  const [pasteText, setPasteText] = useState('');
   const [visionLoading, setVisionLoading] = useState(false);
 
   const [playing, setPlaying]   = useState(false);
@@ -398,7 +333,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const handleHarmonize = () => { setRegenSeed(0); runHarmonize(0, 'harmonize'); };
   const handleRegenerate = () => { const s = regenSeed + 1; setRegenSeed(s); runHarmonize(s, 'regenerate'); };
 
-  // ── Image / paste import ────────────────────────────────────────────────────
+  // ── Image import ────────────────────────────────────────────────────────────
   const onImageFile = (file: File) => {
     setVisionLoading(true); setError(null);
     const reader = new FileReader();
@@ -417,12 +352,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         .catch(() => { setVisionLoading(false); setError('שגיאה בעיבוד התמונה.'); });
     };
     reader.readAsDataURL(file);
-  };
-
-  const loadPaste = () => {
-    const g = parseAsciiTab(pasteText);
-    if (g) { withHistory(() => ({ grid: g, bars: [] })); setPasteOpen(false); setPasteText(''); setError(null); }
-    else setError('לא זוהה טאב בטקסט. הדבק 6 שורות טאב תקינות.');
   };
 
   // ── A/B playback ────────────────────────────────────────────────────────────
@@ -722,24 +651,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             <button onClick={() => fileRef.current?.click()} disabled={visionLoading} style={secBtn(visionLoading)}>
               {visionLoading ? 'Reading…' : 'Image'}
             </button>
-            <button onClick={() => setPasteOpen(p => !p)} style={secBtn(false)}>Paste</button>
             <button onClick={clearGrid} style={secBtn(false)}>Clear</button>
           </div>
         </div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) onImageFile(f); e.target.value = ''; }} />
-
-        {pasteOpen && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <textarea
-              value={pasteText} onChange={e => setPasteText(e.target.value)}
-              placeholder={'e|--0--3--\nB|--1--1--\nG|--0--0--\nD|-------\nA|-------\nE|-------'}
-              rows={6}
-              style={{ width: '100%', boxSizing: 'border-box', background: T.bgInput, border: `1px solid ${T.border}`, color: T.text, fontFamily: 'monospace', fontSize: 12, padding: 8, resize: 'vertical' }}
-            />
-            <button onClick={loadPaste} style={{ ...secBtn(false), alignSelf: 'flex-start' }}>Load tab</button>
-          </div>
-        )}
 
         {/* Always the user's original, editable tab — the harmonized result
             lives only in the result panel, never here. */}
