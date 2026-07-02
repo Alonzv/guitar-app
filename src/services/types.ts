@@ -39,6 +39,29 @@ export interface SavedTab {
   updated_at: string;
 }
 
+/** Mirrors the Melody Harmonizer's saved working state (loose jsonb shapes). */
+export interface HarmonizationMelody {
+  grid: { fret: string; tech?: string; anchor?: boolean }[][];
+  bars: number[];
+}
+export interface HarmonizationResult {
+  columns: { col: number; notes: { str: string; fret: number; added: boolean; tech?: string }[] }[];
+  analysis: string;
+}
+
+export interface SavedHarmonization {
+  id: string;
+  user_id: string;
+  name: string;
+  scale: string | null;
+  styles: string[];
+  bpm: number | null;
+  melody: HarmonizationMelody;
+  result: HarmonizationResult;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SavedProgression {
   id: string;
   user_id: string;

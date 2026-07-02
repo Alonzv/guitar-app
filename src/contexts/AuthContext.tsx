@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import {
-  getProfile, touchLastSeen, signOut as svcSignOut,
+  ensureProfile, touchLastSeen, signOut as svcSignOut,
   deleteAccountData, signInWithEmail, signUpWithEmail,
   signInWithGoogle, signInWithApple,
 } from '../services/auth';
@@ -33,7 +33,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadProfile = useCallback(async (u: User | null) => {
     if (!u) { setProfile(null); return; }
     try {
-      const p = await getProfile(u.id);
+      // ensureProfile self-heals a missing row (pre-trigger users) so the
+      // account menu never shows an empty identity for a signed-in user.
+      const p = await ensureProfile(u);
       setProfile(p);
       // throttle the last-seen ping to once per 5 min
       const now = Date.now();

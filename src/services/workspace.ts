@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
-import type { AudioTab, SavedTab, SavedProgression, TabContent } from './types';
+import type {
+  AudioTab, SavedTab, SavedProgression, SavedHarmonization,
+  HarmonizationMelody, HarmonizationResult, TabContent,
+} from './types';
 import type { ChordInProgression } from '../types/music';
 
 function client() {
@@ -112,6 +115,63 @@ export const savedTabs = {
       content: item.content,
       tempo: item.tempo,
       music_key: item.music_key,
+    });
+  },
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Saved harmonizations (Melody Harmonizer arrangements)
+// ════════════════════════════════════════════════════════════════════════════
+
+export const savedHarmonizations = {
+  async list(userId: string): Promise<SavedHarmonization[]> {
+    const { data, error } = await client()
+      .from('saved_harmonizations')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as SavedHarmonization[];
+  },
+
+  async create(
+    userId: string,
+    input: {
+      name: string;
+      scale?: string | null;
+      styles?: string[];
+      bpm?: number | null;
+      melody: HarmonizationMelody;
+      result: HarmonizationResult;
+    },
+  ): Promise<SavedHarmonization> {
+    const { data, error } = await client()
+      .from('saved_harmonizations')
+      .insert({ user_id: userId, ...input })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as SavedHarmonization;
+  },
+
+  async rename(id: string, name: string) {
+    const { error } = await client().from('saved_harmonizations').update({ name }).eq('id', id);
+    if (error) throw error;
+  },
+
+  async remove(id: string) {
+    const { error } = await client().from('saved_harmonizations').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async duplicate(userId: string, item: SavedHarmonization): Promise<SavedHarmonization> {
+    return this.create(userId, {
+      name: `${item.name} (copy)`,
+      scale: item.scale,
+      styles: item.styles,
+      bpm: item.bpm,
+      melody: item.melody,
+      result: item.result,
     });
   },
 };

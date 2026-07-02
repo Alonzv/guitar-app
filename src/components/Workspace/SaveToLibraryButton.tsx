@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../Auth/AuthModal';
-import { savedProgressions, savedTabs, audioTabs, uploadAudioClip } from '../../services/workspace';
-import type { TabContent } from '../../services/types';
+import { savedProgressions, savedTabs, savedHarmonizations, audioTabs, uploadAudioClip } from '../../services/workspace';
+import type { TabContent, HarmonizationMelody, HarmonizationResult } from '../../services/types';
 import type { ChordInProgression } from '../../types/music';
 
 // A description of what to persist — returned lazily so we always capture the
@@ -11,6 +11,7 @@ import type { ChordInProgression } from '../../types/music';
 export type SaveDescriptor =
   | { kind: 'progression'; name: string; chords: ChordInProgression[]; detected_key?: string | null }
   | { kind: 'tab';         name: string; content: TabContent; tempo?: number | null; music_key?: string | null }
+  | { kind: 'harmonization'; name: string; scale?: string | null; styles?: string[]; bpm?: number | null; melody: HarmonizationMelody; result: HarmonizationResult }
   | { kind: 'audio';       name: string; tab_content: string; audioBlob?: Blob | null; audioExt?: string; original_audio_url?: string | null; duration_seconds?: number | null };
 
 type Status = 'idle' | 'saving' | 'saved';
@@ -36,6 +37,11 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
       await savedProgressions.create(uid, { name: d.name, chords: d.chords, detected_key: d.detected_key ?? null });
     } else if (d.kind === 'tab') {
       await savedTabs.create(uid, { name: d.name, content: d.content, tempo: d.tempo ?? null, music_key: d.music_key ?? null });
+    } else if (d.kind === 'harmonization') {
+      await savedHarmonizations.create(uid, {
+        name: d.name, scale: d.scale ?? null, styles: d.styles ?? [],
+        bpm: d.bpm ?? null, melody: d.melody, result: d.result,
+      });
     } else {
       let url = d.original_audio_url ?? null;
       if (!url && d.audioBlob) {
