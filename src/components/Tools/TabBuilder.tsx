@@ -11,6 +11,7 @@ import { VerticalScaleFretboard } from '../Fretboard/VerticalScaleFretboard';
 import { subscribeHandoff, consumePendingTab } from '../../services/handoff';
 import type { TabContent } from '../../services/types';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
+import { TabNoteCell } from '../Tabs/TabNoteCell';
 
 type Lang = 'he' | 'en';
 type ErrKey = 'empty' | 'ai' | 'gen';
@@ -764,113 +765,13 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
                     return (
                       <React.Fragment key={c}>
-                        <div
+                        <TabNoteCell
+                          cell={cell}
+                          cw={cw} ch={ch} fs={fs} circleD={circleD}
+                          isSel={isSel} isHov={isHov} editable
                           onClick={() => selectCell(si, c)}
                           onMouseEnter={() => setHov([si, c])}
-                          style={{
-                            width: cw, height: ch, flexShrink: 0,
-                            position: 'relative', cursor: 'pointer',
-                          }}>
-
-                          {/* ── String line through vertical center ── */}
-                          <div style={{
-                            position: 'absolute',
-                            top: '50%', left: 0, right: 0,
-                            height: 0,
-                            borderTop: `2px solid ${T.border}`,
-                            transform: 'translateY(-0.5px)',
-                            pointerEvents: 'none',
-                          }} />
-
-                          {/* ── Hover circle (light) ── */}
-                          {isHov && !isSel && (
-                            <div style={{
-                              position: 'absolute',
-                              width: circleD, height: circleD,
-                              borderRadius: 0,
-                              background: 'rgba(255, 220, 80, 0.32)',
-                              top: '50%', left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              pointerEvents: 'none',
-                            }} />
-                          )}
-
-                          {/* ── Selected circle (solid) ── */}
-                          {isSel && (
-                            <div style={{
-                              position: 'absolute',
-                              width: circleD, height: circleD,
-                              borderRadius: 0,
-                              background: 'rgba(255, 210, 0, 0.60)',
-                              top: '50%', left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              pointerEvents: 'none',
-                            }} />
-                          )}
-
-                          {/* ── Fret number ── */}
-                          {cell.fret && (
-                            <span style={{
-                              position: 'absolute',
-                              top: '50%', left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              fontSize: fs, fontFamily: 'monospace',
-                              fontWeight: 400, color: T.text,
-                              lineHeight: 1, zIndex: 1,
-                            }}>
-                              {cell.fret}
-                            </span>
-                          )}
-
-                          {(cell.tech === '/' || cell.tech === '\\') && (
-                            <span style={{
-                              position: 'absolute', top: '50%', right: 0,
-                              transform: 'translate(50%, -50%)',
-                              fontSize: Math.round(fs * 1.5), fontFamily: 'monospace',
-                              fontWeight: 400, color: T.coral,
-                              lineHeight: 1, zIndex: 2, pointerEvents: 'none',
-                            }}>
-                              {cell.tech}
-                            </span>
-                          )}
-                          {(cell.tech === 'h' || cell.tech === 'p') && (
-                            <span style={{
-                              position: 'absolute', top: -2, right: 0,
-                              transform: 'translateX(50%)',
-                              fontSize: Math.round(fs * 1.1), fontFamily: 'monospace',
-                              fontWeight: 400, fontStyle: 'italic', color: T.coral,
-                              lineHeight: 1, zIndex: 2, pointerEvents: 'none',
-                            }}>
-                              {cell.tech}
-                            </span>
-                          )}
-                          {cell.tech === 'b' && (
-                            <svg
-                              width={Math.round(cw * 0.7)} height={Math.round(ch * 0.32)}
-                              viewBox="0 0 20 8"
-                              style={{
-                                position: 'absolute', top: 0, right: 0,
-                                transform: 'translateX(50%)',
-                                zIndex: 2, pointerEvents: 'none',
-                              }}>
-                              <path d="M 1 7 Q 10 -3 19 7" fill="none"
-                                stroke="currentColor" strokeWidth="1.6"
-                                strokeLinecap="round" style={{ color: T.coral }} />
-                            </svg>
-                          )}
-                          {cell.tech === '~' && (
-                            <span style={{
-                              position: 'absolute', top: -1, left: '50%',
-                              transform: 'translateX(-50%)',
-                              fontSize: Math.round(fs * 1.3), fontFamily: 'monospace',
-                              fontWeight: 400, color: T.coral,
-                              lineHeight: 1, zIndex: 2, pointerEvents: 'none',
-                              letterSpacing: -1,
-                            }}>
-                              ~
-                            </span>
-                          )}
-                        </div>
+                        />
 
                         {/* Bar line */}
                         {isBar && (
