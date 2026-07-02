@@ -3,6 +3,71 @@ import type { TabContent } from '../services/types';
 
 type ImgMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 
+// Claude vision reads images best at ≤1568px on the long edge; anything
+// larger is downscaled server-side anyway, and a raw phone photo (12MP+)
+// blows the request size limit once base64-inflated. Keep small originals
+// untouched (PNG screenshots stay pixel-crisp for OCR); downscale/re-encode
+// only when needed.
+const MAX_EDGE = 1568;
+const MAX_RAW_BYTES = 1_500_000; // ≈2MB after base64 inflation
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = String(reader.result);
+      resolve(url.slice(url.indexOf(',') + 1));
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Turn an uploaded image file into a vision-API payload, downscaling and
+ * re-encoding as JPEG when the original is too large to send as-is.
+ * Returns null when the browser can't decode the file (e.g. HEIC on Chrome).
+ */
+export async function fileToVisionPayload(
+  file: File,
+): Promise<{ data: string; mediaType: ImgMediaType } | null> {
+  const apiTypes = new Set<string>(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+
+  const bmp = await createImageBitmap(file).catch(() => null);
+  if (!bmp) {
+    // Undecodable here (e.g. exotic format) — pass through untouched if the
+    // API accepts the type and it's small enough, otherwise give up.
+    if (apiTypes.has(file.type) && file.size <= MAX_RAW_BYTES) {
+      try { return { data: await fileToBase64(file), mediaType: file.type as ImgMediaType }; }
+      catch { return null; }
+    }
+    return null;
+  }
+
+  const needScale = Math.max(bmp.width, bmp.height) > MAX_EDGE;
+  const needReencode = !apiTypes.has(file.type) || file.size > MAX_RAW_BYTES;
+  if (!needScale && !needReencode) {
+    // Small, API-friendly original — keep it byte-identical (PNG screenshots
+    // stay pixel-crisp for reading fret numbers).
+    bmp.close();
+    try { return { data: await fileToBase64(file), mediaType: file.type as ImgMediaType }; }
+    catch { return null; }
+  }
+
+  const scale = Math.min(1, MAX_EDGE / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * scale));
+  const h = Math.max(1, Math.round(bmp.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) { bmp.close(); return null; }
+  ctx.drawImage(bmp, 0, 0, w, h);
+  bmp.close();
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  return { data: dataUrl.slice(dataUrl.indexOf(',') + 1), mediaType: 'image/jpeg' };
+}
+
 const STR_ROWS = ['e', 'B', 'G', 'D', 'A', 'E']; // row 0 = high e … row 5 = low E
 
 function emptyGrid(cols: number): { fret: string }[][] {
