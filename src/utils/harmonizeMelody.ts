@@ -98,8 +98,12 @@ export async function harmonizeMelody(
   styles: HarmonizeStyle[],
   tuning: Tuning,
   regenerateSeed = 0,
+  // Lets the Node-based eval harness (scripts/evalHarmonizer.ts) supply a key
+  // directly — import.meta.env only exists under Vite, and ?? short-circuits
+  // so it's never touched when an override is provided.
+  apiKeyOverride?: string,
 ): Promise<HarmonizeResult | null> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const apiKey = apiKeyOverride ?? import.meta.env.VITE_ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
   const events = extractMelodyEvents(grid, tuning);
