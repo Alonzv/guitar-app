@@ -13,6 +13,7 @@ import {
 import { extractTabFromImage, fileToVisionPayload } from '../../utils/tabVision';
 import { exportNotesMidi } from '../../utils/midiExport';
 import { requestOpenTabInBuilder } from '../../services/handoff';
+import { TabNoteCell } from '../Tabs/TabNoteCell';
 
 // ── Grid model ───────────────────────────────────────────────────────────────
 // The editor deliberately mirrors Tab Builder's model and editing rules
@@ -561,122 +562,22 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
               const isSel = editable && sel?.[0] === row && sel?.[1] === col;
               const isHov = editable && hov?.[0] === row && hov?.[1] === col;
               const isBar = gBarsSet.has(col);
-              const color = cell.added ? COLOR_ADDED : COLOR_ORIG;
 
               return (
                 <React.Fragment key={col}>
-                  <div
-                    onClick={editable ? () => selectCell(row, col) : undefined}
-                    onMouseEnter={editable ? () => setHov([row, col]) : undefined}
-                    style={{
-                      width: CW, height: CH, flexShrink: 0, position: 'relative',
-                      cursor: editable ? 'pointer' : 'default',
-                    }}
-                  >
-                    {/* String line through vertical center */}
-                    <div style={{
-                      position: 'absolute', top: '50%', left: 0, right: 0, height: 0,
-                      borderTop: `2px solid ${T.border}`, transform: 'translateY(-0.5px)',
-                      pointerEvents: 'none',
-                    }} />
-
-                    {/* Hover circle (light) */}
-                    {isHov && !isSel && (
-                      <div style={{
-                        position: 'absolute', width: CIRCLE_D, height: CIRCLE_D, borderRadius: 0,
-                        background: 'rgba(255, 220, 80, 0.32)',
-                        top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                        pointerEvents: 'none',
-                      }} />
-                    )}
-
-                    {/* Selected circle (solid) */}
-                    {isSel && (
-                      <div style={{
-                        position: 'absolute', width: CIRCLE_D, height: CIRCLE_D, borderRadius: 0,
-                        background: 'rgba(255, 210, 0, 0.60)',
-                        top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                        pointerEvents: 'none',
-                      }} />
-                    )}
-
-                    {/* Result view: highlighter behind the user's ORIGINAL
-                        notes — the source tab pops out of the arrangement */}
-                    {!editable && !cell.added && cell.fret !== '' && (
-                      <div style={{ position: 'absolute', width: CIRCLE_D, height: CIRCLE_D, background: MELODY_MARK, top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
-                    )}
-
-                    {/* Harmonizer: anchor marker — one per anchored column */}
-                    {anchorMarkRow.get(col) === row && (
-                      <span style={{ position: 'absolute', top: -2, left: 2, fontSize: 12, fontWeight: 700, color: T.secondary, lineHeight: 1, zIndex: 2, pointerEvents: 'none' }}>
-                        ›
-                      </span>
-                    )}
-
-                    {/* Fret number — in the result view the ORIGINAL melody
-                        is the emphasized voice (bold), harmony stays light */}
-                    {cell.fret !== '' && (
-                      <span style={{
-                        position: 'absolute', top: '50%', left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: FS, fontFamily: 'monospace',
-                        fontWeight: !editable && !cell.added ? 700 : 400, color,
-                        lineHeight: 1, zIndex: 1,
-                      }}>
-                        {cell.fret}
-                      </span>
-                    )}
-
-                    {/* Technique marks — identical to Tab Builder */}
-                    {(cell.tech === '/' || cell.tech === '\\') && (
-                      <span style={{
-                        position: 'absolute', top: '50%', right: 0,
-                        transform: 'translate(50%, -50%)',
-                        fontSize: Math.round(FS * 1.5), fontFamily: 'monospace',
-                        fontWeight: 400, color: T.coral,
-                        lineHeight: 1, zIndex: 2, pointerEvents: 'none',
-                      }}>
-                        {cell.tech}
-                      </span>
-                    )}
-                    {(cell.tech === 'h' || cell.tech === 'p') && (
-                      <span style={{
-                        position: 'absolute', top: -2, right: 0,
-                        transform: 'translateX(50%)',
-                        fontSize: Math.round(FS * 1.1), fontFamily: 'monospace',
-                        fontWeight: 400, fontStyle: 'italic', color: T.coral,
-                        lineHeight: 1, zIndex: 2, pointerEvents: 'none',
-                      }}>
-                        {cell.tech}
-                      </span>
-                    )}
-                    {cell.tech === 'b' && (
-                      <svg
-                        width={Math.round(CW * 0.7)} height={Math.round(CH * 0.32)}
-                        viewBox="0 0 20 8"
-                        style={{
-                          position: 'absolute', top: 0, right: 0,
-                          transform: 'translateX(50%)',
-                          zIndex: 2, pointerEvents: 'none',
-                        }}>
-                        <path d="M 1 7 Q 10 -3 19 7" fill="none"
-                          stroke="currentColor" strokeWidth="1.6"
-                          strokeLinecap="round" style={{ color: T.coral }} />
-                      </svg>
-                    )}
-                    {cell.tech === '~' && (
-                      <span style={{
-                        position: 'absolute', top: -1, left: '50%',
-                        transform: 'translateX(-50%)',
-                        fontSize: Math.round(FS * 1.3), fontFamily: 'monospace',
-                        fontWeight: 400, color: T.coral,
-                        lineHeight: 1, zIndex: 2, pointerEvents: 'none',
-                        letterSpacing: -1,
-                      }}>
-                        ~
-                      </span>
-                    )}
-                  </div>
+                  <TabNoteCell
+                    cell={cell}
+                    cw={CW} ch={CH} fs={FS} circleD={CIRCLE_D}
+                    isSel={isSel} isHov={isHov} editable={editable}
+                    onClick={() => selectCell(row, col)}
+                    onMouseEnter={() => setHov([row, col])}
+                    // Result view: the ORIGINAL melody is the emphasized
+                    // voice (bold + highlighter), AI harmony stays light blue
+                    emphasized={!editable && !cell.added}
+                    markColor={!editable && !cell.added ? MELODY_MARK : undefined}
+                    fretColor={cell.added ? COLOR_ADDED : COLOR_ORIG}
+                    anchorMark={anchorMarkRow.get(col) === row}
+                  />
 
                   {/* Bar line */}
                   {isBar && (
