@@ -146,6 +146,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const [styles, setStyles]     = useState<HarmonizeStyle[]>(() => {
     const valid = new Set(HARMONY_STYLES.map(s => s.id));
     const saved = (loadSavedPrefs().styles ?? []).filter((s): s is HarmonizeStyle => valid.has(s as HarmonizeStyle));
+    // Chord-Melody is standalone — normalize prefs saved before that rule
+    // existed (or hand-edited) so the forbidden combo can't sneak back in.
+    if (saved.includes('chordmelody')) return ['chordmelody'];
     return saved.length > 0 ? saved : ['3rds'];
   });
   // Tempo for playback + MIDI: one input-grid column = one eighth note.
@@ -779,9 +782,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         )}
       </div>
 
-      {/* Harmony styles (multi-select) */}
+      {/* Harmony styles — Melodic/3rds combine; Chord-Melody stands alone */}
       <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <p style={LABEL_STYLE}>Harmony Type <span style={{ fontSize: 9, color: T.textDim }}>(multi-select)</span></p>
+        <p style={LABEL_STYLE}>Harmony Type <span style={{ fontSize: 9, color: T.textDim, textTransform: 'none' }}>(Chord-Melody stands alone; others combine)</span></p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
           {HARMONY_STYLES.map(s => {
             const active = styles.includes(s.id);
