@@ -846,16 +846,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             );
           })}
         </div>
-        {styles.includes('melodic') && (
-          <p style={{ margin: 0, fontSize: 10, color: T.textDim, lineHeight: 1.5 }}>
-            Melodic adds an independent moving harmony line with its own passing notes between your melody notes — not just stacked chords.
-          </p>
-        )}
-        {styles.includes('chordmelody') && (
-          <p style={{ margin: 0, fontSize: 10, color: T.textDim, lineHeight: 1.5 }}>
-            Chord-Melody builds a master-class solo-guitar arrangement: your melody always on top, max 3-4 note voicings built from root + guide tones (3rd/7th, 5th omitted), bass landing only on your anchors and ringing between them, open-string campanella and pedal points, half-step voice leading, slash/poly-chord colors, and reharmonization under static melody notes.
-          </p>
-        )}
       </div>
 
       {/* Harmonize / Regenerate */}

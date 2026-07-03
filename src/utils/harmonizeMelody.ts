@@ -24,6 +24,12 @@ export const SLOT_MULT = 4;
 // awkward jump rather than a smooth bridge, and gets dropped.
 const MAX_CONNECT_JUMP = 7;
 
+// Max fret span the FRETTED notes of a single column may cover — one hand
+// reaches ~5 frets with a stretch. Open strings (fret 0) need no finger so
+// they're exempt. Any harmony note that would push the fretted span past this
+// is physically unreachable and gets dropped.
+const MAX_HAND_SPAN = 5;
+
 export type HarmonizeStyle = 'melodic' | '3rds' | 'chordmelody';
 
 export const HARMONY_STYLES: { id: HarmonizeStyle; label: string; hint: string }[] = [
@@ -189,7 +195,7 @@ ${styleLines}
 ${anchorScopeRule}RULES — follow every one:
 1. VOICE LEADING: move added harmony voices smoothly (small intervals, shared/common tones) from event to event. Avoid parallel awkward jumps.
 2. ACCIDENTALS: notes outside ${scaleName} are passing tones or borrowed-chord tones — harmonize them as chromatic approach or secondary-dominant color, don't force them diatonic.
-3. PLAYABILITY (critical): every column must be a real fingering one hand can hold. Max 6 notes per column, at most ONE note per string, frets within a ~4-fret span where possible. If a harmony note collides with the melody's string, you MAY relocate the ORIGINAL melody note to a neighbouring string/fret that produces the EXACT SAME pitch, to free the fingering — keep it flagged added:false and make sure it's still the identical note.
+3. PLAYABILITY (CRITICAL, hard rule): every column must be a real fingering one hand can hold in ONE position. At most ONE note per string. The FRETTED notes (fret > 0) in a single column MUST all fall within a 4-fret window — e.g. frets 5,6,7,8 are fine; frets 3 and 12 together, or 2 and 8 together, are IMPOSSIBLE and forbidden. OPEN strings (fret 0) need no finger and are exempt from the window. If the harmony you want sits too far from the melody's fret to be reached, either voice it on an OPEN string, or relocate the ORIGINAL melody note to another string/fret producing the EXACT SAME pitch to bring the hand into a shared position (keep it added:false, identical pitch), or simply use fewer notes. Never output a column whose fretted notes span more than 4-5 frets.
 4. TECHNIQUES: if an original note has a tech of "b" (bend), "~" (vibrato), "h"/"p" (hammer/pull), or "/"/"\\" (slide), the harmony notes you add in that column must be STATIC pedal-points — do NOT imitate the bend/slide. Keep added notes on frozen frets so the hand can still execute the technique. Carry the original tech only on the original note.
 5. Keep the ORIGINAL melody note present at every original slot (added:false), reproducing its exact "str"/"fret" unless relocating per rule 3 (same pitch, different string).
 6. Original slot numbers are fixed: ${originalSlots.join(', ')}. Do not change these numbers or drop any of them.
@@ -311,6 +317,47 @@ Return VALID JSON only, no markdown:
           const topMidi = Math.max(...melodyPitches);
           for (const [str, n] of perString) {
             if (n.added && noteMidi(n.str, n.fret, tuning) >= topMidi) perString.delete(str);
+          }
+        }
+      }
+
+      // PLAYABILITY guardrail (all styles) — a real hand can't span more than
+      // ~5 frets. Open strings (fret 0) need no finger and are exempt; the
+      // melody is sacred and never dropped. Among the harmony notes, drop any
+      // fretted note that would push the column's fretted span past the reach,
+      // keeping the ones closest to the melody's hand position. This is what
+      // prevents e.g. a fret-12 note stacked with a fret-3 note in one chord.
+      {
+        const fret0 = (n: HarmNote) => n.fret === 0;
+        const sacredFrets = [...perString.values()]
+          .filter(n => !n.added && !fret0(n))
+          .map(n => n.fret);
+        const harmony = [...perString.entries()].filter(([, n]) => n.added && !fret0(n));
+        if (harmony.length > 0) {
+          // Anchor the hand window on the melody's fretted notes; if the
+          // melody is all open strings, anchor on the lowest harmony fret.
+          let winLo: number, winHi: number;
+          if (sacredFrets.length) {
+            winLo = Math.min(...sacredFrets); winHi = Math.max(...sacredFrets);
+          } else {
+            const lowest = Math.min(...harmony.map(([, n]) => n.fret));
+            winLo = lowest; winHi = lowest;
+          }
+          // Outer-voice priority: try the BASS (lowest harmony note) first so
+          // the melody+bass skeleton survives, then fill inner notes nearest
+          // the hand window. Notes that no longer fit are dropped.
+          const mid = (winLo + winHi) / 2;
+          harmony.sort((a, b) => {
+            const [, na] = a, [, nb] = b;
+            const lowest = Math.min(...harmony.map(([, n]) => n.fret));
+            if (na.fret === lowest && nb.fret !== lowest) return -1;
+            if (nb.fret === lowest && na.fret !== lowest) return 1;
+            return Math.abs(na.fret - mid) - Math.abs(nb.fret - mid);
+          });
+          for (const [str, n] of harmony) {
+            const lo = Math.min(winLo, n.fret), hi = Math.max(winHi, n.fret);
+            if (hi - lo > MAX_HAND_SPAN) perString.delete(str);
+            else { winLo = lo; winHi = hi; }
           }
         }
       }
