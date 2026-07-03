@@ -91,7 +91,9 @@ export const ItemMenu: React.FC<Props> = ({ items, label = 'Actions' }) => {
               onMouseEnter={e => { e.currentTarget.style.background = T.bgInput; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
-              {it.icon && <span style={{ width: 16, textAlign: 'center', fontSize: 13 }}>{it.icon}</span>}
+              {/* Always reserve the icon column so a label with no icon
+                  (e.g. Delete) stays aligned with the rest. */}
+              <span style={{ width: 16, textAlign: 'center', fontSize: 13, flexShrink: 0 }}>{it.icon ?? ''}</span>
               {it.label}
             </button>
           ))}
