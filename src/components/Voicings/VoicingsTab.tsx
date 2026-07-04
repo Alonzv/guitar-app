@@ -993,7 +993,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
               <p style={{ margin: 0, fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>
                 Tap a diagram to enlarge · long-press to swap the chord
               </p>
-              <div style={{
+              <div className="gc-noselect" style={{
                 display: 'flex', gap: 8, overflowX: 'auto',
                 paddingBottom: 4, flexWrap: 'nowrap',
                 minHeight: 148,

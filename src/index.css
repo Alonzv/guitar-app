@@ -94,6 +94,15 @@ body {
 button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: -0.02em; text-transform: uppercase; transition: transform 0.08s ease; }
 button:active { transform: scale(0.96); }
 
+/* Long-press-safe surfaces: kill the iOS text-selection magnifier and the
+   Copy/Look-Up callout bar so a Haptic-Touch long press opens our own editor
+   instead of the OS selection UI. Covers the whole subtree (labels, diagrams). */
+.gc-noselect, .gc-noselect * {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
 /* Header ghost icon buttons — springy rotate on press */
 .gc-icon-btn:active { transform: scale(0.86) rotate(-8deg); }
 

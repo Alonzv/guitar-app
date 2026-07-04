@@ -98,15 +98,14 @@ export function ChordMicroEdit({
         position: 'fixed', inset: 0, zIndex: 9000,
         background: 'rgba(0,0,0,0.62)', display: 'flex',
         alignItems: 'center', justifyContent: 'center', padding: 16,
-        animation: 'gcMicroFade 0.15s ease',
+        animation: 'gcMicroFade 0.26s ease',
       }}
     >
       <style>{`
         @keyframes gcMicroFade { from { opacity: 0; } to { opacity: 1; } }
         @keyframes gcMicroPop {
-          0%   { transform: scale(0.92); opacity: 0; }
-          60%  { transform: scale(1.02); opacity: 1; }
-          100% { transform: scale(1);    opacity: 1; }
+          0%   { opacity: 0; transform: translateY(14px) scale(0.84); }
+          100% { opacity: 1; transform: translateY(0)    scale(1); }
         }
       `}</style>
       <div
@@ -118,9 +117,10 @@ export function ChordMicroEdit({
           maxHeight: '90vh', overflowY: 'auto',
           display: 'flex', flexDirection: 'column', gap: 14,
           transformOrigin: 'center',
-          // ~10% slower than the first cut with a gentler overshoot, so it reads
-          // smoother. Sync with the long-press haptic is handled by the timer.
-          animation: 'gcMicroPop 0.22s cubic-bezier(0.33, 1.25, 0.5, 1)',
+          // A proper spring pop: rises + scales up past 1 and settles (back-out
+          // ease), slow enough (0.42s) to actually read as a pop, smooth enough
+          // to feel elegant. Lands with the long-press haptic (timer-synced).
+          animation: 'gcMicroPop 0.42s cubic-bezier(0.34, 1.5, 0.5, 1)',
         }}
       >
         {/* Header */}
