@@ -157,9 +157,9 @@ export function SwipePager({
         backgroundColor: T.bgDeep,
         flexShrink: 0,
       }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <BrandMark size={22} />
-          <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 17, lineHeight: 1 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <BrandMark size={16} />
+          <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 17, letterSpacing: '-0.045em', lineHeight: 1 }}>
             <span style={{ color: T.text }}>Scale</span>
             <span style={{ color: T.brandAccent }}>Up</span>
           </span>

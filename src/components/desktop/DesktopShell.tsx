@@ -35,10 +35,11 @@ export function DesktopShell({
         backgroundColor: T.bgDeep, flexShrink: 0,
       }}>
 
-        {/* Left: mark + wordmark lockup */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <BrandMark size={24} />
-          <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 19, lineHeight: 1 }}>
+        {/* Left: mark + wordmark lockup. Mark sized to the wordmark cap-height
+            so the tallest bar aligns with the top of "ScaleUp". */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <BrandMark size={18} />
+          <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 19, letterSpacing: '-0.045em', lineHeight: 1 }}>
             <span style={{ color: T.text }}>Scale</span>
             <span style={{ color: T.brandAccent }}>Up</span>
           </span>
