@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T } from '../theme';
+import { BrandMark } from './BrandMark';
 
 // ── Segment control ──────────────────────────────────────────────────────────
 
@@ -156,10 +157,7 @@ export function SwipePager({
         backgroundColor: T.bgDeep,
         flexShrink: 0,
       }}>
-        <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 17, lineHeight: 1 }}>
-          <span style={{ color: T.text }}>Scale</span>
-          <span style={{ color: T.brandAccent }}>Up</span>
-        </span>
+        <BrandMark size={24} />
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button

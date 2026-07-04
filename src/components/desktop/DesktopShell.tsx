@@ -1,5 +1,6 @@
 import React from 'react';
 import { T } from '../../theme';
+import { BrandMark } from '../BrandMark';
 
 const PANEL_TITLES = ['CHORDS', 'SCALES', 'VOICINGS', 'PRACTICE', 'STUDIO'];
 
@@ -34,11 +35,8 @@ export function DesktopShell({
         backgroundColor: T.bgDeep, flexShrink: 0,
       }}>
 
-        {/* Left: wordmark */}
-        <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 19, lineHeight: 1 }}>
-          <span style={{ color: T.text }}>Scale</span>
-          <span style={{ color: T.brandAccent }}>Up</span>
-        </span>
+        {/* Left: mark */}
+        <BrandMark size={26} />
 
         {/* Center: horizontal tab nav */}
         <nav>
