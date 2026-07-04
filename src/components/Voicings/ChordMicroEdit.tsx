@@ -104,8 +104,8 @@ export function ChordMicroEdit({
       <style>{`
         @keyframes gcMicroFade { from { opacity: 0; } to { opacity: 1; } }
         @keyframes gcMicroPop {
-          0%   { transform: scale(0.88); opacity: 0; }
-          55%  { transform: scale(1.03); opacity: 1; }
+          0%   { transform: scale(0.92); opacity: 0; }
+          60%  { transform: scale(1.02); opacity: 1; }
           100% { transform: scale(1);    opacity: 1; }
         }
       `}</style>
@@ -118,7 +118,9 @@ export function ChordMicroEdit({
           maxHeight: '90vh', overflowY: 'auto',
           display: 'flex', flexDirection: 'column', gap: 14,
           transformOrigin: 'center',
-          animation: 'gcMicroPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          // ~10% slower than the first cut with a gentler overshoot, so it reads
+          // smoother. Sync with the long-press haptic is handled by the timer.
+          animation: 'gcMicroPop 0.22s cubic-bezier(0.33, 1.25, 0.5, 1)',
         }}
       >
         {/* Header */}

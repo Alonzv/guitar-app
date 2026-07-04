@@ -637,7 +637,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
   const beginLongPress = (ci: number, x: number, y: number) => {
     lpFired.current = false;
     lpStart.current = { x, y };
-    lpTimer.current = setTimeout(() => { lpFired.current = true; setMicroEdit({ index: ci }); }, 500);
+    // 550ms — a touch past the iOS Haptic-Touch threshold so the popover's
+    // pop lands together with the system long-press haptic, not before it.
+    lpTimer.current = setTimeout(() => { lpFired.current = true; setMicroEdit({ index: ci }); }, 550);
   };
   const moveLongPress = (x: number, y: number) => {
     if (!lpStart.current || !lpTimer.current) return;
