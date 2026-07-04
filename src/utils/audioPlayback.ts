@@ -8,7 +8,6 @@ const AudioCtxClass: typeof AudioContext = window.AudioContext || (window as any
 let _ctx: AudioContext | null = null;
 let _masterGain: GainNode | null = null;
 let _unlocking: Promise<void> | null = null;
-let _silentPlayed = false;
 
 // ── Now Playing suppression ───────────────────────────────────────────────
 // audioSession.type = 'playback' causes iOS to show the app in the Now
@@ -32,39 +31,26 @@ function suppressNowPlaying(delayMs = 0): void {
 /** Call when the metronome stops so it releases the Now Playing widget. */
 export function releaseNowPlaying(): void { suppressNowPlaying(); }
 
-// iOS 16.4+ Web Audio Session API.
-// 'playback'        = ignore mute switch; playback-only (default for this app).
-// 'play-and-record' = ignore mute switch; mic + speaker simultaneously (Tuner).
-// Never downgrade from a more permissive mode already set by Tuner.
-function setPlaybackSession(): void {
+// iOS 16.4+ Web Audio Session API. We deliberately use 'ambient' so the app
+// stays a polite background citizen and does NOT hijack the phone's media
+// controls:
+//   'ambient'         = respects the silent switch, MIXES with other apps'
+//                       audio, and — crucially — never registers the app in the
+//                       Now Playing widget / lock-screen media controls.
+//   'playback'        = would ignore the mute switch, but iOS ties that to
+//                       taking over Now Playing (no way to keep one without the
+//                       other), so we don't use it.
+//   'play-and-record' = mic + speaker simultaneously (Tuner) — never downgrade
+//                       a more permissive mode already set there.
+function setAmbientSession(): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const session = (navigator as any).audioSession;
     if (!session) return;
-    if (session.type !== 'playback' && session.type !== 'play-and-record') {
-      session.type = 'playback';
+    if (session.type !== 'ambient' && session.type !== 'play-and-record') {
+      session.type = 'ambient';
     }
   } catch { /* not supported on non-Safari or older iOS */ }
-}
-
-// Older iOS (< 16.4) fix: play a silent <audio> element synchronously within
-// the user gesture — this switches iOS audio session from "ambient" (muted by
-// silent switch) to "playback" (ignores silent switch). Only needs to run once.
-// NOT called on browsers that have navigator.audioSession (iOS 16.4+) because
-// el.play() consumes the user-activation token there, leaving ctx.resume() without
-// one on the same gesture — which silently prevents the AudioContext from starting.
-function playSilentElement(): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if ((navigator as any).audioSession) return; // handled by setPlaybackSession() instead
-  if (_silentPlayed) return;
-  _silentPlayed = true;
-  try {
-    const el = document.createElement('audio');
-    // Minimal valid WAV: 44-byte header, 0 PCM samples, 44100 Hz mono 16-bit.
-    el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-    el.volume = 0;
-    el.play().catch(() => { _silentPlayed = false; });
-  } catch { _silentPlayed = false; }
 }
 
 /** Called by Tuner when it starts recording mic input. */
@@ -76,12 +62,12 @@ export function setMicSession(): void {
   } catch { /* ignore */ }
 }
 
-/** Called by Tuner when it stops — revert to playback-only. */
+/** Called by Tuner when it stops — revert to the polite ambient session. */
 export function clearMicSession(): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const session = (navigator as any).audioSession;
-    if (session) session.type = 'playback';
+    if (session) session.type = 'ambient';
   } catch { /* ignore */ }
 }
 
@@ -108,8 +94,7 @@ export function getOutputNode(): AudioNode {
 // Must be called synchronously from a user-gesture handler on every play action.
 // Returns a Promise that resolves once the context is actually running.
 export function unlockAudio(): Promise<void> {
-  setPlaybackSession();   // iOS 16.4+ — must be before AudioContext creation
-  playSilentElement();    // older iOS — must be synchronous in gesture handler
+  setAmbientSession();   // iOS 16.4+ — must be before AudioContext creation
   initAudioGraph();
 
   const ctx = _ctx!;
