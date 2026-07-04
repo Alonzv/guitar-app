@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#F7F0DC" />
+    <!-- Chrome stays neutral — the cobalt brand accent (#110CF0) is reserved for
+         the logo only. White (light) / night-black (dark) address-bar tint. -->
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="ScaleUp — chord builder, progressions, and scale visualizer" />
 
     <!-- CSP lives ONLY in vercel.json (HTTP header). Do NOT add a meta CSP
@@ -11,8 +14,12 @@
          stale meta copy silently re-blocks anything the header allows — that
          exact drift once broke all Supabase auth/DB calls in production. -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- ScaleUp mark. SVG favicon is the master (crisp, light/dark tabs); PNGs
+         are fallbacks. PWA manifest is injected by vite-plugin-pwa. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <title>ScaleUp</title>
   </head>
   <body>

@@ -16,8 +16,10 @@ export default defineConfig({
         name: 'ScaleUp',
         short_name: 'ScaleUp',
         description: 'ScaleUp — chord builder, progressions, and scale visualizer',
-        theme_color: '#F7F0DC',
-        background_color: '#F7F0DC',
+        // Neutral chrome — cobalt is reserved for the mark itself, never the
+        // PWA splash / address bar.
+        theme_color: '#FFFFFF',
+        background_color: '#FFFFFF',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
