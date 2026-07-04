@@ -346,6 +346,78 @@ function generateDescription(
 
 // ── Main export ────────────────────────────────────────────────────────────
 
+// ── Micro-edit helpers (Paths long-press editor) ────────────────────────────
+
+export interface AltVoicing {
+  voicing: FretPosition[];
+  label: string;   // neck-zone label (e.g. "Mid Neck")
+  avgFret: number;
+}
+
+/**
+ * Alternative playable voicings of ONE chord, spread across neck positions
+ * and bucketed by zone — used by the "Positions" tab of the micro-editor.
+ * Reuses the exact same candidate generators + playability test as the paths
+ * engine, so what the user swaps to is guaranteed reachable.
+ */
+export function alternativeVoicings(
+  chordName: string,
+  mode: VoicingMode,
+  stringGroup: StringGroup,
+  tuning: string[] = TUNINGS[0].notes,
+  limit = 6,
+): AltVoicing[] {
+  const allowed = STRING_GROUPS[stringGroup];
+  const gen = mode === 'triads' ? generateTriadCandidates : generateFullCandidates;
+  const withMeta = gen(chordName, allowed, tuning)
+    .map(v => {
+      const avg = avgNonOpenFret(v);
+      const open = v.filter(p => p.fret === 0).length;
+      return { voicing: v, label: pathLabel(avg, open), avgFret: avg };
+    })
+    .sort((a, b) => a.avgFret - b.avgFret);
+
+  // One per distinct neck zone first (variety), then fill by ascending fret.
+  const out: AltVoicing[] = [];
+  const zones = new Set<string>();
+  for (const m of withMeta) {
+    if (out.length >= limit) break;
+    if (!zones.has(m.label)) { zones.add(m.label); out.push(m); }
+  }
+  for (const m of withMeta) {
+    if (out.length >= limit) break;
+    if (!out.includes(m)) out.push(m);
+  }
+  return out;
+}
+
+/**
+ * Recompute a path's metrics after a chord/voicing swap — the same cost model
+ * findVoicingPaths uses, so the Smoothness meter and neck-zone label stay
+ * honest once the user edits a chord.
+ */
+export function recomputePathMetrics(
+  voicings: FretPosition[][],
+  chordNames: string[],
+  genre: VoicingGenre,
+): { label: string; avgFret: number; smoothness: number } {
+  const gc = GC[genre];
+  let cost = 0;
+  for (let i = 0; i < voicings.length; i++) {
+    cost += genreCost(voicings[i], chordNames[i], genre);
+    if (i > 0) cost += transitionCost(voicings[i - 1], voicings[i]) * gc.transitionWeight;
+  }
+  const pathAvg = voicings.length
+    ? voicings.reduce((s, v) => s + avgNonOpenFret(v), 0) / voicings.length
+    : 0;
+  const openCount = voicings.reduce((s, v) => s + v.filter(p => p.fret === 0).length, 0);
+  return {
+    label: pathLabel(pathAvg, openCount),
+    avgFret: pathAvg,
+    smoothness: computeSmoothness(cost, chordNames.length),
+  };
+}
+
 export function findVoicingPaths(
   chordNames: string[],
   options: PathOptions,

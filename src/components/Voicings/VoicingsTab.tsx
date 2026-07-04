@@ -6,11 +6,13 @@ import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { fretToNote } from '../../utils/musicTheory';
 import {
   findVoicingPaths,
+  recomputePathMetrics,
   type VoicingGenre,
   type VoicingMode,
   type StringGroup,
   type VoicingPath,
 } from '../../utils/voicingPaths';
+import { ChordMicroEdit } from './ChordMicroEdit';
 import { analyzeProgression, type MusicalAnalysis } from '../../utils/musicalAnalysis';
 import { TUNINGS } from '../../utils/musicTheory';
 import { T, card } from '../../theme';
@@ -425,6 +427,22 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
   // Voice isolator
   const [isolate, setIsolate] = useState<IsolateGroup>(null);
 
+  // ── Micro-edit (long-press a diagram in Paths) ────────────────────────────
+  // `editedPath` overlays the selected path with a swapped chord/voicing and
+  // its recomputed metrics; `microEdit` holds which chord index is open in the
+  // popover. Both clear when the selection or the underlying paths change.
+  interface EditedPath {
+    baseId: string;
+    voicings: FretPosition[][];
+    chordNames: string[];
+    label: string;
+    smoothness: number;
+    avgFret: number;
+    description: string;
+  }
+  const [editedPath, setEditedPath] = useState<EditedPath | null>(null);
+  const [microEdit, setMicroEdit]   = useState<{ index: number } | null>(null);
+
   // ── Library handoff (Open in Paths / Open in Reharm) ──────────────────────
   // Restores a saved progression + filters; for Paths also re-selects the
   // saved path once paths recompute; for Reharm seeds the saved AI result
@@ -483,7 +501,12 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
     playTimers.current.forEach(clearTimeout);
     playTimers.current = [];
     setPlayingId(null);
+    setEditedPath(null);   // recomputed paths invalidate any in-place edit
+    setMicroEdit(null);
   }, [paths]);
+
+  // A different path selected drops the edit (it belonged to the old one).
+  useEffect(() => { setEditedPath(null); setMicroEdit(null); }, [selectedIdx]);
 
   useEffect(() => () => { playTimers.current.forEach(clearTimeout); }, []);
 
@@ -560,9 +583,69 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
     setModal({ voicings, chordNames: names, index, color, dotColors });
   }, []);
 
-  const currentPath: VoicingPath | undefined = paths[selectedIdx];
-  const currentColor = currentPath ? (PATH_COLOR[currentPath.label] ?? T.primary) : T.primary;
-  const isPlaying    = currentPath?.id === playingId;
+  const basePath: VoicingPath | undefined = paths[selectedIdx];
+  const activeEdit = editedPath && basePath && editedPath.baseId === basePath.id ? editedPath : null;
+
+  // The displayed path — base path with any in-place micro-edit applied. All
+  // downstream render (diagrams, smoothness, play, save) reads from this.
+  const currentPath: VoicingPath | undefined = basePath ? {
+    ...basePath,
+    voicings:    activeEdit?.voicings   ?? basePath.voicings,
+    label:       activeEdit?.label      ?? basePath.label,
+    smoothness:  activeEdit?.smoothness ?? basePath.smoothness,
+    avgFret:     activeEdit?.avgFret    ?? basePath.avgFret,
+    description: activeEdit?.description ?? basePath.description,
+  } : undefined;
+  // Chord names shown above each diagram — a re-harmonize swap changes one.
+  const displayChords = activeEdit?.chordNames ?? chords;
+  // Edited paths get the brand accent so "Custom Path" reads as user-touched.
+  const currentColor = currentPath
+    ? (currentPath.label === 'Custom Path' ? T.brandAccent : (PATH_COLOR[currentPath.label] ?? T.primary))
+    : T.primary;
+  const isPlaying    = basePath?.id === playingId;
+
+  // Apply a swap from the micro-editor: replace chord `ci`, recompute metrics,
+  // and re-label as "Custom Path" if the chord changed or the neck zone shifts.
+  const applyMicroEdit = (ci: number, newChordName: string, newVoicing: FretPosition[]) => {
+    if (!basePath) return;
+    const srcVoicings = activeEdit?.voicings ?? basePath.voicings;
+    const srcChords   = activeEdit?.chordNames ?? chords;
+    const voicings   = srcVoicings.map((v, i) => (i === ci ? newVoicing : v));
+    const chordNames = srcChords.map((c, i) => (i === ci ? newChordName : c));
+    const m = recomputePathMetrics(voicings, chordNames, genre);
+    const nameChanged = chordNames.some((c, i) => c !== chords[i]);
+    const zoneChanged = m.label !== basePath.label;
+    const custom = nameChanged || zoneChanged;
+    setEditedPath({
+      baseId: basePath.id,
+      voicings, chordNames,
+      label: custom ? 'Custom Path' : basePath.label,
+      smoothness: m.smoothness,
+      avgFret: m.avgFret,
+      description: custom
+        ? 'Custom path — edited from the original, one chord swapped.'
+        : basePath.description,
+    });
+    setMicroEdit(null);
+  };
+
+  // Long-press vs tap: a diagram tap enlarges (openModal); a long press opens
+  // the micro-editor. We time the pointer-down and cancel on move/up.
+  const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lpFired = useRef(false);
+  const lpStart = useRef<{ x: number; y: number } | null>(null);
+  const beginLongPress = (ci: number, x: number, y: number) => {
+    lpFired.current = false;
+    lpStart.current = { x, y };
+    lpTimer.current = setTimeout(() => { lpFired.current = true; setMicroEdit({ index: ci }); }, 500);
+  };
+  const moveLongPress = (x: number, y: number) => {
+    if (!lpStart.current || !lpTimer.current) return;
+    if (Math.abs(x - lpStart.current.x) > 10 || Math.abs(y - lpStart.current.y) > 10) {
+      clearTimeout(lpTimer.current); lpTimer.current = null;
+    }
+  };
+  const endLongPress = () => { if (lpTimer.current) { clearTimeout(lpTimer.current); lpTimer.current = null; } };
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -865,7 +948,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 9, fontWeight: 800, flexShrink: 0,
                     }}>{pi + 1}</span>
-                    {path.label}
+                    {active && activeEdit ? activeEdit.label : path.label}
                     {isAIPick && (
                       <span style={{
                         fontSize: 8, fontWeight: 800,
@@ -904,9 +987,9 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                 </div>
               </div>
 
-              {/* Chord diagrams — tap to enlarge */}
+              {/* Chord diagrams — tap to enlarge, long-press to edit */}
               <p style={{ margin: 0, fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>
-                Tap a diagram to enlarge
+                Tap a diagram to enlarge · long-press to swap the chord
               </p>
               <div style={{
                 display: 'flex', gap: 8, overflowX: 'auto',
@@ -916,15 +999,22 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                 {currentPath.voicings.map((voicing, ci) => (
                   <button
                     key={ci}
-                    onClick={() => openModal(ci, currentPath.voicings, chords, currentColor)}
+                    onClick={() => { if (lpFired.current) { lpFired.current = false; return; } openModal(ci, currentPath.voicings, displayChords, currentColor); }}
+                    onPointerDown={e => beginLongPress(ci, e.clientX, e.clientY)}
+                    onPointerMove={e => moveLongPress(e.clientX, e.clientY)}
+                    onPointerUp={endLongPress}
+                    onPointerLeave={endLongPress}
+                    onPointerCancel={endLongPress}
+                    onContextMenu={e => e.preventDefault()}
                     style={{
                       flexShrink: 0, width: 120,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                       background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                      WebkitTouchCallout: 'none', userSelect: 'none',
                     }}
                   >
                     <span style={{ fontSize: 13, fontWeight: 800, color: currentColor }}>
-                      {chords[ci]}
+                      {displayChords[ci]}
                     </span>
                     <div style={{
                       width: '100%', background: T.bgInput,
@@ -964,12 +1054,14 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                 {isPlaying ? 'STOP' : 'PLAY'}
               </button>
 
+              {/* Save reads the DISPLAY state — an edited path stores its
+                  swapped chords, voicings, recomputed smoothness and label. */}
               <SaveToLibraryButton
                 label="Save to Library"
                 getPayload={() => currentPath ? ({
                   kind: 'voicing',
-                  name: `${chords.join(' – ')} · ${currentPath.label}`,
-                  chords,
+                  name: `${displayChords.join(' – ')} · ${currentPath.label}`,
+                  chords: displayChords,
                   path: {
                     label: currentPath.label,
                     description: currentPath.description,
@@ -1289,6 +1381,21 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
           tuning={tuning.notes}
           dotColors={modal.dotColors}
           onClose={() => setModal(null)}
+        />
+      )}
+
+      {/* ── Micro-edit popover (long-press a Paths diagram) ──────────────── */}
+      {microEdit && currentPath && (
+        <ChordMicroEdit
+          chordName={displayChords[microEdit.index]}
+          prevChord={microEdit.index > 0 ? displayChords[microEdit.index - 1] : null}
+          nextChord={microEdit.index < displayChords.length - 1 ? displayChords[microEdit.index + 1] : null}
+          mode={mode}
+          stringGroup={stringGroup}
+          tuning={tuning}
+          color={currentColor}
+          onReplace={(name, voicing) => applyMicroEdit(microEdit.index, name, voicing)}
+          onClose={() => setMicroEdit(null)}
         />
       )}
     </div>

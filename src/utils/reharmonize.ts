@@ -99,3 +99,63 @@ Return valid JSON only, no markdown:
     return null;
   }
 }
+
+// ── Context-aware single-chord re-harmonization (Paths micro-editor) ─────────
+// Suggests substitutes / passing chords for ONE chord in a progression, given
+// its neighbours so the flow stays coherent. `structure` keeps the family:
+// a triads path gets triads/inversions back, a full-chord path gets richer
+// sevenths/extensions — never mixing the two.
+
+export async function reharmonizeChord(input: {
+  target: string;
+  prev: string | null;
+  next: string | null;
+  structure: 'triads' | 'full';
+}): Promise<string[] | null> {
+  const { target, prev, next, structure } = input;
+
+  const structureRule = structure === 'triads'
+    ? 'The path uses TRIADS. Return only triads or simple slash/inversion triads (e.g. "C", "Am", "F/A", "Ddim"). Do NOT return 7th or extended chords.'
+    : 'The path uses FULL chords. Prefer richer substitutes — 7ths, 9ths, sus, add, altered dominants (e.g. "Cmaj7", "Am9", "D7b9", "Fsus2"). Avoid bare triads unless a triad is clearly the strongest choice.';
+
+  const context = [
+    prev ? `Previous chord: ${prev}` : 'This is the FIRST chord (no chord before).',
+    `Chord to replace: ${target}`,
+    next ? `Next chord: ${next}` : 'This is the LAST chord (no chord after).',
+  ].join('\n');
+
+  try {
+    const msg = await createAIMessage({
+      model: 'claude-haiku-4-5',
+      max_tokens: 260,
+      messages: [{
+        role: 'user',
+        content: `You are a professional harmony arranger doing a targeted chord substitution inside a progression.
+
+${context}
+
+Suggest 4 substitute or passing chords that could replace "${target}" while flowing naturally FROM the previous chord and INTO the next one. Favor common-practice moves: diatonic substitutes, secondary dominants, tritone subs, chromatic passing chords, modal interchange. Keep the melodic/harmonic flow believable — each suggestion must make musical sense in this exact spot.
+
+${structureRule}
+
+CRITICAL — every chord name MUST parse with tonaljs Chord.get():
+Major "C"  Minor "Am"  Dom7 "G7"  Maj7 "Cmaj7"  Min7 "Dm7"  Sus "Dsus4"/"Csus2"  Dim "Bdim"  Half-dim "Bm7b5"  Add9 "Cadd9"  9ths "Cmaj9"/"Am9"/"G9"  6 "C6"  Slash "C/E".
+
+Return VALID JSON only, no markdown:
+{ "chords": ["<chord1>", "<chord2>", "<chord3>", "<chord4>"] }`,
+      }],
+    }, { signal: AbortSignal.timeout(30_000) });
+
+    const text = (msg.content[0] as { type: string; text: string }).text.trim();
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1) return null;
+    const parsed = JSON.parse(text.slice(start, end + 1)) as { chords?: unknown };
+    if (!Array.isArray(parsed.chords)) return null;
+    const chords = parsed.chords.filter((c): c is string => typeof c === 'string' && c.length > 0);
+    return chords.length > 0 ? chords.slice(0, 4) : null;
+  } catch (err) {
+    console.error('[reharmonizeChord] API error:', err);
+    return null;
+  }
+}
