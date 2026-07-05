@@ -31,6 +31,11 @@ export const T = {
 
 export type Theme = typeof T;
 
+// Alpha variant of any palette color. Unlike hex concatenation (`color + '33'`),
+// this also works with var() tokens, so theme-aware colors can be dimmed too.
+export const alpha = (color: string, pct: number): string =>
+  `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+
 // Shared card style — flat Arturia-style, no border-radius
 export const card = (extra?: React.CSSProperties): React.CSSProperties => {
   const { padding: explicitPad, ...rest } = extra ?? {};

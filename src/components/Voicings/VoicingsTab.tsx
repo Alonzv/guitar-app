@@ -15,7 +15,7 @@ import {
 import { ChordMicroEdit } from './ChordMicroEdit';
 import { analyzeProgression, type MusicalAnalysis } from '../../utils/musicalAnalysis';
 import { TUNINGS } from '../../utils/musicTheory';
-import { T, card } from '../../theme';
+import { T, card, alpha } from '../../theme';
 import { ReharmonizeTab } from './ReharmonizeTab';
 import { MelodyHarmonizerTab } from './MelodyHarmonizerTab';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
@@ -100,7 +100,9 @@ export type IsolateGroup = null | 'root' | '3rd' | '5th' | '7th';
 
 const INTERVAL_COLOR: Record<string, string> = {
   '1P': '#110CF0',               // Root — blue
-  '3m': '#1A1818', '3M': '#1A1818', // 3rd — ink
+  // 3rd — theme ink (#1A1818 light / sand #F0EAD8 dark); a hardcoded ink here
+  // used to vanish on the dark background.
+  '3m': T.text, '3M': T.text,
   '5P': '#5C5650', '5A': '#5C5650', '5d': '#5C5650', // 5th — slate
   '7m': '#8A8378', '7M': '#8A8378', '7d': '#8A8378', // 7th — taupe
   '9M': '#9C958C', '9m': '#9C958C', '9A': '#9C958C', // ext — light taupe
@@ -169,12 +171,12 @@ function ChordSpelling({ chordName }: { chordName: string }) {
           <div key={i} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             padding: '5px 10px',
-            background: color + '20', borderRight: `3px solid ${color}`,
+            background: alpha(color, 13), borderRight: `3px solid ${color}`,
             minWidth: 34,
           }}>
             <span style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1.1 }}>{note}</span>
             <span style={{ fontSize: 10, fontWeight: 400, color, lineHeight: 1.3 }}>{short}</span>
-            <span style={{ fontSize: 8, color: color + 'bb', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{name}</span>
+            <span style={{ fontSize: 8, color: alpha(color, 73), lineHeight: 1.2, whiteSpace: 'nowrap' }}>{name}</span>
           </div>
         );
       })}
@@ -201,8 +203,8 @@ function FretBadge({ voicing, color }: { voicing: FretPosition[]; color: string 
     <span style={{
       display: 'inline-block',
       padding: '2px 7px', borderRadius: 0,
-      background: color + '22',
-      border: `1px solid ${color}55`,
+      background: alpha(color, 13),
+      border: `1px solid ${alpha(color, 33)}`,
       fontSize: 10, fontWeight: 400, color,
     }}>
       {nonOpen.length === 0
@@ -1203,9 +1205,10 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                         flex: 1, minWidth: 60,
                         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
                         padding: '8px 6px', borderRadius: 0,
-                        border: active ? 'none' : `1px solid ${opt.color}44`,
-                        background: active ? opt.color : opt.color + '12',
-                        color: active ? '#fff' : opt.color,
+                        border: active ? 'none' : `1px solid ${alpha(opt.color, 27)}`,
+                        background: active ? opt.color : alpha(opt.color, 7),
+                        // bgDeep = white on ink in light, night-black on sand in dark
+                        color: active ? T.bgDeep : opt.color,
                         cursor: 'pointer', transition: 'all 0.15s',
                         borderLeft: '3px solid var(--gc-bar-color)',
                       }}
@@ -1296,7 +1299,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                           <div style={{
                             width: '100%', background: T.bgInput,
                             borderRadius: 0,
-                            border: `1px solid ${filtered.length > 0 ? ivColor + '33' : T.border}`,
+                            border: `1px solid ${filtered.length > 0 ? alpha(ivColor, 20) : T.border}`,
                             padding: '4px 4px 2px', boxSizing: 'border-box',
                           }}>
                             {filtered.length > 0 ? (

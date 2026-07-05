@@ -24,21 +24,24 @@ const INTERVAL_NAME: Record<string, string> = {
   '9m': '♭9th', '11P': '11th', '13M': '13th',
 };
 
-const PURPLE  = '#9C958C';
-const GREEN   = '#1A1818';
-const DARKGRAY = '#3A3A3A';
+const LIGHT_TAUPE = '#9C958C';
+// Theme-aware ink: #1A1818 in light, sand #F0EAD8 in dark. A hardcoded ink
+// here used to vanish against the dark background (the 3rd of every chord).
+const INK   = T.text;
+// Palette taupe — the same value VoicingsTab uses for 7ths; legible both modes.
+const TAUPE = '#8A8378';
 
 export const INTERVAL_COLOR: Record<string, string> = {
-  '1P': T.primary,  '8P': T.primary,   // root / octave — red
-  '3m': GREEN,      '3M': GREEN,        // 3rd — green
-  '4P': T.coral,    '4A': T.coral,      // 4th — gold
-  '5P': T.coral,    '5A': PURPLE,       '5d': PURPLE,   // 5th — gold / aug/dim — purple
-  '2m': DARKGRAY,  '2M': DARKGRAY,    '2A': DARKGRAY,  // 2nd — dark gray
-  '6m': PURPLE,     '6M': DARKGRAY,    // 6th
-  '7m': DARKGRAY,  '7M': DARKGRAY,    // 7th — dark gray
-  '9m': PURPLE,     '9M': DARKGRAY,    '9A': PURPLE,   // 9th
-  '11P': DARKGRAY, '11A': PURPLE,     // 11th
-  '13m': PURPLE,    '13M': DARKGRAY,  // 13th
+  '1P': T.primary,   '8P': T.primary,      // root / octave
+  '3m': INK,         '3M': INK,            // 3rd — ink (sand in dark)
+  '4P': T.coral,     '4A': T.coral,        // 4th
+  '5P': T.coral,     '5A': LIGHT_TAUPE, '5d': LIGHT_TAUPE, // 5th / altered 5th
+  '2m': TAUPE,       '2M': TAUPE,       '2A': TAUPE,       // 2nd
+  '6m': LIGHT_TAUPE, '6M': TAUPE,          // 6th
+  '7m': TAUPE,       '7M': TAUPE,          // 7th
+  '9m': LIGHT_TAUPE, '9M': TAUPE,       '9A': LIGHT_TAUPE, // 9th
+  '11P': TAUPE,      '11A': LIGHT_TAUPE,   // 11th
+  '13m': LIGHT_TAUPE, '13M': TAUPE,        // 13th
 };
 
 /** Returns a chroma (0–11) → color map for the given chord */
