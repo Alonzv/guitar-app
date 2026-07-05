@@ -51,8 +51,8 @@ type StudioSub    = 'tabbuilder' | 'audiotab';
 const PANEL_TITLES = ['CHORDS', 'SCALES', 'VOICINGS', 'PRACTICE', 'STUDIO'];
 
 const CHORDS_SEGS    = [
-  { id: 'builder',  label: 'By Ear'  },
   { id: 'finder',   label: 'By Name' },
+  { id: 'builder',  label: 'By Ear'  },
   { id: 'analyzer', label: 'Analyze' },
   { id: 'target',   label: 'Target'  },
 ];
@@ -215,7 +215,8 @@ export default function App() {
 
   // ── SwipePager state ──────────────────────────────────────────────────────
   const [pagerTab, setPagerTab]             = useState(() => parseInt(readLS('scaleup_pager_tab', '0'), 10) || 0);
-  const [chordsSegment, setChordsSegment]   = useState<ChordsSub>(() => readLS('scaleup_seg_chords', 'builder') as ChordsSub);
+  // Always land on "By Name" when the app opens (not the last-used chords tab).
+  const [chordsSegment, setChordsSegment]   = useState<ChordsSub>('finder');
   const [scalesSegment, setScalesSegment]   = useState<ScalesSub>(() => readLS('scaleup_seg_scales', 'explorer') as ScalesSub);
   const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => readLS('scaleup_seg_voicings', 'paths') as VoicingsSub);
   const [practiceSegment, setPracticeSegment] = useState<PracticeSub>(() => readLS('scaleup_seg_practice', 'tuner') as PracticeSub);
