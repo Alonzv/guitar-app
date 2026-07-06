@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, lazy } from 'react';
+import type { ComponentType, LazyExoticComponent } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 
@@ -9,28 +10,53 @@ import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 // downloads). This keeps the initial JS bundle small for a fast mobile load.
 import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
 
-const ChordBuilderTab  = lazy(() => import('./components/ChordBuilder/ChordBuilderTab').then(m => ({ default: m.ChordBuilderTab })));
-const ChordAnalyzerTab = lazy(() => import('./components/ChordBuilder/ChordAnalyzerTab').then(m => ({ default: m.ChordAnalyzerTab })));
-const TargetNoteTab    = lazy(() => import('./components/Chords/TargetNoteTab').then(m => ({ default: m.TargetNoteTab })));
+// A dynamic import can fail with "Importing a module script failed" when a
+// redeploy replaces the hashed chunk filenames while the page is still open —
+// the old URL now 404s. Recover by reloading once (which fetches the fresh
+// index.html + chunk names); guard with sessionStorage so a genuinely broken
+// chunk can't loop. Cleared on the first successful load.
+const RELOAD_KEY = 'scu_chunk_reloaded';
+function lazyPanel<T extends ComponentType<never>>(
+  factory: () => Promise<Record<string, T>>, name: string,
+): LazyExoticComponent<T> {
+  return lazy(async () => {
+    try {
+      const mod = await factory();
+      sessionStorage.removeItem(RELOAD_KEY);
+      return { default: mod[name] };
+    } catch (err) {
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.setItem(RELOAD_KEY, '1');
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {}); // never resolves; page reloads
+      }
+      throw err;
+    }
+  });
+}
 
-const ScaleExplorer    = lazy(() => import('./components/ScalePanel/ScaleExplorer').then(m => ({ default: m.ScaleExplorer })));
-const TriadsGenerator  = lazy(() => import('./components/Triads/TriadsGenerator').then(m => ({ default: m.TriadsGenerator })));
-const IntervalsTab     = lazy(() => import('./components/Intervals/IntervalsTab').then(m => ({ default: m.IntervalsTab })));
-const WheelTab         = lazy(() => import('./components/Tools/WheelTab').then(m => ({ default: m.WheelTab })));
+const ChordBuilderTab  = lazyPanel(() => import('./components/ChordBuilder/ChordBuilderTab'), 'ChordBuilderTab');
+const ChordAnalyzerTab = lazyPanel(() => import('./components/ChordBuilder/ChordAnalyzerTab'), 'ChordAnalyzerTab');
+const TargetNoteTab    = lazyPanel(() => import('./components/Chords/TargetNoteTab'), 'TargetNoteTab');
 
-const VoicingsTab      = lazy(() => import('./components/Voicings/VoicingsTab').then(m => ({ default: m.VoicingsTab })));
+const ScaleExplorer    = lazyPanel(() => import('./components/ScalePanel/ScaleExplorer'), 'ScaleExplorer');
+const TriadsGenerator  = lazyPanel(() => import('./components/Triads/TriadsGenerator'), 'TriadsGenerator');
+const IntervalsTab     = lazyPanel(() => import('./components/Intervals/IntervalsTab'), 'IntervalsTab');
+const WheelTab         = lazyPanel(() => import('./components/Tools/WheelTab'), 'WheelTab');
 
-const Tuner            = lazy(() => import('./components/Tools/Tuner').then(m => ({ default: m.Tuner })));
-const Metronome        = lazy(() => import('./components/Tools/Metronome').then(m => ({ default: m.Metronome })));
+const VoicingsTab      = lazyPanel(() => import('./components/Voicings/VoicingsTab'), 'VoicingsTab');
 
-const TabBuilder       = lazy(() => import('./components/Tools/TabBuilder').then(m => ({ default: m.TabBuilder })));
-const AudioToTab       = lazy(() => import('./components/Tools/AudioToTab').then(m => ({ default: m.AudioToTab })));
+const Tuner            = lazyPanel(() => import('./components/Tools/Tuner'), 'Tuner');
+const Metronome        = lazyPanel(() => import('./components/Tools/Metronome'), 'Metronome');
+
+const TabBuilder       = lazyPanel(() => import('./components/Tools/TabBuilder'), 'TabBuilder');
+const AudioToTab       = lazyPanel(() => import('./components/Tools/AudioToTab'), 'AudioToTab');
 import { WorkspacePanel }    from './components/Workspace/WorkspacePanel';
 import { WorkspaceOverlay }  from './components/Workspace/WorkspaceOverlay';
 
 // ── Electron-only ──────────────────────────────────────────────────────────
-const TheoryTab = lazy(() => import('./components/TheoryTab').then(m => ({ default: m.TheoryTab })));
-const ToolsTab  = lazy(() => import('./components/Tools/ToolsTab').then(m => ({ default: m.ToolsTab })));
+const TheoryTab = lazyPanel(() => import('./components/TheoryTab'), 'TheoryTab');
+const ToolsTab  = lazyPanel(() => import('./components/Tools/ToolsTab'), 'ToolsTab');
 
 // ── Shell ──────────────────────────────────────────────────────────────────
 import { SwipePager, Segment } from './components/SwipePager';
