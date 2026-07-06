@@ -462,6 +462,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         pattern="[0-9]*"
         value=""
         aria-hidden="true"
+        tabIndex={-1}
         onChange={e => {
           const d = e.target.value.replace(/[^0-9]/g, '').slice(-1);
           if (d) applyDigit(d);

@@ -1,9 +1,8 @@
-import {
-  BasicPitch,
-  noteFramesToTime,
-  outputToNotesPoly,
-  addPitchBendsToNoteEvents,
-} from '@spotify/basic-pitch';
+// basic-pitch pulls in TensorFlow.js (~1MB+). Import only the TYPE statically
+// (erased at build) and load the runtime lazily inside transcribeAudioBuffer,
+// so TensorFlow stays out of the main bundle and only downloads when a user
+// actually transcribes audio.
+import type { BasicPitch } from '@spotify/basic-pitch';
 import { createAIMessage } from './aiClient';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -55,8 +54,11 @@ const MODEL_URL = '/basic-pitch/model.json';
 
 // Singleton — model loads once, reused across calls
 let _bp: BasicPitch | null = null;
-function getBasicPitch(): BasicPitch {
-  if (!_bp) _bp = new BasicPitch(MODEL_URL);
+async function getBasicPitch(): Promise<BasicPitch> {
+  if (!_bp) {
+    const { BasicPitch } = await import('@spotify/basic-pitch');
+    _bp = new BasicPitch(MODEL_URL);
+  }
   return _bp;
 }
 
@@ -343,7 +345,8 @@ export async function transcribeAudioBuffer(
   const resampled = await offlineCtx.startRendering();
   const mono      = resampled.getChannelData(0);
 
-  const bp = getBasicPitch();
+  const [bp, { noteFramesToTime, outputToNotesPoly, addPitchBendsToNoteEvents }] =
+    await Promise.all([getBasicPitch(), import('@spotify/basic-pitch')]);
 
   const frames:   number[][] = [];
   const onsets:   number[][] = [];

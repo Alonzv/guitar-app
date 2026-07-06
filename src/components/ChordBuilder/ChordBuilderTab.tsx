@@ -98,6 +98,7 @@ export function ChordBuilderTab({
             <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
               <select
+                aria-label="Tuning"
                 value={tuning.name}
                 onChange={e => {
                   const t = TUNINGS.find(t => t.name === e.target.value);
@@ -114,6 +115,7 @@ export function ChordBuilderTab({
             <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Capo</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
               <select
+                aria-label="Capo"
                 value={capo}
                 onChange={e => onCapoChange(Number(e.target.value))}
                 style={{ ...SELECT_STYLE, width: '100%' }}

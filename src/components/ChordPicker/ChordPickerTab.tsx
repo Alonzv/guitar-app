@@ -273,6 +273,7 @@ export function ChordPickerTab({
         <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <select
+            aria-label="Tuning"
             value={tuningName}
             onChange={e => handleTuningChange(e.target.value)}
             style={SELECT_STYLE}

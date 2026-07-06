@@ -797,11 +797,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 10 }}>
         <p style={LABEL_STYLE}>Scale / Mode <span style={{ color: T.coral }}>*</span></p>
         <div style={{ display: 'flex', gap: 8 }}>
-          <select value={scaleRoot} onChange={e => setScaleRoot(e.target.value)} style={selectStyle}>
+          <select aria-label="Scale root" value={scaleRoot} onChange={e => setScaleRoot(e.target.value)} style={selectStyle}>
             <option value="">Root…</option>
             {SCALE_ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-          <select value={scaleType} onChange={e => setScaleType(e.target.value)} style={selectStyle}>
+          <select aria-label="Scale type" value={scaleType} onChange={e => setScaleType(e.target.value)} style={selectStyle}>
             {SCALE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>

@@ -816,6 +816,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
         <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Vibe</span>
         <div style={{ flex: 1, position: 'relative' }}>
           <select
+            aria-label="Vibe / genre"
             value={genre}
             onChange={e => setGenre(e.target.value as VoicingGenre)}
             style={{
