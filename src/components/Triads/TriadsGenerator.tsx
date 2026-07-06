@@ -3,7 +3,7 @@ import { Note as TonalNote } from '@tonaljs/tonal';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { playScale } from '../../utils/audioPlayback';
-import { T, card } from '../../theme';
+import { T, card, alpha } from '../../theme';
 import { TwoPane } from '../desktop/TwoPane';
 import type { Note } from '../../types/music';
 
@@ -386,7 +386,7 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
                   {activeLabels.length > 0 && (
                     <span style={{
                       fontSize: 10, fontWeight: 400, color: T.primary,
-                      background: T.primaryBg, border: `1px solid ${T.primary}55`,
+                      background: T.primaryBg, border: `1px solid ${alpha(T.primary, 33)}`,
                       padding: '1px 6px', borderRadius: 0,
                     }}>{activeLabels.join(' · ')}</span>
                   )}
@@ -479,7 +479,7 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
                   <span key={j} style={{
                     fontSize: 8, fontWeight: 400,
                     color:      DEGREE_COLORS[p.degree],
-                    background: `${DEGREE_COLORS[p.degree]}18`,
+                    background: alpha(DEGREE_COLORS[p.degree], 9),
                     padding: '1px 4px', borderRadius: 0,
                   }}>{fretToNote(p.string, p.fret)}</span>
                 ))}
@@ -518,7 +518,7 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
                         <span key={j} style={{
                           fontSize: 8, fontWeight: 400,
                           color:      DEGREE_COLORS[p.degree],
-                          background: `${DEGREE_COLORS[p.degree]}18`,
+                          background: alpha(DEGREE_COLORS[p.degree], 9),
                           padding: '1px 4px', borderRadius: 0,
                         }}>{fretToNote(p.string, p.fret)}</span>
                       ))}
@@ -598,8 +598,8 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
                 <span key={j} style={{
                   fontSize: 13, fontWeight: 800,
                   color:      DEGREE_COLORS[p.degree],
-                  background: `${DEGREE_COLORS[p.degree]}22`,
-                  border:     `1px solid ${DEGREE_COLORS[p.degree]}55`,
+                  background: alpha(DEGREE_COLORS[p.degree], 13),
+                  border:     `1px solid ${alpha(DEGREE_COLORS[p.degree], 33)}`,
                   padding: '4px 12px', borderRadius: 0,
                 }}>{fretToNote(p.string, p.fret)}</span>
               ))}

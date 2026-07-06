@@ -13,7 +13,7 @@ import { reharmonize, type ReharmonizeResult } from '../../utils/reharmonize';
 import { exportMidi } from '../../utils/midiExport';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import type { ReharmData } from '../../services/types';
-import { T, card } from '../../theme';
+import { T, card, alpha } from '../../theme';
 
 interface Props {
   chords: string[];
@@ -539,7 +539,7 @@ export function ReharmonizeTab({
                       <span style={{
                         padding: '5px 12px', borderRadius: 0,
                         background: T.secondaryBg,
-                        border: `1px solid ${T.secondary}44`,
+                        border: `1px solid ${alpha(T.secondary, 27)}`,
                         fontSize: 13, fontWeight: 400, color: T.text,
                       }}>
                         {c}

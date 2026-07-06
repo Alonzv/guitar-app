@@ -4,7 +4,7 @@ import { detectKey } from '../../utils/progressionHelper';
 import type { ChordInProgression } from '../../types/music';
 import { IconSearch } from '../Icons';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
-import { T, card } from '../../theme';
+import { T, card, alpha } from '../../theme';
 
 interface Props {
   progression: ChordInProgression[];
@@ -145,7 +145,7 @@ export function ChordAnalyzerTab({ progression, desktop }: Props) {
               padding: '2px 6px', borderRadius: 0, fontSize: 10, fontWeight: 600,
               background: i === 0 ? T.primaryBg : T.bgInput,
               color: i === 0 ? T.primary : T.textMuted,
-              border: i === 0 ? `1px solid ${T.primary}44` : `1px solid ${T.border}`,
+              border: i === 0 ? `1px solid ${alpha(T.primary, 27)}` : `1px solid ${T.border}`,
             }}>{note}</span>
           ))}
         </div>
