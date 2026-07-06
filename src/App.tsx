@@ -1,31 +1,36 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 
 // ── Panel components ───────────────────────────────────────────────────────
-import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
+// Only the initial view (Chords → By Name) is eager; every other panel is
+// code-split and loads on demand — each is rendered inside an ErrorBoundary,
+// which doubles as the Suspense boundary (shows TabLoader while the chunk
+// downloads). This keeps the initial JS bundle small for a fast mobile load.
 import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
-import { ChordAnalyzerTab }  from './components/ChordBuilder/ChordAnalyzerTab';
-import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 
-import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
-import { TriadsGenerator }   from './components/Triads/TriadsGenerator';
-import { IntervalsTab }      from './components/Intervals/IntervalsTab';
-import { WheelTab }          from './components/Tools/WheelTab';
+const ChordBuilderTab  = lazy(() => import('./components/ChordBuilder/ChordBuilderTab').then(m => ({ default: m.ChordBuilderTab })));
+const ChordAnalyzerTab = lazy(() => import('./components/ChordBuilder/ChordAnalyzerTab').then(m => ({ default: m.ChordAnalyzerTab })));
+const TargetNoteTab    = lazy(() => import('./components/Chords/TargetNoteTab').then(m => ({ default: m.TargetNoteTab })));
 
-import { VoicingsTab }       from './components/Voicings/VoicingsTab';
+const ScaleExplorer    = lazy(() => import('./components/ScalePanel/ScaleExplorer').then(m => ({ default: m.ScaleExplorer })));
+const TriadsGenerator  = lazy(() => import('./components/Triads/TriadsGenerator').then(m => ({ default: m.TriadsGenerator })));
+const IntervalsTab     = lazy(() => import('./components/Intervals/IntervalsTab').then(m => ({ default: m.IntervalsTab })));
+const WheelTab         = lazy(() => import('./components/Tools/WheelTab').then(m => ({ default: m.WheelTab })));
 
-import { Tuner }             from './components/Tools/Tuner';
-import { Metronome }         from './components/Tools/Metronome';
+const VoicingsTab      = lazy(() => import('./components/Voicings/VoicingsTab').then(m => ({ default: m.VoicingsTab })));
 
-import { TabBuilder }        from './components/Tools/TabBuilder';
-import { AudioToTab }        from './components/Tools/AudioToTab';
+const Tuner            = lazy(() => import('./components/Tools/Tuner').then(m => ({ default: m.Tuner })));
+const Metronome        = lazy(() => import('./components/Tools/Metronome').then(m => ({ default: m.Metronome })));
+
+const TabBuilder       = lazy(() => import('./components/Tools/TabBuilder').then(m => ({ default: m.TabBuilder })));
+const AudioToTab       = lazy(() => import('./components/Tools/AudioToTab').then(m => ({ default: m.AudioToTab })));
 import { WorkspacePanel }    from './components/Workspace/WorkspacePanel';
 import { WorkspaceOverlay }  from './components/Workspace/WorkspaceOverlay';
 
 // ── Electron-only ──────────────────────────────────────────────────────────
-import { TheoryTab }   from './components/TheoryTab';
-import { ToolsTab }    from './components/Tools/ToolsTab';
+const TheoryTab = lazy(() => import('./components/TheoryTab').then(m => ({ default: m.TheoryTab })));
+const ToolsTab  = lazy(() => import('./components/Tools/ToolsTab').then(m => ({ default: m.ToolsTab })));
 
 // ── Shell ──────────────────────────────────────────────────────────────────
 import { SwipePager, Segment } from './components/SwipePager';

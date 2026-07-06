@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { T } from '../theme';
 import { IconWarn } from './Icons';
+import { TabLoader } from './TabLoader';
 
 interface State { hasError: boolean; error: Error | null }
 
@@ -19,7 +20,11 @@ export class ErrorBoundary extends React.Component<
   }
 
   render() {
-    if (!this.state.hasError) return this.props.children;
+    // Also the Suspense boundary for lazy-loaded (code-split) panels: while a
+    // tab's chunk downloads, show the TabLoader instead of blanking.
+    if (!this.state.hasError) {
+      return <Suspense fallback={<TabLoader />}>{this.props.children}</Suspense>;
+    }
     return (
       <div style={{
         padding: 32, textAlign: 'center',

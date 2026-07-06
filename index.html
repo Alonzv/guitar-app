@@ -14,6 +14,9 @@
          stale meta copy silently re-blocks anything the header allows — that
          exact drift once broke all Supabase auth/DB calls in production. -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- Start the primary wordmark font early so it isn't last in the request
+         chain (it sits behind the CSS otherwise). -->
+    <link rel="preload" as="font" type="font/woff2" href="/font/AzeretMono-latin.woff2" crossorigin />
     <!-- ScaleUp mark. SVG favicon is the master (crisp, light/dark tabs); PNGs
          are fallbacks. PWA manifest is injected by vite-plugin-pwa. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
