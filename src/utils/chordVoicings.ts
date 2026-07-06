@@ -1,6 +1,6 @@
 import { Chord as TonalChord, Note as TonalNote } from '@tonaljs/tonal';
 import type { FretPosition } from '../types/music';
-import { fretToNote, STRING_COUNT, FRET_COUNT, TUNINGS } from './musicTheory';
+import { fretToNote, STRING_COUNT, TUNINGS } from './musicTheory';
 
 function samePitch(a: string, b: string): boolean {
   const ca = TonalNote.chroma(a);
@@ -84,9 +84,13 @@ export function findChordVoicings(
   const allVoicings: FretPosition[][] = [];
   const seen = new Set<string>();
 
-  // Scan the FULL neck — never stop early
+  // Anchor windows up to the octave (fret 12) so we don't generate pure
+  // octave-duplicate shapes, but let a window extend to fret 15 so shapes that
+  // straddle the 12th fret (e.g. a C triad at 12–13) complete instead of being
+  // truncated and discarded. 12 + max 3-fret span = 15.
+  const UPPER_FRET = 15;
   for (let startFret = 0; startFret <= 12; startFret++) {
-    const windowMax = Math.min(startFret + 3, FRET_COUNT);
+    const windowMax = Math.min(startFret + 3, UPPER_FRET);
     const voicing: FretPosition[] = [];
 
     for (let s = 0; s < STRING_COUNT; s++) {

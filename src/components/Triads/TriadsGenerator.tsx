@@ -78,13 +78,15 @@ function getTriadNotes(root: string, intervals: [number, number, number]): [stri
   return intervals.map(i => CHROMATIC[(rootIdx + i) % 12]) as [string, string, string];
 }
 
-// Cap at fret 12 — nothing beyond that.
+// Scan to fret 15, not 12: a triad can straddle the 12th-fret octave (e.g. a C
+// shape at 12–13), and stopping at 12 drops the note above it so the whole
+// shape is discarded. 12 (anchor) + max 3-fret span = 15.
 function fretsForNote(stringIdx: number, note: string): number[] {
   const openMidi  = OPEN_MIDI[stringIdx];
   const targetPc  = CHROMATIC.indexOf(note);
   if (targetPc === -1) return [];
   const result: number[] = [];
-  for (let f = 1; f <= 12; f++) {
+  for (let f = 1; f <= 15; f++) {
     if ((openMidi + f) % 12 === targetPc) result.push(f);
   }
   return result;
