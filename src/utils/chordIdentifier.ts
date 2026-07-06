@@ -25,7 +25,7 @@ function chordTypePriority(suffix: string): number {
   if (s === 'dim7' || s === 'm7b5')                        return 2; // half-dim
   if (/^sus[24]?$/.test(s))                                return 2; // sus
   if (/^add|^[mM]?6$|^[mM]?9$/.test(s))                  return 3; // add/6/9
-  if (/[#b]/.test(s) && !s.startsWith('m') && s !== 'dim7') return 5; // altered
+  if (/[#b]/.test(s))                                      return 5; // altered (m#5, 7b9, …)
   return 4;
 }
 
@@ -34,9 +34,20 @@ function chordTypeScore(name: string): number {
   return chordTypePriority(name.slice(root.length));
 }
 
-// ── Ranking: non-slash → bass match → chord type → length ────────────────────
+// ── Ranking: exotic last → non-slash → bass match → chord type → length ──────
+// Altered/exotic names (m#5, 7b9, …) are demoted below everything else FIRST:
+// an inverted plain triad must beat an exotic name whose root merely coincides
+// with the bass. Without this, A-C#-E with C# in the bass was headlined
+// "Dbm#5" instead of "A" (and E-G-C showed as "Em#5" instead of "C"), because
+// no-slash + bass-match outranked how common the chord type is. The remaining
+// tiers keep their original order so equivalences like C6 vs Am7/C still
+// resolve to the non-slash root-position name.
 function rankNames(names: string[], bassNote?: string): string[] {
   return [...names].sort((a, b) => {
+    const aExotic = chordTypeScore(a) >= 5 ? 1 : 0;
+    const bExotic = chordTypeScore(b) >= 5 ? 1 : 0;
+    if (aExotic !== bExotic) return aExotic - bExotic;
+
     const aSlash = a.includes('/') ? 1 : 0;
     const bSlash = b.includes('/') ? 1 : 0;
     if (aSlash !== bSlash) return aSlash - bSlash;
