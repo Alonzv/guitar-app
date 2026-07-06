@@ -145,6 +145,13 @@ function shapeInArea(shape: PosDot[], area: FretArea): boolean {
   return minFret >= lo && minFret <= hi;
 }
 
+// Immutable toggle for Set-based multi-select filters.
+function toggleInSet<T>(set: Set<T>, value: T): Set<T> {
+  const next = new Set(set);
+  if (next.has(value)) next.delete(value); else next.add(value);
+  return next;
+}
+
 // ── Filter pill helper ────────────────────────────────────────────────────────
 function pill(active: boolean, onClick: () => void, label: string) {
   return (
@@ -163,10 +170,11 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
   const [root,               setRoot]               = useState<Note>('C');
   const [triadType,          setTriadType]          = useState<TriadType | null>(null);
   const [triadMenuOpen,      setTriadMenuOpen]      = useState(false);
-  const [selectedSet,        setSelectedSet]        = useState<number | null>(null);
+  // Multi-select filters — an empty Set means "All" (no restriction).
+  const [selectedSets,       setSelectedSets]       = useState<Set<number>>(new Set());
   const [displayMode,        setDisplayMode]        = useState<DisplayMode>('notes');
-  const [selectedInversion,  setSelectedInversion]  = useState<0 | 1 | 2 | null>(null);
-  const [selectedArea,       setSelectedArea]       = useState<FretArea>('all');
+  const [selectedInversions, setSelectedInversions] = useState<Set<0 | 1 | 2>>(new Set());
+  const [selectedAreas,      setSelectedAreas]      = useState<Set<Exclude<FretArea, 'all'>>>(new Set());
   const [expandedIdx,        setExpandedIdx]        = useState<number | null>(null);
   const [filtersOpen,        setFiltersOpen]        = useState(false);
   const [sortMode,           setSortMode]           = useState<SortMode>('strings');
@@ -185,9 +193,9 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
   // Flat ordered list of every visible card — drives the expand/navigate modal.
   const allVisibleCards = useMemo<ExpandedCard[]>(() => {
     if (!def) return [];
-    const sets      = selectedSet        !== null ? [selectedSet]        : [0, 1, 2, 3];
-    const inversions: (0|1|2)[] =
-      selectedInversion !== null ? [selectedInversion] : [0, 1, 2];
+    const sets       = selectedSets.size ? [0, 1, 2, 3].filter(i => selectedSets.has(i)) : [0, 1, 2, 3];
+    const inversions: (0 | 1 | 2)[] =
+      selectedInversions.size ? ([0, 1, 2] as const).filter(i => selectedInversions.has(i)) : [0, 1, 2];
 
     const cards: ExpandedCard[] = [];
     sets.forEach(setIdx => {
@@ -195,7 +203,10 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
       const shapes = allShapes[setIdx];
       inversions.forEach(inv => {
         const shape = shapes[inv];
-        if (!shape || !shapeInArea(shape, selectedArea)) return;
+        if (!shape) return;
+        // Empty area set = all positions; otherwise the shape must sit in one.
+        const areaOk = selectedAreas.size === 0 || [...selectedAreas].some(a => shapeInArea(shape, a));
+        if (!areaOk) return;
 
         const fretPositions = shape.map(p => ({ string: p.string, fret: p.fret }));
         const colors        = shape.map(p => DEGREE_COLORS[p.degree]);
@@ -220,7 +231,7 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
       });
     });
     return cards;
-  }, [allShapes, selectedSet, selectedInversion, selectedArea, displayMode, root, def]);
+  }, [allShapes, selectedSets, selectedInversions, selectedAreas, displayMode, root, def]);
 
   // Keep expandedIdx in bounds when filters change.
   const safeIdx      = expandedIdx !== null
@@ -265,7 +276,7 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
     return map;
   }, [allVisibleCards]);
 
-  const visibleSets = selectedSet !== null ? [selectedSet] : [0, 1, 2, 3];
+  const visibleSets = selectedSets.size ? [0, 1, 2, 3].filter(i => selectedSets.has(i)) : [0, 1, 2, 3];
 
   const triadsLeft = (
     <>
@@ -367,10 +378,10 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
 
       {(() => {
         const activeLabels = [
-          selectedSet       !== null  ? STRING_SETS[selectedSet].label      : null,
-          selectedInversion !== null  ? INV_SHORT_LABELS[selectedInversion] : null,
-          selectedArea      !== 'all' ? selectedArea                        : null,
-        ].filter(Boolean) as string[];
+          ...STRING_SETS.filter((_, i) => selectedSets.has(i)).map(ss => ss.label),
+          ...([0, 1, 2] as const).filter(i => selectedInversions.has(i)).map(i => INV_SHORT_LABELS[i]),
+          ...FRET_AREAS.filter(a => a.id !== 'all' && selectedAreas.has(a.id as Exclude<FretArea, 'all'>)).map(a => a.label),
+        ];
         return (
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
 
@@ -400,29 +411,31 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
                 <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: `1px solid ${T.border}` }}>
                   <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', paddingTop: 10 }}>
                     <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Strings:</span>
-                    {pill(selectedSet === null, () => setSelectedSet(null), 'All')}
+                    {pill(selectedSets.size === 0, () => setSelectedSets(new Set()), 'All')}
                     {STRING_SETS.map((ss, i) => pill(
-                      selectedSet === i,
-                      () => setSelectedSet(selectedSet === i ? null : i),
+                      selectedSets.has(i),
+                      () => setSelectedSets(s => toggleInSet(s, i)),
                       ss.label,
                     ))}
                   </div>
                   <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Inversion:</span>
-                    {pill(selectedInversion === null, () => setSelectedInversion(null), 'All')}
+                    {pill(selectedInversions.size === 0, () => setSelectedInversions(new Set()), 'All')}
                     {([0, 1, 2] as const).map(inv => pill(
-                      selectedInversion === inv,
-                      () => setSelectedInversion(selectedInversion === inv ? null : inv),
+                      selectedInversions.has(inv),
+                      () => setSelectedInversions(s => toggleInSet(s, inv)),
                       INV_SHORT_LABELS[inv],
                     ))}
                   </div>
                   <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Position:</span>
-                    {FRET_AREAS.map(a => pill(
-                      selectedArea === a.id,
-                      () => setSelectedArea(a.id),
-                      a.label,
-                    ))}
+                    {FRET_AREAS.map(a => a.id === 'all'
+                      ? pill(selectedAreas.size === 0, () => setSelectedAreas(new Set()), a.label)
+                      : pill(
+                          selectedAreas.has(a.id as Exclude<FretArea, 'all'>),
+                          () => setSelectedAreas(s => toggleInSet(s, a.id as Exclude<FretArea, 'all'>)),
+                          a.label,
+                        ))}
                   </div>
                 </div>
               )}
