@@ -172,7 +172,7 @@ export function ProgressionPanel({
                 fontSize: 11, cursor: canUndo ? 'pointer' : 'not-allowed', fontWeight: 400,
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}
-            >↩</button>
+            >Undo</button>
             <button
               onClick={onRedo}
               disabled={!canRedo}
@@ -183,7 +183,7 @@ export function ProgressionPanel({
                 fontSize: 11, cursor: canRedo ? 'pointer' : 'not-allowed', fontWeight: 400,
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}
-            >↪</button>
+            >Redo</button>
             <button
               onClick={handleCopy}
               style={{
