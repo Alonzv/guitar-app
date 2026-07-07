@@ -233,6 +233,8 @@ export default function App() {
 
   const handleTabChange = (t: number) => { setPagerTab(t); writeLS('scaleup_pager_tab', String(t)); };
   const handleChordsSegChange   = (s: string) => { setChordsSegment(s as ChordsSub);   writeLS('scaleup_seg_chords',   s); };
+  // Logo click → home base: Chords / By Name.
+  const handleLogoClick = () => { handleTabChange(0); handleChordsSegChange('finder'); };
   const handleScalesSegChange   = (s: string) => { setScalesSegment(s as ScalesSub);   writeLS('scaleup_seg_scales',   s); };
   const handleVoicingsSegChange = (s: string) => { setVoicingsSegment(s as VoicingsSub); writeLS('scaleup_seg_voicings', s); };
   const handlePracticeSegChange = (s: string) => { setPracticeSegment(s as PracticeSub); writeLS('scaleup_seg_practice', s); };
@@ -449,6 +451,7 @@ export default function App() {
           onToggleDark={() => setDarkMode(d => !d)}
           userMenu={<UserMenu onOpenWorkspace={() => setWorkspaceOpen(true)} />}
           sharedBanner={sharedBanner}
+          onLogoClick={handleLogoClick}
         >
           {/* ── Panel 0: CHORDS ──────────────────────────────────────── */}
           {pagerTab === 0 && (
@@ -578,6 +581,7 @@ export default function App() {
         onToggleDark={() => setDarkMode(d => !d)}
         userMenu={<UserMenu compact onOpenWorkspace={() => setWorkspaceOpen(true)} />}
         sharedBanner={sharedBanner}
+        onLogoClick={handleLogoClick}
       >
 
         {/* ── Panel 0: CHORDS ─────────────────────────────────────────────── */}

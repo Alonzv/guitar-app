@@ -11,6 +11,7 @@ interface Props {
   onToggleDark: () => void;
   userMenu?: React.ReactNode;
   sharedBanner?: React.ReactNode;
+  onLogoClick?: () => void;
   children: React.ReactNode;
 }
 
@@ -18,6 +19,7 @@ export function DesktopShell({
   tab, onTabChange,
   darkMode, onToggleDark,
   userMenu, sharedBanner,
+  onLogoClick,
   children,
 }: Props) {
   return (
@@ -35,9 +37,17 @@ export function DesktopShell({
         backgroundColor: T.bgDeep, flexShrink: 0,
       }}>
 
-        {/* Left: mark + wordmark lockup. Mark sized to the wordmark cap-height
-            so the tallest bar aligns with the top of "ScaleUp". */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Left: mark + wordmark lockup. Clickable → Chords / By Name.
+            Kept a <span> (not <button>) so the global uppercase button style
+            doesn't turn "ScaleUp" into "SCALEUP". */}
+        <span
+          onClick={onLogoClick}
+          role={onLogoClick ? 'button' : undefined}
+          tabIndex={onLogoClick ? 0 : undefined}
+          aria-label={onLogoClick ? 'ScaleUp — go to Chords, By Name' : undefined}
+          onKeyDown={onLogoClick ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLogoClick(); } }) : undefined}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: onLogoClick ? 'pointer' : 'default' }}
+        >
           <BrandMark size={18} />
           <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 19, letterSpacing: '-0.045em', lineHeight: 1 }}>
             <span style={{ color: T.text }}>Scale</span>

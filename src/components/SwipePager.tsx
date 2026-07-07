@@ -49,6 +49,7 @@ interface SwipePagerProps {
   onToggleDark: () => void;
   userMenu?: React.ReactNode;
   sharedBanner?: React.ReactNode;
+  onLogoClick?: () => void;
   children: React.ReactNode;
 }
 
@@ -58,7 +59,7 @@ const TITLE_W = 150; // px per title cell
 export function SwipePager({
   tab, onTabChange, tabTitles,
   darkMode, onToggleDark,
-  userMenu, sharedBanner, children,
+  userMenu, sharedBanner, onLogoClick, children,
 }: SwipePagerProps) {
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -157,7 +158,14 @@ export function SwipePager({
         backgroundColor: T.bgDeep,
         flexShrink: 0,
       }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span
+          onClick={onLogoClick}
+          role={onLogoClick ? 'button' : undefined}
+          tabIndex={onLogoClick ? 0 : undefined}
+          aria-label={onLogoClick ? 'ScaleUp — go to Chords, By Name' : undefined}
+          onKeyDown={onLogoClick ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLogoClick(); } }) : undefined}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: onLogoClick ? 'pointer' : 'default' }}
+        >
           <BrandMark size={16} />
           <span style={{ fontFamily: 'var(--gc-font)', fontWeight: 600, fontSize: 17, letterSpacing: '-0.045em', lineHeight: 1 }}>
             <span style={{ color: T.text }}>Scale</span>
