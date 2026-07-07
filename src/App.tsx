@@ -1,73 +1,37 @@
-import { useState, useEffect, useRef, useCallback, lazy } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 
 // ── Panel components ───────────────────────────────────────────────────────
-// Only the initial view (Chords → By Name) is eager; every other panel is
-// code-split and loads on demand — each is rendered inside an ErrorBoundary,
-// which doubles as the Suspense boundary (shows TabLoader while the chunk
-// downloads). This keeps the initial JS bundle small for a fast mobile load.
+// Statically imported (single bundle). Tab-level code-splitting was tried for
+// a smaller initial download, but a hashed chunk going 404 after a redeploy —
+// amplified by the PWA service worker serving a stale index.html — broke every
+// tab mid-session. Stability wins: one bundle can never hit a missing chunk.
+// (The large TensorFlow dependency stays lazy-loaded inside audioToTab, which
+// is an isolated leaf that never blocks a whole tab.)
 import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
+import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
+import { ChordAnalyzerTab }  from './components/ChordBuilder/ChordAnalyzerTab';
+import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 
-// A dynamic import can fail with "Importing a module script failed" when a
-// redeploy replaces the hashed chunk filenames while the page is still open —
-// the old URL now 404s. The PWA service worker makes it worse: it can keep
-// serving a stale index.html from cache, so a plain reload still points at the
-// dead chunks. Recover by nuking the SW + all caches and reloading once, which
-// forces a fresh fetch of index.html + current chunk names from the server.
-// Guarded with sessionStorage so a genuinely broken chunk can't loop; cleared
-// on the first successful load.
-const RELOAD_KEY = 'scu_chunk_reloaded';
-async function purgeAndReload(): Promise<void> {
-  try {
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-  } catch { /* best effort — reload anyway */ }
-  window.location.reload();
-}
-// Wraps a dynamic import(): on a chunk-load failure, purge the SW + caches and
-// reload once (guarded) to recover from a stale deploy; passes the module
-// through unchanged so each lazy() below keeps its component's exact prop types.
-function withReload<M>(p: Promise<M>): Promise<M> {
-  return p.then(
-    m => { sessionStorage.removeItem(RELOAD_KEY); return m; },
-    async (err) => {
-      if (sessionStorage.getItem(RELOAD_KEY)) throw err;
-      sessionStorage.setItem(RELOAD_KEY, '1');
-      await purgeAndReload();
-      return new Promise<M>(() => {}); // never resolves; the page is reloading
-    },
-  );
-}
+import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
+import { TriadsGenerator }   from './components/Triads/TriadsGenerator';
+import { IntervalsTab }      from './components/Intervals/IntervalsTab';
+import { WheelTab }          from './components/Tools/WheelTab';
 
-const ChordBuilderTab  = lazy(() => withReload(import('./components/ChordBuilder/ChordBuilderTab')).then(m => ({ default: m.ChordBuilderTab })));
-const ChordAnalyzerTab = lazy(() => withReload(import('./components/ChordBuilder/ChordAnalyzerTab')).then(m => ({ default: m.ChordAnalyzerTab })));
-const TargetNoteTab    = lazy(() => withReload(import('./components/Chords/TargetNoteTab')).then(m => ({ default: m.TargetNoteTab })));
+import { VoicingsTab }       from './components/Voicings/VoicingsTab';
 
-const ScaleExplorer    = lazy(() => withReload(import('./components/ScalePanel/ScaleExplorer')).then(m => ({ default: m.ScaleExplorer })));
-const TriadsGenerator  = lazy(() => withReload(import('./components/Triads/TriadsGenerator')).then(m => ({ default: m.TriadsGenerator })));
-const IntervalsTab     = lazy(() => withReload(import('./components/Intervals/IntervalsTab')).then(m => ({ default: m.IntervalsTab })));
-const WheelTab         = lazy(() => withReload(import('./components/Tools/WheelTab')).then(m => ({ default: m.WheelTab })));
+import { Tuner }             from './components/Tools/Tuner';
+import { Metronome }         from './components/Tools/Metronome';
 
-const VoicingsTab      = lazy(() => withReload(import('./components/Voicings/VoicingsTab')).then(m => ({ default: m.VoicingsTab })));
-
-const Tuner            = lazy(() => withReload(import('./components/Tools/Tuner')).then(m => ({ default: m.Tuner })));
-const Metronome        = lazy(() => withReload(import('./components/Tools/Metronome')).then(m => ({ default: m.Metronome })));
-
-const TabBuilder       = lazy(() => withReload(import('./components/Tools/TabBuilder')).then(m => ({ default: m.TabBuilder })));
-const AudioToTab       = lazy(() => withReload(import('./components/Tools/AudioToTab')).then(m => ({ default: m.AudioToTab })));
+import { TabBuilder }        from './components/Tools/TabBuilder';
+import { AudioToTab }        from './components/Tools/AudioToTab';
 import { WorkspacePanel }    from './components/Workspace/WorkspacePanel';
 import { WorkspaceOverlay }  from './components/Workspace/WorkspaceOverlay';
 
 // ── Electron-only ──────────────────────────────────────────────────────────
-const TheoryTab = lazy(() => withReload(import('./components/TheoryTab')).then(m => ({ default: m.TheoryTab })));
-const ToolsTab  = lazy(() => withReload(import('./components/Tools/ToolsTab')).then(m => ({ default: m.ToolsTab })));
+import { TheoryTab }   from './components/TheoryTab';
+import { ToolsTab }    from './components/Tools/ToolsTab';
 
 // ── Shell ──────────────────────────────────────────────────────────────────
 import { SwipePager, Segment } from './components/SwipePager';
