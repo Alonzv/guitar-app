@@ -84,7 +84,7 @@ export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop })
               )}
               <button onClick={() => onOpenInBuilder(it.chords)} style={{
                 marginTop: 4, width: '100%', padding: '7px 0', borderRadius: 0, cursor: 'pointer',
-                background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondaryFaint}`,
+                background: T.primary, color: T.white, border: 'none',
                 fontSize: 11, fontFamily: 'inherit', fontWeight: 400,
                 textTransform: 'uppercase', letterSpacing: '-0.02em',
                 borderLeft: `3px solid ${PROG_ACCENT}`,
@@ -113,7 +113,7 @@ export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop })
               </div>
               <button onClick={() => onOpenInBuilder(it.chords)} style={{
                 padding: '8px 12px', borderRadius: 0, cursor: 'pointer', flexShrink: 0,
-                background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondaryFaint}`,
+                background: T.primary, color: T.white, border: 'none',
                 fontSize: 11, fontFamily: 'inherit', fontWeight: 400,
                 textTransform: 'uppercase', letterSpacing: '-0.02em',
                 borderLeft: '3px solid var(--gc-bar-color)',

@@ -94,7 +94,7 @@ export const VoicingPathsSection: React.FC<{ desktop?: boolean }> = ({ desktop }
 
           <button onClick={() => open(it)} style={{
             width: '100%', padding: '8px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondaryFaint}`,
+            background: T.primary, color: T.white, border: 'none',
             fontSize: 11.5, fontFamily: 'inherit', fontWeight: 400,
             textTransform: 'uppercase', letterSpacing: '-0.02em',
             borderLeft: '3px solid var(--gc-bar-color)',
