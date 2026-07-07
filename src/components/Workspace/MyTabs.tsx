@@ -75,6 +75,7 @@ export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
               { label: 'Rename',          icon: '✎', onClick: () => setRenaming(it) },
               { label: 'Duplicate',       icon: '⧉', onClick: () => duplicate(it) },
               { label: 'Export PDF',      icon: '⤓', onClick: () => exportPdf(it) },
+              { label: 'Export MIDI',     icon: '⤓', onClick: async () => { const { exportTabMidi } = await import('../../utils/midiExport'); exportTabMidi(it.content.grid ?? [], it.name); } },
               { label: 'Delete',          icon: '', onClick: () => remove(it), danger: true },
             ]} />
           </div>

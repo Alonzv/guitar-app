@@ -189,6 +189,36 @@ export function exportNotesMidi(notes: TimedNote[], filename = 'transcription.mi
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+// Standard-tuning open-string MIDI by tab row — row 0 = high e … row 5 = low E,
+// matching the ['e','B','G','D','A','E'] grid layout used across the app.
+const ROW_OPEN_MIDI = [64, 59, 55, 50, 45, 40];
+
+/**
+ * Convert a tab grid ({ fret }[row][col]) to timed notes and download as MIDI.
+ * Each column is one step; a non-empty fret on row r becomes the note
+ * ROW_OPEN_MIDI[r] + fret. Used for saved tabs, audio tabs and harmonizations.
+ */
+export function exportTabMidi(
+  grid: { fret: string }[][],
+  filename = 'tab',
+  bpm = 120,
+): void {
+  const STEP = 0.5; // seconds per column
+  const notes: TimedNote[] = [];
+  const cols = grid.reduce((m, row) => Math.max(m, row.length), 0);
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < grid.length && r < ROW_OPEN_MIDI.length; r++) {
+      const raw = grid[r]?.[c]?.fret;
+      if (raw == null || raw === '') continue;
+      const f = parseInt(raw, 10);
+      if (Number.isNaN(f)) continue;
+      notes.push({ startTime: c * STEP, endTime: (c + 1) * STEP, midiNote: ROW_OPEN_MIDI[r] + f });
+    }
+  }
+  const safe = filename.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'tab';
+  exportNotesMidi(notes, `${safe}.mid`, bpm);
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function exportMidi(chords: string[], filename = 'progression', bpm = 120): void {

@@ -48,12 +48,18 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     setRenaming(null);
   };
 
+  const parseGrid = (it: AudioTab) => (it.tab_content ?? '')
+    .split('\n')
+    .map(line => line.split('').map(ch => ({ fret: ch.trim() })));
+
   const exportPdf = async (it: AudioTab) => {
-    const grid = (it.tab_content ?? '')
-      .split('\n')
-      .map(line => line.split('').map(ch => ({ fret: ch.trim() })));
     const { exportTabPDF } = await import('../../utils/pdfExport');
-    await exportTabPDF(it.name, 'Audio transcription', grid, [], ['e','B','G','D','A','E'], 0);
+    await exportTabPDF(it.name, 'Audio transcription', parseGrid(it), [], ['e','B','G','D','A','E'], 0);
+  };
+
+  const exportMidiFile = async (it: AudioTab) => {
+    const { exportTabMidi } = await import('../../utils/midiExport');
+    exportTabMidi(parseGrid(it), it.name);
   };
 
   return (
@@ -83,6 +89,7 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                   { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
                   { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
                   { label: 'Export PDF',icon: '⤓', onClick: () => exportPdf(it) },
+                  { label: 'Export MIDI',icon: '⤓', onClick: () => exportMidiFile(it) },
                   { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
                 ]} />
               </div>
@@ -102,6 +109,7 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                 { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
                 { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
                 { label: 'Export PDF',icon: '⤓', onClick: () => exportPdf(it) },
+                { label: 'Export MIDI',icon: '⤓', onClick: () => exportMidiFile(it) },
                 { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
               ]} />
             </>
