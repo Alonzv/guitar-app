@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback, lazy } from 'react';
-import type { ComponentType, LazyExoticComponent } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
 import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 
@@ -12,51 +11,63 @@ import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
 
 // A dynamic import can fail with "Importing a module script failed" when a
 // redeploy replaces the hashed chunk filenames while the page is still open —
-// the old URL now 404s. Recover by reloading once (which fetches the fresh
-// index.html + chunk names); guard with sessionStorage so a genuinely broken
-// chunk can't loop. Cleared on the first successful load.
+// the old URL now 404s. The PWA service worker makes it worse: it can keep
+// serving a stale index.html from cache, so a plain reload still points at the
+// dead chunks. Recover by nuking the SW + all caches and reloading once, which
+// forces a fresh fetch of index.html + current chunk names from the server.
+// Guarded with sessionStorage so a genuinely broken chunk can't loop; cleared
+// on the first successful load.
 const RELOAD_KEY = 'scu_chunk_reloaded';
-function lazyPanel<T extends ComponentType<never>>(
-  factory: () => Promise<Record<string, T>>, name: string,
-): LazyExoticComponent<T> {
-  return lazy(async () => {
-    try {
-      const mod = await factory();
-      sessionStorage.removeItem(RELOAD_KEY);
-      return { default: mod[name] };
-    } catch (err) {
-      if (!sessionStorage.getItem(RELOAD_KEY)) {
-        sessionStorage.setItem(RELOAD_KEY, '1');
-        window.location.reload();
-        return new Promise<{ default: T }>(() => {}); // never resolves; page reloads
-      }
-      throw err;
+async function purgeAndReload(): Promise<void> {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
     }
-  });
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch { /* best effort — reload anyway */ }
+  window.location.reload();
+}
+// Wraps a dynamic import(): on a chunk-load failure, purge the SW + caches and
+// reload once (guarded) to recover from a stale deploy; passes the module
+// through unchanged so each lazy() below keeps its component's exact prop types.
+function withReload<M>(p: Promise<M>): Promise<M> {
+  return p.then(
+    m => { sessionStorage.removeItem(RELOAD_KEY); return m; },
+    async (err) => {
+      if (sessionStorage.getItem(RELOAD_KEY)) throw err;
+      sessionStorage.setItem(RELOAD_KEY, '1');
+      await purgeAndReload();
+      return new Promise<M>(() => {}); // never resolves; the page is reloading
+    },
+  );
 }
 
-const ChordBuilderTab  = lazyPanel(() => import('./components/ChordBuilder/ChordBuilderTab'), 'ChordBuilderTab');
-const ChordAnalyzerTab = lazyPanel(() => import('./components/ChordBuilder/ChordAnalyzerTab'), 'ChordAnalyzerTab');
-const TargetNoteTab    = lazyPanel(() => import('./components/Chords/TargetNoteTab'), 'TargetNoteTab');
+const ChordBuilderTab  = lazy(() => withReload(import('./components/ChordBuilder/ChordBuilderTab')).then(m => ({ default: m.ChordBuilderTab })));
+const ChordAnalyzerTab = lazy(() => withReload(import('./components/ChordBuilder/ChordAnalyzerTab')).then(m => ({ default: m.ChordAnalyzerTab })));
+const TargetNoteTab    = lazy(() => withReload(import('./components/Chords/TargetNoteTab')).then(m => ({ default: m.TargetNoteTab })));
 
-const ScaleExplorer    = lazyPanel(() => import('./components/ScalePanel/ScaleExplorer'), 'ScaleExplorer');
-const TriadsGenerator  = lazyPanel(() => import('./components/Triads/TriadsGenerator'), 'TriadsGenerator');
-const IntervalsTab     = lazyPanel(() => import('./components/Intervals/IntervalsTab'), 'IntervalsTab');
-const WheelTab         = lazyPanel(() => import('./components/Tools/WheelTab'), 'WheelTab');
+const ScaleExplorer    = lazy(() => withReload(import('./components/ScalePanel/ScaleExplorer')).then(m => ({ default: m.ScaleExplorer })));
+const TriadsGenerator  = lazy(() => withReload(import('./components/Triads/TriadsGenerator')).then(m => ({ default: m.TriadsGenerator })));
+const IntervalsTab     = lazy(() => withReload(import('./components/Intervals/IntervalsTab')).then(m => ({ default: m.IntervalsTab })));
+const WheelTab         = lazy(() => withReload(import('./components/Tools/WheelTab')).then(m => ({ default: m.WheelTab })));
 
-const VoicingsTab      = lazyPanel(() => import('./components/Voicings/VoicingsTab'), 'VoicingsTab');
+const VoicingsTab      = lazy(() => withReload(import('./components/Voicings/VoicingsTab')).then(m => ({ default: m.VoicingsTab })));
 
-const Tuner            = lazyPanel(() => import('./components/Tools/Tuner'), 'Tuner');
-const Metronome        = lazyPanel(() => import('./components/Tools/Metronome'), 'Metronome');
+const Tuner            = lazy(() => withReload(import('./components/Tools/Tuner')).then(m => ({ default: m.Tuner })));
+const Metronome        = lazy(() => withReload(import('./components/Tools/Metronome')).then(m => ({ default: m.Metronome })));
 
-const TabBuilder       = lazyPanel(() => import('./components/Tools/TabBuilder'), 'TabBuilder');
-const AudioToTab       = lazyPanel(() => import('./components/Tools/AudioToTab'), 'AudioToTab');
+const TabBuilder       = lazy(() => withReload(import('./components/Tools/TabBuilder')).then(m => ({ default: m.TabBuilder })));
+const AudioToTab       = lazy(() => withReload(import('./components/Tools/AudioToTab')).then(m => ({ default: m.AudioToTab })));
 import { WorkspacePanel }    from './components/Workspace/WorkspacePanel';
 import { WorkspaceOverlay }  from './components/Workspace/WorkspaceOverlay';
 
 // ── Electron-only ──────────────────────────────────────────────────────────
-const TheoryTab = lazyPanel(() => import('./components/TheoryTab'), 'TheoryTab');
-const ToolsTab  = lazyPanel(() => import('./components/Tools/ToolsTab'), 'ToolsTab');
+const TheoryTab = lazy(() => withReload(import('./components/TheoryTab')).then(m => ({ default: m.TheoryTab })));
+const ToolsTab  = lazy(() => withReload(import('./components/Tools/ToolsTab')).then(m => ({ default: m.ToolsTab })));
 
 // ── Shell ──────────────────────────────────────────────────────────────────
 import { SwipePager, Segment } from './components/SwipePager';
