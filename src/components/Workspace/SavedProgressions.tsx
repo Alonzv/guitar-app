@@ -93,6 +93,7 @@ export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop })
                 { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
                 { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
                 { label: 'Export PDF',icon: '⤓', onClick: async () => { const { exportProgressionPDF } = await import('../../utils/pdfExport'); await exportProgressionPDF(it.name, it.chords); } },
+                { label: 'Export MIDI', icon: '⤓', onClick: async () => { const { exportMidi } = await import('../../utils/midiExport'); exportMidi(it.chords.map(c => c.chord.name), it.name); } },
                 { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
               ]} />
             </>

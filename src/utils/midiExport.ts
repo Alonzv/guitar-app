@@ -191,7 +191,7 @@ export function exportNotesMidi(notes: TimedNote[], filename = 'transcription.mi
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export function exportMidi(chords: string[], bpm = 120): void {
+export function exportMidi(chords: string[], filename = 'progression', bpm = 120): void {
   const PPQ = 480;
 
   const trackData = buildTrack(chords, bpm);
@@ -216,9 +216,10 @@ export function exportMidi(chords: string[], bpm = 120): void {
   const blob = new Blob([allBytes], { type: 'audio/midi' });
   const url = URL.createObjectURL(blob);
 
+  const safe = filename.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'progression';
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'reharmonized.mid';
+  a.download = `${safe}.mid`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -69,7 +69,7 @@ export const ReharmsSection: React.FC<{ desktop?: boolean }> = ({ desktop }) => 
               { label: 'Open in Reharm', icon: '↗', onClick: () => open(it) },
               { label: 'Rename',         icon: '✎', onClick: () => setRenaming(it) },
               { label: 'Duplicate',      icon: '⧉', onClick: () => duplicate(it) },
-              { label: 'Export MIDI',    icon: '⤓', onClick: () => exportMidi(it.result.chords) },
+              { label: 'Export MIDI',    icon: '⤓', onClick: () => exportMidi(it.result.chords, it.name) },
               { label: 'Delete',         icon: '', onClick: () => remove(it), danger: true },
             ]} />
           </div>
