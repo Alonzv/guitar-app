@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import type { ChordInProgression, FretPosition, Tuning } from '../../types/music';
 import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
+import { VoicingViewer } from './VoicingViewer';
 import { ChordStructure } from '../ChordBuilder/ChordStructure';
 import { ProgressionPanel } from '../ChordBuilder/ProgressionPanel';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
-import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
-import { T, card, btn } from '../../theme';
+import { T, card } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
 
 interface Props {
@@ -101,8 +101,8 @@ export function ChordPickerTab({
   const [selectedRoot,      setSelectedRoot]      = useState<string | null>(null);
   const [selectedTriad,     setSelectedTriad]     = useState<string | null>(null);
   const [selectedExtension, setSelectedExtension] = useState<string>('');
-  const [pickerDots,        setPickerDots]        = useState<FretPosition[]>([]);
-  const [selectedVoicingIndex, setSelectedVoicingIndex] = useState<number | undefined>(undefined);
+  // Index of the variation shown enlarged in the VoicingViewer popover, or null.
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [tuningName, setTuningName] = useState<string>(tuningProp?.name ?? TUNINGS[0].name);
   const tuningObj = TUNINGS.find(t => t.name === tuningName) ?? TUNINGS[0];
   const tuning = tuningObj.notes;
@@ -120,49 +120,23 @@ export function ChordPickerTab({
     return findChordVoicings(chordName, 6, tuning);
   }, [chordName, tuning]);
 
-  const handleTuningChange = (name: string) => {
-    setTuningName(name);
-    setPickerDots([]);
-    setSelectedVoicingIndex(undefined);
-  };
-
-  const handleRootSelect = (root: string) => {
-    setSelectedRoot(root);
-    setPickerDots([]);
-    setSelectedVoicingIndex(undefined);
-  };
-
+  const handleTuningChange = (name: string) => { setTuningName(name); setViewerIndex(null); };
+  const handleRootSelect = (root: string) => { setSelectedRoot(root); setViewerIndex(null); };
   const handleTriadSelect = (key: string) => {
     setSelectedTriad(key);
     setSelectedExtension(''); // reset extension when triad changes
-    setPickerDots([]);
-    setSelectedVoicingIndex(undefined);
+    setViewerIndex(null);
+  };
+  const handleExtensionSelect = (key: string) => { setSelectedExtension(key); setViewerIndex(null); };
+
+  // Add a specific voicing (from the enlarged viewer) straight to the progression.
+  const addVoicing = (voicing: FretPosition[]) => {
+    const found = identifyChord(voicing, tuning);
+    const chord = found.length > 0 ? found[0] : { name: chordName ?? 'Unknown', notes: [], aliases: [] };
+    onAddToProgression({ id: `chord-${Date.now()}`, chord, fretPositions: [...voicing] });
+    setViewerIndex(null);
   };
 
-  const handleExtensionSelect = (key: string) => {
-    setSelectedExtension(key);
-    setPickerDots([]);
-    setSelectedVoicingIndex(undefined);
-  };
-
-  const handleVoicingSelect = (voicing: FretPosition[], index: number) => {
-    setPickerDots(voicing);
-    setSelectedVoicingIndex(index);
-  };
-
-  const handleAdd = () => {
-    const chords = identifyChord(pickerDots, tuning);
-    const chord = chords.length > 0 ? chords[0] : {
-      name: chordName ?? 'Unknown',
-      notes: [],
-      aliases: [],
-    };
-    onAddToProgression({ id: `chord-${Date.now()}`, chord, fretPositions: [...pickerDots] });
-    setPickerDots([]);
-    setSelectedVoicingIndex(undefined);
-  };
-
-  const canAdd = pickerDots.length >= 2;
   const displayName = chordName ? formatChordName(chordName) : null;
   const validExt = selectedTriad ? (VALID_EXTENSIONS[selectedTriad] ?? ['']) : [];
 
@@ -303,30 +277,8 @@ export function ChordPickerTab({
         </div>
       )}
 
-      {/* ── Add to Progression — only once a voicing is selected ── */}
-      {chordName && canAdd && (
-        <button
-          onClick={handleAdd}
-          style={{ ...btn.primary(false), width: '100%' }}
-        >
-          + Add {displayName} to Progression
-        </button>
-      )}
-      {chordName && canAdd && (
-        <SaveToLibraryButton
-          style={{ width: '100%', justifyContent: 'center' }}
-          label="Save voicing to Library"
-          getPayload={() => {
-            const found = identifyChord(pickerDots, tuning);
-            const chord = found.length > 0 ? found[0] : { name: chordName, notes: [], aliases: [] };
-            return {
-              kind: 'progression',
-              name: chordName,
-              chords: [{ id: `chord-${Date.now()}`, chord, fretPositions: [...pickerDots] }],
-            };
-          }}
-        />
-      )}
+      {/* Add / Save now live inside the enlarged VoicingViewer popover — open
+          it by tapping a variation below. */}
     </div>
   );
 
@@ -336,15 +288,14 @@ export function ChordPickerTab({
         <>
           {desktop && (
             <p style={{ margin: 0, fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-              Voicing Variations · Tap to Load
+              Voicing Variations · Tap to Enlarge
             </p>
           )}
           <VoicingVariations
             voicings={voicings}
-            selectedIndex={selectedVoicingIndex}
             chordName={chordName ?? undefined}
             tuning={tuning}
-            onSelect={handleVoicingSelect}
+            onSelect={(_, i) => setViewerIndex(i)}
             gridColumns={desktop ? 3 : undefined}
           />
         </>
@@ -361,6 +312,18 @@ export function ChordPickerTab({
     </div>
   );
 
+  const viewer = viewerIndex != null && chordName && voicings[viewerIndex] ? (
+    <VoicingViewer
+      voicings={voicings}
+      index={viewerIndex}
+      chordName={displayName ?? chordName}
+      tuning={tuningObj}
+      onNav={setViewerIndex}
+      onAdd={addVoicing}
+      onClose={() => setViewerIndex(null)}
+    />
+  ) : null;
+
   if (desktop) {
     return (
       <div style={{ marginTop: 18 }}>
@@ -371,6 +334,7 @@ export function ChordPickerTab({
         <div style={{ marginTop: 36, borderTop: `1px solid ${T.border}`, paddingTop: 24 }}>
           {progressionPanel}
         </div>
+        {viewer}
       </div>
     );
   }
@@ -380,6 +344,7 @@ export function ChordPickerTab({
       {builderPane}
       {voicingsPane}
       {progressionPanel}
+      {viewer}
     </div>
   );
 }
