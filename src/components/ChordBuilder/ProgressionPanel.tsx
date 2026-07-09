@@ -53,7 +53,7 @@ const LABEL_STYLE = {
 
 export function ProgressionPanel({
   progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
-  onReorderProgression, onTransposeProgression,
+  onReorderProgression,
   canUndo, canRedo, onUndo, onRedo,
   tuning, capo,
 }: Props) {
@@ -248,30 +248,6 @@ export function ProgressionPanel({
             boxSizing: 'border-box',
           }}
         />
-
-        {/* Transpose controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-            Transpose:
-          </span>
-          <button
-            onClick={() => onTransposeProgression(-1)}
-            style={{
-              width: 34, height: 34, borderRadius: 0, border: `1px solid ${T.border}`,
-              background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 400,
-              cursor: 'pointer', lineHeight: 1, borderLeft: '3px solid var(--gc-bar-color)',
-            }}
-          >−</button>
-          <span style={{ fontSize: 11, color: T.textMuted }}>semitone</span>
-          <button
-            onClick={() => onTransposeProgression(1)}
-            style={{
-              width: 34, height: 34, borderRadius: 0, border: `1px solid ${T.border}`,
-              background: T.bgInput, color: T.text, fontSize: 16, fontWeight: 400,
-              cursor: 'pointer', lineHeight: 1, borderLeft: '3px solid var(--gc-bar-color)',
-            }}
-          >+</button>
-        </div>
 
         {/* Clear All */}
         <button
