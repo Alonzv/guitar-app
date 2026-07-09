@@ -456,7 +456,7 @@ export default function App() {
           {/* ── Panel 0: CHORDS ──────────────────────────────────────── */}
           {pagerTab === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} />
+              <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} helpPrefix="chords" />
               <ErrorBoundary label="Chords">
                 {chordsSegment === 'builder' && (
                   <ChordBuilderTab
@@ -500,7 +500,7 @@ export default function App() {
           {/* ── Panel 1: SCALES ──────────────────────────────────────── */}
           {pagerTab === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} />
+              <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} helpPrefix="scales" />
               <ErrorBoundary label="Scales">
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
                 {scalesSegment === 'triads'    && <TriadsGenerator desktop />}
@@ -513,7 +513,7 @@ export default function App() {
           {/* ── Panel 2: VOICINGS ────────────────────────────────────── */}
           {pagerTab === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} />
+              <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
               <ErrorBoundary label="Voicings">
                 <VoicingsTab
                   desktop
@@ -546,7 +546,7 @@ export default function App() {
           {pagerTab === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <div style={{ maxWidth: 560 }}>
-                <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} />
+                <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} helpPrefix="studio" />
               </div>
               <ErrorBoundary label="Studio">
                 {studioSegment === 'tabbuilder' && <TabBuilder desktop />}
@@ -586,7 +586,7 @@ export default function App() {
 
         {/* ── Panel 0: CHORDS ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} />
+          <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} helpPrefix="chords" />
           <ErrorBoundary label="Chords">
             {chordsSegment === 'builder' && (
               <ChordBuilderTab
@@ -622,7 +622,7 @@ export default function App() {
 
         {/* ── Panel 1: SCALES ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} />
+          <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} helpPrefix="scales" />
           <ErrorBoundary label="Scales">
             {scalesSegment === 'explorer'  && <ScaleExplorer />}
             {scalesSegment === 'triads'    && <TriadsGenerator />}
@@ -633,7 +633,7 @@ export default function App() {
 
         {/* ── Panel 2: VOICINGS ───────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} />
+          <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
           <ErrorBoundary label="Voicings">
             <VoicingsTab
               globalProgression={progression}
@@ -646,7 +646,7 @@ export default function App() {
 
         {/* ── Panel 3: PRACTICE ───────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} />
+          <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
           <ErrorBoundary label="Practice">
             {practiceSegment === 'tuner'     && <Tuner />}
             {practiceSegment === 'metronome' && <Metronome />}
@@ -655,7 +655,7 @@ export default function App() {
 
         {/* ── Panel 4: STUDIO ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} />
+          <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} helpPrefix="studio" />
           <ErrorBoundary label="Studio">
             {studioSegment === 'tabbuilder' && <TabBuilder />}
             {studioSegment === 'audiotab'   && <AudioToTab />}

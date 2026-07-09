@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T } from '../theme';
 import { BrandMark } from './BrandMark';
+import { HelpButton } from './HelpButton';
 
 // ── Segment control ──────────────────────────────────────────────────────────
 
@@ -10,31 +11,40 @@ interface SegmentProps {
   items: SegItem[];
   active: string;
   onChange: (id: string) => void;
+  /** When set, shows a "?" help button for topic `${helpPrefix}:${active}`. */
+  helpPrefix?: string;
 }
 
-export function Segment({ items, active, onChange }: SegmentProps) {
+export function Segment({ items, active, onChange, helpPrefix }: SegmentProps) {
   return (
-    <div style={{ display: 'flex', border: `1px solid ${T.border}`, marginBottom: 18, flexShrink: 0 }}>
-      {items.map((it, i) => (
-        <button
-          key={it.id}
-          onClick={() => onChange(it.id)}
-          style={{
-            flex: 1, textAlign: 'center',
-            padding: '10px 4px', minHeight: 44,
-            fontFamily: 'var(--gc-font)',
-            fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase',
-            cursor: 'pointer', borderRadius: 0,
-            borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
-            background: it.id === active ? T.secondary : 'transparent',
-            color: it.id === active ? '#fff' : T.textDim,
-            fontWeight: it.id === active ? 500 : 400,
-            transition: 'background .12s ease, color .12s ease',
-          }}
-        >
-          {it.label}
-        </button>
-      ))}
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, marginBottom: 18, flexShrink: 0 }}>
+      <div style={{ display: 'flex', border: `1px solid ${T.border}`, flex: 1, minWidth: 0 }}>
+        {items.map((it, i) => (
+          <button
+            key={it.id}
+            onClick={() => onChange(it.id)}
+            style={{
+              flex: 1, textAlign: 'center',
+              padding: '10px 4px', minHeight: 44,
+              fontFamily: 'var(--gc-font)',
+              fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase',
+              cursor: 'pointer', borderRadius: 0,
+              borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
+              background: it.id === active ? T.secondary : 'transparent',
+              color: it.id === active ? '#fff' : T.textDim,
+              fontWeight: it.id === active ? 500 : 400,
+              transition: 'background .12s ease, color .12s ease',
+            }}
+          >
+            {it.label}
+          </button>
+        ))}
+      </div>
+      {helpPrefix && (
+        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <HelpButton topic={`${helpPrefix}:${active}`} />
+        </div>
+      )}
     </div>
   );
 }
