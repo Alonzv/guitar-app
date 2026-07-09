@@ -303,14 +303,13 @@ export function ChordPickerTab({
         </div>
       )}
 
-      {/* ── Add to Progression ── */}
-      {chordName && (
+      {/* ── Add to Progression — only once a voicing is selected ── */}
+      {chordName && canAdd && (
         <button
           onClick={handleAdd}
-          disabled={!canAdd}
-          style={{ ...btn.primary(!canAdd), width: '100%' }}
+          style={{ ...btn.primary(false), width: '100%' }}
         >
-          {canAdd ? `+ Add ${displayName} to Progression` : 'Select a voicing below'}
+          + Add {displayName} to Progression
         </button>
       )}
       {chordName && canAdd && (
