@@ -213,18 +213,18 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                 style={{ pointerEvents: 'none' }}
               >
                 <text
-                  x={mp_o.x} y={outerInfo ? mp_o.y - 4 : mp_o.y}
+                  x={mp_o.x} y={outerInfo ? mp_o.y - 5 : mp_o.y}
                   textAnchor="middle" dominantBaseline="middle"
-                  fontSize={outerInfo ? 11 : 9} fontWeight={outerInfo ? 700 : 400}
+                  fontSize={outerInfo ? 14 : 12} fontWeight={outerInfo ? 700 : 500}
                   fill={outerInfo ? '#fff' : '#9C958C'}
                 >
                   {cofNote}
                 </text>
                 {outerInfo && (
                   <text
-                    x={mp_o.x} y={mp_o.y + 6}
+                    x={mp_o.x} y={mp_o.y + 8}
                     textAnchor="middle" dominantBaseline="middle"
-                    fontSize={7} fontWeight={500}
+                    fontSize={9} fontWeight={500}
                     fill="rgba(255,255,255,0.75)"
                   >
                     {outerInfo.roman}
@@ -238,18 +238,18 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                 style={{ pointerEvents: 'none' }}
               >
                 <text
-                  x={mp_i.x} y={innerInfo ? mp_i.y - 4 : mp_i.y}
+                  x={mp_i.x} y={innerInfo ? mp_i.y - 5 : mp_i.y}
                   textAnchor="middle" dominantBaseline="middle"
-                  fontSize={innerInfo ? 9 : 8} fontWeight={innerInfo ? 600 : 400}
+                  fontSize={innerInfo ? 12 : 11} fontWeight={innerInfo ? 600 : 500}
                   fill={innerInfo ? '#fff' : '#9C958C'}
                 >
                   {minorName}
                 </text>
                 {innerInfo && (
                   <text
-                    x={mp_i.x} y={mp_i.y + 6}
+                    x={mp_i.x} y={mp_i.y + 8}
                     textAnchor="middle" dominantBaseline="middle"
-                    fontSize={6} fontWeight={500}
+                    fontSize={8} fontWeight={500}
                     fill="rgba(255,255,255,0.75)"
                   >
                     {innerInfo.roman}
