@@ -805,7 +805,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}
             >
-              ↓ Import my progression ({globalProgression.length})
+              ↓ Import ({globalProgression.length})
             </button>
           )}
         </div>

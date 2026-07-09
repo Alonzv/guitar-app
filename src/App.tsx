@@ -503,7 +503,7 @@ export default function App() {
               <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} helpPrefix="scales" />
               <ErrorBoundary label="Scales">
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
-                {scalesSegment === 'triads'    && <TriadsGenerator desktop />}
+                {scalesSegment === 'triads'    && <TriadsGenerator desktop globalProgression={progression} />}
                 {scalesSegment === 'intervals' && <IntervalsTab desktop />}
                 {scalesSegment === 'wheel'     && <WheelTab desktop tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
               </ErrorBoundary>
@@ -625,7 +625,7 @@ export default function App() {
           <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} helpPrefix="scales" />
           <ErrorBoundary label="Scales">
             {scalesSegment === 'explorer'  && <ScaleExplorer />}
-            {scalesSegment === 'triads'    && <TriadsGenerator />}
+            {scalesSegment === 'triads'    && <TriadsGenerator globalProgression={progression} />}
             {scalesSegment === 'intervals' && <IntervalsTab />}
             {scalesSegment === 'wheel'     && <WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
           </ErrorBoundary>

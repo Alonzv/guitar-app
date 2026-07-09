@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Note as TonalNote } from '@tonaljs/tonal';
+import { Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { playScale } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 import { TwoPane } from '../desktop/TwoPane';
-import type { Note } from '../../types/music';
+import type { Note, ChordInProgression } from '../../types/music';
 
 const OPEN_MIDI = STANDARD_OPEN_MIDI;
 
@@ -166,10 +166,26 @@ function pill(active: boolean, onClick: () => void, label: string) {
   );
 }
 
-export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
+export function TriadsGenerator({ desktop, globalProgression }: { desktop?: boolean; globalProgression?: ChordInProgression[] } = {}) {
   const [root,               setRoot]               = useState<Note>('C');
   const [triadType,          setTriadType]          = useState<TriadType | null>(null);
   const [triadMenuOpen,      setTriadMenuOpen]      = useState(false);
+  // Chords imported from the user's progression (Chords tab). Click one to load
+  // its root + closest triad quality into the generator.
+  const [imported,           setImported]           = useState<string[] | null>(null);
+  const loadChord = (name: string) => {
+    const info = TonalChord.get(name);
+    if (!info.tonic) return;
+    const chroma = TonalNote.chroma(info.tonic);
+    if (chroma == null) return;
+    const type: TriadType =
+      info.quality === 'Minor'      ? 'minor'
+      : info.quality === 'Diminished' ? 'diminished'
+      : info.quality === 'Augmented'  ? 'augmented'
+      : 'major';
+    setRoot(ALL_NOTES[chroma] as Note);
+    setTriadType(type);
+  };
   // Multi-select filters — an empty Set means "All" (no restriction).
   const [selectedSets,       setSelectedSets]       = useState<Set<number>>(new Set());
   const [displayMode,        setDisplayMode]        = useState<DisplayMode>('notes');
@@ -280,6 +296,38 @@ export function TriadsGenerator({ desktop }: { desktop?: boolean } = {}) {
 
   const triadsLeft = (
     <>
+      {/* Import from the user's progression */}
+      {globalProgression && globalProgression.length > 0 && (
+        <div style={card()}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>From your progression</p>
+            <button
+              onClick={() => setImported(imported ? null : globalProgression.map(c => c.chord.name))}
+              style={{
+                padding: '5px 12px', borderRadius: 0, border: `1px solid ${T.border}`,
+                background: T.bgInput, color: T.textMuted, fontSize: 11, fontWeight: 400,
+                cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)',
+              }}
+            >{imported ? 'Hide' : `Import (${globalProgression.length})`}</button>
+          </div>
+          {imported && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+              {imported.map((name, i) => (
+                <button
+                  key={i}
+                  onClick={() => loadChord(name)}
+                  title={`Load ${name} triad`}
+                  style={{
+                    padding: '6px 11px', borderRadius: 0, border: `1px solid ${T.border}`,
+                    background: T.bgDeep, color: T.text, fontSize: 13, fontWeight: 400, cursor: 'pointer',
+                  }}
+                >{name}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Root selector */}
       <div style={card()}>
         <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
