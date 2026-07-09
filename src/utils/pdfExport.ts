@@ -24,42 +24,6 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function buildProgressionHTML(
-  name: string,
-  progression: ChordInProgression[],
-): string {
-  const cards = progression.map((item, i) => {
-    const diagram = item.fretPositions.length > 0
-      ? fretboardSVGHtml(item.fretPositions)
-      : '<div style="height:70px;"></div>';
-    return `
-    <div style="
-      display:inline-block;width:130px;vertical-align:top;
-      background:#1A1918;border-radius:0;padding:10px 12px;
-      margin:4px;text-align:center;
-    ">
-      <div style="font-size:11px;color:rgba(240,234,216,0.5);margin-bottom:3px;">${i + 1}</div>
-      <div style="font-size:18px;font-weight:800;color:#F0EAD8;">${escapeHtml(formatChordName(item.chord.name))}</div>
-      <div style="font-size:9px;color:rgba(240,234,216,0.55);margin-top:3px;">${escapeHtml(item.chord.notes.join(' · '))}</div>
-      ${diagram}
-    </div>`;
-  }).join('');
-
-  return `
-    <div style="
-      font-family: Arial, Helvetica, sans-serif;
-      padding: 28px 32px;
-      width: 680px;
-      background: #111110;
-      color: #F0EAD8;
-      box-sizing: border-box;
-    ">
-      <h1 style="font-size:20px;font-weight:800;margin:0 0 8px;">${escapeHtml(name || 'Chord Progression')}</h1>
-      <div style="height:2px;background:#110CF0;margin-bottom:20px;"></div>
-      <div>${cards}</div>
-    </div>`;
-}
-
 // ── Fretboard SVG for PDF ─────────────────────────────────
 
 function fretboardSVGHtml(voicing: FretPosition[]): string {
@@ -337,13 +301,176 @@ export async function exportTabPDF(
   await renderHTMLToPDF(html, filename);
 }
 
+// ── Progression PDF (native jsPDF vector) ─────────────────
+// Drawn with vector primitives rather than rasterising the DOM, so text and
+// fretboard diagrams stay razor-sharp at any zoom and the file stays small.
+
+type RGB = [number, number, number];
+const INK: RGB       = [26, 24, 24];    // #1A1818 — near-black text
+const INK_SOFT: RGB  = [122, 116, 108]; // muted captions
+const ACCENT: RGB    = [17, 12, 240];   // #110CF0 — brand blue
+const GRID: RGB      = [201, 194, 184];  // #C9C2B8 — fret/string lines
+const CARD_BG: RGB   = [247, 243, 235];  // soft parchment card fill
+const CARD_LINE: RGB = [223, 216, 204];
+
+// Draw a compact fretboard diagram inside the box (x, y, w, h) in mm.
+function drawVectorFretboard(
+  pdf: import('jspdf').jsPDF,
+  voicing: FretPosition[],
+  x: number, y: number, w: number, h: number,
+): void {
+  const STRING_COUNT = 6;
+  const hasOpen = voicing.some(p => p.fret === 0);
+  const nonZero = voicing.map(p => p.fret).filter(f => f > 0);
+  const minFret = nonZero.length > 0 ? Math.min(...nonZero) : 0;
+  const maxFret = voicing.length > 0 ? Math.max(...voicing.map(p => p.fret)) : 0;
+  const displayMin = hasOpen ? 0 : Math.max(0, minFret - 1);
+  const displayMax = Math.max(maxFret, displayMin + 4);
+  const fretCount = Math.max(1, displayMax - displayMin);
+
+  const leftPad = displayMin === 0 ? 2.4 : 5;
+  const rightPad = 1.6;
+  const topPad = 2.2;
+  const boardW = w - leftPad - rightPad;
+  const boardH = h - 2 * topPad;
+  const fretSp = boardW / fretCount;
+  const strSp  = boardH / (STRING_COUNT - 1);
+  const x0 = x + leftPad;
+  const y0 = y + topPad;
+
+  const fx = (f: number) => f === 0 ? x0 - fretSp * 0.5 : x0 + (f - displayMin - 0.5) * fretSp;
+  const sy = (s: number) => y0 + (STRING_COUNT - 1 - s) * strSp;
+
+  // Fret lines (vertical)
+  pdf.setDrawColor(...GRID);
+  pdf.setLineWidth(0.2);
+  for (let i = 0; i <= fretCount; i++) {
+    const fxi = x0 + i * fretSp;
+    pdf.line(fxi, y0, fxi, y0 + (STRING_COUNT - 1) * strSp);
+  }
+  // String lines (horizontal) — thicker toward the low strings
+  for (let s = 0; s < STRING_COUNT; s++) {
+    pdf.setLineWidth(0.18 + s * 0.05);
+    pdf.line(x0, sy(s), x0 + fretCount * fretSp, sy(s));
+  }
+
+  // Nut, or starting-fret label
+  if (displayMin === 0) {
+    pdf.setFillColor(...INK);
+    pdf.rect(x0 - 0.35, y0 - 0.2, 0.9, (STRING_COUNT - 1) * strSp + 0.4, 'F');
+  } else {
+    pdf.setFontSize(6);
+    pdf.setTextColor(...INK_SOFT);
+    pdf.text(`${displayMin + 1}fr`, x0 - 1.4, y0 + (STRING_COUNT - 1) * strSp / 2, { align: 'right', baseline: 'middle' });
+  }
+
+  // Finger dots
+  for (const p of voicing) {
+    const cx = fx(p.fret), cy = sy(p.string);
+    pdf.setFillColor(...ACCENT);
+    pdf.setDrawColor(255, 255, 255);
+    pdf.setLineWidth(0.3);
+    pdf.circle(cx, cy, 1.55, 'FD');
+    pdf.setFontSize(5);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(fretToNote(p.string, p.fret), cx, cy + 0.1, { align: 'center', baseline: 'middle' });
+  }
+}
+
 // ── Public API ────────────────────────────────────────────
 
 export async function exportProgressionPDF(
   name: string,
   progression: ChordInProgression[],
 ): Promise<void> {
-  const html = buildProgressionHTML(name, progression);
+  const { jsPDF } = await import('jspdf');
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+  const PAGE_W = 210, PAGE_H = 297;
+  const MARGIN = 15;
+  const usableW = PAGE_W - 2 * MARGIN;
+
+  // Card grid geometry
+  const COLS = 3;
+  const GAP = 6;
+  const cardW = (usableW - GAP * (COLS - 1)) / COLS;
+  const cardH = 52;
+  const boardTop = 15;   // where the diagram starts inside a card
+  const boardH = 26;
+
+  const title = name || 'Chord Progression';
+
+  // ── Header ──
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(19);
+  pdf.setTextColor(...INK);
+  pdf.text(title, MARGIN, MARGIN + 2, { baseline: 'middle' });
+  pdf.setDrawColor(...ACCENT);
+  pdf.setLineWidth(0.7);
+  pdf.line(MARGIN, MARGIN + 8, PAGE_W - MARGIN, MARGIN + 8);
+
+  const gridTop = MARGIN + 15;
+  let col = 0;
+  let rowTop = gridTop;
+
+  progression.forEach((item, i) => {
+    const x = MARGIN + col * (cardW + GAP);
+    // New page when a row would overflow the bottom margin
+    if (rowTop + cardH > PAGE_H - MARGIN) {
+      pdf.addPage();
+      rowTop = MARGIN;
+    }
+    const y = rowTop;
+
+    // Card background
+    pdf.setFillColor(...CARD_BG);
+    pdf.setDrawColor(...CARD_LINE);
+    pdf.setLineWidth(0.2);
+    pdf.rect(x, y, cardW, cardH, 'FD');
+    // Accent bar down the left edge
+    pdf.setFillColor(...ACCENT);
+    pdf.rect(x, y, 1.1, cardH, 'F');
+
+    // Index
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.setTextColor(...INK_SOFT);
+    pdf.text(String(i + 1), x + cardW / 2, y + 5.5, { align: 'center', baseline: 'middle' });
+
+    // Chord name
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(15);
+    pdf.setTextColor(...INK);
+    pdf.text(formatChordName(item.chord.name), x + cardW / 2, y + 11, { align: 'center', baseline: 'middle' });
+
+    // Fretboard diagram (or a hint when no voicing was chosen)
+    if (item.fretPositions.length > 0) {
+      drawVectorFretboard(pdf, item.fretPositions, x + 3, y + boardTop, cardW - 6, boardH);
+    } else {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(...INK_SOFT);
+      pdf.text('no voicing', x + cardW / 2, y + boardTop + boardH / 2, { align: 'center', baseline: 'middle' });
+    }
+
+    // Note names
+    if (item.chord.notes.length > 0) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(...INK_SOFT);
+      pdf.text(item.chord.notes.join(' · '), x + cardW / 2, y + cardH - 4, { align: 'center', baseline: 'middle', maxWidth: cardW - 6 });
+    }
+
+    col++;
+    if (col >= COLS) { col = 0; rowTop += cardH + GAP; }
+  });
+
+  // Footer on the last page
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(...GRID);
+  pdf.text('Created with ScaleUp', PAGE_W - MARGIN, PAGE_H - 8, { align: 'right', baseline: 'middle' });
+
   const filename = `${(name || 'progression').replace(/[^a-zA-Z0-9֐-׿ ]/g, '_')}.pdf`;
-  await renderHTMLToPDF(html, filename);
+  pdf.save(filename);
 }
