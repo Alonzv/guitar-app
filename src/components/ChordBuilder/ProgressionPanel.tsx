@@ -3,7 +3,6 @@ import type { ChordInProgression, Tuning } from '../../types/music';
 import { formatChordName } from '../../utils/chordIdentifier';
 import { detectKey } from '../../utils/progressionHelper';
 import { playChord } from '../../utils/audioPlayback';
-import { IconLink } from '../Icons';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card } from '../../theme';
 
@@ -33,16 +32,16 @@ const LABEL_STYLE = {
   letterSpacing: '-0.02em',
 };
 
-// Shared compact toolbar-button style — one row, single-word labels.
+// Shared compact toolbar-button style — every button in the row looks identical.
 const toolBtn = (opts?: {
-  active?: boolean; disabled?: boolean; danger?: boolean;
+  active?: boolean; disabled?: boolean;
 }): React.CSSProperties => {
-  const { active, disabled, danger } = opts ?? {};
+  const { active, disabled } = opts ?? {};
   return {
     padding: '5px 10px', borderRadius: 0,
-    border: `1px solid ${danger ? T.coral : T.border}`,
-    background: active ? (danger ? T.coralFaint : T.secondaryBg) : (danger ? T.coralFaint : T.bgInput),
-    color: disabled ? T.textDim : danger ? T.coral : active ? T.secondary : T.textMuted,
+    border: `1px solid ${T.border}`,
+    background: active ? T.secondaryBg : T.bgInput,
+    color: disabled ? T.textDim : active ? T.secondary : T.textMuted,
     fontSize: 11, fontWeight: 400, fontFamily: 'inherit',
     textTransform: 'uppercase', letterSpacing: '-0.02em',
     cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
@@ -50,6 +49,13 @@ const toolBtn = (opts?: {
     borderLeft: '3px solid var(--gc-bar-color)',
     transition: 'background 0.15s, color 0.15s',
   };
+};
+
+// The Save button is a shared component; force it to match the toolbar buttons.
+const SAVE_BTN_STYLE: React.CSSProperties = {
+  padding: '5px 10px', fontSize: 11, fontWeight: 400,
+  background: T.bgInput, color: T.textMuted,
+  border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)',
 };
 
 export function ProgressionPanel({
@@ -153,14 +159,12 @@ export function ProgressionPanel({
           {exporting ? '…' : 'PDF'}
         </button>
         <button onClick={handleShare} title="Copy a shareable link" style={toolBtn({ active: shared })}>
-          {shared ? '✓ Link' : <><IconLink size={12} /> Share</>}
+          {shared ? '✓ Link' : 'Share'}
         </button>
         <SaveToLibraryButton
           size="sm"
           label="Save"
-          style={{
-            padding: '5px 10px', fontSize: 11, borderLeft: '3px solid var(--gc-bar-color)',
-          }}
+          style={SAVE_BTN_STYLE}
           getPayload={() => progression.length === 0 ? null : ({
             kind: 'progression',
             name: progressionName.trim() || `Progression ${new Date().toLocaleDateString()}`,
@@ -173,11 +177,11 @@ export function ProgressionPanel({
             {playingAll ? 'Stop' : 'Play'}
           </button>
         )}
-        <button onClick={handleClear} title="Remove every chord" style={toolBtn({ danger: true })}>Clear</button>
+        <button onClick={handleClear} title="Remove every chord" style={toolBtn()}>Clear</button>
       </div>
 
-      {/* ── Chord cards ── */}
-      <div className="gc-chip-strip" style={{ paddingTop: 14 }}>
+      {/* ── Chord cards — wrap so nothing is ever clipped ── */}
+      <div className="gc-chip-strip" style={{ paddingTop: 14, flexWrap: 'wrap', overflowX: 'visible' }}>
         {progression.map((item, i) => {
           const accent = CHORD_ACCENTS[i % CHORD_ACCENTS.length];
           return (
