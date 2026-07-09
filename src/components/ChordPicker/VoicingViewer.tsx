@@ -82,6 +82,7 @@ export function VoicingViewer({ voicings, index, chordName, tuning, onNav, onAdd
           width: '100%', maxWidth: 460, background: T.bgCard,
           border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
           padding: 18, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 14,
+          maxHeight: '90vh', overflowY: 'auto',
           animation: 'gcVvPop 0.2s cubic-bezier(0.34, 1.4, 0.5, 1)',
         }}
       >
@@ -102,21 +103,26 @@ export function VoicingViewer({ voicings, index, chordName, tuning, onNav, onAdd
           <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning.notes} />
         </div>
 
-        {/* Controls: page arrows flank Play + Add */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-          <Arrow dir="left" onClick={() => go(-1)} disabled={total < 2} />
+        {/* Controls — two rows so nothing wraps or overflows on narrow phones.
+            Row 1: page arrows flank Play. Row 2: full-width Add. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+            <Arrow dir="left" onClick={() => go(-1)} disabled={total < 2} />
+            <button
+              onClick={play}
+              style={{
+                flex: 1, minWidth: 0, padding: '12px 0', borderRadius: 0, cursor: 'pointer',
+                border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
+                fontSize: 14, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
+                whiteSpace: 'nowrap',
+              }}
+            >▶ Play</button>
+            <Arrow dir="right" onClick={() => go(1)} disabled={total < 2} />
+          </div>
           <button
-            onClick={play}
-            style={{
-              flex: '0 0 auto', minWidth: 92, padding: '12px 0', borderRadius: 0, cursor: 'pointer',
-              border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
-              fontSize: 14, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
-            }}
-          >▶ Play</button>
-          <button onClick={() => onAdd(voicing)} style={{ ...btn.primary(false), flex: 1 }}>
-            + Add to Progression
-          </button>
-          <Arrow dir="right" onClick={() => go(1)} disabled={total < 2} />
+            onClick={() => onAdd(voicing)}
+            style={{ ...btn.primary(false), width: '100%', whiteSpace: 'nowrap' }}
+          >+ Add to Progression</button>
         </div>
       </div>
     </div>,
