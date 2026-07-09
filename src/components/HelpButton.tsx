@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { T } from '../theme';
 import { HELP } from '../content/helpContent';
 
@@ -43,7 +44,7 @@ export function HelpButton({ topic }: { topic: string }) {
         }}
       >?</button>
 
-      {open && (
+      {open && createPortal(
         <div
           onClick={() => setOpen(false)}
           style={{
@@ -99,7 +100,8 @@ export function HelpButton({ topic }: { topic: string }) {
               }}>{text.body}</p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

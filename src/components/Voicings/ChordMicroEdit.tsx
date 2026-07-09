@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { T, card } from '../../theme';
 import type { FretPosition, Tuning } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
@@ -91,7 +92,7 @@ export function ChordMicroEdit({
 
   const contextLine = [prevChord, chordName, nextChord].filter(Boolean).join('  →  ');
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -206,7 +207,8 @@ export function ChordMicroEdit({
           </CardGrid>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

@@ -48,7 +48,7 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
   return (
     <div style={card({ marginTop: 0 })}>
       <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-        Voicing Variations · tap to load
+        Voicing Variations · tap to enlarge
       </p>
       <div className="gc-voicing-grid" style={gridColumns ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)` } : undefined}>
         {voicings.map((voicing, i) => {
