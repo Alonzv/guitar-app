@@ -79,7 +79,7 @@ export function VoicingViewer({ voicings, index, chordName, tuning, onNav, onAdd
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 380, background: T.bgCard,
+          width: '100%', maxWidth: 460, background: T.bgCard,
           border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
           padding: 18, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 14,
           animation: 'gcVvPop 0.2s cubic-bezier(0.34, 1.4, 0.5, 1)',
@@ -97,21 +97,18 @@ export function VoicingViewer({ voicings, index, chordName, tuning, onNav, onAdd
           }}>✕</button>
         </div>
 
-        {/* Enlarged fretboard flanked by nav arrows */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Arrow dir="left" onClick={() => go(-1)} disabled={total < 2} />
-          <div style={{ flex: 1, minWidth: 0, background: T.bgInput, border: `1px solid ${T.border}`, padding: '12px 10px 8px' }}>
-            <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning.notes} />
-          </div>
-          <Arrow dir="right" onClick={() => go(1)} disabled={total < 2} />
+        {/* Enlarged fretboard — full width for maximum size */}
+        <div style={{ background: T.bgInput, border: `1px solid ${T.border}`, padding: '18px 16px 12px' }}>
+          <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning.notes} />
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        {/* Controls: page arrows flank Play + Add */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+          <Arrow dir="left" onClick={() => go(-1)} disabled={total < 2} />
           <button
             onClick={play}
             style={{
-              flex: '0 0 auto', minWidth: 96, padding: '12px 0', borderRadius: 0, cursor: 'pointer',
+              flex: '0 0 auto', minWidth: 92, padding: '12px 0', borderRadius: 0, cursor: 'pointer',
               border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
               fontSize: 14, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
             }}
@@ -119,6 +116,7 @@ export function VoicingViewer({ voicings, index, chordName, tuning, onNav, onAdd
           <button onClick={() => onAdd(voicing)} style={{ ...btn.primary(false), flex: 1 }}>
             + Add to Progression
           </button>
+          <Arrow dir="right" onClick={() => go(1)} disabled={total < 2} />
         </div>
       </div>
     </div>,
