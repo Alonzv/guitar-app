@@ -47,7 +47,7 @@ const NUT = 44;
 const FRET_SP = (FB_W - NUT - 16) / 12;
 const STR_SP = (FB_H - 30) / 5;
 const FB_TOP = 12;
-const DOT_R = 9;
+const DOT_R = 12;
 const BRACKET_EXTRA = 30;
 
 const strY = (s: number) => FB_TOP + (5 - s) * STR_SP;
@@ -237,7 +237,7 @@ export function IntervalExplore() {
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Root</span>
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16110F', display: 'inline-block', border: '1px solid rgba(255,255,255,0.3)' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.primary, display: 'inline-block', border: '1px solid rgba(255,255,255,0.3)' }} />
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Interval</span>
                 </span>
               </div>
@@ -283,17 +283,19 @@ export function IntervalExplore() {
 
                 {intervalDots.map((p, i) => (
                   <g key={`iv-${i}`}>
-                    <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill="#16110F" />
-                    <text x={noteX(p.fret)} y={strY(p.string) + 3.5}
-                      textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{intervalNote}</text>
+                    {/* Theme ink (T.primary), not a hardcoded near-black, so the
+                        dot stays visible on the dark fretboard. */}
+                    <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill={T.primary} />
+                    <text x={noteX(p.fret)} y={strY(p.string)} dominantBaseline="central"
+                      textAnchor="middle" fontSize={10} fill="#fff" fontWeight="700">{intervalNote}</text>
                   </g>
                 ))}
 
                 {rootDots.map((p, i) => (
                   <g key={`r-${i}`}>
                     <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill="#110CF0" />
-                    <text x={noteX(p.fret)} y={strY(p.string) + 3.5}
-                      textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{root}</text>
+                    <text x={noteX(p.fret)} y={strY(p.string)} dominantBaseline="central"
+                      textAnchor="middle" fontSize={10} fill="#fff" fontWeight="700">{root}</text>
                   </g>
                 ))}
 
