@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { IntervalExplore } from './IntervalExplore';
 import { IntervalCalculate } from './IntervalCalculate';
+import { IntervalPlayground } from './IntervalPlayground';
 import { T, card } from '../../theme';
 
-type Sub = 'explore' | 'calculate';
+type Sub = 'learn' | 'explore';
 
 const SUB_LABELS: Record<Sub, string> = {
-  explore:   'Explore',
-  calculate: 'Calculate',
+  learn:   'Learn',
+  explore: 'Explore',
 };
 
 const INTERVAL_REF = [
@@ -39,11 +40,11 @@ const SECTION: React.CSSProperties = {
 };
 
 export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
-  const [sub, setSub] = useState<Sub>('explore');
+  const [sub, setSub] = useState<Sub>('learn');
 
   const tabBar = (
     <div style={{ display: 'flex', gap: 0 }}>
-      {(['explore', 'calculate'] as Sub[]).map(id => (
+      {(['learn', 'explore'] as Sub[]).map(id => (
         <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
           flex: 1, padding: '11px 4px', borderRadius: 0,
           cursor: 'pointer', fontSize: 14,
@@ -61,8 +62,14 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
   const mainContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {tabBar}
-      {sub === 'explore'   && <IntervalExplore />}
-      {sub === 'calculate' && <IntervalCalculate />}
+      {sub === 'learn' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <IntervalExplore />
+          <div style={{ borderTop: `1px solid ${T.border}` }} />
+          <IntervalCalculate />
+        </div>
+      )}
+      {sub === 'explore' && <IntervalPlayground />}
     </div>
   );
 
