@@ -159,6 +159,13 @@ button:active { transform: scale(0.96); }
   --gc-coral-faint:      rgba(26,24,24,0.06);
   --gc-coral-faint2:     rgba(26,24,24,0.10);
   --gc-peek:             #C9C2B8;
+  /* Semantic feedback — drawn from the palette's cobalt accent (success) and a
+     muted terracotta/amber (error/warning). Deliberately NOT generic green/red
+     so ear-training feedback stays on-brand in both themes. */
+  --gc-success:          #2B54D4;
+  --gc-success-soft:     rgba(43,84,212,0.14);
+  --gc-error:            #B4741A;
+  --gc-error-soft:       rgba(180,116,26,0.16);
 }
 
 body.dark {
@@ -188,6 +195,11 @@ body.dark {
   --gc-coral-faint:      rgba(255,255,255,0.06);
   --gc-coral-faint2:     rgba(255,255,255,0.10);
   --gc-peek:             #4A453E;
+  /* Semantic feedback — lifted for legibility on black */
+  --gc-success:          #5E86FF;
+  --gc-success-soft:     rgba(94,134,255,0.20);
+  --gc-error:            #D99A3C;
+  --gc-error-soft:       rgba(217,154,60,0.22);
   /* Inset right bar — dark mode */
   --gc-offset: none;
   --gc-offset-sm: none;

@@ -27,6 +27,12 @@ export const T = {
   coralFaint2:     'var(--gc-coral-faint2)',
   offset:          'var(--gc-offset)',
   offsetSm:        'var(--gc-offset-sm)',
+  // Semantic feedback (ear-training success / error) — palette-derived, never
+  // generic green/red. See --gc-success / --gc-error in index.css.
+  success:         'var(--gc-success)',
+  successSoft:     'var(--gc-success-soft)',
+  error:           'var(--gc-error)',
+  errorSoft:       'var(--gc-error-soft)',
 } as const;
 
 export type Theme = typeof T;

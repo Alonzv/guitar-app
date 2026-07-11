@@ -217,6 +217,74 @@ export function playScale(midiNotes: number[]): void {
   });
 }
 
+// ── Ear-training interval playback ──────────────────────────────────────────
+// A slightly richer voice than the bare scale sine — a triangle with a short
+// filter sweep — so intervals read clearly whether played melodically or
+// harmonically. Notes are addressed by absolute MIDI (not fret coordinates),
+// which is what makes enharmonic / open-string answers validate correctly.
+function synthesizeIntervalNote(
+  ctx: AudioContext, midi: number, startTime: number, dur: number,
+): void {
+  const freq = 440 * Math.pow(2, (midi - 69) / 12);
+  const osc    = ctx.createOscillator();
+  const gain   = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
+  osc.type = 'triangle';
+  osc.frequency.value = freq;
+
+  filter.type = 'lowpass';
+  filter.frequency.value = Math.min(freq * 5, 5200);
+  filter.Q.value = 0.6;
+
+  const peak = 0.22;
+  gain.gain.setValueAtTime(0.001, startTime);
+  gain.gain.linearRampToValueAtTime(peak, startTime + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(getOutputNode());
+  osc.start(startTime);
+  osc.stop(startTime + dur + 0.05);
+}
+
+export type IntervalPlayMode = 'melodic' | 'harmonic';
+
+/**
+ * Play a two-note interval by absolute MIDI. `melodic` sounds the notes in the
+ * given order (caller decides ascending/descending); `harmonic` sounds them
+ * together. Safe to call repeatedly (Replay). Call from a user-gesture handler.
+ */
+export function playInterval(
+  midiA: number,
+  midiB: number,
+  mode: IntervalPlayMode = 'melodic',
+): void {
+  unlockAudio().then(() => {
+    const ctx = getSharedContext();
+    const t0 = ctx.currentTime + 0.12;
+    if (mode === 'harmonic') {
+      synthesizeIntervalNote(ctx, midiA, t0, 1.5);
+      synthesizeIntervalNote(ctx, midiB, t0, 1.5);
+      suppressNowPlaying(2200);
+    } else {
+      synthesizeIntervalNote(ctx, midiA, t0, 0.7);
+      synthesizeIntervalNote(ctx, midiB, t0 + 0.62, 1.1);
+      suppressNowPlaying(2400);
+    }
+  });
+}
+
+/** Play a single note by absolute MIDI (used for the pinned root preview). */
+export function playMidi(midi: number, dur = 0.9): void {
+  unlockAudio().then(() => {
+    const ctx = getSharedContext();
+    synthesizeIntervalNote(ctx, midi, ctx.currentTime + 0.1, dur);
+    suppressNowPlaying(dur * 1000 + 800);
+  });
+}
+
 /** Arpeggiate a chord low → high. Call only from a user-gesture handler. */
 export function playChord(
   fretPositions: FretPos[],

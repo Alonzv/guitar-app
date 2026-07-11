@@ -190,6 +190,28 @@ create trigger touch_saved_voicings     before update on public.saved_voicings
 create trigger touch_saved_reharms      before update on public.saved_reharms
   for each row execute procedure public.touch_updated_at();
 
+-- ── Ear Training (preferences, best streak & weak-spot analytics) ───────────
+-- One row per user. `prefs` holds the tool toggles (language, playback mode,
+-- direction); `best_streak` is the historical high score; `stats` is a
+-- per-interval { correct, wrong } map that powers the smart-practice weighting.
+create table if not exists public.ear_training (
+  user_id      uuid references public.profiles(id) on delete cascade primary key,
+  prefs        jsonb not null default '{}',   -- { lang, playback, direction }
+  best_streak  integer not null default 0,
+  stats        jsonb not null default '{}',   -- { [intervalId]: { correct, wrong } }
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+
+alter table public.ear_training enable row level security;
+drop policy if exists "Users crud own ear_training" on public.ear_training;
+create policy "Users crud own ear_training" on public.ear_training
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop trigger if exists touch_ear_training on public.ear_training;
+create trigger touch_ear_training before update on public.ear_training
+  for each row execute procedure public.touch_updated_at();
+
 -- ── Indexes for the per-user library queries ────────────────────────────────
 create index if not exists idx_audio_tabs_user            on public.audio_tabs(user_id, updated_at desc);
 create index if not exists idx_saved_tabs_user            on public.saved_tabs(user_id, updated_at desc);
