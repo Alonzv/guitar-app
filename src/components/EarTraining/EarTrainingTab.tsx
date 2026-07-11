@@ -186,6 +186,7 @@ export const EarTrainingTab: React.FC<Props> = () => {
 const LearnMode: React.FC<{ lang: Lang; playExercise: (ex: Exercise) => void }> = ({ lang, playExercise }) => {
   const t = UI[lang];
   const [selected, setSelected] = useState<IntervalId>('P5');
+  const [mode, setMode] = useState<PlayMode>('melodic');
 
   // A concrete, valid on-neck shape (≤ fret 12, B-string aware) for the diagram.
   const demo = useMemo<Exercise>(() => makeExercise(selected, 'asc', 'melodic'), [selected]);
@@ -239,23 +240,40 @@ const LearnMode: React.FC<{ lang: Lang; playExercise: (ex: Exercise) => void }> 
           disabled
           onPick={() => {}}
         />
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button onClick={() => playExercise({ ...demo, mode: 'melodic' })} style={playBtn(true)}>♪ {t.melodic}</button>
-          <button onClick={() => playExercise({ ...demo, mode: 'harmonic' })} style={playBtn(false)}>♬ {t.harmonic}</button>
+        {/* Legend — every circle on the neck is labelled with its note name */}
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 14, marginTop: 10, fontSize: 11, color: T.textDim }}>
+          <LegendDot color={T.primary} label={t.rootLabel} />
+          <LegendDot color={T.success} label={t.secondNote} />
         </div>
+
+        {/* Playback mode toggle — the dark highlight follows the selection */}
+        <div style={{ marginTop: 12 }}>
+          <p style={LABEL}>{t.playbackMode}</p>
+          <ToggleRow>
+            <Pill active={mode === 'melodic'} onClick={() => { setMode('melodic'); playExercise({ ...demo, mode: 'melodic' }); }}>
+              ♪ {t.melodic}
+            </Pill>
+            <Pill active={mode === 'harmonic'} onClick={() => { setMode('harmonic'); playExercise({ ...demo, mode: 'harmonic' }); }}>
+              ♬ {t.harmonic}
+            </Pill>
+          </ToggleRow>
+        </div>
+        <button onClick={() => playExercise({ ...demo, mode })} style={playBtn()}>
+          ▶ {t.playInterval}
+        </button>
       </div>
     </div>
   );
 };
 
-function playBtn(primary: boolean): React.CSSProperties {
+function playBtn(): React.CSSProperties {
   return {
-    flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer',
+    width: '100%', marginTop: 10, padding: '11px 0', borderRadius: 0, cursor: 'pointer',
     fontSize: 14, fontWeight: 500,
-    border: primary ? 'none' : `1px solid ${T.border}`,
+    border: 'none',
     borderLeft: '4px solid var(--gc-bar-color)',
-    background: primary ? T.primary : T.bgInput,
-    color: primary ? T.white : T.textMuted,
+    background: T.primary,
+    color: T.white,
   };
 }
 

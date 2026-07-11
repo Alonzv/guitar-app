@@ -158,12 +158,23 @@ export const HELP: Record<string, HelpEntry> = {
 
   'practice:eartraining': {
     en: {
-      title: 'Ear Training',
+      title: 'Interval Ear Training',
       body: 'Train your ear to recognise intervals on the neck. Learn mode explains each interval with a description, an aural anchor (a familiar tune) and a shape on a windowed fretboard. Practice mode plays an interval from a pinned root — melodic or harmonic — and you tap the second note anywhere it sounds right; any position at the correct pitch counts. Build a streak, and mixed practice quietly focuses on the intervals you miss most.',
     },
     he: {
-      title: 'אימון שמיעה',
+      title: 'אימון שמיעה — אינטרוולים',
       body: 'מאמנים את האוזן לזהות אינטרוולים על הצוואר. במצב לימוד כל אינטרוול מוסבר עם תיאור, עוגן שמיעתי (מנגינה מוכרת) וצורה על מקטע צוואר. במצב תרגול המערכת משמיעה אינטרוול מתו בסיס נעוץ — מלודי או הרמוני — ואתם מקליקים על התו השני בכל מקום שנכון; כל מיקום בגובה הצליל הנכון מתקבל. אוספים רצף, ובמצב מעורב האלגוריתם מתמקד באינטרוולים שבהם אתם טועים יותר.',
+    },
+  },
+
+  'practice:scaletrainer': {
+    en: {
+      title: 'Scale Speller & Trainer',
+      body: 'Learn scale formulas and spell scales note by note. Learn mode explains each scale — formula, character, an aural anchor — and shows it on one string and in a box position. Practice mode asks you to spell a scale (e.g. Eb Major) with strict enharmonic spelling: D# is not Eb! Complete the spelling and the notes drop onto the neck, where you can play the scale ascending or descending. Build a streak, and practice quietly focuses on the scales you misspell most.',
+    },
+    he: {
+      title: 'איות ותרגול סולמות',
+      body: 'לומדים את נוסחאות הסולמות ומאייתים סולמות תו אחר תו. במצב לימוד כל סולם מוסבר — נוסחה, אופי ועוגן שמיעתי — ומוצג על מיתר אחד ובפוזיציה על הצוואר. במצב תרגול מאייתים סולם (למשל Eb מז\'ור) עם דיוק אנהרמוני קפדני: ‎D#‎ הוא לא ‎Eb‎! בסיום האיות התווים נופלים אל הצוואר, ואפשר לנגן את הסולם בעלייה או בירידה. אוספים רצף, והאלגוריתם מתמקד בסולמות שבהם אתם טועים יותר.',
     },
   },
 

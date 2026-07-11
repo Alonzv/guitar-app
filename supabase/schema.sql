@@ -212,6 +212,28 @@ drop trigger if exists touch_ear_training on public.ear_training;
 create trigger touch_ear_training before update on public.ear_training
   for each row execute procedure public.touch_updated_at();
 
+-- ── Scale Trainer (preferences, best streak & weak-spot analytics) ──────────
+-- One row per user. `prefs` holds the tool toggles (language); `best_streak`
+-- is the historical high score for flawless scale spellings; `stats` is a
+-- per-scale { correct, wrong } map that powers the smart-practice weighting.
+create table if not exists public.scale_trainer (
+  user_id      uuid references public.profiles(id) on delete cascade primary key,
+  prefs        jsonb not null default '{}',   -- { lang }
+  best_streak  integer not null default 0,
+  stats        jsonb not null default '{}',   -- { [scaleId]: { correct, wrong } }
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+
+alter table public.scale_trainer enable row level security;
+drop policy if exists "Users crud own scale_trainer" on public.scale_trainer;
+create policy "Users crud own scale_trainer" on public.scale_trainer
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop trigger if exists touch_scale_trainer on public.scale_trainer;
+create trigger touch_scale_trainer before update on public.scale_trainer
+  for each row execute procedure public.touch_updated_at();
+
 -- ── Indexes for the per-user library queries ────────────────────────────────
 create index if not exists idx_audio_tabs_user            on public.audio_tabs(user_id, updated_at desc);
 create index if not exists idx_saved_tabs_user            on public.saved_tabs(user_id, updated_at desc);

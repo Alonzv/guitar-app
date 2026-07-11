@@ -276,6 +276,27 @@ export function playInterval(
   });
 }
 
+/** Short low error buzz — wrong-answer feedback in the practice tools. */
+export function playError(): void {
+  unlockAudio().then(() => {
+    const ctx = getSharedContext();
+    const t0 = ctx.currentTime + 0.02;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(165, t0);
+    osc.frequency.exponentialRampToValueAtTime(110, t0 + 0.16);
+    gain.gain.setValueAtTime(0.001, t0);
+    gain.gain.linearRampToValueAtTime(0.1, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+    osc.connect(gain);
+    gain.connect(getOutputNode());
+    osc.start(t0);
+    osc.stop(t0 + 0.24);
+    suppressNowPlaying(400);
+  });
+}
+
 /** Play a single note by absolute MIDI (used for the pinned root preview). */
 export function playMidi(midi: number, dur = 0.9): void {
   unlockAudio().then(() => {
