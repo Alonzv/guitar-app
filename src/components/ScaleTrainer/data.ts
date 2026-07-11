@@ -68,7 +68,9 @@ export const SCALE_DATA: Record<ScaleId, ScaleEntry> = {
   },
 };
 
-export const SCALE_ORDER: ScaleId[] = ['major', 'natural_minor', 'major_pentatonic', 'minor_pentatonic'];
+// Pentatonics intentionally omitted from the trainer for now (kept in the data
+// / type so they can be re-enabled by adding them back here).
+export const SCALE_ORDER: ScaleId[] = ['major', 'natural_minor'];
 
 // ── UI strings (component-level HE / EN) ────────────────────────────────────
 export interface UIStrings {
