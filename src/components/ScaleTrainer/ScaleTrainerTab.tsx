@@ -163,7 +163,12 @@ const LearnMode: React.FC<{ lang: Lang }> = ({ lang }) => {
   const copy = SCALE_DATA[selected][lang];
   const notes = useMemo(() => spellScale(effRoot, selected)!, [effRoot, selected]);
   const box = useMemo(() => placeBox(notes[0]), [notes]);
-  const dots = useMemo(() => boxDots(notes, box.winStart), [notes, box.winStart]);
+  // Slide the 5-fret box window along the neck to view other positions.
+  const MAX_START = 12;
+  const [winShift, setWinShift] = useState(0);
+  useEffect(() => setWinShift(0), [notes]); // reset when the scale/root changes
+  const winStart = Math.min(Math.max(0, box.winStart + winShift), MAX_START);
+  const dots = useMemo(() => boxDots(notes, winStart), [notes, winStart]);
   const linStr = useMemo(() => linearString(notes[0]), [notes]);
   const midiRun = useMemo(() => scaleMidiRun(selected, box.rootMidi), [selected, box.rootMidi]);
 
@@ -204,6 +209,7 @@ const LearnMode: React.FC<{ lang: Lang }> = ({ lang }) => {
                   background: active ? T.primary : T.bgInput,
                   color: active ? T.white : T.textMuted,
                   fontSize: 12, fontWeight: active ? 700 : 500,
+                  textTransform: 'none',  // keep flats lowercase: Db, not DB
                 }}>
                 {r}
               </button>
@@ -251,17 +257,25 @@ const LearnMode: React.FC<{ lang: Lang }> = ({ lang }) => {
         <OneStringDiagram string={linStr} notes={notes} />
       </div>
 
-      {/* Box — one basic position */}
+      {/* Box — slide the window to see the scale in other positions */}
       <div style={card({ padding: 14 })}>
-        <p style={LABEL}>{t.boxPosition}</p>
-        <BoxFretboard winStart={box.winStart} dots={dots} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+          <p style={{ ...LABEL, margin: 0 }}>{t.boxPosition}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => setWinShift(s => s - 1)} disabled={winStart <= 0} aria-label="Previous position" style={posBtn(winStart <= 0)}>‹</button>
+            <span dir="ltr" style={{ fontSize: 11, color: T.textDim, minWidth: 84, textAlign: 'center' }}>
+              {t.positionLabel} · fr {winStart}–{winStart + 4}
+            </span>
+            <button onClick={() => setWinShift(s => s + 1)} disabled={winStart >= MAX_START} aria-label="Next position" style={posBtn(winStart >= MAX_START)}>›</button>
+          </div>
+        </div>
+        <BoxFretboard winStart={winStart} dots={dots} />
         <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 14, marginTop: 8, fontSize: 11, color: T.textDim }}>
           <LegendDot color={T.primary} label={t.rootLabel} />
           <LegendDot color={T.success} label={t.scaleNoteLabel} />
         </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button onClick={() => playScale(midiRun)} style={playBtn(true)}>▲ {t.playAsc}</button>
-          <button onClick={() => playScale([...midiRun].reverse())} style={playBtn(false)}>▼ {t.playDesc}</button>
+        <div style={{ marginTop: 12 }}>
+          <button onClick={() => playScale(midiRun)} style={playBtn(true)}>▶ {t.playScale}</button>
         </div>
       </div>
     </div>
@@ -270,12 +284,21 @@ const LearnMode: React.FC<{ lang: Lang }> = ({ lang }) => {
 
 function playBtn(primary: boolean): React.CSSProperties {
   return {
-    flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer',
+    flex: 1, width: '100%', padding: '11px 0', borderRadius: 0, cursor: 'pointer',
     fontSize: 14, fontWeight: 500,
     border: primary ? 'none' : `1px solid ${T.border}`,
     borderLeft: '4px solid var(--gc-bar-color)',
     background: primary ? T.primary : T.bgInput,
     color: primary ? T.white : T.textMuted,
+  };
+}
+
+function posBtn(disabled: boolean): React.CSSProperties {
+  return {
+    width: 30, height: 30, borderRadius: 0, cursor: disabled ? 'default' : 'pointer',
+    border: `1px solid ${T.border}`, background: T.bgInput,
+    color: disabled ? T.textDim : T.text, fontSize: 16, lineHeight: 1,
+    borderLeft: '3px solid var(--gc-bar-color)',
   };
 }
 
@@ -448,6 +471,7 @@ const PracticeMode: React.FC<PracticeProps> = ({ lang, data, recordResult, onNew
                         background: isErr ? T.error : T.bgInput,
                         color: isErr ? '#fff' : T.textMuted,
                         transition: 'background .12s ease',
+                        textTransform: 'none',  // keep flats lowercase: Db, not DB
                       }}>
                       {n}
                     </button>
@@ -479,8 +503,7 @@ const PracticeMode: React.FC<PracticeProps> = ({ lang, data, recordResult, onNew
                 <LegendDot color={T.success} label={t.scaleNoteLabel} />
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button onClick={() => playScale(midiRun)} style={playBtn(true)}>▲ {t.playAsc}</button>
-                <button onClick={() => playScale([...midiRun].reverse())} style={playBtn(false)}>▼ {t.playDesc}</button>
+                <button onClick={() => playScale(midiRun)} style={playBtn(true)}>▶ {t.playScale}</button>
               </div>
               <button onClick={nextChallenge}
                 style={{ width: '100%', marginTop: 10, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>

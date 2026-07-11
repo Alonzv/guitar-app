@@ -84,6 +84,8 @@ export interface UIStrings {
   boxPosition: string;
   playAsc: string;
   playDesc: string;
+  playScale: string;
+  positionLabel: string;
   spellPrompt: string;
   noteBank: string;
   streak: string;
@@ -117,6 +119,8 @@ export const UI: Record<Lang, UIStrings> = {
     boxPosition: 'Box position',
     playAsc: 'Play Ascending',
     playDesc: 'Play Descending',
+    playScale: 'Play Scale',
+    positionLabel: 'Position',
     spellPrompt: 'Spell the scale — fill the boxes in order',
     noteBank: 'Note bank',
     streak: 'Streak',
@@ -148,6 +152,8 @@ export const UI: Record<Lang, UIStrings> = {
     boxPosition: 'פוזיציה (Box)',
     playAsc: 'נגן עולה',
     playDesc: 'נגן יורד',
+    playScale: 'נגן סולם',
+    positionLabel: 'פוזיציה',
     spellPrompt: 'איית את הסולם — מלא את המשבצות לפי הסדר',
     noteBank: 'מקלדת תווים',
     streak: 'רצף',

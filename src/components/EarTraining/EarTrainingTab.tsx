@@ -209,6 +209,7 @@ const LearnMode: React.FC<{ lang: Lang; playExercise: (ex: Exercise) => void }> 
                   background: active ? T.secondary : T.bgInput,
                   color: active ? '#fff' : T.textMuted,
                   fontSize: 13, fontWeight: active ? 700 : 500,
+                  textTransform: 'none',  // keep m3 / M3 distinct (global button rule uppercases)
                 }}>
                 {id}
               </button>
