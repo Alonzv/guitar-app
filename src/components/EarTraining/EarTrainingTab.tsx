@@ -7,7 +7,7 @@ import {
 } from './data';
 import type { IntervalId, Lang } from './data';
 import {
-  makeExercise, pickWeightedInterval, midiAt,
+  makeExercise, pickWeightedInterval, midiAt, noteName,
 } from './engine';
 import type { Exercise, Direction, PlayMode } from './engine';
 import { WindowedFretboard } from './WindowedFretboard';
@@ -228,7 +228,6 @@ const LearnMode: React.FC<{ lang: Lang; playExercise: (ex: Exercise) => void }> 
           feedback={null}
           showAnswer
           disabled
-          rootLabel="R"
           onPick={() => {}}
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -389,13 +388,21 @@ const PracticeMode: React.FC<PracticeProps> = ({
         </div>
       ) : (
         <div style={card({ padding: 14 })}>
-          {/* Replay — prominent, above the neck */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          {/* Replay + Play-root — prominent, above the neck */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
             <button onClick={() => playExercise(exercise)}
               style={{ padding: '10px 26px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               ↻ {t.replay}
             </button>
+            <button onClick={() => playMidi(exercise.rootMidi)}
+              style={{ padding: '10px 22px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 500, background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              ● {t.playRoot}
+            </button>
           </div>
+          {/* Name the anchor note so it maps to the black dot on the neck */}
+          <p style={{ textAlign: 'center', margin: '0 0 10px', fontSize: 12, color: T.textDim }}>
+            {t.rootLabel}: <span style={{ fontWeight: 700, color: T.text }}>{noteName(exercise.rootMidi)}</span>
+          </p>
 
           <WindowedFretboard
             winStart={exercise.winStart}
@@ -404,7 +411,6 @@ const PracticeMode: React.FC<PracticeProps> = ({
             feedback={feedback}
             showAnswer={revealed}
             disabled={!!feedback}
-            rootLabel={t.rootLabel === 'בסיס' ? 'ב' : 'R'}
             onPick={handlePick}
           />
 

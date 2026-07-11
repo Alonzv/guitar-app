@@ -13,7 +13,6 @@ interface Props {
   /** Reveal the correct target(s) — set after a wrong answer. */
   showAnswer: boolean;
   disabled: boolean;
-  rootLabel: string;
   onPick: (pos: Pos) => void;
 }
 
@@ -34,8 +33,11 @@ const colX = (c: number) => PAD_L + c * COL_W + COL_W / 2;
 const MARKERS = new Set([3, 5, 7, 9, 12]);
 
 export const WindowedFretboard: React.FC<Props> = ({
-  winStart, root, targetPositions, feedback, showAnswer, disabled, rootLabel, onPick,
+  winStart, root, targetPositions, feedback, showAnswer, disabled, onPick,
 }) => {
+  // The root always shows its actual pitch name so it's obvious the pinned dot
+  // is the FIRST note the exercise plays — not an abstract "R".
+  const rootLabel = noteName(midiAt(root.string, root.fret));
   const atNut = winStart === 0;
   const frets = Array.from({ length: WINDOW }, (_, c) => winStart + c);
 
