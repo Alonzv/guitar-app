@@ -156,6 +156,17 @@ export const HELP: Record<string, HelpEntry> = {
     },
   },
 
+  'practice:eartraining': {
+    en: {
+      title: 'Ear Training',
+      body: 'Train your ear to recognise intervals on the neck. Learn mode explains each interval with a description, an aural anchor (a familiar tune) and a shape on a windowed fretboard. Practice mode plays an interval from a pinned root — melodic or harmonic — and you tap the second note anywhere it sounds right; any position at the correct pitch counts. Build a streak, and mixed practice quietly focuses on the intervals you miss most.',
+    },
+    he: {
+      title: 'אימון שמיעה',
+      body: 'מאמנים את האוזן לזהות אינטרוולים על הצוואר. במצב לימוד כל אינטרוול מוסבר עם תיאור, עוגן שמיעתי (מנגינה מוכרת) וצורה על מקטע צוואר. במצב תרגול המערכת משמיעה אינטרוול מתו בסיס נעוץ — מלודי או הרמוני — ואתם מקליקים על התו השני בכל מקום שנכון; כל מיקום בגובה הצליל הנכון מתקבל. אוספים רצף, ובמצב מעורב האלגוריתם מתמקד באינטרוולים שבהם אתם טועים יותר.',
+    },
+  },
+
   // ── STUDIO ────────────────────────────────────────────────────────────────
   'studio:tabbuilder': {
     en: {

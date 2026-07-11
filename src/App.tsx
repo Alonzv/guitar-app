@@ -23,6 +23,7 @@ import { VoicingsTab }       from './components/Voicings/VoicingsTab';
 
 import { Tuner }             from './components/Tools/Tuner';
 import { Metronome }         from './components/Tools/Metronome';
+import { EarTrainingTab }    from './components/EarTraining/EarTrainingTab';
 
 import { TabBuilder }        from './components/Tools/TabBuilder';
 import { AudioToTab }        from './components/Tools/AudioToTab';
@@ -51,7 +52,7 @@ import { T } from './theme';
 type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target';
 type ScalesSub    = 'explorer' | 'triads' | 'intervals' | 'wheel';
 type VoicingsSub  = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
-type PracticeSub  = 'tuner' | 'metronome';
+type PracticeSub  = 'tuner' | 'metronome' | 'eartraining';
 type StudioSub    = 'tabbuilder' | 'audiotab';
 
 const PANEL_TITLES = ['CHORDS', 'SCALES', 'VOICINGS', 'PRACTICE', 'STUDIO'];
@@ -75,8 +76,9 @@ const VOICINGS_SEGS  = [
   { id: 'reharmonize',  label: 'Reharm'     },
 ];
 const PRACTICE_SEGS  = [
-  { id: 'tuner',     label: 'Tuner'     },
-  { id: 'metronome', label: 'Metronome' },
+  { id: 'tuner',       label: 'Tuner'     },
+  { id: 'metronome',   label: 'Metronome' },
+  { id: 'eartraining', label: 'Ear'       },
 ];
 const STUDIO_SEGS    = [
   { id: 'tabbuilder', label: 'Tab Builder' },
@@ -529,15 +531,21 @@ export default function App() {
           {/* ── Panel 3: PRACTICE ────────────────────────────────────── */}
           {pagerTab === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
               <ErrorBoundary label="Practice">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginTop: 24 }}>
-                  <div style={{ borderRight: `1px solid ${T.border}`, paddingRight: 40, paddingBottom: 24 }}>
-                    <div style={{ maxWidth: 420, margin: '0 auto' }}><Tuner /></div>
+                {(practiceSegment === 'tuner' || practiceSegment === 'metronome') && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginTop: 24 }}>
+                    <div style={{ borderRight: `1px solid ${T.border}`, paddingRight: 40, paddingBottom: 24 }}>
+                      <div style={{ maxWidth: 420, margin: '0 auto' }}><Tuner /></div>
+                    </div>
+                    <div style={{ paddingLeft: 40, paddingBottom: 24 }}>
+                      <div style={{ maxWidth: 420, margin: '0 auto' }}><Metronome /></div>
+                    </div>
                   </div>
-                  <div style={{ paddingLeft: 40, paddingBottom: 24 }}>
-                    <div style={{ maxWidth: 420, margin: '0 auto' }}><Metronome /></div>
-                  </div>
-                </div>
+                )}
+                {practiceSegment === 'eartraining' && (
+                  <div style={{ maxWidth: 680, margin: '0 auto', width: '100%' }}><EarTrainingTab desktop /></div>
+                )}
               </ErrorBoundary>
             </div>
           )}
@@ -648,8 +656,9 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
           <ErrorBoundary label="Practice">
-            {practiceSegment === 'tuner'     && <Tuner />}
-            {practiceSegment === 'metronome' && <Metronome />}
+            {practiceSegment === 'tuner'       && <Tuner />}
+            {practiceSegment === 'metronome'   && <Metronome />}
+            {practiceSegment === 'eartraining' && <EarTrainingTab />}
           </ErrorBoundary>
         </div>
 
