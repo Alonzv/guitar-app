@@ -160,6 +160,17 @@ export function placeBox(root: string): BoxPlacement {
   return { winStart: Math.min(Math.max(0, fret - 1), 12 - BOX_WINDOW + 1), rootMidi: OPEN_MIDI[1] + fret };
 }
 
+/**
+ * Window starts for the scale's neck positions — 7 for the 7-note scales
+ * (5 for pentatonics). Each position begins on the next scale degree, so the
+ * box climbs the neck by the scale's own step pattern: a whole step = 2 frets,
+ * a half step = 1 fret (major: +2,+2,+1,+2,+2,+2,+1, spanning the 12-fret
+ * octave across the 7 positions).
+ */
+export function positionStarts(scale: ScaleId, base: number): number[] {
+  return SHAPES[scale].semis.map(s => base + s);
+}
+
 export interface BoxDot { string: number; fret: number; label: string; isRoot: boolean }
 
 /** Every position inside the window whose pitch class is in the scale. */

@@ -6,7 +6,7 @@ import { SCALE_DATA, SCALE_ORDER, UI } from './data';
 import type { Lang, ScaleId } from './data';
 import {
   NOTE_BANK, spellScale, validRoots, pcOf,
-  makeChallenge, pickWeightedScale, placeBox, boxDots, scaleMidiRun, linearString,
+  makeChallenge, pickWeightedScale, placeBox, boxDots, scaleMidiRun, linearString, positionStarts,
 } from './engine';
 import type { Challenge } from './engine';
 import { BoxFretboard, OneStringDiagram } from './ScaleDiagrams';
@@ -163,11 +163,13 @@ const LearnMode: React.FC<{ lang: Lang }> = ({ lang }) => {
   const copy = SCALE_DATA[selected][lang];
   const notes = useMemo(() => spellScale(effRoot, selected)!, [effRoot, selected]);
   const box = useMemo(() => placeBox(notes[0]), [notes]);
-  // Slide the 5-fret box window along the neck to view other positions.
-  const MAX_START = 12;
-  const [winShift, setWinShift] = useState(0);
-  useEffect(() => setWinShift(0), [notes]); // reset when the scale/root changes
-  const winStart = Math.min(Math.max(0, box.winStart + winShift), MAX_START);
+  // The scale's neck positions (7 for major/minor). Each starts on the next
+  // scale degree, so the box climbs by the scale's step pattern.
+  const positions = useMemo(() => positionStarts(selected, box.winStart), [selected, box.winStart]);
+  const [posIdx, setPosIdx] = useState(0);
+  useEffect(() => setPosIdx(0), [notes]); // reset to position 1 when scale/root changes
+  const idx = Math.min(posIdx, positions.length - 1);
+  const winStart = positions[idx];
   const dots = useMemo(() => boxDots(notes, winStart), [notes, winStart]);
   const linStr = useMemo(() => linearString(notes[0]), [notes]);
   const midiRun = useMemo(() => scaleMidiRun(selected, box.rootMidi), [selected, box.rootMidi]);
@@ -262,11 +264,11 @@ const LearnMode: React.FC<{ lang: Lang }> = ({ lang }) => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
           <p style={{ ...LABEL, margin: 0 }}>{t.boxPosition}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button onClick={() => setWinShift(s => s - 1)} disabled={winStart <= 0} aria-label="Previous position" style={posBtn(winStart <= 0)}>‹</button>
-            <span dir="ltr" style={{ fontSize: 11, color: T.textDim, minWidth: 84, textAlign: 'center' }}>
-              {t.positionLabel} · fr {winStart}–{winStart + 4}
+            <button onClick={() => setPosIdx(i => Math.max(0, i - 1))} disabled={idx <= 0} aria-label="Previous position" style={posBtn(idx <= 0)}>‹</button>
+            <span dir="ltr" style={{ fontSize: 11, color: T.textDim, minWidth: 96, textAlign: 'center' }}>
+              {t.positionLabel} {idx + 1}/{positions.length} · fr {winStart}–{winStart + 4}
             </span>
-            <button onClick={() => setWinShift(s => s + 1)} disabled={winStart >= MAX_START} aria-label="Next position" style={posBtn(winStart >= MAX_START)}>›</button>
+            <button onClick={() => setPosIdx(i => Math.min(positions.length - 1, i + 1))} disabled={idx >= positions.length - 1} aria-label="Next position" style={posBtn(idx >= positions.length - 1)}>›</button>
           </div>
         </div>
         <BoxFretboard winStart={winStart} dots={dots} />
