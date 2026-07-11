@@ -165,7 +165,7 @@ const LearnMode: React.FC<{ lang: Lang }> = ({ lang }) => {
   const box = useMemo(() => placeBox(notes[0]), [notes]);
   // The scale's neck positions (7 for major/minor). Each starts on the next
   // scale degree, so the box climbs by the scale's step pattern.
-  const positions = useMemo(() => positionStarts(selected, box.winStart), [selected, box.winStart]);
+  const positions = useMemo(() => positionStarts(selected, effRoot), [selected, effRoot]);
   const [posIdx, setPosIdx] = useState(0);
   useEffect(() => setPosIdx(0), [notes]); // reset to position 1 when scale/root changes
   const idx = Math.min(posIdx, positions.length - 1);

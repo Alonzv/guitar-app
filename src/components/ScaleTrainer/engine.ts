@@ -161,14 +161,21 @@ export function placeBox(root: string): BoxPlacement {
 }
 
 /**
- * Window starts for the scale's neck positions — 7 for the 7-note scales
- * (5 for pentatonics). Each position begins on the next scale degree, so the
- * box climbs the neck by the scale's own step pattern: a whole step = 2 frets,
- * a half step = 1 fret (major: +2,+2,+1,+2,+2,+2,+1, spanning the 12-fret
- * octave across the 7 positions).
+ * Neck positions for the scale, anchored to the fretboard (not to the root's
+ * 6th-string location): each position begins on the next scale note found on
+ * the low-E string, walking up from fret 1 to fret 12. So position 1 is the
+ * lowest box on the neck and they climb by the scale's step pattern — 7
+ * positions for the 7-note scales (5 for pentatonics).
  */
-export function positionStarts(scale: ScaleId, base: number): number[] {
-  return SHAPES[scale].semis.map(s => base + s);
+export function positionStarts(scale: ScaleId, root: string): number[] {
+  const rootPc = pcOf(root);
+  const pcs = new Set(SHAPES[scale].semis.map(s => (rootPc + s) % 12));
+  const lowE = OPEN_MIDI[0] % 12;
+  const starts: number[] = [];
+  for (let f = 1; f <= 12 && starts.length < SHAPES[scale].semis.length; f++) {
+    if (pcs.has((lowE + f) % 12)) starts.push(f);
+  }
+  return starts;
 }
 
 export interface BoxDot { string: number; fret: number; label: string; isRoot: boolean }
