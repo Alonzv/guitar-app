@@ -54,6 +54,15 @@ function ToggleRow({ children }: { children: React.ReactNode }) {
   return <div style={{ display: 'flex', gap: 6 }}>{children}</div>;
 }
 
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ width: 12, height: 12, borderRadius: '50%', background: color, border: '1.5px solid #fff', boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} />
+      {label}
+    </span>
+  );
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 export const EarTrainingTab: React.FC<Props> = () => {
   const { user } = useAuth();
@@ -413,6 +422,13 @@ const PracticeMode: React.FC<PracticeProps> = ({
             disabled={!!feedback}
             onPick={handlePick}
           />
+
+          {/* Dot legend — clarifies what each coloured circle means */}
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 14, marginTop: 10, fontSize: 11, color: T.textDim }}>
+            <LegendDot color={T.primary} label={t.rootLabel} />
+            {feedback && <LegendDot color={feedback.correct ? T.success : T.error} label={t.answerLabel} />}
+            {feedback && !feedback.correct && <LegendDot color={T.success} label={t.correct.replace('!', '')} />}
+          </div>
 
           {/* Status line */}
           <div style={{ minHeight: 44, marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
