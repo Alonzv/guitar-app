@@ -39,6 +39,19 @@ const SECTION: React.CSSProperties = {
   textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
 };
 
+function ToolHeader({ eyebrow, title, blurb }: { eyebrow: string; title: string; blurb: string }) {
+  return (
+    <div style={{ borderLeft: `4px solid ${T.secondary}`, paddingLeft: 12 }}>
+      <p style={{
+        fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.16em',
+        textTransform: 'uppercase', color: T.secondary, margin: '0 0 4px',
+      }}>{eyebrow}</p>
+      <h3 style={{ margin: '0 0 4px', fontSize: 19, fontWeight: 500, color: T.text }}>{title}</h3>
+      <p style={{ margin: 0, fontSize: 13, color: T.textMuted }}>{blurb}</p>
+    </div>
+  );
+}
+
 export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
   const [sub, setSub] = useState<Sub>('learn');
 
@@ -63,10 +76,23 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {tabBar}
       {sub === 'learn' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <IntervalExplore />
-          <div style={{ borderTop: `1px solid ${T.border}` }} />
-          <IntervalCalculate />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={card({ padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 16 })}>
+            <ToolHeader
+              eyebrow="Tool 1 · Explore"
+              title="Interval Explorer"
+              blurb="Pick a root note and an interval to see and hear every place it lands on the neck."
+            />
+            <IntervalExplore />
+          </div>
+          <div style={card({ padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 16 })}>
+            <ToolHeader
+              eyebrow="Tool 2 · Calculate"
+              title="Interval Calculator"
+              blurb="Pick any two notes to work out the interval between them, melodic or harmonic."
+            />
+            <IntervalCalculate />
+          </div>
         </div>
       )}
       {sub === 'explore' && <IntervalPlayground />}
