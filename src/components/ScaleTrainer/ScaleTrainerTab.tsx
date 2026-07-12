@@ -345,13 +345,23 @@ const PracticeMode: React.FC<PracticeProps> = ({ lang, data, recordResult, onNew
     if (!challenge || phase !== 'spelling') return;
     const expected = challenge.notes[filled];
 
-    if (name === expected) {
+    // Accept the exact spelling, OR an enharmonic equivalent (same pitch) as
+    // long as its letter isn't already used by a filled slot — so writing Eb
+    // as D# counts, unless that would repeat a letter already in the scale.
+    // The slot still displays the theory-correct spelling (challenge.notes[i]),
+    // keeping the finished scale free of repeated letters.
+    const rightPitch = pcOf(name) === pcOf(expected);
+    const usedLetters = new Set(challenge.notes.slice(0, filled).map(n => n[0]));
+    const repeatsLetter = name[0] !== expected[0] && usedLetters.has(name[0]);
+    const accept = name === expected || (rightPitch && !repeatsLetter);
+
+    if (accept) {
       setErrorBtn(null);
       setHint(null);
       const nextFilled = filled + 1;
       setFilled(nextFilled);
       if (nextFilled === challenge.notes.length) {
-        // Scale complete → record, update streak, drop the notes onto the neck.
+        // Scale complete → record once, update streak, drop notes onto the neck.
         recordResult(challenge.scale, flawless);
         if (flawless) {
           const next = streak + 1;
@@ -361,17 +371,14 @@ const PracticeMode: React.FC<PracticeProps> = ({ lang, data, recordResult, onNew
         setPhase('reward');
       }
     } else {
-      // Strict enharmonic rule: the right pitch under the wrong letter is an
-      // error too — but it gets its own, more instructive hint.
+      // Wrong: either not in the scale, or the right pitch spelled with a
+      // letter that's already taken (which would duplicate a letter).
       playError();
       navigator.vibrate?.(30);
       setErrorBtn(name);
-      setHint(pcOf(name) === pcOf(expected) ? 'enharmonic' : 'wrong');
-      if (flawless) {
-        setFlawless(false);
-        setStreak(0);
-        recordResult(challenge.scale, false);
-      }
+      setHint(rightPitch ? 'enharmonic' : 'wrong');
+      if (flawless) setFlawless(false);
+      setStreak(0);
       if (errTimer.current) clearTimeout(errTimer.current);
       errTimer.current = setTimeout(() => setErrorBtn(null), 500);
     }
