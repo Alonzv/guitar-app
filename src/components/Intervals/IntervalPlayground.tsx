@@ -176,20 +176,20 @@ export function IntervalPlayground() {
       {/* Interactive neck */}
       <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 9 }}>
-          <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
+          <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'var(--gc-text-dim)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: A_COLOR, display: 'inline-block' }} />
-            <span style={{ color: 'rgba(255,255,255,0.7)' }}>1st</span>
+            <span style={{ color: 'var(--gc-text)' }}>1st</span>
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: B_COLOR, display: 'inline-block', border: '1px solid rgba(255,255,255,0.3)' }} />
-            <span style={{ color: 'rgba(255,255,255,0.7)' }}>2nd</span>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: B_COLOR, display: 'inline-block', border: '1px solid var(--gc-border)' }} />
+            <span style={{ color: 'var(--gc-text)' }}>2nd</span>
           </span>
           {selected.length > 0 && (
             <button onClick={() => setSelected([])} style={{
               marginLeft: 'auto', padding: '2px 8px', borderRadius: 0, cursor: 'pointer',
               fontSize: 9, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
-              background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.65)',
+              background: 'var(--gc-bg-input)', color: 'var(--gc-text-dim)',
               border: 'none', borderLeft: '2px solid var(--gc-bar-color)',
             }}>CLEAR</button>
           )}
@@ -226,14 +226,14 @@ export function IntervalPlayground() {
             {/* Open-string note names, left of the nut */}
             {Array.from({ length: 6 }).map((_, s) => (
               <text key={`open-${s}`} x={NUT - 30} y={strY(s) + 3.5}
-                textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.45)">
+                textAnchor="middle" fontSize={11} fontWeight="600" fill="var(--gc-text-dim)">
                 {fretToNote(s, 0)}
               </text>
             ))}
 
             {[3, 5, 7, 9, 12].map(f => (
               <text key={f} x={NUT + (f - 0.5) * FRET_SP} y={FB_TOP + 5 * STR_SP + 10}
-                textAnchor="middle" fontSize={8} fill="var(--gc-fretboard-pos)">{f}</text>
+                textAnchor="middle" fontSize={10} fontWeight="600" fill="var(--gc-text-dim)">{f}</text>
             ))}
 
             {/* Connector between the two chosen notes */}
