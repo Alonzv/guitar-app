@@ -133,8 +133,9 @@ export function IntervalPlayground() {
         Tap any two notes on the neck to hear them and name the interval
       </p>
 
-      {/* Result card — appears with two notes; placeholder otherwise */}
-      <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `4px solid ${desc ? T.primary : T.border}`, minHeight: 64 }}>
+      {/* Result card — appears with two notes; placeholder otherwise. Ordered
+          below the neck so the neck stays put when this card grows. */}
+      <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `4px solid ${desc ? T.primary : T.border}`, minHeight: 64, order: 2 }}>
         {a && b && desc ? (
           <>
             <p style={{ ...MONO_LBL, margin: '0 0 6px' }}>{noteName(a)} → {noteName(b)}</p>
@@ -173,8 +174,9 @@ export function IntervalPlayground() {
         )}
       </div>
 
-      {/* Interactive neck */}
-      <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}` }}>
+      {/* Interactive neck — kept above the result card (order 1) so it doesn't
+          shift down when the card expands to show the interval info. */}
+      <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}`, order: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 9 }}>
           <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'var(--gc-text-dim)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -226,14 +228,14 @@ export function IntervalPlayground() {
             {/* Open-string note names, left of the nut */}
             {Array.from({ length: 6 }).map((_, s) => (
               <text key={`open-${s}`} x={NUT - 30} y={strY(s) + 3.5}
-                textAnchor="middle" fontSize={11} fontWeight="600" fill="var(--gc-text-dim)">
+                textAnchor="middle" fontSize={12} fontWeight="700" fill="var(--gc-text)">
                 {fretToNote(s, 0)}
               </text>
             ))}
 
             {[3, 5, 7, 9, 12].map(f => (
-              <text key={f} x={NUT + (f - 0.5) * FRET_SP} y={FB_TOP + 5 * STR_SP + 10}
-                textAnchor="middle" fontSize={10} fontWeight="600" fill="var(--gc-text-dim)">{f}</text>
+              <text key={f} x={NUT + (f - 0.5) * FRET_SP} y={FB_TOP + 5 * STR_SP + 11}
+                textAnchor="middle" fontSize={11} fontWeight="700" fill="var(--gc-text)">{f}</text>
             ))}
 
             {/* Connector between the two chosen notes */}
