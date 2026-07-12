@@ -195,8 +195,10 @@ export function IntervalPlayground() {
           )}
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <svg viewBox={`0 0 ${FB_W} ${FB_H + 6}`} style={{ display: 'block', width: '100%', minWidth: 300, userSelect: 'none' }}>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {/* 40% larger than the container so it reads clearly; overflow scrolls
+              horizontally (string names stay pinned to the left of the board). */}
+          <svg viewBox={`0 0 ${FB_W} ${FB_H + 6}`} style={{ display: 'block', width: '140%', minWidth: 460, userSelect: 'none' }}>
             <rect x={0} y={0} width={FB_W} height={FB_H + 6} fill="var(--gc-fretboard-bg)" />
 
             {[3, 5, 7, 9].map(f => (
