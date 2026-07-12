@@ -99,11 +99,12 @@ export function DesktopShell({
               width: 34, height: 34, borderRadius: 0,
               border: `1px solid ${T.border}`,
               background: 'transparent',
-              color: T.textDim, fontSize: 14, cursor: 'pointer',
+              color: T.textDim, fontSize: 12, fontWeight: 600, fontFamily: 'var(--gc-mono)',
+              letterSpacing: '0.04em', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            {darkMode ? 'L' : 'D'}
+            {darkMode ? 'D' : 'L'}
           </button>
           {userMenu}
         </div>

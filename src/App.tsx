@@ -406,8 +406,8 @@ export default function App() {
           </nav>
 
           <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
-            <button onClick={() => setDarkMode(d => !d)} style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textDim, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Toggle dark mode">
-              {darkMode ? '☀' : '☾'}
+            <button onClick={() => setDarkMode(d => !d)} style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textDim, fontSize: 12, fontWeight: 600, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Toggle dark mode">
+              {darkMode ? 'D' : 'L'}
             </button>
             {sidebarPinned
               ? <button onClick={() => setSidebarPinned(false)} title="Hide sidebar" style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
