@@ -11,7 +11,7 @@ import { T, card } from '../../theme';
 // a G high up read as a Minor 10th, not a Minor 3rd. Third tap rolls the pair:
 // the oldest note drops so there are never more than two.
 
-const A_COLOR = '#110CF0';       // first note — matches Note A elsewhere
+const A_COLOR = 'var(--gc-success)';       // first note — matches Note A elsewhere
 const B_COLOR = T.primary;       // second note
 
 // Fretboard geometry — mirrors the Explore/Calculate necks for visual parity.

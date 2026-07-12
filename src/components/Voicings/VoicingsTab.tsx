@@ -89,7 +89,7 @@ const PATH_COLOR: Record<string, string> = {
   'Open Drones':   '#1A1818',  // ink
   'Open Position': '#3A352F',  // graphite
   'Lower Neck':    '#5C5650',  // slate
-  'Mid Neck':      '#110CF0',  // accent blue
+  'Mid Neck':      'var(--gc-success)',  // accent blue
   'Upper Neck':    '#8A8378',  // taupe
   'High Neck':     '#9C958C',  // light taupe
 };
@@ -99,7 +99,7 @@ const PATH_COLOR: Record<string, string> = {
 export type IsolateGroup = null | 'root' | '3rd' | '5th' | '7th';
 
 const INTERVAL_COLOR: Record<string, string> = {
-  '1P': '#110CF0',               // Root — blue
+  '1P': 'var(--gc-success)',               // Root — blue
   // 3rd — theme ink (#1A1818 light / sand #F0EAD8 dark); a hardcoded ink here
   // used to vanish on the dark background.
   '3m': T.text, '3M': T.text,

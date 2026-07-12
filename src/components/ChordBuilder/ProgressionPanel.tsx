@@ -21,7 +21,7 @@ interface Props {
   capo: number;
 }
 
-const CHORD_ACCENTS = ['#110CF0', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
+const CHORD_ACCENTS = ['var(--gc-success)', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
 
 const LABEL_STYLE = {
   margin: 0,

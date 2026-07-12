@@ -34,7 +34,7 @@ const TAB_BG   = T.secondary;
 const TAB_LINE = 'rgba(255,255,255,0.45)';
 const TAB_BAR  = 'rgba(255,255,255,0.9)';
 const TAB_LBL  = 'rgba(255,255,255,0.75)';
-const TAB_SEL  = '#110CF0';
+const TAB_SEL  = 'var(--gc-success)';
 
 const COL_W        = 16;
 const STR_GAP      = 16;
@@ -220,7 +220,7 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
           <linearGradient id="wv-green" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%"   stopColor="#5C5650" />
             <stop offset="50%"  stopColor="#5C5650" />
-            <stop offset="100%" stopColor="#2E2A26" />
+            <stop offset="100%" stopColor="var(--gc-bg-input)" />
           </linearGradient>
         </defs>
         {sampled.map((v, i) => {
@@ -603,7 +603,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
           onClick={startRecording}
           style={{
             width: 88, height: 88, borderRadius: '50%',
-            background: T.primary, border: '4px solid rgba(17,12,240,0.25)',
+            background: T.primary, border: '4px solid var(--gc-success-soft)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, outline: 'none',
           }}
@@ -657,7 +657,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         <p style={{ margin: 0, fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Recording</p>
         <button onClick={stopRecording} style={{
           width: 88, height: 88, borderRadius: '50%',
-          background: T.primary, border: '4px solid rgba(17,12,240,0.25)',
+          background: T.primary, border: '4px solid var(--gc-success-soft)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0, outline: 'none',
         }}>

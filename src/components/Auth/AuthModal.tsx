@@ -186,7 +186,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
             borderLeft: '3px solid var(--gc-bar-color)',
           }}>
-            <span style={{ fontWeight: 700, color: '#4285F4' }}>G</span> Continue with Google
+            <span style={{ fontWeight: 700, color: 'var(--gc-text)' }}>G</span> Continue with Google
           </button>
           <button disabled={!configured || busy} onClick={() => social('apple')} style={{
             width: '100%', padding: '11px 0', borderRadius: 0, cursor: configured ? 'pointer' : 'not-allowed',

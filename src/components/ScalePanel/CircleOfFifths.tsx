@@ -32,7 +32,7 @@ type HarmonicFunc = 'tonic' | 'subdominant' | 'dominant';
 type Mode = 'major' | 'minor';
 
 const FC: Record<HarmonicFunc, { fill: string; hover: string; text: string }> = {
-  tonic:       { fill: '#110CF0', hover: '#3D3DFF', text: '#ffffff' },
+  tonic:       { fill: 'var(--gc-success)', hover: 'var(--gc-success)', text: '#ffffff' },
   subdominant: { fill: '#5C5650', hover: '#6B655C', text: '#ffffff' },
   dominant:    { fill: '#1A1818', hover: '#2E2A26', text: '#ffffff' },
 };

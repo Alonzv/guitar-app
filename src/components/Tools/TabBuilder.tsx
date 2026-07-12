@@ -679,7 +679,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
               disabled={!canUndo}
               title="Undo (Ctrl+Z)"
               style={{
-                background: '#FFC800',
+                background: 'var(--gc-error)',
                 border: 'none',
                 borderRadius: 0, padding: '7px 9px',
                 cursor: canUndo ? 'pointer' : 'default',

@@ -103,7 +103,7 @@ const COLOR_ORIG  = T.text;
 const COLOR_ADDED = T.brandAccent;
 // Soft highlighter drawn behind the user's ORIGINAL notes in the result
 // view, so the source tab stands out inside the arrangement.
-const MELODY_MARK = 'rgba(255, 210, 0, 0.45)';
+const MELODY_MARK = 'var(--gc-error-soft)';
 
 type LoadingKind = 'harmonize' | 'regenerate' | null;
 

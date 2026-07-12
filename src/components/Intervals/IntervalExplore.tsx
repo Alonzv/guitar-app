@@ -233,7 +233,7 @@ export function IntervalExplore() {
               ))}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, fontSize: 9, alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#110CF0', display: 'inline-block' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gc-success)', display: 'inline-block' }} />
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Root</span>
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -278,7 +278,7 @@ export function IntervalExplore() {
                   <line key={`conn-${i}`}
                     x1={noteX(p.rootFret)} y1={strY(p.string)}
                     x2={noteX(p.intFret)} y2={strY(p.string)}
-                    stroke="#110CF0" strokeWidth={1.5} strokeDasharray="5 3" opacity={0.7} />
+                    stroke="var(--gc-success)" strokeWidth={1.5} strokeDasharray="5 3" opacity={0.7} />
                 ))}
 
                 {intervalDots.map((p, i) => (
@@ -293,7 +293,7 @@ export function IntervalExplore() {
 
                 {rootDots.map((p, i) => (
                   <g key={`r-${i}`}>
-                    <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill="#110CF0" />
+                    <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill="var(--gc-success)" />
                     <text x={noteX(p.fret)} y={strY(p.string)} dominantBaseline="central"
                       textAnchor="middle" fontSize={10} fill="#fff" fontWeight="700">{root}</text>
                   </g>
@@ -311,11 +311,11 @@ export function IntervalExplore() {
                   const lbl  = `${selectedInterval.name.toUpperCase()} · ${frets} FRET${frets !== 1 ? 'S' : ''}`;
                   return (
                     <g>
-                      <line x1={xL} y1={bY} x2={xL} y2={bY + bH} stroke="#110CF0" strokeWidth={1.5} />
-                      <line x1={xL} y1={bY + bH} x2={xR} y2={bY + bH} stroke="#110CF0" strokeWidth={1.5} />
-                      <line x1={xR} y1={bY} x2={xR} y2={bY + bH} stroke="#110CF0" strokeWidth={1.5} />
+                      <line x1={xL} y1={bY} x2={xL} y2={bY + bH} stroke="var(--gc-success)" strokeWidth={1.5} />
+                      <line x1={xL} y1={bY + bH} x2={xR} y2={bY + bH} stroke="var(--gc-success)" strokeWidth={1.5} />
+                      <line x1={xR} y1={bY} x2={xR} y2={bY + bH} stroke="var(--gc-success)" strokeWidth={1.5} />
                       <text x={cX} y={bY + bH + 11} textAnchor="middle" fontSize={7}
-                        fill="#110CF0" fontFamily="monospace" letterSpacing="0.08em">{lbl}</text>
+                        fill="var(--gc-success)" fontFamily="monospace" letterSpacing="0.08em">{lbl}</text>
                     </g>
                   );
                 })()}

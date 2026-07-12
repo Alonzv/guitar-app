@@ -673,7 +673,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
           {results.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {results.map((item, idx) => {
-                const RESULT_COLORS = ['#110CF0', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
+                const RESULT_COLORS = ['var(--gc-success)', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
                 const bg = RESULT_COLORS[idx % RESULT_COLORS.length];
                 return (
                   <button

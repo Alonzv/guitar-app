@@ -72,7 +72,7 @@ function fretboardSVGHtml(voicing: FretPosition[]): string {
   for (const p of voicing) {
     const cx = fx(p.fret), cy = sy(p.string);
     const note = fretToNote(p.string, p.fret);
-    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#110CF0" stroke="#fff" stroke-width="1.25" opacity="0.92"/>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="7" fill="#2B54D4" stroke="#fff" stroke-width="1.25" opacity="0.92"/>`;
     svg += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700" font-family="'Courier New',monospace">${note}</text>`;
   }
 
@@ -200,7 +200,7 @@ function buildAnalysisHTML(a: TabPDFAnalysis): string {
   }).join('');
 
   return `
-    <div dir="${dir}" style="text-align:${align};margin-top:34px;padding-top:24px;border-top:2px solid #110CF0;">
+    <div dir="${dir}" style="text-align:${align};margin-top:34px;padding-top:24px;border-top:2px solid #2B54D4;">
       <h2 style="font-size:18px;font-weight:800;margin:0 0 14px;color:#111110;">${escapeHtml(a.heading)}</h2>
       <div style="background:#1A1918;border-radius:0;padding:12px 16px;margin-bottom:18px;color:#F0EAD8;">
         <div style="font-size:11px;opacity:0.7;margin-bottom:2px;">${escapeHtml(a.scaleLabel)}</div>
@@ -291,7 +291,7 @@ export async function exportTabPDF(
     ">
       ${title ? `<h1 style="font-size:24px;font-weight:800;margin:0 0 6px;">${escapeHtml(title)}</h1>` : ''}
       ${subtitle ? `<p style="font-size:13px;color:#3A3A3A;margin:0 0 18px;">${escapeHtml(subtitle)}</p>` : ''}
-      <div style="height:2px;background:#110CF0;margin-bottom:30px;"></div>
+      <div style="height:2px;background:#2B54D4;margin-bottom:30px;"></div>
       ${systemsHTML || '<p style="color:#3A3A3A;font-size:13px;">Empty tab</p>'}
       ${analysis ? buildAnalysisHTML(analysis) : ''}
       <div style="margin-top:36px;font-size:10px;color:#D0D0D0;text-align:right;">Created with ScaleUp</div>
@@ -308,7 +308,7 @@ export async function exportTabPDF(
 type RGB = [number, number, number];
 const INK: RGB       = [26, 24, 24];    // #1A1818 — near-black text
 const INK_SOFT: RGB  = [122, 116, 108]; // muted captions
-const ACCENT: RGB    = [17, 12, 240];   // #110CF0 — brand blue
+const ACCENT: RGB    = [43, 84, 212];   // #2B54D4 — palette cobalt (--gc-success, print/light value)
 const GRID: RGB      = [201, 194, 184];  // #C9C2B8 — fret/string lines
 const CARD_BG: RGB   = [247, 243, 235];  // soft parchment card fill
 const CARD_LINE: RGB = [223, 216, 204];

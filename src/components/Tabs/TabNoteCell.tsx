@@ -63,7 +63,7 @@ export function TabNoteCell({
       {isHov && !isSel && (
         <div style={{
           position: 'absolute', width: circleD, height: circleD, borderRadius: 0,
-          background: 'rgba(255, 220, 80, 0.32)',
+          background: 'var(--gc-error-soft)',
           top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
         }} />
@@ -73,7 +73,7 @@ export function TabNoteCell({
       {isSel && (
         <div style={{
           position: 'absolute', width: circleD, height: circleD, borderRadius: 0,
-          background: 'rgba(255, 210, 0, 0.60)',
+          background: 'var(--gc-error-soft)',
           top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
         }} />
