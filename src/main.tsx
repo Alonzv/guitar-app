@@ -25,6 +25,19 @@ if ('serviceWorker' in navigator) {
     reloading = true;
     window.location.reload();
   });
+
+  // Force an update check whenever the app is opened or brought back to the
+  // foreground. Installed PWAs (especially on iOS) don't reliably re-check the
+  // service worker on their own, so a freshly deployed build can sit unseen for
+  // a long time. Asking the registration to update on focus/visibility makes a
+  // new worker install → skipWaiting → controllerchange → reload above.
+  const checkForUpdate = () => {
+    navigator.serviceWorker.getRegistration().then(reg => reg?.update()).catch(() => {});
+  };
+  window.addEventListener('focus', checkForUpdate);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
 }
 
 createRoot(document.getElementById('root')!).render(
