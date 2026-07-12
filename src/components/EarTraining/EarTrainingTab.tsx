@@ -459,7 +459,7 @@ const PracticeMode: React.FC<PracticeProps> = ({
             )}
             {feedback && !feedback.correct && (
               <>
-                <span style={{ fontSize: 15, fontWeight: 700, color: T.error }}>✕ {t.wrong}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: T.text }}>✕ {t.wrong}</span>
                 <button onClick={nextExercise}
                   style={{ padding: '8px 22px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '3px solid var(--gc-bar-color)' }}>
                   {t.next} →

@@ -361,24 +361,25 @@ const PracticeMode: React.FC<PracticeProps> = ({ lang, data, recordResult, onNew
       const nextFilled = filled + 1;
       setFilled(nextFilled);
       if (nextFilled === challenge.notes.length) {
-        // Scale complete → record once, update streak, drop notes onto the neck.
+        // Scale complete → award the point for solving it. A slip earlier in
+        // the spelling only affects the accuracy stats (recordResult) and the
+        // "perfect" badge, never the streak — completing correctly always
+        // counts. Then drop the notes onto the neck.
         recordResult(challenge.scale, flawless);
-        if (flawless) {
-          const next = streak + 1;
-          setStreak(next);
-          onNewBest(next);
-        }
+        const next = streak + 1;
+        setStreak(next);
+        onNewBest(next);
         setPhase('reward');
       }
     } else {
       // Wrong: either not in the scale, or the right pitch spelled with a
-      // letter that's already taken (which would duplicate a letter).
+      // letter that's already taken (which would duplicate a letter). A slip
+      // clears the "perfect" badge but does NOT reset the streak.
       playError();
       navigator.vibrate?.(30);
       setErrorBtn(name);
       setHint(rightPitch ? 'enharmonic' : 'wrong');
       if (flawless) setFlawless(false);
-      setStreak(0);
       if (errTimer.current) clearTimeout(errTimer.current);
       errTimer.current = setTimeout(() => setErrorBtn(null), 500);
     }
@@ -491,10 +492,10 @@ const PracticeMode: React.FC<PracticeProps> = ({ lang, data, recordResult, onNew
               {/* Feedback line */}
               <div style={{ minHeight: 34, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {hint === 'enharmonic' && (
-                  <span style={{ fontSize: 13, fontWeight: 600, color: T.error, textAlign: 'center' }}>✕ {t.enharmonicHint}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: T.text, textAlign: 'center' }}>✕ {t.enharmonicHint}</span>
                 )}
                 {hint === 'wrong' && (
-                  <span style={{ fontSize: 13, fontWeight: 600, color: T.error, textAlign: 'center' }}>✕ {t.wrongHint}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: T.text, textAlign: 'center' }}>✕ {t.wrongHint}</span>
                 )}
               </div>
             </>
