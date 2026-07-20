@@ -2,9 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { T, card } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { playInterval, playMidi } from '../../utils/audioPlayback';
-import {
-  INTERVAL_DATA, INTERVAL_ORDER, SEMITONES, UI,
-} from './data';
+import { INTERVAL_ORDER, UI } from './data';
 import type { IntervalId, Lang } from './data';
 import {
   makeExercise, pickWeightedInterval, midiAt, noteName,
@@ -19,7 +17,6 @@ import type { EarTrainingData, EarPlayback, EarDirection } from '../../services/
 
 interface Props { desktop?: boolean }
 
-type SubMode = 'learn' | 'practice';
 
 // ── Small presentational helpers ────────────────────────────────────────────
 const LABEL: React.CSSProperties = {
@@ -71,9 +68,7 @@ export const EarTrainingTab: React.FC<Props> = () => {
   const dataRef = useRef(data);
   useEffect(() => { dataRef.current = data; }, [data]);
 
-  const [sub, setSub] = useState<SubMode>('learn');
   const lang: Lang = data.prefs.lang;
-  const t = UI[lang];
   const rtl = lang === 'he';
 
   // ── Persistence: local mirror always, remote (debounced) when signed in ────
@@ -147,136 +142,18 @@ export const EarTrainingTab: React.FC<Props> = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', border: `1px solid ${T.border}`, marginBottom: 18 }}>
-        {(['learn', 'practice'] as SubMode[]).map((m, i) => (
-          <button key={m} onClick={() => setSub(m)}
-            style={{
-              flex: 1, padding: '10px 4px', minHeight: 42, borderRadius: 0, cursor: 'pointer',
-              fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase',
-              fontWeight: sub === m ? 600 : 400,
-              borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
-              background: sub === m ? T.secondary : 'transparent',
-              color: sub === m ? '#fff' : T.textDim,
-            }}>
-            {m === 'learn' ? t.learn : t.practice}
-          </button>
-        ))}
-      </div>
-
-      {sub === 'learn'
-        ? <LearnMode lang={lang} playExercise={playExercise} />
-        : (
-          <PracticeMode
-            lang={lang}
-            data={data}
-            setPrefs={setPrefs}
-            recordResult={recordResult}
-            playExercise={playExercise}
-            onNewBest={(best) => setData(d => (best > d.bestStreak ? { ...d, bestStreak: best } : d))}
-            signedIn={!!user}
-          />
-        )}
+      <PracticeMode
+        lang={lang}
+        data={data}
+        setPrefs={setPrefs}
+        recordResult={recordResult}
+        playExercise={playExercise}
+        onNewBest={(best) => setData(d => (best > d.bestStreak ? { ...d, bestStreak: best } : d))}
+        signedIn={!!user}
+      />
     </div>
   );
 };
-
-// ════════════════════════════════════════════════════════════════════════════
-//  Learn Mode
-// ════════════════════════════════════════════════════════════════════════════
-const LearnMode: React.FC<{ lang: Lang; playExercise: (ex: Exercise) => void }> = ({ lang, playExercise }) => {
-  const t = UI[lang];
-  const [selected, setSelected] = useState<IntervalId>('P5');
-  const [mode, setMode] = useState<PlayMode>('melodic');
-
-  // A concrete, valid on-neck shape (≤ fret 12, B-string aware) for the diagram.
-  const demo = useMemo<Exercise>(() => makeExercise(selected, 'asc', 'melodic'), [selected]);
-  const copy = INTERVAL_DATA[selected][lang];
-  const semis = SEMITONES[selected];
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <p style={LABEL}>{t.pickInterval}</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-          {INTERVAL_ORDER.map(id => {
-            const active = id === selected;
-            return (
-              <button key={id} onClick={() => setSelected(id)}
-                style={{
-                  padding: '10px 4px', borderRadius: 0, cursor: 'pointer',
-                  border: active ? 'none' : `1px solid ${T.border}`,
-                  borderLeft: '3px solid var(--gc-bar-color)',
-                  background: active ? T.secondary : T.bgInput,
-                  color: active ? '#fff' : T.textMuted,
-                  fontSize: 13, fontWeight: active ? 700 : 500,
-                  textTransform: 'none',  // keep m3 / M3 distinct (global button rule uppercases)
-                }}>
-                {id}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div style={card({ padding: 16 })}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: T.text }}>{copy.name}</h3>
-          <span style={{ fontSize: 12, color: T.textDim, fontWeight: 600 }}>
-            {selected} · {semis} {t.fretsApart}
-          </span>
-        </div>
-        <p style={{ margin: '0 0 12px', fontSize: 14, lineHeight: 1.5, color: T.textMuted }}>{copy.desc}</p>
-        <p style={{ margin: 0, fontSize: 13, color: T.textMuted }}>
-          <span style={{ color: T.textDim, fontWeight: 600 }}>{t.anchorLabel}: </span>{copy.anchor}
-        </p>
-      </div>
-
-      <div style={card({ padding: 14 })}>
-        <WindowedFretboard
-          winStart={demo.winStart}
-          root={demo.root}
-          targetPositions={demo.targetPositions}
-          feedback={null}
-          showAnswer
-          disabled
-          onPick={() => {}}
-        />
-        {/* Legend — every circle on the neck is labelled with its note name */}
-        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 14, marginTop: 10, fontSize: 11, color: T.textDim }}>
-          <LegendDot color={T.primary} label={t.rootLabel} />
-          <LegendDot color={T.success} label={t.secondNote} />
-        </div>
-
-        {/* Playback mode toggle — the dark highlight follows the selection */}
-        <div style={{ marginTop: 12 }}>
-          <p style={LABEL}>{t.playbackMode}</p>
-          <ToggleRow>
-            <Pill active={mode === 'melodic'} onClick={() => { setMode('melodic'); playExercise({ ...demo, mode: 'melodic' }); }}>
-              ♪ {t.melodic}
-            </Pill>
-            <Pill active={mode === 'harmonic'} onClick={() => { setMode('harmonic'); playExercise({ ...demo, mode: 'harmonic' }); }}>
-              ♬ {t.harmonic}
-            </Pill>
-          </ToggleRow>
-        </div>
-        <button onClick={() => playExercise({ ...demo, mode })} style={playBtn()}>
-          ▶ {t.playInterval}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-function playBtn(): React.CSSProperties {
-  return {
-    width: '100%', marginTop: 10, padding: '11px 0', borderRadius: 0, cursor: 'pointer',
-    fontSize: 14, fontWeight: 500,
-    border: 'none',
-    borderLeft: '4px solid var(--gc-bar-color)',
-    background: T.primary,
-    color: T.white,
-  };
-}
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Practice Mode
