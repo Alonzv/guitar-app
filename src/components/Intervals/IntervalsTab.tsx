@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { IntervalExplore } from './IntervalExplore';
 import { IntervalPlayground } from './IntervalPlayground';
+import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
 
-type Sub = 'learn' | 'explore';
+type Sub = 'explore' | 'identify' | 'inchord' | 'practice';
 
-const SUB_LABELS: Record<Sub, string> = {
-  learn:   'Learn',
-  explore: 'Explore',
-};
+const SUBS: { id: Sub; label: string }[] = [
+  { id: 'explore',  label: 'Explore'   },
+  { id: 'identify', label: 'Identify'  },
+  { id: 'inchord',  label: 'In a Chord' },
+  { id: 'practice', label: 'Practice'  },
+];
 
 const INTERVAL_REF = [
   { abbrev: 'P1',  semitones: 0,  name: 'Unison',        quality: 'Perfect',    feel: 'Same note' },
@@ -38,35 +41,69 @@ const SECTION: React.CSSProperties = {
   textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
 };
 
+const SUB_KEY = 'scaleup_seg_intervals';
+const readSub = (): Sub => {
+  try {
+    const v = localStorage.getItem(SUB_KEY);
+    if (v && SUBS.some(s => s.id === v)) return v as Sub;
+  } catch { /* private mode */ }
+  return 'explore';
+};
+
+// Placeholder for the upcoming "In a Chord" tool (built in a follow-up step).
+function InChordComingSoon() {
+  return (
+    <div style={{ ...card({ padding: '28px 22px' }), textAlign: 'center' }}>
+      <p style={{ ...SECTION, margin: '0 0 8px' }}>In a Chord</p>
+      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: T.textMuted }}>
+        Coming soon — pick a chord and see any interval within it laid out on the neck,
+        showing only shapes a hand can actually play.
+      </p>
+    </div>
+  );
+}
+
 export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
-  const [sub, setSub] = useState<Sub>('learn');
+  const [sub, setSub] = useState<Sub>(readSub);
+  const pick = (s: Sub) => {
+    setSub(s);
+    try { localStorage.setItem(SUB_KEY, s); } catch { /* private mode */ }
+  };
 
   const tabBar = (
     <div style={{ display: 'flex', gap: 0 }}>
-      {(['learn', 'explore'] as Sub[]).map(id => (
-        <button key={id} onClick={() => setSub(id)} className="gc-sub-tab" style={{
-          flex: 1, padding: '11px 4px', borderRadius: 0,
-          cursor: 'pointer', fontSize: 14,
+      {SUBS.map(({ id, label }) => (
+        <button key={id} onClick={() => pick(id)} className="gc-sub-tab" style={{
+          flex: 1, padding: '11px 3px', borderRadius: 0,
+          cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap',
           background: sub === id ? T.secondary : T.bgInput,
           color: sub === id ? '#fff' : T.textMuted,
           borderLeft: '3px solid var(--gc-bar-color)',
           transition: 'background 0.1s',
         }}>
-          <span style={{ fontWeight: 400 }}>{SUB_LABELS[id]}</span>
+          <span style={{ fontWeight: 400 }}>{label}</span>
         </button>
       ))}
     </div>
   );
 
+  const tool =
+    sub === 'explore'  ? <IntervalExplore /> :
+    sub === 'identify' ? <IntervalPlayground /> :
+    sub === 'inchord'  ? <InChordComingSoon /> :
+    <EarTrainingTab desktop={desktop} />;
+
   const mainContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {tabBar}
-      {sub === 'learn' && <IntervalExplore />}
-      {sub === 'explore' && <IntervalPlayground />}
+      {sub === 'practice'
+        ? <div style={{ maxWidth: desktop ? 680 : undefined, margin: '0 auto', width: '100%' }}>{tool}</div>
+        : tool}
     </div>
   );
 
-  if (!desktop) return mainContent;
+  // Mobile, or the full-width sub-tabs (practice / in-a-chord) — no side panel.
+  if (!desktop || sub === 'practice' || sub === 'inchord') return mainContent;
 
   const sidePanel = (
     <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>

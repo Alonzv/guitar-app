@@ -23,7 +23,6 @@ import { VoicingsTab }       from './components/Voicings/VoicingsTab';
 
 import { Tuner }             from './components/Tools/Tuner';
 import { Metronome }         from './components/Tools/Metronome';
-import { EarTrainingTab }    from './components/EarTraining/EarTrainingTab';
 import { ScaleTrainerTab }   from './components/ScaleTrainer/ScaleTrainerTab';
 
 import { TabBuilder }        from './components/Tools/TabBuilder';
@@ -51,12 +50,12 @@ import { T } from './theme';
 
 // ── Types & constants ──────────────────────────────────────────────────────
 type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target';
-type ScalesSub    = 'explorer' | 'triads' | 'intervals' | 'wheel';
+type ScalesSub    = 'explorer' | 'triads' | 'wheel';
 type VoicingsSub  = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
-type PracticeSub  = 'tuner' | 'metronome' | 'eartraining' | 'scaletrainer';
+type PracticeSub  = 'tuner' | 'metronome' | 'scaletrainer';
 type StudioSub    = 'tabbuilder' | 'audiotab';
 
-const PANEL_TITLES = ['CHORDS', 'SCALES', 'VOICINGS', 'PRACTICE', 'STUDIO'];
+const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'PRACTICE', 'STUDIO'];
 
 const CHORDS_SEGS    = [
   { id: 'finder',   label: 'By Name' },
@@ -67,7 +66,6 @@ const CHORDS_SEGS    = [
 const SCALES_SEGS    = [
   { id: 'explorer',  label: 'Explorer' },
   { id: 'triads',    label: 'Triads'   },
-  { id: 'intervals', label: 'Intervals'},
   { id: 'wheel',     label: 'Wheel'    },
 ];
 const VOICINGS_SEGS  = [
@@ -79,7 +77,6 @@ const VOICINGS_SEGS  = [
 const PRACTICE_SEGS  = [
   { id: 'tuner',        label: 'Tuner'     },
   { id: 'metronome',    label: 'Metronome' },
-  { id: 'eartraining',  label: 'Intervals' },
   { id: 'scaletrainer', label: 'Scales'    },
 ];
 const STUDIO_SEGS    = [
@@ -227,9 +224,15 @@ export default function App() {
   const [pagerTab, setPagerTab]             = useState(() => parseInt(readLS('scaleup_pager_tab', '0'), 10) || 0);
   // Always land on "By Name" when the app opens (not the last-used chords tab).
   const [chordsSegment, setChordsSegment]   = useState<ChordsSub>('finder');
-  const [scalesSegment, setScalesSegment]   = useState<ScalesSub>(() => readLS('scaleup_seg_scales', 'explorer') as ScalesSub);
+  const [scalesSegment, setScalesSegment]   = useState<ScalesSub>(() => {
+    const v = readLS('scaleup_seg_scales', 'explorer');   // 'intervals' moved to its own top tab
+    return (v === 'intervals' ? 'explorer' : v) as ScalesSub;
+  });
   const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => readLS('scaleup_seg_voicings', 'paths') as VoicingsSub);
-  const [practiceSegment, setPracticeSegment] = useState<PracticeSub>(() => readLS('scaleup_seg_practice', 'tuner') as PracticeSub);
+  const [practiceSegment, setPracticeSegment] = useState<PracticeSub>(() => {
+    const v = readLS('scaleup_seg_practice', 'tuner');    // 'eartraining' moved to the Intervals tab
+    return (v === 'eartraining' ? 'tuner' : v) as PracticeSub;
+  });
   const [studioSegment, setStudioSegment]   = useState<StudioSub>(() => {
     const v = readLS('scaleup_seg_studio', 'tabbuilder');
     return (v === 'tabbuilder' || v === 'audiotab') ? v : 'tabbuilder';
@@ -247,18 +250,18 @@ export default function App() {
   // ── Handoff: Workspace "Open in Builder" → STUDIO/Tab Builder ─────────────
   useEffect(() => subscribeHandoff(() => {
     setWorkspaceOpen(false);
-    setPagerTab(4);
+    setPagerTab(5);
     setStudioSegment('tabbuilder');
-    writeLS('scaleup_pager_tab', '4');
+    writeLS('scaleup_pager_tab', '5');
     writeLS('scaleup_seg_studio', 'tabbuilder');
   }), []);
 
   // ── Handoff: Library "Open in Harmonizer" → VOICINGS/Harmonize ────────────
   useEffect(() => subscribeHarmonizationHandoff(() => {
     setWorkspaceOpen(false);
-    setPagerTab(2);
+    setPagerTab(3);
     setVoicingsSegment('harmonizer');
-    writeLS('scaleup_pager_tab', '2');
+    writeLS('scaleup_pager_tab', '3');
     writeLS('scaleup_seg_voicings', 'harmonizer');
     setElTab('voicings'); // Electron layout — the tool consumes on its mount
   }), []);
@@ -266,9 +269,9 @@ export default function App() {
   // ── Handoff: Library "Open in Paths / Reharm" → VOICINGS/<sub> ────────────
   useEffect(() => subscribeVoicingsHandoff(h => {
     setWorkspaceOpen(false);
-    setPagerTab(2);
+    setPagerTab(3);
     setVoicingsSegment(h.sub);
-    writeLS('scaleup_pager_tab', '2');
+    writeLS('scaleup_pager_tab', '3');
     writeLS('scaleup_seg_voicings', h.sub);
     setElTab('voicings');
   }), []);
@@ -283,9 +286,9 @@ export default function App() {
   };
   const handleOpenTab = (content: TabContent) => {
     requestOpenTabInBuilder(content);
-    setPagerTab(4);
+    setPagerTab(5);
     setStudioSegment('tabbuilder');
-    writeLS('scaleup_pager_tab', '4');
+    writeLS('scaleup_pager_tab', '5');
     writeLS('scaleup_seg_studio', 'tabbuilder');
   };
 
@@ -508,14 +511,20 @@ export default function App() {
               <ErrorBoundary label="Scales">
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
                 {scalesSegment === 'triads'    && <TriadsGenerator desktop globalProgression={progression} />}
-                {scalesSegment === 'intervals' && <IntervalsTab desktop />}
                 {scalesSegment === 'wheel'     && <WheelTab desktop tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
               </ErrorBoundary>
             </div>
           )}
 
-          {/* ── Panel 2: VOICINGS ────────────────────────────────────── */}
+          {/* ── Panel 2: INTERVALS ───────────────────────────────────── */}
           {pagerTab === 2 && (
+            <ErrorBoundary label="Intervals">
+              <IntervalsTab desktop />
+            </ErrorBoundary>
+          )}
+
+          {/* ── Panel 3: VOICINGS ────────────────────────────────────── */}
+          {pagerTab === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
               <ErrorBoundary label="Voicings">
@@ -530,8 +539,8 @@ export default function App() {
             </div>
           )}
 
-          {/* ── Panel 3: PRACTICE ────────────────────────────────────── */}
-          {pagerTab === 3 && (
+          {/* ── Panel 4: PRACTICE ────────────────────────────────────── */}
+          {pagerTab === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
               <ErrorBoundary label="Practice">
@@ -545,9 +554,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-                {practiceSegment === 'eartraining' && (
-                  <div style={{ maxWidth: 680, margin: '0 auto', width: '100%' }}><EarTrainingTab desktop /></div>
-                )}
                 {practiceSegment === 'scaletrainer' && (
                   <div style={{ maxWidth: 680, margin: '0 auto', width: '100%' }}><ScaleTrainerTab desktop /></div>
                 )}
@@ -555,8 +561,8 @@ export default function App() {
             </div>
           )}
 
-          {/* ── Panel 4: STUDIO ──────────────────────────────────────── */}
-          {pagerTab === 4 && (
+          {/* ── Panel 5: STUDIO ──────────────────────────────────────── */}
+          {pagerTab === 5 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <div style={{ maxWidth: 560 }}>
                 <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} helpPrefix="studio" />
@@ -639,12 +645,18 @@ export default function App() {
           <ErrorBoundary label="Scales">
             {scalesSegment === 'explorer'  && <ScaleExplorer />}
             {scalesSegment === 'triads'    && <TriadsGenerator globalProgression={progression} />}
-            {scalesSegment === 'intervals' && <IntervalsTab />}
             {scalesSegment === 'wheel'     && <WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
           </ErrorBoundary>
         </div>
 
-        {/* ── Panel 2: VOICINGS ───────────────────────────────────────────── */}
+        {/* ── Panel 2: INTERVALS ──────────────────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <ErrorBoundary label="Intervals">
+            <IntervalsTab />
+          </ErrorBoundary>
+        </div>
+
+        {/* ── Panel 3: VOICINGS ───────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
           <ErrorBoundary label="Voicings">
@@ -657,18 +669,17 @@ export default function App() {
           </ErrorBoundary>
         </div>
 
-        {/* ── Panel 3: PRACTICE ───────────────────────────────────────────── */}
+        {/* ── Panel 4: PRACTICE ───────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
           <ErrorBoundary label="Practice">
             {practiceSegment === 'tuner'        && <Tuner />}
             {practiceSegment === 'metronome'    && <Metronome />}
-            {practiceSegment === 'eartraining'  && <EarTrainingTab />}
             {practiceSegment === 'scaletrainer' && <ScaleTrainerTab />}
           </ErrorBoundary>
         </div>
 
-        {/* ── Panel 4: STUDIO ─────────────────────────────────────────────── */}
+        {/* ── Panel 5: STUDIO ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} helpPrefix="studio" />
           <ErrorBoundary label="Studio">

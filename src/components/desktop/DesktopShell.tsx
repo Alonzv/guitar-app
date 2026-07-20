@@ -2,7 +2,7 @@ import React from 'react';
 import { T } from '../../theme';
 import { BrandMark } from '../BrandMark';
 
-const PANEL_TITLES = ['CHORDS', 'SCALES', 'VOICINGS', 'PRACTICE', 'STUDIO'];
+const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'PRACTICE', 'STUDIO'];
 
 interface Props {
   tab: number;
