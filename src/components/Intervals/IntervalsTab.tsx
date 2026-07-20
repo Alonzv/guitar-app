@@ -78,7 +78,7 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
   const tool =
     sub === 'explore'  ? <IntervalExplore /> :
     sub === 'identify' ? <IntervalPlayground /> :
-    sub === 'inchord'  ? <IntervalInChord /> :
+    sub === 'inchord'  ? <IntervalInChord desktop={desktop} /> :
     <EarTrainingTab desktop={desktop} />;
 
   const mainContent = (
