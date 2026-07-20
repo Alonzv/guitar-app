@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { IntervalExplore } from './IntervalExplore';
 import { IntervalPlayground } from './IntervalPlayground';
+import { IntervalInChord } from './IntervalInChord';
 import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
 
@@ -50,19 +51,6 @@ const readSub = (): Sub => {
   return 'explore';
 };
 
-// Placeholder for the upcoming "In a Chord" tool (built in a follow-up step).
-function InChordComingSoon() {
-  return (
-    <div style={{ ...card({ padding: '28px 22px' }), textAlign: 'center' }}>
-      <p style={{ ...SECTION, margin: '0 0 8px' }}>In a Chord</p>
-      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: T.textMuted }}>
-        Coming soon — pick a chord and see any interval within it laid out on the neck,
-        showing only shapes a hand can actually play.
-      </p>
-    </div>
-  );
-}
-
 export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
   const [sub, setSub] = useState<Sub>(readSub);
   const pick = (s: Sub) => {
@@ -90,7 +78,7 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
   const tool =
     sub === 'explore'  ? <IntervalExplore /> :
     sub === 'identify' ? <IntervalPlayground /> :
-    sub === 'inchord'  ? <InChordComingSoon /> :
+    sub === 'inchord'  ? <IntervalInChord /> :
     <EarTrainingTab desktop={desktop} />;
 
   const mainContent = (
