@@ -140,7 +140,10 @@ export const WindowedFretboard: React.FC<Props> = ({
           return (
             <g key={`${s}-${f}`}
               onClick={() => { if (disabled || rootHere) return; navigator.vibrate?.(20); onPick({ string: s, fret: f }); }}
-              style={{ cursor: disabled || rootHere ? 'default' : 'pointer' }}>
+              style={{
+                cursor: disabled || rootHere ? 'default' : 'pointer',
+                ...(revealHere ? { animation: 'gc-reveal 400ms ease-out', transformBox: 'fill-box', transformOrigin: 'center' } : {}),
+              }}>
               <rect x={cx - FRET_SP / 2} y={cy - STR_GAP / 2} width={FRET_SP} height={STR_GAP} fill="transparent" />
               {fill && (
                 <>

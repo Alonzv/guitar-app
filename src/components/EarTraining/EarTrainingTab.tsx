@@ -1,15 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { T, card } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { playInterval, playMidi } from '../../utils/audioPlayback';
+import { playInterval, playMidi, playError } from '../../utils/audioPlayback';
 import { INTERVAL_ORDER, UI } from './data';
 import type { IntervalId, Lang } from './data';
 import {
-  makeExercise, pickWeightedInterval, midiAt, noteName,
+  makeExercise, pickWeightedInterval, noteName,
 } from './engine';
 import type { Exercise, Direction, PlayMode } from './engine';
 import { WindowedFretboard } from './WindowedFretboard';
-import type { Feedback } from './WindowedFretboard';
 import {
   loadLocal, saveLocal, loadRemote, saveRemote, mergeRemote,
 } from '../../services/earTraining';
@@ -168,6 +167,9 @@ interface PracticeProps {
   signedIn: boolean;
 }
 
+// Difficulty pools — Basic keeps to the clearest intervals; Advanced is all 12.
+const BASIC_IVS: IntervalId[] = ['m3', 'M3', 'P4', 'P5', 'M6', 'P8'];
+
 const PracticeMode: React.FC<PracticeProps> = ({
   lang, data, setPrefs, recordResult, playExercise, onNewBest, signedIn,
 }) => {
@@ -175,10 +177,13 @@ const PracticeMode: React.FC<PracticeProps> = ({
   const { playback, direction } = data.prefs;
 
   const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  const [difficulty, setDifficulty] = useState<'basic' | 'advanced'>('basic');
+  const [wrongPicks, setWrongPicks] = useState<Set<IntervalId>>(new Set());
+  const [answered, setAnswered] = useState<null | 'correct' | 'reset'>(null);
   const [streak, setStreak] = useState(0);
   const advanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealed = answered !== null;   // show the hidden 2nd note once answered
+  const pool = difficulty === 'advanced' ? INTERVAL_ORDER : BASIC_IVS;
 
   const resolveMode = useCallback((): PlayMode => {
     if (playback === 'mixed') return Math.random() < 0.5 ? 'melodic' : 'harmonic';
@@ -191,38 +196,43 @@ const PracticeMode: React.FC<PracticeProps> = ({
     return direction === 'desc' ? 'desc' : 'asc';
   }, [direction]);
 
-  const nextExercise = useCallback(() => {
-    const interval = pickWeightedInterval(INTERVAL_ORDER, data.stats);
+  const nextExercise = useCallback((p: IntervalId[] = pool) => {
+    const interval = pickWeightedInterval(p, data.stats);
     const mode = resolveMode();
     const dir = resolveDirection(mode);
     const ex = makeExercise(interval, dir, mode);
     setExercise(ex);
-    setFeedback(null);
-    setRevealed(false);
+    setWrongPicks(new Set());
+    setAnswered(null);
     playExercise(ex);
-  }, [data.stats, resolveMode, resolveDirection, playExercise]);
+  }, [pool, data.stats, resolveMode, resolveDirection, playExercise]);
 
   useEffect(() => () => { if (advanceRef.current) clearTimeout(advanceRef.current); }, []);
 
-  const handlePick = useCallback((pos: { string: number; fret: number }) => {
-    if (!exercise || feedback) return;
-    const correct = midiAt(pos.string, pos.fret) === exercise.targetMidi;
-    setFeedback({ picked: pos, correct });
-    recordResult(exercise.interval, correct);
-
-    if (correct) {
+  // Answer by NAMING the interval (no tapping the neck → no fret counting). The
+  // second note stays hidden until answered; first wrong guess is forgiven
+  // (second-chance streak), a second wrong resets and reveals the answer.
+  const guess = useCallback((id: IntervalId) => {
+    if (!exercise || answered) return;
+    if (id === exercise.interval) {
+      recordResult(exercise.interval, true);
       const next = streak + 1;
       setStreak(next);
       onNewBest(next);
-      playMidi(exercise.targetMidi + 12, 0.5); // brief confirmation chirp
-      advanceRef.current = setTimeout(() => nextExercise(), 950);
+      setAnswered('correct');
+      playMidi(exercise.targetMidi + 12, 0.5); // confirmation chirp
+      advanceRef.current = setTimeout(() => nextExercise(), 1500);
     } else {
-      setStreak(0);
-      setRevealed(true);
-      // Re-teach the ear: sound the correct interval again after a beat.
-      advanceRef.current = setTimeout(() => playExercise(exercise), 550);
+      playError();
+      const nw = new Set(wrongPicks); nw.add(id); setWrongPicks(nw);
+      if (nw.size >= 2) {
+        recordResult(exercise.interval, false);
+        setStreak(0);
+        setAnswered('reset');
+        advanceRef.current = setTimeout(() => nextExercise(), 1900);
+      }
     }
-  }, [exercise, feedback, streak, recordResult, onNewBest, playExercise, nextExercise]);
+  }, [exercise, answered, wrongPicks, streak, recordResult, onNewBest, nextExercise]);
 
   // ── Weak spots (top-3 most-missed with enough data) ────────────────────────
   const weak = useMemo(() => {
@@ -266,6 +276,17 @@ const PracticeMode: React.FC<PracticeProps> = ({
               ))}
             </ToggleRow>
           </div>
+          <div>
+            <p style={LABEL}>{lang === 'he' ? 'קושי' : 'Difficulty'}</p>
+            <ToggleRow>
+              {(['basic', 'advanced'] as const).map(d => (
+                <Pill key={d} active={difficulty === d}
+                  onClick={() => { setDifficulty(d); if (exercise) nextExercise(d === 'advanced' ? INTERVAL_ORDER : BASIC_IVS); }}>
+                  {d === 'basic' ? (lang === 'he' ? 'בסיסי' : 'Basic') : (lang === 'he' ? 'מתקדם' : 'Advanced')}
+                </Pill>
+              ))}
+            </ToggleRow>
+          </div>
         </div>
       </div>
 
@@ -285,7 +306,7 @@ const PracticeMode: React.FC<PracticeProps> = ({
       {!exercise ? (
         <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
           <p style={{ margin: '0 0 16px', fontSize: 14, color: T.textMuted }}>{t.listenPrompt}</p>
-          <button onClick={nextExercise}
+          <button onClick={() => nextExercise()}
             style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>
             {t.startPractice}
           </button>
@@ -309,40 +330,43 @@ const PracticeMode: React.FC<PracticeProps> = ({
             {t.rootLabel}: <span style={{ fontWeight: 700, color: T.text }}>{noteName(exercise.rootMidi)}</span>
           </p>
 
+          {/* Neck shows ONLY the root; the 2nd note stays hidden until answered */}
           <WindowedFretboard
             winStart={exercise.winStart}
             root={exercise.root}
             targetPositions={exercise.targetPositions}
-            feedback={feedback}
+            feedback={null}
             showAnswer={revealed}
-            disabled={!!feedback}
-            onPick={handlePick}
+            disabled
+            onPick={() => {}}
           />
 
-          {/* Dot legend — clarifies what each coloured circle means */}
           <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 14, marginTop: 10, fontSize: 11, color: T.textDim }}>
             <LegendDot color={T.primary} label={t.rootLabel} />
-            {feedback && <LegendDot color={feedback.correct ? T.success : T.error} label={t.answerLabel} />}
-            {feedback && !feedback.correct && <LegendDot color={T.success} label={t.correct.replace('!', '')} />}
+            {revealed && <LegendDot color={T.success} label={t.answerLabel} />}
+          </div>
+
+          {/* Answer by naming the interval — no neck tapping (no fret counting) */}
+          <p style={{ ...LABEL, marginTop: 14 }}>{lang === 'he' ? 'זהו את האינטרוול' : 'Name the interval'}</p>
+          <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: 6 }}>
+            {pool.map(id => {
+              const isAnswer = revealed && id === exercise.interval;
+              const isWrong = wrongPicks.has(id);
+              return (
+                <button key={id} onClick={() => guess(id)} disabled={revealed} style={{
+                  padding: '11px 2px', borderRadius: 0, cursor: revealed ? 'default' : 'pointer', fontSize: 14, fontWeight: 600,
+                  border: (isAnswer || isWrong) ? 'none' : `1px solid ${T.border}`,
+                  background: isAnswer ? T.success : isWrong ? T.error : T.bgInput,
+                  color: (isAnswer || isWrong) ? '#fff' : T.textMuted, textTransform: 'none',
+                }}>{id}</button>
+              );
+            })}
           </div>
 
           {/* Status line */}
-          <div style={{ minHeight: 44, marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            {!feedback && (
-              <span style={{ fontSize: 13, color: T.textMuted }}>{t.clickPrompt}</span>
-            )}
-            {feedback?.correct && (
-              <span style={{ fontSize: 15, fontWeight: 700, color: T.success }}>✓ {t.correct}</span>
-            )}
-            {feedback && !feedback.correct && (
-              <>
-                <span style={{ fontSize: 15, fontWeight: 700, color: T.text }}>✕ {t.wrong}</span>
-                <button onClick={nextExercise}
-                  style={{ padding: '8px 22px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '3px solid var(--gc-bar-color)' }}>
-                  {t.next} →
-                </button>
-              </>
-            )}
+          <div style={{ minHeight: 30, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {answered === 'correct' && <span style={{ fontSize: 15, fontWeight: 700, color: T.success }}>✓ {t.correct}</span>}
+            {answered === 'reset' && <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>✕ {t.wrong} — {exercise.interval}</span>}
           </div>
         </div>
       )}

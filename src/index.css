@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Ear-training: reveal the hidden second note on a correct answer. */
+@keyframes gc-reveal {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* ─────────────────────────────────────────────────────────────
    Azeret Mono — variable font (wght 100-900), properly hinted.
    Hebrew has no glyphs in Azeret, so Miriam Libre covers them
