@@ -81,7 +81,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     if (name === expected || (rightPitch && !repeats)) {
       setErrBtn(null); setHint(null);
       const next = filled + 1; setFilled(next);
-      if (next === ch.notes.length) { if (wrongs < 2) bumpStreak(); setPhase('done'); }
+      if (next === ch.notes.length) { if (wrongs === 0) bumpStreak(); setPhase('done'); }
     } else {
       playError(); navigator.vibrate?.(30); setErrBtn(name);
       const w = wrongs + 1; setWrongs(w);
@@ -104,7 +104,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   }, [diff]);
   const guess = (s: ScaleId) => {
     if (!earCh || revealed) return;
-    if (s === earCh.scale) { setRevealed(true); bumpStreak(); }
+    if (s === earCh.scale) { setRevealed(true); if (wrongPicks.size === 0) bumpStreak(); }
     else { playError(); const nw = new Set(wrongPicks); nw.add(s); setWrongPicks(nw); if (nw.size >= 2) { setStreak(0); setRevealed(true); } }
   };
 

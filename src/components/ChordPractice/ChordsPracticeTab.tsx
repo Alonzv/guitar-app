@@ -103,7 +103,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
       setFilled(next);
       if (next === challenge.notes.length) {
         // chord complete — count it unless the run already broke this chord
-        if (wrongs < 2) {
+        if (wrongs === 0) {   // streak grows only on a clean, first-try chord
           setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
         }
         setPhase('done');
@@ -143,7 +143,8 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     if (!earCh || revealed) return;
     if (q === earCh.quality) {
       setRevealed(true);
-      setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
+      if (wrongPicks.size === 0)   // first-try correct only
+        setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
     } else {
       playError();
       const nw = new Set(wrongPicks); nw.add(q); setWrongPicks(nw);

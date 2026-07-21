@@ -221,10 +221,9 @@ const PracticeMode: React.FC<PracticeProps> = ({
   const guess = useCallback((id: IntervalId) => {
     if (!exercise || answered) return;
     if (id === exercise.interval) {
-      recordResult(exercise.interval, true);
-      const next = streak + 1;
-      setStreak(next);
-      onNewBest(next);
+      const clean = wrongPicks.size === 0;   // streak grows only on a first-try answer
+      recordResult(exercise.interval, clean);
+      if (clean) { const next = streak + 1; setStreak(next); onNewBest(next); }
       setAnswered('correct');
       playMidi(exercise.targetMidi + 12, 0.5); // confirmation chirp
       advanceRef.current = setTimeout(() => nextExercise(), 1500);
