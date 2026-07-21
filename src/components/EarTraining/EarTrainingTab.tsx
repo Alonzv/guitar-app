@@ -111,12 +111,18 @@ export const EarTrainingTab: React.FC<Props> = () => {
     });
   }, []);
 
-  // ── Shared: play a built exercise in its configured mode/direction ─────────
+  // ── Shared: play a built exercise ──────────────────────────────────────────
   const playExercise = useCallback((ex: Exercise) => {
-    // Melodic always sounds root → target; whether that's heard as ascending or
+    // The LIVE playback preference wins: a fixed Melodic/Harmonic choice
+    // overrides whatever mode the exercise was generated under (an exercise
+    // rolled while on Mixed could carry 'harmonic', and replaying it after
+    // switching to Melodic used to still sound harmonic). Only Mixed keeps the
+    // per-exercise coin flip. Melodic always sounds root → target; ascending vs
     // descending is carried by where the target pitch sits (see engine).
-    playInterval(ex.rootMidi, ex.targetMidi, ex.mode === 'harmonic' ? 'harmonic' : 'melodic');
-  }, []);
+    const pb = data.prefs.playback;
+    const mode = pb === 'mixed' ? ex.mode : pb;
+    playInterval(ex.rootMidi, ex.targetMidi, mode === 'harmonic' ? 'harmonic' : 'melodic');
+  }, [data.prefs.playback]);
 
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>

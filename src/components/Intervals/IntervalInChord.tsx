@@ -142,15 +142,22 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   const playExample = () => { if (pairs.length) play([...pairs].sort((a, b) => a.loMidi - b.loMidi)[0]); };
 
   const ivName = INTERVALS.find(i => i.semis === effSemis)?.name ?? '';
-  // Which chord-tone pairs form this interval (e.g. "G→Eb", or "C→E, G→B").
-  const ivPairs = useMemo(() => {
-    const res: string[] = [];
-    for (const a of chordPcs) {
-      const b = (a + effSemis) % 12;
-      if (chordPcs.has(b)) res.push(`${chord.spelling.get(a) ?? pcName(a)}→${chord.spelling.get(b) ?? pcName(b)}`);
+  // For every interval, which chord-tone pairs form it (e.g. M3 in Cmaj7 →
+  // ["C→E", "G→B"]). Shown on the picker buttons so it's obvious which pair
+  // each interval maps to — and that e.g. A→F# is the MAJOR 6th, not m6.
+  const pairLabels = useMemo(() => {
+    const map = new Map<number, string[]>();
+    for (const iv of INTERVALS) {
+      const res: string[] = [];
+      for (const a of chordPcs) {
+        const b = (a + iv.semis) % 12;
+        if (chordPcs.has(b)) res.push(`${chord.spelling.get(a) ?? pcName(a)}→${chord.spelling.get(b) ?? pcName(b)}`);
+      }
+      if (res.length) map.set(iv.semis, res);
     }
-    return res;
-  }, [chordPcs, effSemis, chord]);
+    return map;
+  }, [chordPcs, chord]);
+  const ivPairs = pairLabels.get(effSemis) ?? [];
   const pillBtn = (active: boolean): React.CSSProperties => ({
     padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
     border: 'none', borderLeft: '3px solid var(--gc-bar-color)',
@@ -180,16 +187,24 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
           {INTERVALS.map(iv => {
             const has = present.has(iv.semis);
             const active = effSemis === iv.semis;
+            const labels = pairLabels.get(iv.semis) ?? [];
             return (
               <button key={iv.semis} disabled={!has} onClick={() => setSemis(iv.semis)} title={iv.name}
                 style={{
-                  padding: '8px 2px', borderRadius: 0, fontSize: 12, fontWeight: 600, textTransform: 'none',
+                  padding: '6px 2px 5px', borderRadius: 0, fontSize: 12, fontWeight: 600, textTransform: 'none',
                   border: active ? 'none' : `1px solid ${T.border}`,
                   background: active ? T.secondary : T.bgInput,
                   color: active ? '#fff' : T.textMuted,
                   opacity: has ? 1 : 0.28, cursor: has ? 'pointer' : 'not-allowed',
+                  lineHeight: 1.25,
                 }}>
-                {iv.ab}
+                <span style={{ display: 'block' }}>{iv.ab}</span>
+                {/* the chord-tone pair this interval maps to, e.g. A→F# on M6 */}
+                {has && labels.length > 0 && (
+                  <span style={{ display: 'block', fontSize: 8, fontWeight: 400, opacity: 0.8, fontFamily: 'var(--gc-mono)' }}>
+                    {labels[0]}{labels.length > 1 ? ` +${labels.length - 1}` : ''}
+                  </span>
+                )}
               </button>
             );
           })}
