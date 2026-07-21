@@ -24,7 +24,7 @@ import { VoicingsTab }       from './components/Voicings/VoicingsTab';
 
 import { Tuner }             from './components/Tools/Tuner';
 import { Metronome }         from './components/Tools/Metronome';
-import { ScaleTrainerTab }   from './components/ScaleTrainer/ScaleTrainerTab';
+import { ScalesPracticeTab } from './components/ScalePractice/ScalesPracticeTab';
 
 import { TabBuilder }        from './components/Tools/TabBuilder';
 import { AudioToTab }        from './components/Tools/AudioToTab';
@@ -51,9 +51,9 @@ import { T } from './theme';
 
 // ── Types & constants ──────────────────────────────────────────────────────
 type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target' | 'practice';
-type ScalesSub    = 'explorer' | 'triads' | 'wheel';
+type ScalesSub    = 'explorer' | 'triads' | 'wheel' | 'practice';
 type VoicingsSub  = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
-type PracticeSub  = 'tuner' | 'metronome' | 'scaletrainer';
+type PracticeSub  = 'tuner' | 'metronome';
 type StudioSub    = 'tabbuilder' | 'audiotab';
 
 const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'PRACTICE', 'STUDIO'];
@@ -69,6 +69,7 @@ const SCALES_SEGS    = [
   { id: 'explorer',  label: 'Explorer' },
   { id: 'triads',    label: 'Triads'   },
   { id: 'wheel',     label: 'Wheel'    },
+  { id: 'practice',  label: 'Practice' },
 ];
 const VOICINGS_SEGS  = [
   { id: 'paths',        label: 'Paths'      },
@@ -79,7 +80,6 @@ const VOICINGS_SEGS  = [
 const PRACTICE_SEGS  = [
   { id: 'tuner',        label: 'Tuner'     },
   { id: 'metronome',    label: 'Metronome' },
-  { id: 'scaletrainer', label: 'Scales'    },
 ];
 const STUDIO_SEGS    = [
   { id: 'tabbuilder', label: 'Tab Builder' },
@@ -232,8 +232,8 @@ export default function App() {
   });
   const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => readLS('scaleup_seg_voicings', 'paths') as VoicingsSub);
   const [practiceSegment, setPracticeSegment] = useState<PracticeSub>(() => {
-    const v = readLS('scaleup_seg_practice', 'tuner');    // 'eartraining' moved to the Intervals tab
-    return (v === 'eartraining' ? 'tuner' : v) as PracticeSub;
+    const v = readLS('scaleup_seg_practice', 'tuner');    // 'eartraining' → Intervals, 'scaletrainer' → Scales
+    return (v === 'tuner' || v === 'metronome') ? v as PracticeSub : 'tuner';
   });
   const [studioSegment, setStudioSegment]   = useState<StudioSub>(() => {
     const v = readLS('scaleup_seg_studio', 'tabbuilder');
@@ -515,6 +515,7 @@ export default function App() {
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
                 {scalesSegment === 'triads'    && <TriadsGenerator desktop globalProgression={progression} />}
                 {scalesSegment === 'wheel'     && <WheelTab desktop tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
+                {scalesSegment === 'practice'  && <ScalesPracticeTab desktop />}
               </ErrorBoundary>
             </div>
           )}
@@ -556,9 +557,6 @@ export default function App() {
                       <div style={{ maxWidth: 420, margin: '0 auto' }}><Metronome /></div>
                     </div>
                   </div>
-                )}
-                {practiceSegment === 'scaletrainer' && (
-                  <div style={{ maxWidth: 680, margin: '0 auto', width: '100%' }}><ScaleTrainerTab desktop /></div>
                 )}
               </ErrorBoundary>
             </div>
@@ -650,6 +648,7 @@ export default function App() {
             {scalesSegment === 'explorer'  && <ScaleExplorer />}
             {scalesSegment === 'triads'    && <TriadsGenerator globalProgression={progression} />}
             {scalesSegment === 'wheel'     && <WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
+            {scalesSegment === 'practice'  && <ScalesPracticeTab />}
           </ErrorBoundary>
         </div>
 
@@ -679,7 +678,6 @@ export default function App() {
           <ErrorBoundary label="Practice">
             {practiceSegment === 'tuner'        && <Tuner />}
             {practiceSegment === 'metronome'    && <Metronome />}
-            {practiceSegment === 'scaletrainer' && <ScaleTrainerTab />}
           </ErrorBoundary>
         </div>
 
