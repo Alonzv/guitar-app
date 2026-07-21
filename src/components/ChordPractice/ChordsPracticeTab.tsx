@@ -122,6 +122,35 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
 
   const playChord = () => { if (challenge) challenge.midis.forEach(m => playMidi(m, 1.1)); };
 
+  // ── Ear training (Phase 3) — play a chord, guess its type ──────────────────
+  const [earCh, setEarCh] = useState<Challenge | null>(null);
+  const [wrongPicks, setWrongPicks] = useState<Set<string>>(new Set());
+  const [revealed, setRevealed] = useState(false);
+  const arpTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => arpTimers.current.forEach(clearTimeout), []);
+
+  const playHarmonic = (ch: Challenge) => ch.midis.forEach(m => playMidi(m, 1.3));
+  const playArpeggio = (ch: Challenge) => {
+    arpTimers.current.forEach(clearTimeout); arpTimers.current = [];
+    ch.midis.forEach((m, i) => arpTimers.current.push(setTimeout(() => playMidi(m, 0.7), i * 300)));
+  };
+  const startEar = useCallback((d: Diff = diff) => {
+    const c = makeChallenge(d);
+    setEarCh(c); setWrongPicks(new Set()); setRevealed(false);
+    setTimeout(() => playHarmonic(c), 140);
+  }, [diff]);
+  const guess = (q: string) => {
+    if (!earCh || revealed) return;
+    if (q === earCh.quality) {
+      setRevealed(true);
+      setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
+    } else {
+      playError();
+      const nw = new Set(wrongPicks); nw.add(q); setWrongPicks(nw);
+      if (nw.size >= 2) { setStreak(0); setRevealed(true); }   // second wrong → reset + reveal
+    }
+  };
+
   const qName = challenge ? chordData[challenge.quality][lang].name : '';
   const formula = challenge ? chordData[challenge.quality].en.formula : '';
 
@@ -129,11 +158,15 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     en: { theory: 'Theory', ear: 'Ear Training', basic: 'Basic', advanced: 'Advanced', streak: 'Streak', best: 'Best',
       start: 'Start', next: 'Next →', spell: 'Spell the chord — fill the boxes in order', noteBank: 'Note bank',
       retry: 'Not in this chord — try again.', reset: 'Streak reset — check the formula.', done: 'Correct!', hear: '▶ Hear chord',
-      soon: 'Ear Training is coming next.', startPrompt: 'Spell chords from their formulas, note by note.' },
+      startPrompt: 'Spell chords from their formulas, note by note.',
+      earPrompt: 'Hear a chord and name its type by ear.', which: 'Which chord type?',
+      harm: '▶ Harmonic', arp: '▶ Arpeggio', earStart: 'Play a chord' },
     he: { theory: 'תאוריה', ear: 'שמיעה', basic: 'בסיסי', advanced: 'מתקדם', streak: 'רצף', best: 'שיא',
       start: 'התחל', next: 'הבא →', spell: 'אייתו את האקורד — מלאו את הקופסאות לפי הסדר', noteBank: 'בנק תווים',
       retry: 'לא באקורד — נסו שוב.', reset: 'הרצף אופס — בדקו את הנוסחה.', done: 'נכון!', hear: '▶ השמע אקורד',
-      soon: 'אימון שמיעה יגיע בשלב הבא.', startPrompt: 'אייתו אקורדים מהנוסחה שלהם, תו אחר תו.' },
+      startPrompt: 'אייתו אקורדים מהנוסחה שלהם, תו אחר תו.',
+      earPrompt: 'שמעו אקורד וזהו את סוגו לפי האוזן.', which: 'איזה סוג אקורד?',
+      harm: '▶ הרמוני', arp: '▶ ארפג׳ו', earStart: 'נגן אקורד' },
   }[lang];
 
   const seg = (active: boolean): React.CSSProperties => ({
@@ -170,31 +203,57 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
       {/* Difficulty */}
       <div style={{ display: 'flex', border: `1px solid ${T.border}`, marginBottom: 16 }}>
         {(['basic', 'advanced'] as Diff[]).map((d, i) => (
-          <button key={d} onClick={() => { setDiff(d); if (challenge) start(d); }} style={{ ...seg(diff === d), borderLeft: i > 0 ? `1px solid ${T.border}` : 'none' }}>
+          <button key={d} onClick={() => { setDiff(d); if (challenge) start(d); if (earCh) startEar(d); }} style={{ ...seg(diff === d), borderLeft: i > 0 ? `1px solid ${T.border}` : 'none' }}>
             {d === 'basic' ? t.basic : t.advanced}
           </button>
         ))}
       </div>
 
-      {mode === 'ear' ? (
-        <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
-          <p style={{ margin: 0, fontSize: 14, color: T.textMuted }}>{t.soon}</p>
+      {/* Streak cards — both modes */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
+          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.streak}</p>
+          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{streak}</p>
         </div>
-      ) : (
-        <>
-          {/* Streak cards */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-            <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-              <p style={{ ...LBL, margin: '0 0 4px' }}>{t.streak}</p>
-              <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{streak}</p>
-            </div>
-            <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-              <p style={{ ...LBL, margin: '0 0 4px' }}>{t.best}</p>
-              <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{best}</p>
-            </div>
-          </div>
+        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
+          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.best}</p>
+          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{best}</p>
+        </div>
+      </div>
 
-          {!challenge ? (
+      {mode === 'ear' ? (
+        !earCh ? (
+          <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.6, color: T.textMuted }}>{t.earPrompt}</p>
+            <button onClick={() => startEar()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.earStart}</button>
+          </div>
+        ) : (
+          <div style={card({ padding: 16 })}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <button onClick={() => playHarmonic(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.harm}</button>
+              <button onClick={() => playArpeggio(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.arp}</button>
+            </div>
+            <p style={LBL}>{t.which}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6 }}>
+              {(diff === 'advanced' ? ADVANCED : BASIC).map(q => {
+                const isAnswer = revealed && q === earCh.quality;
+                const isWrong = wrongPicks.has(q);
+                return (
+                  <button key={q} onClick={() => guess(q)} disabled={revealed} style={{
+                    padding: '11px 4px', borderRadius: 0, cursor: revealed ? 'default' : 'pointer', fontSize: 13, fontWeight: 600,
+                    border: (isAnswer || isWrong) ? 'none' : `1px solid ${T.border}`,
+                    background: isAnswer ? T.success : isWrong ? T.error : T.bgInput,
+                    color: (isAnswer || isWrong) ? '#fff' : T.textMuted, textTransform: 'none',
+                  }}>{chordData[q][lang].name}</button>
+                );
+              })}
+            </div>
+            {revealed && (
+              <button onClick={() => startEar()} style={{ width: '100%', marginTop: 14, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.next}</button>
+            )}
+          </div>
+        )
+      ) : !challenge ? (
             <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
               <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.6, color: T.textMuted }}>{t.startPrompt}</p>
               <button onClick={() => start()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.start}</button>
@@ -259,8 +318,6 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               )}
             </div>
           )}
-        </>
-      )}
     </div>
   );
 }
