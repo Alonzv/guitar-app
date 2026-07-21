@@ -13,6 +13,7 @@ import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
 import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
 import { ChordAnalyzerTab }  from './components/ChordBuilder/ChordAnalyzerTab';
 import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
+import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab';
 
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
 import { TriadsGenerator }   from './components/Triads/TriadsGenerator';
@@ -49,7 +50,7 @@ import type { TabContent } from './services/types';
 import { T } from './theme';
 
 // ── Types & constants ──────────────────────────────────────────────────────
-type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target';
+type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target' | 'practice';
 type ScalesSub    = 'explorer' | 'triads' | 'wheel';
 type VoicingsSub  = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
 type PracticeSub  = 'tuner' | 'metronome' | 'scaletrainer';
@@ -58,10 +59,11 @@ type StudioSub    = 'tabbuilder' | 'audiotab';
 const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'PRACTICE', 'STUDIO'];
 
 const CHORDS_SEGS    = [
-  { id: 'finder',   label: 'By Name' },
-  { id: 'builder',  label: 'By Ear'  },
-  { id: 'analyzer', label: 'Analyze' },
-  { id: 'target',   label: 'Target'  },
+  { id: 'finder',   label: 'By Name'  },
+  { id: 'builder',  label: 'By Ear'   },
+  { id: 'analyzer', label: 'Analyze'  },
+  { id: 'target',   label: 'Target'   },
+  { id: 'practice', label: 'Practice' },
 ];
 const SCALES_SEGS    = [
   { id: 'explorer',  label: 'Explorer' },
@@ -500,6 +502,7 @@ export default function App() {
                 {chordsSegment === 'target' && (
                   <TargetNoteTab desktop tuning={tuning} capo={capo} />
                 )}
+                {chordsSegment === 'practice' && <ChordsPracticeTab desktop />}
               </ErrorBoundary>
             </div>
           )}
@@ -636,6 +639,7 @@ export default function App() {
             )}
             {chordsSegment === 'analyzer' && <ChordAnalyzerTab progression={progression} />}
             {chordsSegment === 'target'   && <TargetNoteTab tuning={tuning} capo={capo} />}
+            {chordsSegment === 'practice' && <ChordsPracticeTab />}
           </ErrorBoundary>
         </div>
 
