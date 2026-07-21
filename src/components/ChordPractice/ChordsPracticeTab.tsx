@@ -122,32 +122,41 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
 
   const playChord = () => { if (challenge) challenge.midis.forEach(m => playMidi(m, 1.1)); };
 
-  // ── Ear training (Phase 3) — play a chord, guess its type ──────────────────
+  // ── Ear training — play a chord, pick the whole chord from 4 options ────────
   const [earCh, setEarCh] = useState<Challenge | null>(null);
+  const [earOpts, setEarOpts] = useState<Challenge[]>([]);
   const [wrongPicks, setWrongPicks] = useState<Set<string>>(new Set());
   const [revealed, setRevealed] = useState(false);
   const arpTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => arpTimers.current.forEach(clearTimeout), []);
 
+  const optKey = (c: Challenge) => `${c.root}|${c.quality}`;
   const playHarmonic = (ch: Challenge) => ch.midis.forEach(m => playMidi(m, 1.3));
   const playArpeggio = (ch: Challenge) => {
     arpTimers.current.forEach(clearTimeout); arpTimers.current = [];
     ch.midis.forEach((m, i) => arpTimers.current.push(setTimeout(() => playMidi(m, 0.7), i * 300)));
   };
   const startEar = useCallback((d: Diff = diff) => {
-    const c = makeChallenge(d);
-    setEarCh(c); setWrongPicks(new Set()); setRevealed(false);
-    setTimeout(() => playHarmonic(c), 140);
+    const correct = makeChallenge(d);
+    const seen = new Set([optKey(correct)]);
+    const opts = [correct];
+    for (let g = 0; opts.length < 4 && g < 300; g++) {
+      const dis = makeChallenge(d);
+      if (!seen.has(optKey(dis))) { seen.add(optKey(dis)); opts.push(dis); }
+    }
+    for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+    setEarCh(correct); setEarOpts(opts); setWrongPicks(new Set()); setRevealed(false);
+    setTimeout(() => playHarmonic(correct), 140);
   }, [diff]);
-  const guess = (q: string) => {
+  const guess = (opt: Challenge) => {
     if (!earCh || revealed) return;
-    if (q === earCh.quality) {
+    if (opt.root === earCh.root && opt.quality === earCh.quality) {
       setRevealed(true);
       if (wrongPicks.size === 0)   // first-try correct only
         setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
     } else {
       playError();
-      const nw = new Set(wrongPicks); nw.add(q); setWrongPicks(nw);
+      const nw = new Set(wrongPicks); nw.add(optKey(opt)); setWrongPicks(nw);
       if (nw.size >= 2) { setStreak(0); setRevealed(true); }   // second wrong → reset + reveal
     }
   };
@@ -160,13 +169,13 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
       start: 'Start', next: 'Next →', spell: 'Spell the chord — fill the boxes in order', noteBank: 'Note bank',
       retry: 'Not in this chord — try again.', reset: 'Streak reset — check the formula.', done: 'Correct!', hear: '▶ Hear chord',
       startPrompt: 'Spell chords from their formulas, note by note.',
-      earPrompt: 'Hear a chord and name its type by ear.', which: 'Which chord type?',
+      earPrompt: 'Hear a chord and pick it from four options.', which: 'Which chord?',
       harm: '▶ Harmonic', arp: '▶ Arpeggio', earStart: 'Play a chord' },
     he: { theory: 'תאוריה', ear: 'שמיעה', basic: 'בסיסי', advanced: 'מתקדם', streak: 'רצף', best: 'שיא',
       start: 'התחל', next: 'הבא →', spell: 'אייתו את האקורד — מלאו את הקופסאות לפי הסדר', noteBank: 'בנק תווים',
       retry: 'לא באקורד — נסו שוב.', reset: 'הרצף אופס — בדקו את הנוסחה.', done: 'נכון!', hear: '▶ השמע אקורד',
       startPrompt: 'אייתו אקורדים מהנוסחה שלהם, תו אחר תו.',
-      earPrompt: 'שמעו אקורד וזהו את סוגו לפי האוזן.', which: 'איזה סוג אקורד?',
+      earPrompt: 'שמעו אקורד ובחרו אותו מתוך ארבע אפשרויות.', which: 'איזה אקורד?',
       harm: '▶ הרמוני', arp: '▶ ארפג׳ו', earStart: 'נגן אקורד' },
   }[lang];
 
@@ -235,17 +244,17 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               <button onClick={() => playArpeggio(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.arp}</button>
             </div>
             <p style={LBL}>{t.which}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6 }}>
-              {(diff === 'advanced' ? ADVANCED : BASIC).map(q => {
-                const isAnswer = revealed && q === earCh.quality;
-                const isWrong = wrongPicks.has(q);
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {earOpts.map(opt => {
+                const isAnswer = revealed && opt.root === earCh.root && opt.quality === earCh.quality;
+                const isWrong = wrongPicks.has(optKey(opt));
                 return (
-                  <button key={q} onClick={() => guess(q)} disabled={revealed} style={{
-                    padding: '11px 4px', borderRadius: 0, cursor: revealed ? 'default' : 'pointer', fontSize: 13, fontWeight: 600,
+                  <button key={optKey(opt)} onClick={() => guess(opt)} disabled={revealed} style={{
+                    padding: '13px 6px', borderRadius: 0, cursor: revealed ? 'default' : 'pointer', fontSize: 14, fontWeight: 600,
                     border: (isAnswer || isWrong) ? 'none' : `1px solid ${T.border}`,
                     background: isAnswer ? T.success : isWrong ? T.error : T.bgInput,
                     color: (isAnswer || isWrong) ? '#fff' : T.textMuted, textTransform: 'none',
-                  }}>{chordData[q][lang].name}</button>
+                  }}>{opt.root} {chordData[opt.quality][lang].name}</button>
                 );
               })}
             </div>
