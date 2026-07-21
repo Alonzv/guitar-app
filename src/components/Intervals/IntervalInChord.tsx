@@ -86,13 +86,16 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   const effExt = validExt.includes(ext) ? ext : '';
   const chordName = root + (SUFFIX[triad]?.[effExt] ?? '');
 
-  const chordPcs = useMemo(() => {
+  const chord = useMemo(() => {
     const c = TonalChord.get(chordName);
     const pcs = new Set<number>();
-    (c.notes ?? []).forEach(n => { const ch = Note.chroma(n); if (ch != null) pcs.add(ch); });
-    const rp = Note.chroma(root); if (rp != null) pcs.add(rp);
-    return pcs;
+    const spelling = new Map<number, string>();   // pc → theory-correct name (Eb, not D#)
+    (c.notes ?? []).forEach(n => { const ch = Note.chroma(n); if (ch != null) { pcs.add(ch); if (!spelling.has(ch)) spelling.set(ch, n); } });
+    const rp = Note.chroma(root); if (rp != null) { pcs.add(rp); if (!spelling.has(rp)) spelling.set(rp, root); }
+    return { pcs, spelling };
   }, [chordName, root]);
+  const chordPcs = chord.pcs;
+  const spell = (m: number) => chord.spelling.get(((m % 12) + 12) % 12) ?? pcName(m);
 
   // Which intervals actually occur between two chord tones.
   const present = useMemo(() => {
@@ -139,6 +142,15 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   const playExample = () => { if (pairs.length) play([...pairs].sort((a, b) => a.loMidi - b.loMidi)[0]); };
 
   const ivName = INTERVALS.find(i => i.semis === effSemis)?.name ?? '';
+  // Which chord-tone pairs form this interval (e.g. "G→Eb", or "C→E, G→B").
+  const ivPairs = useMemo(() => {
+    const res: string[] = [];
+    for (const a of chordPcs) {
+      const b = (a + effSemis) % 12;
+      if (chordPcs.has(b)) res.push(`${chord.spelling.get(a) ?? pcName(a)}→${chord.spelling.get(b) ?? pcName(b)}`);
+    }
+    return res;
+  }, [chordPcs, effSemis, chord]);
   const pillBtn = (active: boolean): React.CSSProperties => ({
     padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
     border: 'none', borderLeft: '3px solid var(--gc-bar-color)',
@@ -209,7 +221,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
     <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, fontSize: 11 }}>
         <span style={{ fontFamily: 'var(--gc-mono)', letterSpacing: '0.1em', color: 'var(--gc-text)', fontWeight: 600 }}>
-          {chordName} · {ivName}
+          {chordName} · {ivName}{ivPairs.length ? ` · ${ivPairs.join(', ')}` : ''}
         </span>
         <span style={{ marginInlineStart: 'auto', color: T.textDim, fontSize: 10 }}>
           {pairs.length} on the neck
@@ -254,9 +266,9 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
           {pairs.map((p, i) => (
             <g key={`p${i}`} style={{ cursor: 'pointer' }} onClick={() => play(p)}>
               <circle cx={noteX(p.lo.fret)} cy={strY(p.lo.string)} r={10.5} fill={LO_COLOR} stroke="#fff" strokeWidth={1.5} />
-              <text x={noteX(p.lo.fret)} y={strY(p.lo.string)} dominantBaseline="central" textAnchor="middle" fontSize={9} fontWeight="700" fill="#fff">{pcName(p.loMidi)}</text>
+              <text x={noteX(p.lo.fret)} y={strY(p.lo.string)} dominantBaseline="central" textAnchor="middle" fontSize={9} fontWeight="700" fill="#fff">{spell(p.loMidi)}</text>
               <circle cx={noteX(p.hi.fret)} cy={strY(p.hi.string)} r={10.5} fill={HI_COLOR} stroke="#fff" strokeWidth={1.5} />
-              <text x={noteX(p.hi.fret)} y={strY(p.hi.string)} dominantBaseline="central" textAnchor="middle" fontSize={9} fontWeight="700" fill="#fff">{pcName(p.hiMidi)}</text>
+              <text x={noteX(p.hi.fret)} y={strY(p.hi.string)} dominantBaseline="central" textAnchor="middle" fontSize={9} fontWeight="700" fill="#fff">{spell(p.hiMidi)}</text>
             </g>
           ))}
         </svg>
