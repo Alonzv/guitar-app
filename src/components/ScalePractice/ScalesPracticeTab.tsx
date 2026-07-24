@@ -50,7 +50,6 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const [mode, setMode] = useState<Mode>('theory');
   const [diff, setDiff] = useState<Diff>('basic');
   const rtl = lang === 'he';
-  const pool = diff === 'advanced' ? ADVANCED : BASIC;
   const scaleName = (s: ScaleId) => SCALE_DATA[s][lang].name;
 
   const [streak, setStreak] = useState(0);
@@ -91,21 +90,35 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     }
   }, [ch, phase, filled, wrongs]);
 
-  // ── Ear training: play a scale, name it ────────────────────────────────────
+  // ── Ear training: play a scale, pick the whole scale from 4 options ─────────
   const [earCh, setEarCh] = useState<Challenge | null>(null);
-  const [wrongPicks, setWrongPicks] = useState<Set<ScaleId>>(new Set());
+  const [earOpts, setEarOpts] = useState<Challenge[]>([]);
+  const [wrongPicks, setWrongPicks] = useState<Set<string>>(new Set());
   const [revealed, setRevealed] = useState(false);
 
+  const optKey = (c: Challenge) => `${c.root}|${c.scale}`;
   const playRun = (c: Challenge) => playScale(c.midis);
   const startEar = useCallback((d: Diff = diff) => {
-    const c = makeChallenge(d === 'advanced' ? ADVANCED : BASIC);
-    setEarCh(c); setWrongPicks(new Set()); setRevealed(false);
-    setTimeout(() => playRun(c), 160);
+    const p = d === 'advanced' ? ADVANCED : BASIC;
+    const correct = makeChallenge(p);
+    const seen = new Set([optKey(correct)]);
+    const opts = [correct];
+    for (let g = 0; opts.length < 4 && g < 300; g++) {
+      const dis = makeChallenge(p);
+      if (!seen.has(optKey(dis))) { seen.add(optKey(dis)); opts.push(dis); }
+    }
+    for (let i = opts.length - 1; i > 0; i--) { const j = rnd(i + 1); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+    setEarCh(correct); setEarOpts(opts); setWrongPicks(new Set()); setRevealed(false);
+    setTimeout(() => playRun(correct), 160);
   }, [diff]);
-  const guess = (s: ScaleId) => {
+  const guess = (opt: Challenge) => {
     if (!earCh || revealed) return;
-    if (s === earCh.scale) { setRevealed(true); if (wrongPicks.size === 0) bumpStreak(); }
-    else { playError(); const nw = new Set(wrongPicks); nw.add(s); setWrongPicks(nw); if (nw.size >= 2) { setStreak(0); setRevealed(true); } }
+    if (opt.root === earCh.root && opt.scale === earCh.scale) {
+      setRevealed(true); if (wrongPicks.size === 0) bumpStreak();
+    } else {
+      playError(); const nw = new Set(wrongPicks); nw.add(optKey(opt)); setWrongPicks(nw);
+      if (nw.size >= 2) { setStreak(0); setRevealed(true); }
+    }
   };
 
   const onDiff = (d: Diff) => { setDiff(d); if (ch) startSpell(d); if (earCh) startEar(d); };
@@ -177,17 +190,17 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               <button onClick={() => playRun(earCh)} style={{ padding: '12px 30px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.play}</button>
             </div>
             <p style={LBL}>{t.which}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 6 }}>
-              {pool.map(s => {
-                const isAnswer = revealed && s === earCh.scale;
-                const isWrong = wrongPicks.has(s);
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+              {earOpts.map(opt => {
+                const isAnswer = revealed && opt.root === earCh.root && opt.scale === earCh.scale;
+                const isWrong = wrongPicks.has(optKey(opt));
                 return (
-                  <button key={s} onClick={() => guess(s)} disabled={revealed} style={{
-                    padding: '11px 4px', borderRadius: 0, cursor: revealed ? 'default' : 'pointer', fontSize: 13, fontWeight: 600,
+                  <button key={optKey(opt)} onClick={() => guess(opt)} disabled={revealed} style={{
+                    padding: '13px 4px', borderRadius: 0, cursor: revealed ? 'default' : 'pointer', fontSize: 14, fontWeight: 600,
                     border: (isAnswer || isWrong) ? 'none' : `1px solid ${T.border}`,
                     background: isAnswer ? T.success : isWrong ? T.error : T.bgInput,
                     color: (isAnswer || isWrong) ? '#fff' : T.textMuted, textTransform: 'none',
-                  }}>{scaleName(s)}</button>
+                  }}><span dir="ltr">{opt.root} {scaleName(opt.scale)}</span></button>
                 );
               })}
             </div>

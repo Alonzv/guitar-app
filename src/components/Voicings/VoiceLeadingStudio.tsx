@@ -137,7 +137,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, tuning }: {
     borderRadius: 0, color: T.text, fontSize: 13, fontWeight: 600, padding: '7px 10px', cursor: 'pointer', outline: 'none',
   };
   const LBL: React.CSSProperties = { margin: '0 0 8px', fontSize: 10, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' };
-  const THREAD = T.secondary;   // palette accent for the highlighted voice
+  const THREAD = T.success;   // the only distinct hue in this near-monochrome palette (cobalt) — makes the threaded voice pop
 
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>
