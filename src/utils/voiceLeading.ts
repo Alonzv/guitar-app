@@ -10,7 +10,11 @@ import { Chord as TonalChord, Note, Interval } from '@tonaljs/tonal';
 const LEAP = 4;   // an upper-voice move larger than this many semitones (a 4th+) counts as a leap
 
 export interface VoiceCell { midi: number; note: string; deg: string; motion: number; leap: boolean }
-export interface VoicedProgression { chords: string[]; voices: VoiceCell[][] }   // voices[0] = soprano (top)
+export interface VoicedProgression {
+  chords: string[];
+  voices: VoiceCell[][];    // voices[0] = soprano (top)
+  omitted: string[][];      // per chord: chord tones dropped to fit four voices (degree labels)
+}
 
 function degLabel(iv: string): string {
   const it = Interval.get(iv);
@@ -39,13 +43,23 @@ function chordData(name: string): ChordData | null {
   return { rootPc, pcNote, pcDeg, notePcs };
 }
 
+// Priority of a chord tone when a chord has more notes than we have voices.
+// Guide tones (3, 7) are essential; the colour extensions (13/11/9/6) come next;
+// a plain perfect 5th is the most expendable — but an altered 5th (b5/#5) is
+// characteristic, so it stays. Lower number = keep first.
+const ext: Record<number, number> = { 13: 2, 11: 3, 9: 4, 6: 5, 2: 6, 4: 7 };
+function tonePriority(label: string): number {
+  const num = parseInt(label.replace(/[^0-9]/g, ''), 10) || 0;
+  const altered = /[#b]/.test(label);
+  if (num === 3) return 0;
+  if (num === 7) return 1;
+  if (num === 5) return altered ? 1.5 : 20;   // natural 5th is dropped first
+  return ext[num] ?? 10;
+}
+
 // The three upper voices' pitch-classes (non-bass), padded to 3 by doubling.
 function upperPcs(d: ChordData): number[] {
-  const order: Record<number, number> = { 3: 0, 7: 1, 6: 2, 5: 3, 9: 4, 4: 5, 2: 6, 11: 7, 13: 8 };
-  const prio = (pc: number) => {
-    const num = parseInt((d.pcDeg.get(pc) ?? '').replace(/[^0-9]/g, ''), 10) || 0;
-    return order[num] ?? 9;
-  };
+  const prio = (pc: number) => tonePriority(d.pcDeg.get(pc) ?? '');
   const nonRoot = [...new Set(d.notePcs.filter(pc => pc !== d.rootPc))].sort((a, b) => prio(a) - prio(b));
   const up = nonRoot.slice(0, 3);
   while (up.length < 3) up.push(d.rootPc);   // double the root (or fill) for triads
@@ -121,5 +135,17 @@ export function voiceLead(chordNames: string[]): VoicedProgression {
   // their first-chord pitch (descending), then the bass.
   const order = [0, 1, 2].sort((a, b) => (up[b][0]?.midi ?? 0) - (up[a][0]?.midi ?? 0));
   const voices = [...order.map(i => up[i]), bass];
-  return { chords: chordNames, voices };
+
+  // Which chord tones didn't make it into the four voices (extensions dropped
+  // to keep the texture playable) — reported so the arrangement can explain itself.
+  const omitted = datas.map((d, k) => {
+    if (!d) return [];
+    const voicedPcs = new Set(voices.map(v => ((v[k].midi % 12) + 12) % 12));
+    return [...new Set(d.notePcs)]
+      .filter(pc => !voicedPcs.has(pc))
+      .sort((a, b) => tonePriority(d.pcDeg.get(a) ?? '') - tonePriority(d.pcDeg.get(b) ?? ''))
+      .map(pc => d.pcDeg.get(pc) ?? '');
+  });
+
+  return { chords: chordNames, voices, omitted };
 }

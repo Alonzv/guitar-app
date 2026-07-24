@@ -57,11 +57,11 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
     ? { title: 'סטודיו הולכת קולות', calc: 'חשב', play: '▶ נגן', clear: 'נקה', voice: 'קול',
         build: 'בנו מהלך אקורדים ולחצו על "חשב"', addChord: 'הוסף', follow: (v: string) => `עוקב אחרי קול ${v}`,
         key: 'סולם', auto: 'אוטומטי', outKey: 'מחוץ לסולם', leap: 'קפיצה', hold: 'צליל משותף מוחזק',
-        par5: 'קוינטות מקבילות', par8: 'אוקטבות מקבילות' }
+        par5: 'קוינטות מקבילות', par8: 'אוקטבות מקבילות', omit: 'הושמט (אין מספיק קולות)' }
     : { title: 'Voice Leading Studio', calc: 'Calculate', play: '▶ Play', clear: 'Clear', voice: 'Voice',
         build: 'Build a progression, then press Calculate', addChord: 'Add', follow: (v: string) => `Following voice ${v}`,
         key: 'Key', auto: 'Auto', outKey: 'out of key', leap: 'leap', hold: 'common tone held',
-        par5: 'parallel 5ths', par8: 'parallel octaves' };
+        par5: 'parallel 5ths', par8: 'parallel octaves', omit: 'omitted (not enough voices)' };
 
   const keyToStr = (k: KeyGuess) => `${k.tonicPc}:${k.mode}`;
 
@@ -245,6 +245,19 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Omitted-tone info — extensions dropped to fit four voices (informational, not a warning) */}
+      {result && result.omitted.some(o => o.length > 0) && (
+        <div style={{ ...card({ padding: '10px 14px' }), marginTop: 12 }}>
+          {result.omitted.map((o, ci) => o.length ? (
+            <p key={ci} dir="ltr" style={{ margin: 0, padding: '2px 0', fontSize: 12, color: T.textMuted }}>
+              <span style={{ fontWeight: 700, color: T.text }}>{result.chords[ci]}</span>
+              <span> — {t.omit}: </span>
+              <span style={{ fontFamily: 'var(--gc-mono)', fontWeight: 700 }}>{o.join(', ')}</span>
+            </p>
+          ) : null)}
         </div>
       )}
 
