@@ -34,6 +34,16 @@ const validExts = (t: string) => EXTS.filter(e => SUFFIX[t]?.[e.k] !== undefined
 const buildName = (root: string, t: string, e: string) => root + (SUFFIX[t]?.[e] ?? '');
 
 const motionGlyph = (m: number, first: boolean) => first ? '' : m === 0 ? '=' : m > 0 ? '▲' : '▼';
+const degNum = (label: string) => parseInt(label.replace(/[^0-9]/g, ''), 10) || 0;
+const DEG_ORDER = [1, 3, 5, 7, 9, 11, 13, 2, 4, 6];   // display order for the degree chips
+const degLabelShort = (n: number, lang: 'en' | 'he') => n === 1 ? (lang === 'he' ? 'שורש' : 'Root') : String(n);
+
+// The studio keeps its own progression so switching tabs and coming back doesn't
+// wipe it. STORE holds the working chords; SEED remembers the last external
+// progression we seeded from, so a *new* one from elsewhere still takes over.
+const STORE = 'scaleup_vls_chords';
+const SEED = 'scaleup_vls_seed';
+const globalNames = (gp?: ChordInProgression[]) => (gp ?? []).map(c => c.chord.name).filter(Boolean).slice(0, 12);
 
 export function VoiceLeadingStudio({ desktop, globalProgression }: {
   desktop?: boolean; globalProgression?: ChordInProgression[]; tuning?: Tuning;
@@ -42,10 +52,24 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
   const rtl = lang === 'he';
 
   const [chords, setChords] = useState<string[]>(() => {
-    const g = (globalProgression ?? []).map(c => c.chord.name).filter(Boolean);
-    return g.length ? g.slice(0, 12) : ['Cmaj7', 'Am7', 'Dm7', 'G7'];
+    const g = globalNames(globalProgression);
+    const gsig = g.join('|');
+    let savedSeed = '', saved: unknown = null;
+    try { savedSeed = localStorage.getItem(SEED) ?? ''; saved = JSON.parse(localStorage.getItem(STORE) ?? 'null'); } catch { /* private mode */ }
+    // A new external progression (different from the last seed) takes over…
+    if (g.length && gsig !== savedSeed) {
+      try { localStorage.setItem(SEED, gsig); localStorage.setItem(STORE, JSON.stringify(g)); } catch { /* ignore */ }
+      return g;
+    }
+    // …otherwise restore what the user was working on here.
+    if (Array.isArray(saved) && saved.length) return saved.slice(0, 12) as string[];
+    return g.length ? g : ['Cmaj7', 'Am7', 'Dm7', 'G7'];
   });
-  const [selVoice, setSelVoice] = useState<number | null>(null);
+  useEffect(() => { try { localStorage.setItem(STORE, JSON.stringify(chords)); } catch { /* ignore */ } }, [chords]);
+  // Show the restored/seeded progression right away, so returning to the tab keeps the grid.
+  useEffect(() => { if (chords.length) setResult(voiceLead(chords)); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  const [selVoice, setSelVoice] = useState<number | null>(null);   // follow a voice (a row)
+  const [selDeg, setSelDeg] = useState<number | null>(null);       // highlight a degree across the grid
   const [result, setResult] = useState<VoicedProgression | null>(null);
   const [keyOverride, setKeyOverride] = useState<KeyGuess | null>(null);   // null = auto-detect
   const [pickOpen, setPickOpen] = useState(false);
@@ -57,15 +81,27 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
     ? { title: 'סטודיו הולכת קולות', calc: 'חשב', play: '▶ נגן', clear: 'נקה', voice: 'קול',
         build: 'בנו מהלך אקורדים ולחצו על "חשב"', addChord: 'הוסף', follow: (v: string) => `עוקב אחרי קול ${v}`,
         key: 'סולם', auto: 'אוטומטי', outKey: 'מחוץ לסולם', leap: 'קפיצה', hold: 'צליל משותף מוחזק',
-        par5: 'קוינטות מקבילות', par8: 'אוקטבות מקבילות', omit: 'הושמט (אין מספיק קולות)' }
+        par5: 'קוינטות מקבילות', par8: 'אוקטבות מקבילות', omit: 'הושמט (אין מספיק קולות)',
+        mark: 'הדגש דרגה', degOf: (d: string) => `מדגיש את דרגה ${d} בכל האקורדים` }
     : { title: 'Voice Leading Studio', calc: 'Calculate', play: '▶ Play', clear: 'Clear', voice: 'Voice',
         build: 'Build a progression, then press Calculate', addChord: 'Add', follow: (v: string) => `Following voice ${v}`,
         key: 'Key', auto: 'Auto', outKey: 'out of key', leap: 'leap', hold: 'common tone held',
-        par5: 'parallel 5ths', par8: 'parallel octaves', omit: 'omitted (not enough voices)' };
+        par5: 'parallel 5ths', par8: 'parallel octaves', omit: 'omitted (not enough voices)',
+        mark: 'Highlight degree', degOf: (d: string) => `Highlighting the ${d} in every chord` };
 
   const keyToStr = (k: KeyGuess) => `${k.tonicPc}:${k.mode}`;
 
-  const calc = () => { if (!chords.length) return; setSelVoice(null); setKeyOverride(null); setResult(voiceLead(chords)); };
+  const calc = () => { if (!chords.length) return; setSelVoice(null); setSelDeg(null); setKeyOverride(null); setResult(voiceLead(chords)); };
+
+  // Degrees actually present in the arrangement — used for the highlight chips.
+  const presentDegs = useMemo(() => {
+    if (!result) return [] as number[];
+    const set = new Set<number>();
+    result.voices.forEach(v => v.forEach(c => { const n = degNum(c.deg); if (n) set.add(n); }));
+    return DEG_ORDER.filter(d => set.has(d));
+  }, [result]);
+  const pickVoice = (vi: number) => { setSelVoice(s => s === vi ? null : vi); setSelDeg(null); };
+  const pickDeg = (d: number) => { setSelDeg(s => s === d ? null : d); setSelVoice(null); };
 
   // Functional analysis — key + Roman numerals, recomputed when the key override changes.
   const analysis = useMemo(
@@ -120,7 +156,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
     setChords(c => [...c, name]); setResult(null); setPickOpen(false);
   };
   const removeChord = (i: number) => { setChords(c => c.filter((_, j) => j !== i)); setResult(null); };
-  const clearChords = () => { setChords([]); setResult(null); setSelVoice(null); setPickOpen(false); };
+  const clearChords = () => { setChords([]); setResult(null); setSelVoice(null); setSelDeg(null); setPickOpen(false); };
 
   const sel_: React.CSSProperties = {
     appearance: 'none', WebkitAppearance: 'none', background: T.bgInput, border: `1px solid ${T.border}`,
@@ -188,6 +224,23 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
         )}
       </div>
 
+      {/* Degree highlight chips */}
+      {result && presentDegs.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+          <span style={{ ...LBL, margin: 0 }}>{t.mark}</span>
+          {presentDegs.map(d => {
+            const active = selDeg === d;
+            return (
+              <button key={d} onClick={() => pickDeg(d)} style={{
+                padding: '5px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                border: active ? 'none' : `1px solid ${T.border}`, borderLeft: `3px solid ${active ? THREAD : 'var(--gc-bar-color)'}`,
+                background: active ? THREAD : T.bgInput, color: active ? '#fff' : T.textMuted,
+              }}>{degLabelShort(d, lang)}</button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Result — four-voice grid */}
       {!result ? (
         <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
@@ -215,32 +268,35 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
             </div>
             {/* Voice rows (top = soprano) */}
             {result.voices.map((voice, vi) => {
-              const on = selVoice === vi;
+              const rowOn = selVoice === vi;
               return (
                 <div
                   key={vi}
-                  onClick={() => setSelVoice(s => s === vi ? null : vi)}
-                  style={{ display: 'flex', cursor: 'pointer', borderTop: vi ? `1px solid ${T.border}` : 'none', background: on ? alpha(THREAD, 12) : 'transparent' }}
+                  onClick={() => pickVoice(vi)}
+                  style={{ display: 'flex', cursor: 'pointer', borderTop: vi ? `1px solid ${T.border}` : 'none', background: rowOn ? alpha(THREAD, 12) : 'transparent' }}
                 >
-                  <div style={{ width: LW, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700, color: on ? THREAD : T.textDim, background: T.bgCard, borderInlineEnd: `1px solid ${T.border}` }}>
+                  <div style={{ width: LW, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700, color: rowOn ? THREAD : T.textDim, background: T.bgCard, borderInlineEnd: `1px solid ${T.border}` }}>
                     {vi + 1}
                   </div>
-                  {voice.map((cell, ci) => (
-                    <div key={ci} style={{
-                      width: CW, flexShrink: 0, padding: '7px 4px', textAlign: 'center',
-                      borderInlineStart: ci ? `1px solid ${T.border}` : 'none',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-                      background: on ? alpha(THREAD, 14) : 'transparent',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
-                        <span dir="ltr" style={{ fontSize: 16, fontWeight: 700, color: on ? THREAD : (cell.leap ? T.error : T.text) }}>{cell.note}</span>
-                        <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.textDim }}>{cell.deg}</span>
+                  {voice.map((cell, ci) => {
+                    const hot = rowOn || (selDeg != null && degNum(cell.deg) === selDeg);
+                    return (
+                      <div key={ci} style={{
+                        width: CW, flexShrink: 0, padding: '7px 4px', textAlign: 'center',
+                        borderInlineStart: ci ? `1px solid ${T.border}` : 'none',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+                        background: hot ? alpha(THREAD, rowOn ? 14 : 20) : 'transparent',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
+                          <span dir="ltr" style={{ fontSize: 16, fontWeight: 700, color: hot ? THREAD : (cell.leap ? T.error : T.text) }}>{cell.note}</span>
+                          <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, fontWeight: hot ? 700 : 400, color: hot ? THREAD : T.textDim }}>{cell.deg}</span>
+                        </div>
+                        <div style={{ fontSize: 10, lineHeight: 1, color: cell.leap ? T.error : T.textDim, height: 12 }}>
+                          {cell.leap ? '⚠' : motionGlyph(cell.motion, ci === 0)}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 10, lineHeight: 1, color: cell.leap ? T.error : T.textDim, height: 12 }}>
-                        {cell.leap ? '⚠' : motionGlyph(cell.motion, ci === 0)}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
@@ -291,10 +347,10 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
         </div>
       )}
 
-      {selVoice != null && (
+      {(selVoice != null || selDeg != null) && (
         <p style={{ margin: '10px 0 0', fontSize: 12, color: T.textDim, textAlign: 'center' }}>
           <span style={{ display: 'inline-block', width: 10, height: 10, background: alpha(THREAD, 100), marginInlineEnd: 6, verticalAlign: 'middle' }} />
-          {t.follow(String(selVoice + 1))}
+          {selVoice != null ? t.follow(String(selVoice + 1)) : t.degOf(degLabelShort(selDeg!, lang))}
         </p>
       )}
     </div>
