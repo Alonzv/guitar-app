@@ -54,11 +54,11 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const t = lang === 'he'
-    ? { title: 'סטודיו הולכת קולות', calc: 'חשב', play: '▶ נגן', voice: 'קול',
+    ? { title: 'סטודיו הולכת קולות', calc: 'חשב', play: '▶ נגן', clear: 'נקה', voice: 'קול',
         build: 'בנו מהלך אקורדים ולחצו על "חשב"', addChord: 'הוסף', follow: (v: string) => `עוקב אחרי קול ${v}`,
         key: 'סולם', auto: 'אוטומטי', outKey: 'מחוץ לסולם', leap: 'קפיצה', hold: 'צליל משותף מוחזק',
         par5: 'קוינטות מקבילות', par8: 'אוקטבות מקבילות' }
-    : { title: 'Voice Leading Studio', calc: 'Calculate', play: '▶ Play', voice: 'Voice',
+    : { title: 'Voice Leading Studio', calc: 'Calculate', play: '▶ Play', clear: 'Clear', voice: 'Voice',
         build: 'Build a progression, then press Calculate', addChord: 'Add', follow: (v: string) => `Following voice ${v}`,
         key: 'Key', auto: 'Auto', outKey: 'out of key', leap: 'leap', hold: 'common tone held',
         par5: 'parallel 5ths', par8: 'parallel octaves' };
@@ -120,6 +120,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
     setChords(c => [...c, name]); setResult(null); setPickOpen(false);
   };
   const removeChord = (i: number) => { setChords(c => c.filter((_, j) => j !== i)); setResult(null); };
+  const clearChords = () => { setChords([]); setResult(null); setSelVoice(null); setPickOpen(false); };
 
   const sel_: React.CSSProperties = {
     appearance: 'none', WebkitAppearance: 'none', background: T.bgInput, border: `1px solid ${T.border}`,
@@ -144,14 +145,19 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
 
       {/* Timeline */}
       <div style={{ ...card({ padding: '12px 12px' }), marginBottom: 14 }}>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', alignItems: 'center', paddingBottom: 4 }}>
-          {chords.map((c, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: T.bgInput, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)', padding: '8px 6px 8px 12px', flexShrink: 0 }}>
-              <span dir="ltr" style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{c}</span>
-              <button onClick={() => removeChord(i)} style={{ border: 'none', background: 'transparent', color: T.textDim, cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '0 2px' }}>×</button>
-            </div>
-          ))}
-          <button onClick={() => setPickOpen(o => !o)} style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 0, cursor: 'pointer', fontSize: 20, fontWeight: 500, border: `1px dashed ${T.border}`, background: 'transparent', color: T.textMuted }}>+</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', alignItems: 'center', paddingBottom: 4, flex: 1 }}>
+            {chords.map((c, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: T.bgInput, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)', padding: '8px 6px 8px 12px', flexShrink: 0 }}>
+                <span dir="ltr" style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{c}</span>
+                <button onClick={() => removeChord(i)} style={{ border: 'none', background: 'transparent', color: T.textDim, cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '0 2px' }}>×</button>
+              </div>
+            ))}
+            <button onClick={() => setPickOpen(o => !o)} style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 0, cursor: 'pointer', fontSize: 20, fontWeight: 500, border: `1px dashed ${T.border}`, background: 'transparent', color: T.textMuted }}>+</button>
+          </div>
+          {chords.length > 0 && (
+            <button onClick={clearChords} style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.clear}</button>
+          )}
         </div>
         {pickOpen && (
           <div dir="ltr" style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
