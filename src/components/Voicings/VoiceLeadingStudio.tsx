@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Chord as TonalChord, Note, Interval } from '@tonaljs/tonal';
 import type { ChordInProgression, Tuning } from '../../types/music';
 import { playMidi, unlockAudio } from '../../utils/audioPlayback';
+import { analyzeProgression, keyName, ALL_KEYS } from '../../utils/harmonicAnalysis';
+import type { KeyGuess } from '../../utils/harmonicAnalysis';
 import { T, card, alpha } from '../../theme';
 
 // ── Voice Leading Studio ─────────────────────────────────────────────────────
@@ -73,6 +75,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
   const [muted, setMuted] = useState<Set<number>>(new Set());
   const [sel, setSel] = useState<number | null>(null);       // threaded degree number
   const [result, setResult] = useState<ChordCol[] | null>(null);
+  const [keyOverride, setKeyOverride] = useState<KeyGuess | null>(null);   // null = auto-detect
   const [pickOpen, setPickOpen] = useState(false);
   const [pRoot, setPRoot] = useState('C'); const [pTri, setPTri] = useState('M'); const [pExt, setPExt] = useState('');
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -80,11 +83,22 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
 
   const t = lang === 'he'
     ? { title: 'סטודיו הולכת קולות', mute: 'ניטרול דרגות', calc: 'חשב', play: '▶ נגן',
-        build: 'בנו מהלך אקורדים ולחצו על "חשב"', addChord: 'הוסף', threadOf: (d: string) => `מדגיש את דרגה ${d} לאורך המהלך` }
+        build: 'בנו מהלך אקורדים ולחצו על "חשב"', addChord: 'הוסף', threadOf: (d: string) => `מדגיש את דרגה ${d} לאורך המהלך`,
+        key: 'סולם', auto: 'אוטומטי', outKey: 'מחוץ לסולם', allIn: 'כל האקורדים בתוך הסולם ✓' }
     : { title: 'Voice Leading Studio', mute: 'Mute degrees', calc: 'Calculate', play: '▶ Play',
-        build: 'Build a progression, then press Calculate', addChord: 'Add', threadOf: (d: string) => `Threading degree ${d} across the progression` };
+        build: 'Build a progression, then press Calculate', addChord: 'Add', threadOf: (d: string) => `Threading degree ${d} across the progression`,
+        key: 'Key', auto: 'Auto', outKey: 'out of key', allIn: 'All chords are diatonic ✓' };
 
-  const calc = () => { if (!chords.length) return; setSel(null); setResult(chords.map(toColumn)); };
+  const keyToStr = (k: KeyGuess) => `${k.tonicPc}:${k.mode}`;
+
+  const calc = () => { if (!chords.length) return; setSel(null); setKeyOverride(null); setResult(chords.map(toColumn)); };
+
+  // Functional analysis — key + Roman numerals, recomputed when the key override changes.
+  const analysis = useMemo(
+    () => result ? analyzeProgression(result.map(c => c.name), keyOverride) : null,
+    [result, keyOverride],
+  );
+  const flagged = analysis ? analysis.chords.filter(c => !c.diatonic) : [];
 
   const play = () => {
     if (!result) return;
@@ -162,6 +176,19 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' }}>
         <button onClick={calc} style={{ padding: '9px 26px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 700, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.calc}</button>
         {result && <button onClick={play} style={{ padding: '9px 20px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.play}</button>}
+        {analysis && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginInlineStart: 'auto' }}>
+            <span style={{ ...LBL, margin: 0 }}>{t.key}</span>
+            <select
+              value={keyOverride ? keyToStr(keyOverride) : 'auto'}
+              onChange={e => setKeyOverride(e.target.value === 'auto' ? null : ALL_KEYS.find(k => keyToStr(k) === e.target.value) ?? null)}
+              style={sel_}
+            >
+              <option value="auto">{t.auto} · {keyName(analysis.detected, lang)}</option>
+              {ALL_KEYS.map(k => <option key={keyToStr(k)} value={keyToStr(k)}>{keyName(k, lang)}</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Result — one box per chord, degrees below */}
@@ -171,12 +198,20 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
-          {result.map((col, i) => (
+          {result.map((col, i) => {
+            const an = analysis?.chords[i];
+            return (
             <div key={i} style={{ ...card({ padding: 10 }), width: desktop ? 148 : 132, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                 <span dir="ltr" style={{ fontSize: 16, fontWeight: 700, color: T.text }}>{col.name}</span>
                 <button onClick={() => removeChord(i)} style={{ border: 'none', background: 'transparent', color: T.textDim, cursor: 'pointer', fontSize: 15 }}>×</button>
               </div>
+              {an && (
+                <div dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: -2 }}>
+                  <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 13, fontWeight: 700, color: an.diatonic ? T.textMuted : T.error }}>{an.roman}</span>
+                  {!an.diatonic && <span title={t.outKey} style={{ fontSize: 12, color: T.error, fontWeight: 700 }}>⚠</span>}
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {col.tones.map((tn, j) => {
                   const isSel = sel === tn.num;
@@ -196,6 +231,19 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
                 })}
               </div>
             </div>
+            );
+          })}
+        </div>
+      )}
+      {flagged.length > 0 && (
+        <div style={{ ...card({ padding: '10px 14px' }), marginTop: 12 }}>
+          {flagged.map((c, i) => (
+            <p key={i} dir="ltr" style={{ margin: i ? '6px 0 0' : 0, fontSize: 12, color: T.text }}>
+              <span style={{ color: T.error, fontWeight: 700 }}>⚠ </span>
+              <span style={{ fontWeight: 700 }}>{c.name}</span>
+              <span style={{ fontFamily: 'var(--gc-mono)', color: T.textMuted }}> · {c.roman}</span>
+              <span style={{ color: T.textDim }}> — {t.outKey}</span>
+            </p>
           ))}
         </div>
       )}

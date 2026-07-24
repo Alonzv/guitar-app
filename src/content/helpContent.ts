@@ -106,11 +106,11 @@ export const HELP: Record<string, HelpEntry> = {
   'voicings:voiceleading': {
     en: {
       title: 'Voice Leading Studio',
-      body: 'Build a progression on the horizontal timeline (＋ adds a chord), then press Calculate. Each chord becomes a box with its degrees listed below — degree and note (e.g. 3 · E). Tap any degree to thread that voice: the same degree lights up (in cobalt) across every chord, so you can trace a line — a pedal tone, a common tone, or a moving inner voice — through the whole progression. Threading matches by degree number, so a major 3rd and a minor 3rd both count as "the 3rd". The mute chips (1·3·5·7) drop a degree from playback, and Play walks the chords.',
+      body: 'Build a progression on the horizontal timeline (＋ adds a chord), then press Calculate. Each chord becomes a box with its degrees listed below — degree and note (e.g. 3 · E). Tap any degree to thread that voice: the same degree lights up (in cobalt) across every chord, so you can trace a line — a pedal tone, a common tone, or a moving inner voice — through the whole progression. Threading matches by degree number, so a major 3rd and a minor 3rd both count as "the 3rd". The studio also detects the key and labels each chord with its Roman numeral (I, ii, V7…); a ⚠ marks a chord that falls outside the key, listed with a note below. Use the Key selector to override the auto-detected key. The mute chips (1·3·5·7) drop a degree from playback, and Play walks the chords.',
     },
     he: {
       title: 'סטודיו הולכת קולות',
-      body: 'בונים מהלך על ציר הזמן האופקי (＋ מוסיף אקורד) ולוחצים "חשב". כל אקורד הופך לריבוע שמתחתיו רשומות הדרגות שלו — דרגה ותו (למשל 3 · E). הקישו על דרגה כדי להדגיש את הקול הזה: אותה דרגה נצבעת (בקובלט) בכל האקורדים, כך שאפשר לעקוב אחרי קו — צליל פדל, צליל משותף או קול פנימי נע — לאורך כל המהלך. ההדגשה מתאימה לפי מספר הדרגה, כך ששלישית גדולה ושלישית קטנה נחשבות שתיהן "השלישית". שבבי הניטרול (1·3·5·7) מסירים דרגה מהנגינה, ו"נגן" מנגן את האקורדים.',
+      body: 'בונים מהלך על ציר הזמן האופקי (＋ מוסיף אקורד) ולוחצים "חשב". כל אקורד הופך לריבוע שמתחתיו רשומות הדרגות שלו — דרגה ותו (למשל 3 · E). הקישו על דרגה כדי להדגיש את הקול הזה: אותה דרגה נצבעת (בקובלט) בכל האקורדים, כך שאפשר לעקוב אחרי קו — צליל פדל, צליל משותף או קול פנימי נע — לאורך כל המהלך. ההדגשה מתאימה לפי מספר הדרגה, כך ששלישית גדולה ושלישית קטנה נחשבות שתיהן "השלישית". הכלי גם מזהה את הסולם ומסמן לכל אקורד את הדרגה הרומית שלו (I, ii, V7…); סימן ⚠ מציין אקורד שנמצא מחוץ לסולם, עם הערה מתחת. אפשר לבחור סולם ידנית בתפריט "סולם". שבבי הניטרול (1·3·5·7) מסירים דרגה מהנגינה, ו"נגן" מנגן את האקורדים.',
     },
   },
   'voicings:harmonizer': {
