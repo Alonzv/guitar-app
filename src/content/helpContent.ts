@@ -105,12 +105,12 @@ export const HELP: Record<string, HelpEntry> = {
   },
   'voicings:voiceleading': {
     en: {
-      title: 'Voice Leading',
-      body: 'Isolate a single voice — root, 3rd, 5th or 7th — across the progression to see how that line moves from chord to chord. A focused view for smoothing inner-voice motion.',
+      title: 'Voice Leading Studio',
+      body: 'Build a progression on the horizontal timeline (＋ adds a chord). The mute chips (1·3·5·7) drop a degree from every chord. Press Calculate to voice-lead the progression into playable neck shapes (never more than a ~4-fret stretch), choosing Smooth, Open or Contrary motion. Each chord becomes a column — tap a degree to thread that single voice across the whole progression and see how, say, a 7th resolves to the 3rd of the next chord. Play hears the result.',
     },
     he: {
-      title: 'הולכת קולות',
-      body: 'מבודדים קול יחיד — שורש, שלישה, חמישה או שביעית — לאורך הפרוגרסיה כדי לראות איך הקו הזה נע מאקורד לאקורד. תצוגה ממוקדת להחלקת תנועת הקולות הפנימיים.',
+      title: 'סטודיו הולכת קולות',
+      body: 'בונים מהלך על ציר הזמן האופקי (＋ מוסיף אקורד). שבבי הניטרול (1·3·5·7) מסירים דרגה מכל האקורדים. לוחצים "חשב" כדי לפרק את המהלך להולכת־קולות חלקה עם אחיזות נגישות על הצוואר (מתיחה של עד ~4 סריגים), לפי תנועה חלקה / פתוחה / מנוגדת. כל אקורד הופך לעמודה — הקישו על דרגה כדי לעקוב אחרי מסלול הקול הזה לאורך כל המהלך ולראות איך, למשל, שביעית נפתרת לשלישית של האקורד הבא. "נגן" משמיע את התוצאה.',
     },
   },
   'voicings:harmonizer': {

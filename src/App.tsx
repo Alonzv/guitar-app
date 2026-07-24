@@ -21,6 +21,7 @@ import { IntervalsTab }      from './components/Intervals/IntervalsTab';
 import { WheelTab }          from './components/Tools/WheelTab';
 
 import { VoicingsTab }       from './components/Voicings/VoicingsTab';
+import { VoiceLeadingStudio } from './components/Voicings/VoiceLeadingStudio';
 
 import { Tuner }             from './components/Tools/Tuner';
 import { Metronome }         from './components/Tools/Metronome';
@@ -52,7 +53,7 @@ import { T } from './theme';
 // ── Types & constants ──────────────────────────────────────────────────────
 type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target' | 'practice';
 type ScalesSub    = 'explorer' | 'triads' | 'wheel' | 'practice';
-type VoicingsSub  = 'paths' | 'voiceleading' | 'harmonizer' | 'reharmonize';
+type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize';
 type PracticeSub  = 'tuner' | 'metronome';
 type StudioSub    = 'tabbuilder' | 'audiotab';
 
@@ -72,10 +73,9 @@ const SCALES_SEGS    = [
   { id: 'practice',  label: 'Practice' },
 ];
 const VOICINGS_SEGS  = [
-  { id: 'paths',        label: 'Paths'      },
-  { id: 'voiceleading', label: 'Voice Lead' },
-  { id: 'harmonizer',   label: 'Harmonize'  },
-  { id: 'reharmonize',  label: 'Reharm'     },
+  { id: 'voiceleading', label: 'VL Studio' },
+  { id: 'harmonizer',   label: 'Harmonize' },
+  { id: 'reharmonize',  label: 'Reharm'    },
 ];
 const PRACTICE_SEGS  = [
   { id: 'tuner',        label: 'Tuner'     },
@@ -230,7 +230,10 @@ export default function App() {
     const v = readLS('scaleup_seg_scales', 'explorer');   // 'intervals' moved to its own top tab
     return (v === 'intervals' ? 'explorer' : v) as ScalesSub;
   });
-  const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => readLS('scaleup_seg_voicings', 'paths') as VoicingsSub);
+  const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => {
+    const v = readLS('scaleup_seg_voicings', 'voiceleading');   // 'paths' folded into VL Studio
+    return (v === 'voiceleading' || v === 'harmonizer' || v === 'reharmonize') ? v as VoicingsSub : 'voiceleading';
+  });
   const [practiceSegment, setPracticeSegment] = useState<PracticeSub>(() => {
     const v = readLS('scaleup_seg_practice', 'tuner');    // 'eartraining' → Intervals, 'scaletrainer' → Scales
     return (v === 'tuner' || v === 'metronome') ? v as PracticeSub : 'tuner';
@@ -272,9 +275,10 @@ export default function App() {
   useEffect(() => subscribeVoicingsHandoff(h => {
     setWorkspaceOpen(false);
     setPagerTab(3);
-    setVoicingsSegment(h.sub);
+    const sub = h.sub === 'reharmonize' ? 'reharmonize' : 'voiceleading';  // 'paths' → VL Studio
+    setVoicingsSegment(sub);
     writeLS('scaleup_pager_tab', '3');
-    writeLS('scaleup_seg_voicings', h.sub);
+    writeLS('scaleup_seg_voicings', sub);
     setElTab('voicings');
   }), []);
 
@@ -532,13 +536,15 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
               <ErrorBoundary label="Voicings">
-                <VoicingsTab
-                  desktop
-                  globalProgression={progression}
-                  tuning={tuning}
-                  activeSub={voicingsSegment}
-                  onSubChange={s => handleVoicingsSegChange(s)}
-                />
+                {voicingsSegment === 'voiceleading'
+                  ? <VoiceLeadingStudio desktop globalProgression={progression} tuning={tuning} />
+                  : <VoicingsTab
+                      desktop
+                      globalProgression={progression}
+                      tuning={tuning}
+                      activeSub={voicingsSegment}
+                      onSubChange={s => handleVoicingsSegChange(s)}
+                    />}
               </ErrorBoundary>
             </div>
           )}
@@ -663,12 +669,14 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
           <ErrorBoundary label="Voicings">
-            <VoicingsTab
-              globalProgression={progression}
-              tuning={tuning}
-              activeSub={voicingsSegment}
-              onSubChange={s => handleVoicingsSegChange(s)}
-            />
+            {voicingsSegment === 'voiceleading'
+              ? <VoiceLeadingStudio globalProgression={progression} tuning={tuning} />
+              : <VoicingsTab
+                  globalProgression={progression}
+                  tuning={tuning}
+                  activeSub={voicingsSegment}
+                  onSubChange={s => handleVoicingsSegChange(s)}
+                />}
           </ErrorBoundary>
         </div>
 
