@@ -1,19 +1,16 @@
-import { useRef, useState } from 'react';
-import { Chord as TonalChord, Note } from '@tonaljs/tonal';
-import type { ChordInProgression, FretPosition, Tuning } from '../../types/music';
-import { TUNINGS, fretToNote } from '../../utils/musicTheory';
-import { findVoicingPaths } from '../../utils/voicingPaths';
-import type { VoicingPath } from '../../utils/voicingPaths';
-import { MiniFretboard } from '../Fretboard/MiniFretboard';
-import { playChord, unlockAudio } from '../../utils/audioPlayback';
+import { useEffect, useRef, useState } from 'react';
+import { Chord as TonalChord, Note, Interval } from '@tonaljs/tonal';
+import type { ChordInProgression, Tuning } from '../../types/music';
+import { playMidi, unlockAudio } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 
 // ── Voice Leading Studio ─────────────────────────────────────────────────────
-// Build a progression, optionally mute degrees globally, then Calculate a
-// voice-led arrangement: each chord is a column with a playable shape on the
-// neck. Click a degree to thread that voice across the whole progression.
-// Reuses findVoicingPaths (already enforces a ≤4-fret hand span), MiniFretboard,
-// and the app palette — no hardcoded colours.
+// Build a progression, press Calculate, and get one box per chord. Under each
+// box sit the chord's degrees (degree + note). Click any degree to thread that
+// voice — every chord's matching degree (same degree *number*, so a Major 3rd
+// and a minor 3rd both light up) is highlighted across the whole progression.
+// Global chips mute a degree (1/3/5/7) from playback; Play walks the chords.
+// No fretboard, palette colours only.
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const TRIADS = [
@@ -33,89 +30,70 @@ const SUFFIX: Record<string, Record<string, string>> = {
 const validExts = (t: string) => EXTS.filter(e => SUFFIX[t]?.[e.k] !== undefined);
 const buildName = (root: string, t: string, e: string) => root + (SUFFIX[t]?.[e] ?? '');
 
-// Semitone-from-root → chord-degree label (approximate; enough for muting/threading).
-const DEG_OF_SEMI: Record<number, string> = {
-  0: '1', 1: '♭9', 2: '9', 3: '3', 4: '3', 5: '11', 6: '5', 7: '5', 8: '5', 9: '13', 10: '7', 11: '7',
-};
-const MUTABLE = ['1', '3', '5', '7'];
-const DEG_ORDER = ['1', '♭9', '9', '3', '11', '5', '13', '7'];
+// Degrees that can be muted globally (the structural voices), by degree number.
+const MUTABLE = [1, 3, 5, 7];
 
-type Rule = 'smooth' | 'open' | 'contrary';
+interface Tone { num: number; label: string; note: string; midi: number }
+interface ChordCol { name: string; tones: Tone[] }
 
-function degOf(chordName: string, pos: FretPosition, notes: string[]): string {
-  const note = fretToNote(pos.string, pos.fret, notes);
-  const nc = Note.chroma(note); if (nc == null) return '';
-  const tonic = TonalChord.get(chordName).tonic || (chordName.match(/^[A-G][#b]?/)?.[0] ?? 'C');
-  const rc = Note.chroma(tonic) ?? 0;
-  return DEG_OF_SEMI[((nc - rc) % 12 + 12) % 12] ?? '';
+// Interval string ('3M', '5d', '7m', '9M'…) → degree number + display label.
+function degOf(iv: string): { num: number; label: string } {
+  const it = Interval.get(iv);
+  const num = it.num ?? 0;
+  const alt = it.alt ?? 0;
+  const acc = alt > 0 ? '#'.repeat(alt) : alt < 0 ? 'b'.repeat(-alt) : '';
+  return { num, label: `${acc}${num}` };
 }
 
-// Rule scores over the candidate paths returned by the engine.
-const openScore = (p: VoicingPath) =>
-  p.voicings.reduce((n, v) => n + v.filter(x => x.fret === 0).length, 0) - p.avgFret * 0.2;
-function contraryScore(p: VoicingPath): number {
-  let n = 0;
-  for (let i = 0; i + 1 < p.voicings.length; i++) {
-    const a = p.voicings[i], b = p.voicings[i + 1];
-    const top = (v: FretPosition[]) => [...v].sort((x, y) => y.string - x.string)[0]?.fret ?? 0;
-    const bot = (v: FretPosition[]) => [...v].sort((x, y) => x.string - y.string)[0]?.fret ?? 0;
-    if (Math.sign(top(b) - top(a)) * Math.sign(bot(b) - bot(a)) < 0) n++;
-  }
-  return n;
-}
-function pickPath(paths: VoicingPath[], rule: Rule): VoicingPath | null {
-  if (!paths.length) return null;
-  const sorted = [...paths];
-  if (rule === 'open') sorted.sort((a, b) => openScore(b) - openScore(a));
-  else if (rule === 'contrary') sorted.sort((a, b) => contraryScore(b) - contraryScore(a));
-  else sorted.sort((a, b) => b.smoothness - a.smoothness);
-  return sorted[0];
+function toColumn(name: string): ChordCol {
+  const info = TonalChord.get(name);
+  const notes = info.notes;
+  const ivs = info.intervals;
+  let prev = -Infinity;
+  const tones: Tone[] = notes.map((note, i) => {
+    let midi = Note.midi(`${note}3`) ?? 48;
+    while (midi <= prev) midi += 12;   // keep the voicing ascending for playback
+    prev = midi;
+    const { num, label } = degOf(ivs[i] ?? '');
+    return { num, label, note, midi };
+  });
+  return { name, tones };
 }
 
-interface Result { chords: string[]; voicings: FretPosition[][] }
-
-export function VoiceLeadingStudio({ desktop, globalProgression, tuning }: {
+export function VoiceLeadingStudio({ desktop, globalProgression }: {
   desktop?: boolean; globalProgression?: ChordInProgression[]; tuning?: Tuning;
 } = {}) {
   const [lang, setLang] = useState<'en' | 'he'>('en');
   const rtl = lang === 'he';
-  const tun = tuning ?? TUNINGS[0];
 
   const [chords, setChords] = useState<string[]>(() => {
     const g = (globalProgression ?? []).map(c => c.chord.name).filter(Boolean);
     return g.length ? g.slice(0, 12) : ['Cmaj7', 'Am7', 'Dm7', 'G7'];
   });
-  const [muted, setMuted] = useState<Set<string>>(new Set());
-  const [rule, setRule] = useState<Rule>('smooth');
-  const [result, setResult] = useState<Result | null>(null);
-  const [thread, setThread] = useState<string | null>(null);
+  const [muted, setMuted] = useState<Set<number>>(new Set());
+  const [sel, setSel] = useState<number | null>(null);       // threaded degree number
+  const [result, setResult] = useState<ChordCol[] | null>(null);
   const [pickOpen, setPickOpen] = useState(false);
   const [pRoot, setPRoot] = useState('C'); const [pTri, setPTri] = useState('M'); const [pExt, setPExt] = useState('');
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const t = lang === 'he'
-    ? { title: 'סטודיו הולכת קולות', mute: 'ניטרול דרגות', add: 'הוסף אקורד', calc: 'חשב', play: '▶ נגן', clear: 'נקה',
-        rule: 'חוקיות', smooth: 'חלק', open: 'פתוח', contrary: 'מנוגד', build: 'בנו מהלך ולחצו על "חשב"', addChord: 'הוסף' }
-    : { title: 'Voice Leading Studio', mute: 'Mute degrees', add: 'Add chord', calc: 'Calculate', play: '▶ Play', clear: 'Clear',
-        rule: 'Motion', smooth: 'Smooth', open: 'Open', contrary: 'Contrary', build: 'Build a progression, then press Calculate', addChord: 'Add' };
+    ? { title: 'סטודיו הולכת קולות', mute: 'ניטרול דרגות', calc: 'חשב', play: '▶ נגן',
+        build: 'בנו מהלך אקורדים ולחצו על "חשב"', addChord: 'הוסף', threadOf: (d: string) => `מדגיש את דרגה ${d} לאורך המהלך` }
+    : { title: 'Voice Leading Studio', mute: 'Mute degrees', calc: 'Calculate', play: '▶ Play',
+        build: 'Build a progression, then press Calculate', addChord: 'Add', threadOf: (d: string) => `Threading degree ${d} across the progression` };
 
-  const calc = () => {
-    if (!chords.length) return;
-    const paths = findVoicingPaths(chords, { genre: 'any', mode: 'full', stringGroup: 'all', tuning: tun.notes, pathCount: 6 });
-    const path = pickPath(paths, rule);
-    setThread(null);
-    setResult(path ? { chords: [...chords], voicings: path.voicings } : { chords: [...chords], voicings: [] });
-  };
-
-  const filtered = (voicing: FretPosition[], name: string) =>
-    voicing.filter(pos => { const d = degOf(name, pos, tun.notes); return !MUTABLE.includes(d) || !muted.has(d); });
+  const calc = () => { if (!chords.length) return; setSel(null); setResult(chords.map(toColumn)); };
 
   const play = () => {
     if (!result) return;
     unlockAudio().then(() => {
       timers.current.forEach(clearTimeout); timers.current = [];
-      result.voicings.forEach((v, i) => {
-        timers.current.push(setTimeout(() => playChord(filtered(v, result.chords[i]), tun.openFreqs), i * 1250));
+      result.forEach((col, i) => {
+        timers.current.push(setTimeout(() => {
+          col.tones.filter(t2 => !muted.has(t2.num)).forEach(t2 => playMidi(t2.midi, 1.1));
+        }, i * 1250));
       });
     });
   };
@@ -125,19 +103,14 @@ export function VoiceLeadingStudio({ desktop, globalProgression, tuning }: {
     setChords(c => [...c, name]); setResult(null); setPickOpen(false);
   };
   const removeChord = (i: number) => { setChords(c => c.filter((_, j) => j !== i)); setResult(null); };
-  const toggleMute = (d: string) => setMuted(m => { const n = new Set(m); n.has(d) ? n.delete(d) : n.add(d); return n; });
+  const toggleMute = (n: number) => setMuted(m => { const s = new Set(m); s.has(n) ? s.delete(n) : s.add(n); return s; });
 
-  const chip = (active: boolean): React.CSSProperties => ({
-    padding: '6px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-    border: 'none', borderLeft: '3px solid var(--gc-bar-color)',
-    background: active ? T.secondary : T.bgInput, color: active ? '#fff' : T.textMuted,
-  });
-  const sel: React.CSSProperties = {
+  const sel_: React.CSSProperties = {
     appearance: 'none', WebkitAppearance: 'none', background: T.bgInput, border: `1px solid ${T.border}`,
     borderRadius: 0, color: T.text, fontSize: 13, fontWeight: 600, padding: '7px 10px', cursor: 'pointer', outline: 'none',
   };
   const LBL: React.CSSProperties = { margin: '0 0 8px', fontSize: 10, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' };
-  const THREAD = T.success;   // the only distinct hue in this near-monochrome palette (cobalt) — makes the threaded voice pop
+  const THREAD = T.success;   // the only distinct hue in this near-monochrome palette (cobalt)
 
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>
@@ -154,7 +127,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, tuning }: {
       <p style={LBL}>{t.mute}</p>
       <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
         {MUTABLE.map(d => (
-          <button key={d} onClick={() => toggleMute(d)} title={d} style={{
+          <button key={d} onClick={() => toggleMute(d)} title={String(d)} style={{
             width: 40, height: 40, borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 700,
             border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)',
             background: muted.has(d) ? 'transparent' : T.bgInput,
@@ -177,9 +150,9 @@ export function VoiceLeadingStudio({ desktop, globalProgression, tuning }: {
         </div>
         {pickOpen && (
           <div dir="ltr" style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <select value={pRoot} onChange={e => setPRoot(e.target.value)} style={sel}>{ROOTS.map(r => <option key={r} value={r}>{r}</option>)}</select>
-            <select value={pTri} onChange={e => { setPTri(e.target.value); setPExt(''); }} style={sel}>{TRIADS.map(q => <option key={q.k} value={q.k}>{q.l}</option>)}</select>
-            <select value={pExt} onChange={e => setPExt(e.target.value)} style={sel}>{validExts(pTri).map(e => <option key={e.k} value={e.k}>{e.l}</option>)}</select>
+            <select value={pRoot} onChange={e => setPRoot(e.target.value)} style={sel_}>{ROOTS.map(r => <option key={r} value={r}>{r}</option>)}</select>
+            <select value={pTri} onChange={e => { setPTri(e.target.value); setPExt(''); }} style={sel_}>{TRIADS.map(q => <option key={q.k} value={q.k}>{q.l}</option>)}</select>
+            <select value={pExt} onChange={e => setPExt(e.target.value)} style={sel_}>{validExts(pTri).map(e => <option key={e.k} value={e.k}>{e.l}</option>)}</select>
             <button onClick={addChord} style={{ padding: '8px 18px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 600, background: T.primary, color: T.white, border: 'none', borderLeft: '3px solid var(--gc-bar-color)' }}>{t.addChord}</button>
           </div>
         )}
@@ -187,55 +160,49 @@ export function VoiceLeadingStudio({ desktop, globalProgression, tuning }: {
 
       {/* Controls */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' }}>
-        <span style={{ ...LBL, margin: 0 }}>{t.rule}</span>
-        <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          {(['smooth', 'open', 'contrary'] as Rule[]).map(r => (
-            <button key={r} onClick={() => setRule(r)} style={chip(rule === r)}>{t[r]}</button>
-          ))}
-        </div>
         <button onClick={calc} style={{ padding: '9px 26px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 700, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.calc}</button>
         {result && <button onClick={play} style={{ padding: '9px 20px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.play}</button>}
       </div>
 
-      {/* Results */}
+      {/* Result — one box per chord, degrees below */}
       {!result ? (
         <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted }}>{t.build}</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
-          {result.chords.map((name, i) => {
-            const voicing = filtered(result.voicings[i] ?? [], name);
-            const degs = voicing.map(pos => degOf(name, pos, tun.notes));
-            const present = DEG_ORDER.filter(d => degs.includes(d));
-            const dotColors = voicing.map(pos => degOf(name, pos, tun.notes) === thread ? THREAD : T.primary);
-            const dotLabels = degs;
-            return (
-              <div key={i} style={{ ...card({ padding: 10 }), width: desktop ? 190 : 170, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                  <span dir="ltr" style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{name}</span>
-                  <button onClick={() => removeChord(i)} style={{ border: 'none', background: 'transparent', color: T.textDim, cursor: 'pointer', fontSize: 15 }}>×</button>
-                </div>
-                {/* Smart labels — click a degree to thread that voice */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {present.map(d => (
-                    <button key={d} onClick={() => setThread(td => td === d ? null : d)} style={{
-                      padding: '4px 9px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                      border: 'none', borderLeft: '2px solid var(--gc-bar-color)',
-                      background: thread === d ? THREAD : T.bgInput, color: thread === d ? '#fff' : T.textMuted,
-                    }}>{d}</button>
-                  ))}
-                </div>
-                <MiniFretboard voicing={voicing} dotColors={dotColors} dotLabels={dotLabels} tuning={tun.notes} showStringLabels showFretNumbers />
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
+          {result.map((col, i) => (
+            <div key={i} style={{ ...card({ padding: 10 }), width: desktop ? 148 : 132, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                <span dir="ltr" style={{ fontSize: 16, fontWeight: 700, color: T.text }}>{col.name}</span>
+                <button onClick={() => removeChord(i)} style={{ border: 'none', background: 'transparent', color: T.textDim, cursor: 'pointer', fontSize: 15 }}>×</button>
               </div>
-            );
-          })}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {col.tones.map((tn, j) => {
+                  const isSel = sel === tn.num;
+                  const isMuted = muted.has(tn.num);
+                  return (
+                    <button key={j} onClick={() => setSel(s => s === tn.num ? null : tn.num)} dir="ltr" style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
+                      padding: '8px 10px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                      border: isSel ? 'none' : `1px solid ${T.border}`, borderLeft: `3px solid ${isSel ? THREAD : 'var(--gc-bar-color)'}`,
+                      background: isSel ? THREAD : T.bgInput, color: isSel ? '#fff' : (isMuted ? T.textDim : T.text),
+                      opacity: isMuted && !isSel ? 0.4 : 1, textDecoration: isMuted ? 'line-through' : 'none',
+                    }}>
+                      <span style={{ fontFamily: 'var(--gc-mono)', minWidth: 22, textAlign: 'start' }}>{tn.label}</span>
+                      <span>{tn.note}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
-      {thread && (
+      {sel != null && (
         <p style={{ margin: '10px 0 0', fontSize: 12, color: T.textDim, textAlign: 'center' }}>
           <span style={{ display: 'inline-block', width: 10, height: 10, background: alpha(THREAD, 100), marginInlineEnd: 6, verticalAlign: 'middle' }} />
-          {lang === 'he' ? `מסלול הקול של דרגה ${thread}` : `Threading the ${thread} voice`}
+          {t.threadOf(String(sel))}
         </p>
       )}
     </div>

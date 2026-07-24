@@ -106,11 +106,11 @@ export const HELP: Record<string, HelpEntry> = {
   'voicings:voiceleading': {
     en: {
       title: 'Voice Leading Studio',
-      body: 'Build a progression on the horizontal timeline (＋ adds a chord). The mute chips (1·3·5·7) drop a degree from every chord. Press Calculate to voice-lead the progression into playable neck shapes (never more than a ~4-fret stretch), choosing Smooth, Open or Contrary motion. Each chord becomes a column — tap a degree to thread that single voice across the whole progression and see how, say, a 7th resolves to the 3rd of the next chord. Play hears the result.',
+      body: 'Build a progression on the horizontal timeline (＋ adds a chord), then press Calculate. Each chord becomes a box with its degrees listed below — degree and note (e.g. 3 · E). Tap any degree to thread that voice: the same degree lights up (in cobalt) across every chord, so you can trace a line — a pedal tone, a common tone, or a moving inner voice — through the whole progression. Threading matches by degree number, so a major 3rd and a minor 3rd both count as "the 3rd". The mute chips (1·3·5·7) drop a degree from playback, and Play walks the chords.',
     },
     he: {
       title: 'סטודיו הולכת קולות',
-      body: 'בונים מהלך על ציר הזמן האופקי (＋ מוסיף אקורד). שבבי הניטרול (1·3·5·7) מסירים דרגה מכל האקורדים. לוחצים "חשב" כדי לפרק את המהלך להולכת־קולות חלקה עם אחיזות נגישות על הצוואר (מתיחה של עד ~4 סריגים), לפי תנועה חלקה / פתוחה / מנוגדת. כל אקורד הופך לעמודה — הקישו על דרגה כדי לעקוב אחרי מסלול הקול הזה לאורך כל המהלך ולראות איך, למשל, שביעית נפתרת לשלישית של האקורד הבא. "נגן" משמיע את התוצאה.',
+      body: 'בונים מהלך על ציר הזמן האופקי (＋ מוסיף אקורד) ולוחצים "חשב". כל אקורד הופך לריבוע שמתחתיו רשומות הדרגות שלו — דרגה ותו (למשל 3 · E). הקישו על דרגה כדי להדגיש את הקול הזה: אותה דרגה נצבעת (בקובלט) בכל האקורדים, כך שאפשר לעקוב אחרי קו — צליל פדל, צליל משותף או קול פנימי נע — לאורך כל המהלך. ההדגשה מתאימה לפי מספר הדרגה, כך ששלישית גדולה ושלישית קטנה נחשבות שתיהן "השלישית". שבבי הניטרול (1·3·5·7) מסירים דרגה מהנגינה, ו"נגן" מנגן את האקורדים.',
     },
   },
   'voicings:harmonizer': {
