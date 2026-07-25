@@ -13,6 +13,7 @@ import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
 import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
 import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab';
+import { DiatonicExtensions } from './components/Chords/DiatonicExtensions';
 
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
 import { TriadsGenerator }   from './components/Triads/TriadsGenerator';
@@ -49,7 +50,7 @@ import { T } from './theme';
 // 'chords:analyzer' help entry are kept on disk (currently unreferenced) so the
 // sub-tab can be restored by re-adding the id, the CHORDS_SEGS entry, the
 // import and the two render lines.
-type ChordsSub    = 'builder' | 'finder' | 'practice';
+type ChordsSub    = 'builder' | 'finder' | 'extensions' | 'practice';
 type ScalesSub    = 'explorer' | 'triads' | 'wheel' | 'practice';
 type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize' | 'target';
 type PracticeSub  = 'tuner' | 'metronome';
@@ -58,9 +59,10 @@ type StudioSub    = 'tabbuilder' | 'audiotab';
 const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'PRACTICE', 'STUDIO'];
 
 const CHORDS_SEGS    = [
-  { id: 'finder',   label: 'By Name'  },
-  { id: 'builder',  label: 'By Ear'   },
-  { id: 'practice', label: 'Practice' },
+  { id: 'finder',     label: 'By Name'    },
+  { id: 'builder',    label: 'By Ear'     },
+  { id: 'extensions', label: 'Extensions' },
+  { id: 'practice',   label: 'Practice'   },
 ];
 const SCALES_SEGS    = [
   { id: 'explorer',  label: 'Explorer' },
@@ -352,6 +354,7 @@ export default function App() {
                     tuning={tuning} capo={capo}
                   />
                 )}
+                {chordsSegment === 'extensions' && <DiatonicExtensions desktop />}
                 {chordsSegment === 'practice' && <ChordsPracticeTab desktop />}
               </ErrorBoundary>
             </div>
@@ -489,6 +492,7 @@ export default function App() {
                 tuning={tuning} capo={capo}
               />
             )}
+            {chordsSegment === 'extensions' && <DiatonicExtensions />}
             {chordsSegment === 'practice' && <ChordsPracticeTab />}
           </ErrorBoundary>
         </div>

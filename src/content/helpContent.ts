@@ -29,6 +29,16 @@ export const HELP: Record<string, HelpEntry> = {
       body: 'מניחים תווים על הגריפ והאפליקציה מזהה בזמן אמת איזה אקורד בניתם — כולל היפוכים ושמות חלופיים. מצוין כדי להבין צורה שמצאתם באוזן.',
     },
   },
+  'chords:extensions': {
+    en: {
+      title: 'Diatonic Extensions',
+      body: 'A reference sheet for what each degree of a major scale becomes once you stack a 7th, 9th, 11th or 13th on it. Pick a key and the chords are spelled out for real (Cmaj9, Dm11…) instead of Roman numerals. The degrees are grouped by family — major (I, IV), dominant (V), minor (ii, iii, vi) and diminished (vii) — because that is what makes the pattern click. A dash marks an extension that clashes on that degree, where players normally stop at the one before.',
+    },
+    he: {
+      title: 'הרחבות אקורדים בסולם',
+      body: 'דף עזר: מה כל דרגה בסולם מז׳ור הופכת להיות כשמוסיפים לה 7, 9, 11 או 13. בוחרים סולם והאקורדים מופיעים בשמם המלא (Cmaj9, Dm11…) במקום ספרות רומיות. הדרגות מקובצות לפי משפחה — מז׳ור (1, 4), דומיננטה (5), מינור (2, 3, 6) ומוקטן (7) — כי ככה ההיגיון מתחוור. מקף מציין הרחבה שיוצרת דיסוננס באותה דרגה, שם לרוב עוצרים בהרחבה הקודמת.',
+    },
+  },
   'chords:analyzer': {
     en: {
       title: 'Analyze',
