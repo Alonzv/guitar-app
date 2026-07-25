@@ -47,6 +47,7 @@ const COPY = {
     intro: 'Pick a key to see its seven chords and how far each one can be extended.',
     key: 'Key', mode: 'Mode', major: 'Major', minor: 'Minor',
     families: { major: 'Major', minor: 'Minor', dominant: 'Dominant', dim: 'Diminished' } as Record<Family, string>,
+    familiesShort: { major: 'Maj', minor: 'Min', dominant: 'Dom', dim: 'Dim' } as Record<Family, string>,
     feel: {
       major: 'Open and settled',
       minor: 'Soft and moodier',
@@ -69,6 +70,7 @@ const COPY = {
     intro: 'בוחרים סולם ורואים את שבעת האקורדים שלו ועד כמה כל אחד יכול להתרחב.',
     key: 'סולם', mode: 'סוג', major: 'מז׳ור', minor: 'מינור',
     families: { major: 'מז׳ור', minor: 'מינור', dominant: 'דומיננטה', dim: 'מוקטן' } as Record<Family, string>,
+    familiesShort: { major: 'מז׳', minor: 'מינ', dominant: 'דומ', dim: 'מוק' } as Record<Family, string>,
     feel: {
       major: 'פתוח ויציב',
       minor: 'רך ועגום יותר',
@@ -158,83 +160,108 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
     background: active ? T.secondary : T.bgInput, color: active ? '#fff' : T.textMuted,
   });
 
-  const CW = desktop ? 132 : 118;
 
-  const controls = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div>
+  const legend = (
+    <div style={card({ padding: '11px 13px' })}>
+      <p style={{ ...LBL, marginBottom: 8 }}>{t.legendTitle}</p>
+      <ul style={{ margin: 0, paddingInlineStart: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {t.legend.map((line, i) => (
+          <li key={i} style={{ fontSize: 12, lineHeight: 1.5, color: T.textMuted }}>{line}</li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  const pickers = (
+    <div style={{ display: 'flex', gap: 10, flexDirection: desktop ? 'column' : 'row', alignItems: desktop ? 'stretch' : 'flex-end' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ ...LBL, marginBottom: 6 }}>{t.mode}</p>
         <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
           <button onClick={() => switchMode('major')} style={modeBtn(mode === 'major')}>{t.major}</button>
           <button onClick={() => switchMode('minor')} style={modeBtn(mode === 'minor')}>{t.minor}</button>
         </div>
       </div>
-      <div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ ...LBL, marginBottom: 6 }}>{t.key}</p>
         <select dir="ltr" value={key} onChange={e => setKey(e.target.value)} style={sel}>
           {keys.map(k => <option key={k} value={k}>{k} {mode === 'major' ? 'major' : 'minor'}</option>)}
         </select>
       </div>
-      <div style={card({ padding: '11px 13px' })}>
-        <p style={{ ...LBL, marginBottom: 8 }}>{t.legendTitle}</p>
-        <ul style={{ margin: 0, paddingInlineStart: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {t.legend.map((line, i) => (
-            <li key={i} style={{ fontSize: 12, lineHeight: 1.5, color: T.textMuted }}>{line}</li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 
+  const controls = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {pickers}
+      {legend}
+    </div>
+  );
+
+  // Seven equal columns that shrink to whatever width is available — the whole
+  // key is meant to be readable at a glance, so nothing ever scrolls. Type sizes
+  // scale with the viewport so the narrowest phone still fits all seven.
+  const fs = (min: number, vw: number, max: number) => `clamp(${min}px, ${vw}vw, ${max}px)`;
   const grid = (
-    <div style={{ overflowX: 'auto', paddingBottom: 6 }}>
-      <div dir="ltr" style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-        {pattern.map((shape, i) => {
-          const root = roots[i] ?? '';
-          const raised11 = shape.ext['11'] === 'maj7#11';
-          return (
-            <div key={i} style={{
-              ...card({ padding: '10px 8px' }), width: CW, flexShrink: 0,
-              display: 'flex', flexDirection: 'column', gap: 6,
-            }}>
-              {/* Degree + plain chord */}
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700, color: T.textDim }}>{romans[i]}</div>
-                <div {...peekProps(`${root}${shape.triad}`)} style={{
-                  fontSize: 19, fontWeight: 700, lineHeight: 1.2, cursor: 'pointer',
-                  color: peek?.name === `${root}${shape.triad}` ? T.success : T.text,
-                }}>{root}{shape.triad}</div>
-                <div style={{ ...LBL, fontSize: 9, marginTop: 2 }}>{t.families[shape.family]}</div>
+    <div dir="ltr" style={{
+      display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+      gap: desktop ? 6 : 3, minWidth: 0, alignItems: 'stretch',
+    }}>
+      {pattern.map((shape, i) => {
+        const root = roots[i] ?? '';
+        const raised11 = shape.ext['11'] === 'maj7#11';
+        return (
+          <div key={i} style={{
+            ...card({ padding: desktop ? '9px 6px' : '6px 3px' }),
+            minWidth: 0, display: 'flex', flexDirection: 'column', gap: desktop ? 5 : 3,
+            overflowWrap: 'anywhere',
+          }}>
+            {/* Degree + plain chord */}
+            <div style={{ textAlign: 'center', minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--gc-mono)', fontSize: fs(8, 1.1, 11), fontWeight: 700, color: T.textDim }}>{romans[i]}</div>
+              <div {...peekProps(`${root}${shape.triad}`)} style={{
+                fontSize: fs(12, 2.1, 19), fontWeight: 700, lineHeight: 1.15, cursor: 'pointer',
+                color: peek?.name === `${root}${shape.triad}` ? T.success : T.text,
+              }}>{root}{shape.triad}</div>
+              <div style={{ ...LBL, fontSize: fs(7, 0.9, 9), marginTop: 2, letterSpacing: '0.06em' }}>
+                {(desktop ? t.families : t.familiesShort)[shape.family]}
+              </div>
+              {desktop && (
                 <div style={{ fontSize: 10.5, color: T.textDim, marginTop: 3, minHeight: 26, lineHeight: 1.25 }}>{t.feel[shape.family]}</div>
-              </div>
-
-              {/* Extensions */}
-              <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {STEPS.map(step => {
-                  const suffix = shape.ext[step];
-                  return (
-                    <div key={step} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, fontWeight: 700, color: T.textDim, width: 16, flexShrink: 0 }}>{step}</span>
-                      {suffix ? (
-                        <span {...peekProps(`${root}${suffix}`)} style={{
-                          fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
-                          color: peek?.name === `${root}${suffix}` ? T.success : T.text,
-                        }}>{root}{suffix}</span>
-                      ) : (
-                        <span style={{ fontSize: 12.5, color: T.textDim }}>—</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {raised11 && (
-                <p style={{ margin: 0, fontSize: 10, lineHeight: 1.4, color: T.textDim }}>{t.sharp11}</p>
               )}
             </div>
-          );
-        })}
-      </div>
+
+            {/* Extensions */}
+            <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: desktop ? 5 : 3, display: 'flex', flexDirection: 'column', gap: desktop ? 3 : 2 }}>
+              {STEPS.map(step => {
+                const suffix = shape.ext[step];
+                return (
+                  <div key={step} style={{ display: 'flex', alignItems: 'baseline', gap: 3, minWidth: 0 }}>
+                    {/* On mobile the suffix already names the step (maj9, m11…), so the
+                        number is only spelled out on the rows that have no chord. */}
+                    {(desktop || !suffix) && (
+                      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: fs(7, 0.9, 10), fontWeight: 700, color: T.textDim, flexShrink: 0 }}>{step}</span>
+                    )}
+                    {suffix ? (
+                      // The root is already the column title, so narrow screens list
+                      // just the suffix — that keeps names from wrapping mid-word.
+                      <span {...peekProps(`${root}${suffix}`)} style={{
+                        fontSize: fs(8.5, 1.5, 12.5), fontWeight: 700, cursor: 'pointer', minWidth: 0,
+                        color: peek?.name === `${root}${suffix}` ? T.success : T.text,
+                      }}>{desktop ? `${root}${suffix}` : suffix}</span>
+                    ) : (
+                      <span style={{ fontSize: fs(8.5, 1.5, 12.5), color: T.textDim }}>—</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {raised11 && desktop && (
+              <p style={{ margin: 0, fontSize: 10, lineHeight: 1.4, color: T.textDim }}>{t.sharp11}</p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -255,14 +282,17 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
       <p style={{ margin: '0 0 16px', fontSize: 13, lineHeight: 1.6, color: T.textMuted }}>{t.intro}</p>
 
       {desktop ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr', gap: 24, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '210px minmax(0, 1fr)', gap: 24, alignItems: 'start' }}>
           {controls}
           {grid}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {controls}
+        // Mobile: pickers, then the chart itself, then the legend — so the seven
+        // degrees are on screen straight away rather than pushed below the fold.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+          {pickers}
           {grid}
+          {legend}
         </div>
       )}
 
