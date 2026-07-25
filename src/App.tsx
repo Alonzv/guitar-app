@@ -11,7 +11,6 @@ import { TUNINGS, CHROMATIC } from './utils/musicTheory';
 // is an isolated leaf that never blocks a whole tab.)
 import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
 import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
-import { ChordAnalyzerTab }  from './components/ChordBuilder/ChordAnalyzerTab';
 import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab';
 
@@ -46,7 +45,11 @@ import type { TabContent } from './services/types';
 import { T } from './theme';
 
 // ── Types & constants ──────────────────────────────────────────────────────
-type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'practice';
+// 'analyzer' retired from the tab bar. ChordAnalyzerTab.tsx and its
+// 'chords:analyzer' help entry are kept on disk (currently unreferenced) so the
+// sub-tab can be restored by re-adding the id, the CHORDS_SEGS entry, the
+// import and the two render lines.
+type ChordsSub    = 'builder' | 'finder' | 'practice';
 type ScalesSub    = 'explorer' | 'triads' | 'wheel' | 'practice';
 type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize' | 'target';
 type PracticeSub  = 'tuner' | 'metronome';
@@ -57,7 +60,6 @@ const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'PRACTICE', '
 const CHORDS_SEGS    = [
   { id: 'finder',   label: 'By Name'  },
   { id: 'builder',  label: 'By Ear'   },
-  { id: 'analyzer', label: 'Analyze'  },
   { id: 'practice', label: 'Practice' },
 ];
 const SCALES_SEGS    = [
@@ -350,9 +352,6 @@ export default function App() {
                     tuning={tuning} capo={capo}
                   />
                 )}
-                {chordsSegment === 'analyzer' && (
-                  <ChordAnalyzerTab desktop progression={progression} />
-                )}
                 {chordsSegment === 'practice' && <ChordsPracticeTab desktop />}
               </ErrorBoundary>
             </div>
@@ -490,7 +489,6 @@ export default function App() {
                 tuning={tuning} capo={capo}
               />
             )}
-            {chordsSegment === 'analyzer' && <ChordAnalyzerTab progression={progression} />}
             {chordsSegment === 'practice' && <ChordsPracticeTab />}
           </ErrorBoundary>
         </div>
