@@ -165,6 +165,7 @@ export function ChordPickerTab({
             return (
               <button
                 key={root}
+                className="gc-notation"
                 onClick={() => handleRootSelect(root)}
                 style={{
                   padding: desktop ? '13px 4px' : '8px 4px', borderRadius: 0,
@@ -192,7 +193,7 @@ export function ChordPickerTab({
             return (
               <button
                 key={t.key}
-                className="gc-pill"
+                className="gc-pill gc-notation"
                 onClick={() => handleTriadSelect(t.key)}
                 style={{
                   padding: '6px 16px', borderRadius: 0,

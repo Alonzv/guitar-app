@@ -98,6 +98,11 @@ body {
 }
 
 button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: -0.02em; text-transform: uppercase; transition: transform 0.08s ease; }
+
+/* Music notation is case-sensitive: m2 is a minor 2nd, M2 a major 2nd; Cm and
+   CM are different chords. The blanket uppercase above erases that distinction,
+   so anything showing a note, chord or interval name opts out. */
+.gc-notation, button.gc-notation { text-transform: none; }
 button:active { transform: scale(0.96); }
 
 /* Long-press-safe surfaces: kill the iOS text-selection magnifier and the

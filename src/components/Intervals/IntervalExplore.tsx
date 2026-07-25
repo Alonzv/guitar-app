@@ -162,6 +162,7 @@ export function IntervalExplore() {
             return (
               <button
                 key={iv.semitones}
+                className="gc-notation"
                 onClick={() => setInterval(sel ? null : iv.semitones)}
                 style={{
                   padding: '8px 4px', borderRadius: 0, cursor: 'pointer',
