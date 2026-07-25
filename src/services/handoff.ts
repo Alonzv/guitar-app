@@ -1,9 +1,9 @@
-import type { TabContent, HarmonizationMelody, HarmonizationResult, VoicingPathData, ReharmData } from './types';
+import type { TabContent, HarmonizationMelody, HarmonizationResult, ReharmData } from './types';
 
 // ── Tab Builder handoff ─────────────────────────────────────────────────────
 // Lets the Workspace "Open in Builder" action push a saved tab into the live
-// Tab Builder, even though they live in different parts of the tree. ToolsTab
-// listens so it can switch to the Tab Builder sub-tab; TabBuilder consumes the
+// Tab Builder, even though they live in different parts of the tree. App
+// listens so it can navigate to STUDIO → Tab Builder; TabBuilder consumes the
 // payload on mount (or live, if already mounted).
 
 let pendingTab: TabContent | null = null;
@@ -62,24 +62,18 @@ export function subscribeHarmonizationHandoff(cb: Cb): () => void {
   return () => { harmSubs.delete(cb); };
 }
 
-// ── VOICINGS handoff (Paths / Reharm) ────────────────────────────────────────
-// Library "Open in Paths" / "Open in Reharm" pushes a payload here. App's
-// subscription (which receives the payload) navigates to VOICINGS + the right
-// sub-tab; VoicingsTab consumes it to restore the progression, filters, the
-// selected path, and — for reharms — the saved AI result.
+// ── VOICINGS handoff (Reharm) ────────────────────────────────────────────────
+// The Library's "Open in Reharm" pushes a payload here. App's subscription
+// navigates to VOICINGS → Reharm; VoicingsTab consumes it to restore the
+// progression, the neck filters and the saved AI result.
 
 export interface VoicingsHandoff {
-  sub: 'paths' | 'reharmonize';
+  sub: 'reharmonize';
   chords: string[];
-  settings?: { genre?: string; mode?: string; stringGroup?: string };
-  /** paths: label of the saved path to re-select once paths recompute. */
-  pathLabel?: string;
-  /** reharm: the saved AI result + its inputs. */
+  settings?: { mode?: string; stringGroup?: string };
+  /** The saved AI result + its inputs. */
   reharm?: { result: ReharmData; genre?: string | null; tension?: number | null };
 }
-
-// Re-exported for consumers' convenience.
-export type { VoicingPathData };
 
 let pendingVoicings: VoicingsHandoff | null = null;
 const voicingsSubs = new Set<(h: VoicingsHandoff) => void>();

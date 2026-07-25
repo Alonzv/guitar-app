@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../Auth/AuthModal';
-import { savedProgressions, savedTabs, savedHarmonizations, savedVoicings, savedReharms, audioTabs, uploadAudioClip } from '../../services/workspace';
-import type { TabContent, HarmonizationMelody, HarmonizationResult, VoicingPathData, ReharmData } from '../../services/types';
+import { savedProgressions, savedTabs, savedHarmonizations, savedReharms, audioTabs, uploadAudioClip } from '../../services/workspace';
+import type { TabContent, HarmonizationMelody, HarmonizationResult, ReharmData } from '../../services/types';
 import type { ChordInProgression } from '../../types/music';
 
 // A description of what to persist — returned lazily so we always capture the
@@ -12,7 +12,6 @@ export type SaveDescriptor =
   | { kind: 'progression'; name: string; chords: ChordInProgression[]; detected_key?: string | null }
   | { kind: 'tab';         name: string; content: TabContent; tempo?: number | null; music_key?: string | null }
   | { kind: 'harmonization'; name: string; scale?: string | null; styles?: string[]; bpm?: number | null; melody: HarmonizationMelody; result: HarmonizationResult }
-  | { kind: 'voicing';       name: string; chords: string[]; path: VoicingPathData; settings?: { genre?: string; mode?: string; stringGroup?: string } }
   | { kind: 'reharm';        name: string; original: string[]; result: ReharmData; genre?: string | null; tension?: number | null }
   | { kind: 'audio';       name: string; tab_content: string; audioBlob?: Blob | null; audioExt?: string; original_audio_url?: string | null; duration_seconds?: number | null };
 
@@ -44,8 +43,6 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
         name: d.name, scale: d.scale ?? null, styles: d.styles ?? [],
         bpm: d.bpm ?? null, melody: d.melody, result: d.result,
       });
-    } else if (d.kind === 'voicing') {
-      await savedVoicings.create(uid, { name: d.name, chords: d.chords, path: d.path, settings: d.settings ?? {} });
     } else if (d.kind === 'reharm') {
       await savedReharms.create(uid, { name: d.name, original: d.original, result: d.result, genre: d.genre ?? null, tension: d.tension ?? null });
     } else {

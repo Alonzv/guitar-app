@@ -18,7 +18,7 @@ import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab'
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
 import { TriadsGenerator }   from './components/Triads/TriadsGenerator';
 import { IntervalsTab }      from './components/Intervals/IntervalsTab';
-import { WheelTab }          from './components/Tools/WheelTab';
+import { ChordWheel }        from './components/ScalePanel/ChordWheel';
 
 import { VoicingsTab }       from './components/Voicings/VoicingsTab';
 import { VoiceLeadingStudio } from './components/Voicings/VoiceLeadingStudio';
@@ -29,12 +29,7 @@ import { ScalesPracticeTab } from './components/ScalePractice/ScalesPracticeTab'
 
 import { TabBuilder }        from './components/Tools/TabBuilder';
 import { AudioToTab }        from './components/Tools/AudioToTab';
-import { WorkspacePanel }    from './components/Workspace/WorkspacePanel';
 import { WorkspaceOverlay }  from './components/Workspace/WorkspaceOverlay';
-
-// ── Electron-only ──────────────────────────────────────────────────────────
-import { TheoryTab }   from './components/TheoryTab';
-import { ToolsTab }    from './components/Tools/ToolsTab';
 
 // ── Shell ──────────────────────────────────────────────────────────────────
 import { SwipePager, Segment } from './components/SwipePager';
@@ -84,15 +79,6 @@ const PRACTICE_SEGS  = [
 const STUDIO_SEGS    = [
   { id: 'tabbuilder', label: 'Tab Builder' },
   { id: 'audiotab',   label: 'Audio→Tab'  },
-];
-
-// ── Electron sidebar tabs ─────────────────────────────────────────────────
-type ElTab = 'theory' | 'voicings' | 'tools' | 'workspace';
-const EL_TABS: { id: ElTab; label: string }[] = [
-  { id: 'theory',    label: 'Theory'    },
-  { id: 'voicings',  label: 'Voicings'  },
-  { id: 'tools',     label: 'Tools'     },
-  { id: 'workspace', label: 'Workspace' },
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -268,18 +254,15 @@ export default function App() {
     setVoicingsSegment('harmonizer');
     writeLS('scaleup_pager_tab', '3');
     writeLS('scaleup_seg_voicings', 'harmonizer');
-    setElTab('voicings'); // Electron layout — the tool consumes on its mount
   }), []);
 
-  // ── Handoff: Library "Open in Paths / Reharm" → VOICINGS/<sub> ────────────
-  useEffect(() => subscribeVoicingsHandoff(h => {
+  // ── Handoff: Library "Open in Reharm" → VOICINGS/Reharm ──────────────────
+  useEffect(() => subscribeVoicingsHandoff(() => {
     setWorkspaceOpen(false);
     setPagerTab(3);
-    const sub = h.sub === 'reharmonize' ? 'reharmonize' : 'voiceleading';  // 'paths' → VL Studio
-    setVoicingsSegment(sub);
+    setVoicingsSegment('reharmonize');
     writeLS('scaleup_pager_tab', '3');
-    writeLS('scaleup_seg_voicings', sub);
-    setElTab('voicings');
+    writeLS('scaleup_seg_voicings', 'reharmonize');
   }), []);
 
   // ── Workspace handlers ─────────────────────────────────────────────────────
@@ -298,30 +281,7 @@ export default function App() {
     writeLS('scaleup_seg_studio', 'tabbuilder');
   };
 
-  // ── Electron state ────────────────────────────────────────────────────────
-  const [elTab, setElTab]             = useState<ElTab>('theory');
-  const [sidebarPinned, setSidebarPinned]  = useState(() => readLS('scaleup_sidebar_pinned', '1') !== '0');
-  const [sidebarHovered, setSidebarHovered] = useState(false);
-
-  useEffect(() => { writeLS('scaleup_sidebar_pinned', sidebarPinned ? '1' : '0'); }, [sidebarPinned]);
-
-  const isElectron = navigator.userAgent.includes('Electron');
-  const isDesktop = useIsDesktop();
-  const isDesktopBrowser = !isElectron && isDesktop;
-
-  // ── Common progression props ──────────────────────────────────────────────
-  const progProps = {
-    progression,
-    onAddToProgression: (item: ChordInProgression) => pushHistory([...progression, item]),
-    onRemoveFromProgression: (id: string) => pushHistory(progression.filter(c => c.id !== id)),
-    onClearProgression: () => pushHistory([]),
-    onReorderProgression: handleReorderProgression,
-    onTransposeProgression: handleTransposeProgression,
-    tuning, onTuningChange: setTuning,
-    capo, onCapoChange: setCapo,
-    canUndo: undoStack.length > 0, canRedo: redoStack.length > 0,
-    onUndo: handleUndo, onRedo: handleRedo,
-  };
+  const isDesktopBrowser = useIsDesktop();
 
   const sharedBanner = showSharedBanner && sharedProgression ? (
     <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
@@ -332,116 +292,6 @@ export default function App() {
       </div>
     </div>
   ) : null;
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Electron desktop layout (unchanged structure, updated labels)
-  // ══════════════════════════════════════════════════════════════════════════
-  if (isElectron) {
-    const sidebarVisible = sidebarPinned || sidebarHovered;
-
-    const elTabContent = (
-      <>
-        {elTab === 'theory' && (
-          <ErrorBoundary label="Theory">
-            <TheoryTab {...progProps} />
-          </ErrorBoundary>
-        )}
-        {elTab === 'voicings' && (
-          <ErrorBoundary label="Voicings">
-            <VoicingsTab globalProgression={progression} tuning={tuning} />
-          </ErrorBoundary>
-        )}
-        {elTab === 'tools' && (
-          <ErrorBoundary label="Tools">
-            <ToolsTab />
-          </ErrorBoundary>
-        )}
-        {elTab === 'workspace' && (
-          <ErrorBoundary label="Workspace">
-            <WorkspacePanel
-              onOpenTabInBuilder={(content) => { requestOpenTabInBuilder(content); setElTab('tools'); }}
-              onOpenProgressionInBuilder={(chords) => { pushHistory(chords.map((c, i) => ({ ...c, id: `chord-loaded-${Date.now()}-${i}` }))); setElTab('theory'); }}
-            />
-          </ErrorBoundary>
-        )}
-      </>
-    );
-
-    return (
-      <div style={{ display: 'flex', height: '100vh', position: 'relative', backgroundColor: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', overflow: 'hidden' }}>
-
-        {!sidebarPinned && (
-          <div style={{ position: 'absolute', left: 0, top: 28, bottom: 0, width: 12, zIndex: 30 }} onMouseEnter={() => setSidebarHovered(true)} />
-        )}
-
-        <aside
-          onMouseEnter={() => { if (!sidebarPinned) setSidebarHovered(true); }}
-          onMouseLeave={() => { if (!sidebarPinned) setSidebarHovered(false); }}
-          style={{
-            width: 190, flexShrink: 0,
-            backgroundColor: T.bgInput, borderRight: `1px solid ${T.border}`,
-            display: 'flex', flexDirection: 'column', paddingTop: 28,
-            ...(sidebarPinned ? {} : {
-              position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 40,
-              transform: sidebarVisible ? 'translateX(0)' : 'translateX(-190px)',
-              transition: 'transform 0.22s ease, box-shadow 0.22s ease',
-              boxShadow: sidebarVisible ? '4px 0 24px rgba(0,0,0,0.28)' : 'none',
-            }),
-          }}
-        >
-          <div style={{ padding: '16px 20px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ScaleUp" style={{ width: 55, height: 55, borderRadius: 0, display: 'block', objectFit: 'cover' }} />
-          </div>
-
-          <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
-            {EL_TABS.map(tab => {
-              const active = elTab === tab.id;
-              return (
-                <button key={tab.id} onClick={() => setElTab(tab.id)} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 0,
-                  background: active ? T.primary : 'transparent',
-                  color: active ? T.white : T.textMuted,
-                  fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left',
-                  transition: 'background 0.15s, color 0.15s',
-                  borderLeft: active ? '3px solid var(--gc-bar-color)' : 'none',
-                }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bgCard; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
-            <button onClick={() => setDarkMode(d => !d)} style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textDim, fontSize: 12, fontWeight: 600, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Toggle dark mode">
-              {darkMode ? 'D' : 'L'}
-            </button>
-            {sidebarPinned
-              ? <button onClick={() => setSidebarPinned(false)} title="Hide sidebar" style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-              : <button onClick={() => { setSidebarPinned(true); setSidebarHovered(false); }} title="Pin sidebar" style={{ width: 32, height: 32, borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-            }
-          </div>
-        </aside>
-
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ backgroundColor: T.bgCard, borderBottom: `1px solid ${T.border}`, padding: '14px 24px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: T.text, letterSpacing: '-0.3px' }}>
-              {EL_TABS.find(t => t.id === elTab)?.label ?? ''}
-            </h1>
-            <UserMenu onOpenWorkspace={() => setElTab('workspace')} />
-          </div>
-
-          {sharedBanner}
-
-          <main style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: 800, width: '100%', boxSizing: 'border-box', margin: '0 auto' }}>
-            {elTabContent}
-          </main>
-        </div>
-      </div>
-    );
-  }
 
   // ══════════════════════════════════════════════════════════════════════════
   // Desktop browser layout — DesktopShell
@@ -515,7 +365,7 @@ export default function App() {
               <ErrorBoundary label="Scales">
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
                 {scalesSegment === 'triads'    && <TriadsGenerator desktop globalProgression={progression} />}
-                {scalesSegment === 'wheel'     && <WheelTab desktop tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
+                {scalesSegment === 'wheel'     && <ChordWheel desktop onAddToProgression={item => pushHistory([...progression, item])} />}
                 {scalesSegment === 'practice'  && <ScalesPracticeTab desktop />}
               </ErrorBoundary>
             </div>
@@ -651,7 +501,7 @@ export default function App() {
           <ErrorBoundary label="Scales">
             {scalesSegment === 'explorer'  && <ScaleExplorer />}
             {scalesSegment === 'triads'    && <TriadsGenerator globalProgression={progression} />}
-            {scalesSegment === 'wheel'     && <WheelTab tuning={tuning} onAddToProgression={item => pushHistory([...progression, item])} />}
+            {scalesSegment === 'wheel'     && <ChordWheel onAddToProgression={item => pushHistory([...progression, item])} />}
             {scalesSegment === 'practice'  && <ScalesPracticeTab />}
           </ErrorBoundary>
         </div>

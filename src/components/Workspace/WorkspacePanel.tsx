@@ -7,18 +7,16 @@ import { AudioArchive } from './AudioArchive';
 import { MyTabs } from './MyTabs';
 import { SavedProgressions } from './SavedProgressions';
 import { Harmonizations } from './Harmonizations';
-import { VoicingPathsSection } from './VoicingPathsSection';
 import { ReharmsSection } from './ReharmsSection';
 import type { TabContent } from '../../services/types';
 import type { ChordInProgression } from '../../types/music';
 
-type Sub = 'progressions' | 'voicings' | 'harmonizations' | 'reharms' | 'tabs' | 'audio';
+type Sub = 'progressions' | 'harmonizations' | 'reharms' | 'tabs' | 'audio';
 
 // One category per creation tool, ordered to mirror the app's own flow:
-// CHORDS → VOICINGS (Paths / Harmonize / Reharm) → STUDIO (Tabs / Audio).
+// CHORDS → VOICINGS (Harmonize / Reharm) → STUDIO (Tabs / Audio).
 const SUBS: { id: Sub; label: string }[] = [
   { id: 'progressions',   label: 'Progressions'  },
-  { id: 'voicings',       label: 'Voicing Paths' },
   { id: 'harmonizations', label: 'Harmonized'    },
   { id: 'reharms',        label: 'Reharms'       },
   { id: 'tabs',           label: 'My Tabs'       },
@@ -62,7 +60,7 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Category bar — one tab per creation tool. Scrolls horizontally on
-          narrow screens instead of squeezing six labels into one row. */}
+          narrow screens instead of squeezing the labels into one row. */}
       <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: 2 }}>
         {SUBS.map(s => {
           const active = sub === s.id;
@@ -83,7 +81,6 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
       {/* key={sub} remounts the section so the fade plays on every switch */}
       <div key={sub} className="gc-fadein">
         {sub === 'progressions'   && <SavedProgressions desktop={desktop} onOpenInBuilder={onOpenProgressionInBuilder} />}
-        {sub === 'voicings'       && <VoicingPathsSection desktop={desktop} />}
         {sub === 'harmonizations' && <Harmonizations desktop={desktop} />}
         {sub === 'reharms'        && <ReharmsSection desktop={desktop} />}
         {sub === 'tabs'           && <MyTabs desktop={desktop} onOpenInBuilder={onOpenTabInBuilder} />}
