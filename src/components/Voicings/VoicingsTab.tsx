@@ -59,7 +59,7 @@ const VALID_EXTENSIONS: Record<string, string[]> = {
 
 const SUFFIX_MAP: Record<string, Record<string, string>> = {
   M:    { '': 'M', '7': '7', 'maj7': 'maj7', '9': '9', 'add9': 'add9', '6': '6', '11': '11', '13': '13' },
-  m:    { '': 'm', '7': 'm7', 'maj7': 'mM7', '9': 'm9', 'add9': 'madd9', '6': 'm6', '11': 'm11', '13': 'm13' },
+  m:    { '': 'm', '7': 'm7', 'maj7': 'mMaj7', '9': 'm9', 'add9': 'madd9', '6': 'm6', '11': 'm11', '13': 'm13' },
   dim:  { '': 'dim', '7': 'dim7' },
   aug:  { '': 'aug', '7': 'aug7' },
   sus2: { '': 'sus2' },

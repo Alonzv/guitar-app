@@ -6,6 +6,7 @@ import type { KeyGuess } from '../../utils/harmonicAnalysis';
 import { voiceLead } from '../../utils/voiceLeading';
 import type { VoicedProgression } from '../../utils/voiceLeading';
 import { T, card, alpha } from '../../theme';
+import { toDisplayChord } from '../../utils/chordName';
 
 // ── Voice Leading Studio ─────────────────────────────────────────────────────
 // Build a progression, press Calculate, and see it arranged into four smooth
@@ -26,7 +27,7 @@ const EXTS = [
 ];
 const SUFFIX: Record<string, Record<string, string>> = {
   M: { '': '', '7': '7', maj7: 'maj7', '9': '9', add9: 'add9', '6': '6' },
-  m: { '': 'm', '7': 'm7', maj7: 'mM7', '9': 'm9', add9: 'madd9', '6': 'm6' },
+  m: { '': 'm', '7': 'm7', maj7: 'mMaj7', '9': 'm9', add9: 'madd9', '6': 'm6' },
   dim: { '': 'dim', '7': 'dim7' }, aug: { '': 'aug', '7': 'aug7' },
   sus2: { '': 'sus2' }, sus4: { '': 'sus4' },
 };
@@ -185,7 +186,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', alignItems: 'center', paddingBottom: 4, flex: 1 }}>
             {chords.map((c, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: T.bgInput, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)', padding: '8px 6px 8px 12px', flexShrink: 0 }}>
-                <span dir="ltr" style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{c}</span>
+                <span dir="ltr" style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{toDisplayChord(c)}</span>
                 <button onClick={() => removeChord(i)} style={{ border: 'none', background: 'transparent', color: T.textDim, cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '0 2px' }}>×</button>
               </div>
             ))}
@@ -256,7 +257,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
                 const an = analysis?.chords[ci];
                 return (
                   <div key={ci} style={{ width: CW, flexShrink: 0, padding: '6px 4px', textAlign: 'center', borderInlineStart: ci ? `1px solid ${T.border}` : 'none', background: T.bgCard }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{toDisplayChord(name)}</div>
                     {an && (
                       <div style={{ fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700, color: an.diatonic ? T.textMuted : T.error }}>
                         {an.roman}{!an.diatonic && ' ⚠'}

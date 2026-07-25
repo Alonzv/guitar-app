@@ -1,3 +1,4 @@
+import { toDisplayChord } from './chordName';
 import { Chord as TonalChord, ChordType, Interval } from '@tonaljs/tonal';
 import type { Chord, FretPosition } from '../types/music';
 import { notesToPitchClasses, fretToNote, CHROMATIC, ENHARMONICS } from './musicTheory';
@@ -20,7 +21,7 @@ function chordTypePriority(suffix: string): number {
   if (s === 'm')                                           return 0; // minor
   if (s === '5')                                           return 1; // power chord
   if (s === '7' || s === 'm7')                             return 1; // dom/min 7
-  if (s === 'maj7' || s === 'mM7')                         return 2; // major 7
+  if (s === 'maj7' || s === 'mM7' || s === 'mMaj7')                       return 2; // major 7
   if (s === 'dim' || s === 'aug')                          return 2; // dim / aug
   if (s === 'dim7' || s === 'm7b5')                        return 2; // half-dim
   if (/^sus[24]?$/.test(s))                                return 2; // sus
@@ -192,7 +193,9 @@ function scoreBasedDetect(pitchClasses: string[], bassNote?: string): Chord[] {
 // ── Display formatter ─────────────────────────────────────────────────────────
 // Tonal.js appends 'M' for major chords (e.g. "CM"). Strip for display.
 export function formatChordName(name: string): string {
-  return name.replace(/^([A-G][b#]?)M(\/.*)?$/, '$1$2');
+  // House style: "major" is never a capital M next to a note — CM → C, and a
+  // minor chord with a major 7th reads Cm(maj7), not CmM7. See utils/chordName.
+  return toDisplayChord(name.replace(/^([A-G][b#]?)M(\/.*)?$/, '$1$2'));
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

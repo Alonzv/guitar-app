@@ -3,6 +3,7 @@ import { Chord as TonalChord, Note } from '@tonaljs/tonal';
 import { STANDARD_OPEN_MIDI, CHROMATIC } from '../../utils/musicTheory';
 import { playInterval } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
+import { toDisplayChord } from '../../utils/chordName';
 
 // ── In a Chord — find every occurrence of an interval inside a chord ──────────
 // Pick a chord; the tool shows each chord tone across the neck as dim context.
@@ -42,7 +43,7 @@ const VALID_EXT: Record<string, string[]> = {
 };
 const SUFFIX: Record<string, Record<string, string>> = {
   M: { '': '', '7': '7', maj7: 'maj7', '9': '9', add9: 'add9', '6': '6', '11': '11', '13': '13' },
-  m: { '': 'm', '7': 'm7', maj7: 'mM7', '9': 'm9', add9: 'madd9', '6': 'm6', '11': 'm11', '13': 'm13' },
+  m: { '': 'm', '7': 'm7', maj7: 'mMaj7', '9': 'm9', add9: 'madd9', '6': 'm6', '11': 'm11', '13': 'm13' },
   dim: { '': 'dim', '7': 'dim7' }, aug: { '': 'aug', '7': 'aug7' },
   sus2: { '': 'sus2' }, sus4: { '': 'sus4' },
 };
@@ -236,7 +237,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
     <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, fontSize: 11 }}>
         <span style={{ fontFamily: 'var(--gc-mono)', letterSpacing: '0.1em', color: 'var(--gc-text)', fontWeight: 600 }}>
-          {chordName} · {ivName}{ivPairs.length ? ` · ${ivPairs.join(', ')}` : ''}
+          {toDisplayChord(chordName)} · {ivName}{ivPairs.length ? ` · ${ivPairs.join(', ')}` : ''}
         </span>
         <span style={{ marginInlineStart: 'auto', color: T.textDim, fontSize: 10 }}>
           {pairs.length} on the neck

@@ -61,7 +61,7 @@ export function detectKey(chords: Chord[]): string {
 function buildChordFromNumeral(numeral: string, keyRoot: string, _isMajor: boolean): string {
   // Match: optional ♭/♯  +  scale degree  +  quality suffix
   const m = numeral.match(
-    /^(b|#)?(VII|VI|IV|V|III|II|I)(m7b5|maj7|maj9|mM7|dim7|add9|sus2|sus4|m7|m9|m6|m|13|11|9|7|6|5|aug|dim|o|)$/i
+    /^(b|#)?(VII|VI|IV|V|III|II|I)(m7b5|maj7|maj9|mMaj7|mM7|dim7|add9|sus2|sus4|m7|m9|m6|m|13|11|9|7|6|5|aug|dim|o|)$/i
   );
   if (!m) return '';
 
@@ -86,7 +86,7 @@ function buildChordFromNumeral(numeral: string, keyRoot: string, _isMajor: boole
   // Map raw quality notation to Tonal.js suffix
   const Q: Record<string, string> = {
     '': 'M', m: 'm', '7': '7', m7: 'm7', maj7: 'maj7', maj9: 'maj9',
-    mM7: 'mM7', dim7: 'dim7', add9: 'add9', sus2: 'sus2', sus4: 'sus4',
+    mM7: 'mMaj7', mMaj7: 'mMaj7', dim7: 'dim7', add9: 'add9', sus2: 'sus2', sus4: 'sus4',
     m7b5: 'm7b5', m9: 'm9', m6: 'm6', '13': '13', '11': '11', '9': '9',
     '6': '6', '5': '5', aug: 'aug', dim: 'dim', o: 'dim',
   };
