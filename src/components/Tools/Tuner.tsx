@@ -130,6 +130,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const ctxRef       = useRef<AudioContext | null>(null);
   const analyserRef  = useRef<AnalyserNode | null>(null);
   const sourceRef    = useRef<MediaStreamAudioSourceNode | null>(null);
+  const sinkRef      = useRef<GainNode | null>(null);
   const streamRef    = useRef<MediaStream | null>(null);
   const rafRef       = useRef<number | null>(null);
   const freqBufRef   = useRef<number[]>([]);
@@ -204,8 +205,17 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 4096;
       analyser.smoothingTimeConstant = 0.0;
-      source.connect(analyser); // analyser is a dead-end — not connected to output
+      source.connect(analyser);
       analyserRef.current = analyser;
+      // Some browsers (notably iOS Safari) never process a node that isn't part
+      // of a path to the destination, so a dead-end analyser reads pure silence
+      // and nothing is ever detected. Route it on through a muted gain node so
+      // the mic is actually pulled — silent output, real data.
+      const sink = ctx.createGain();
+      sink.gain.value = 0;
+      analyser.connect(sink);
+      sink.connect(ctx.destination);
+      sinkRef.current = sink;
       setListening(true);
       rafRef.current = requestAnimationFrame(tick);
     } catch (e: unknown) {
@@ -226,9 +236,10 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
     // connected can hold the mic indicator on even after stopping the tracks.
     try { sourceRef.current?.disconnect(); } catch { /* ignore */ }
     try { analyserRef.current?.disconnect(); } catch { /* ignore */ }
+    try { sinkRef.current?.disconnect(); } catch { /* ignore */ }
     streamRef.current?.getTracks().forEach(t => t.stop());
     ctxRef.current = null; analyserRef.current = null;
-    sourceRef.current = null; streamRef.current = null;
+    sourceRef.current = null; sinkRef.current = null; streamRef.current = null;
     freqBufRef.current = [];
     clearMicSession();
     setListening(false); setDisplay(null);
