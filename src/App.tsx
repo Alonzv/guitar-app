@@ -51,9 +51,9 @@ import type { TabContent } from './services/types';
 import { T } from './theme';
 
 // ── Types & constants ──────────────────────────────────────────────────────
-type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'target' | 'practice';
+type ChordsSub    = 'builder' | 'finder' | 'analyzer' | 'practice';
 type ScalesSub    = 'explorer' | 'triads' | 'wheel' | 'practice';
-type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize';
+type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize' | 'target';
 type PracticeSub  = 'tuner' | 'metronome';
 type StudioSub    = 'tabbuilder' | 'audiotab';
 
@@ -63,7 +63,6 @@ const CHORDS_SEGS    = [
   { id: 'finder',   label: 'By Name'  },
   { id: 'builder',  label: 'By Ear'   },
   { id: 'analyzer', label: 'Analyze'  },
-  { id: 'target',   label: 'Target'   },
   { id: 'practice', label: 'Practice' },
 ];
 const SCALES_SEGS    = [
@@ -76,6 +75,7 @@ const VOICINGS_SEGS  = [
   { id: 'voiceleading', label: 'VL Studio' },
   { id: 'harmonizer',   label: 'Harmonize' },
   { id: 'reharmonize',  label: 'Reharm'    },
+  { id: 'target',       label: 'Target'    },
 ];
 const PRACTICE_SEGS  = [
   { id: 'tuner',        label: 'Tuner'     },
@@ -232,7 +232,7 @@ export default function App() {
   });
   const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => {
     const v = readLS('scaleup_seg_voicings', 'voiceleading');   // 'paths' folded into VL Studio
-    return (v === 'voiceleading' || v === 'harmonizer' || v === 'reharmonize') ? v as VoicingsSub : 'voiceleading';
+    return (v === 'voiceleading' || v === 'harmonizer' || v === 'reharmonize' || v === 'target') ? v as VoicingsSub : 'voiceleading';
   });
   const [practiceSegment, setPracticeSegment] = useState<PracticeSub>(() => {
     const v = readLS('scaleup_seg_practice', 'tuner');    // 'eartraining' → Intervals, 'scaletrainer' → Scales
@@ -503,9 +503,6 @@ export default function App() {
                 {chordsSegment === 'analyzer' && (
                   <ChordAnalyzerTab desktop progression={progression} />
                 )}
-                {chordsSegment === 'target' && (
-                  <TargetNoteTab desktop tuning={tuning} capo={capo} />
-                )}
                 {chordsSegment === 'practice' && <ChordsPracticeTab desktop />}
               </ErrorBoundary>
             </div>
@@ -538,6 +535,8 @@ export default function App() {
               <ErrorBoundary label="Voicings">
                 {voicingsSegment === 'voiceleading'
                   ? <VoiceLeadingStudio desktop globalProgression={progression} tuning={tuning} />
+                  : voicingsSegment === 'target'
+                  ? <TargetNoteTab desktop tuning={tuning} capo={capo} />
                   : <VoicingsTab
                       desktop
                       globalProgression={progression}
@@ -642,7 +641,6 @@ export default function App() {
               />
             )}
             {chordsSegment === 'analyzer' && <ChordAnalyzerTab progression={progression} />}
-            {chordsSegment === 'target'   && <TargetNoteTab tuning={tuning} capo={capo} />}
             {chordsSegment === 'practice' && <ChordsPracticeTab />}
           </ErrorBoundary>
         </div>
@@ -671,6 +669,8 @@ export default function App() {
           <ErrorBoundary label="Voicings">
             {voicingsSegment === 'voiceleading'
               ? <VoiceLeadingStudio globalProgression={progression} tuning={tuning} />
+              : voicingsSegment === 'target'
+              ? <TargetNoteTab tuning={tuning} capo={capo} />
               : <VoicingsTab
                   globalProgression={progression}
                   tuning={tuning}

@@ -39,7 +39,7 @@ export const HELP: Record<string, HelpEntry> = {
       body: 'מזינים פרוגרסיית אקורדים ומקבלים את הטוניקה שזוהתה, את התפקיד (ספרות רומיות) של כל אקורד, וניתוח AI שמסביר מה גורם לה לעבוד. שימושי כדי להבין למה פרוגרסיה מצלצלת טוב.',
     },
   },
-  'chords:target': {
+  'voicings:target': {
     en: {
       title: 'Target Note',
       body: 'Choose a note you want to hit and the app finds chords and voicings that contain it, showing where that note sits in each shape. Handy for writing a line that lands on a specific melody note.',
