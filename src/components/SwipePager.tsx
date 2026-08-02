@@ -59,6 +59,8 @@ interface SwipePagerProps {
   onToggleDark: () => void;
   userMenu?: React.ReactNode;
   sharedBanner?: React.ReactNode;
+  /** Slim chrome line naming what the app is currently working on. */
+  sessionBar?: React.ReactNode;
   onLogoClick?: () => void;
   children: React.ReactNode;
 }
@@ -69,7 +71,7 @@ const TITLE_W = 150; // px per title cell
 export function SwipePager({
   tab, onTabChange, tabTitles,
   darkMode, onToggleDark,
-  userMenu, sharedBanner, onLogoClick, children,
+  userMenu, sharedBanner, sessionBar, onLogoClick, children,
 }: SwipePagerProps) {
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -277,6 +279,10 @@ export function SwipePager({
           </div>
 
         </div>
+
+        {sessionBar && (
+          <div style={{ padding: '0 18px', flexShrink: 0 }}>{sessionBar}</div>
+        )}
 
         {/* ── Content track ─────────────────────────────────────────────── */}
         <div ref={areaRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>

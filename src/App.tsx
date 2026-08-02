@@ -13,6 +13,8 @@ import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
 import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
 import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab';
+import { SessionBar } from './components/SessionBar';
+import { namesToProgression } from './utils/progressionBridge';
 import { DiatonicExtensions } from './components/Chords/DiatonicExtensions';
 
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
@@ -269,6 +271,14 @@ export default function App() {
     writeLS('scaleup_seg_voicings', 'reharmonize');
   }), []);
 
+  // ── Session sync ───────────────────────────────────────────────────────────
+  // A voicing tool edited the chord list. Convert back to progression entries
+  // (reusing existing ones so shapes/ids survive) and push through the same
+  // history as any other edit, so undo/redo works across the whole app.
+  const handleChordNamesChange = useCallback((names: string[]) => {
+    pushHistory(namesToProgression(names, tuning.notes, progressionRef.current));
+  }, [pushHistory, tuning]);
+
   // ── Workspace handlers ─────────────────────────────────────────────────────
   const handleOpenProgression = (chords: ChordInProgression[]) => {
     pushHistory(chords.map((c, i) => ({ ...c, id: `chord-loaded-${Date.now()}-${i}` })));
@@ -320,6 +330,8 @@ export default function App() {
           sharedBanner={sharedBanner}
           onLogoClick={handleLogoClick}
         >
+          <SessionBar progression={progression} tuning={tuning} capo={capo} />
+
           {/* ── Panel 0: CHORDS ──────────────────────────────────────── */}
           {pagerTab === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -386,7 +398,7 @@ export default function App() {
               <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
               <ErrorBoundary label="Voicings">
                 {voicingsSegment === 'voiceleading'
-                  ? <VoiceLeadingStudio desktop globalProgression={progression} tuning={tuning} />
+                  ? <VoiceLeadingStudio desktop globalProgression={progression} tuning={tuning} onChordsChange={handleChordNamesChange} />
                   : voicingsSegment === 'target'
                   ? <TargetNoteTab desktop tuning={tuning} capo={capo} />
                   : <VoicingsTab
@@ -458,9 +470,12 @@ export default function App() {
         onToggleDark={() => setDarkMode(d => !d)}
         userMenu={<UserMenu compact onOpenWorkspace={() => setWorkspaceOpen(true)} />}
         sharedBanner={sharedBanner}
+        sessionBar={<SessionBar progression={progression} tuning={tuning} capo={capo} />}
         onLogoClick={handleLogoClick}
       >
 
+        {/* Session bar is rendered inside each panel on mobile via the pager,
+            so it is placed once here at the top of the panel stack. */}
         {/* ── Panel 0: CHORDS ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} helpPrefix="chords" />
@@ -520,7 +535,7 @@ export default function App() {
           <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
           <ErrorBoundary label="Voicings">
             {voicingsSegment === 'voiceleading'
-              ? <VoiceLeadingStudio globalProgression={progression} tuning={tuning} />
+              ? <VoiceLeadingStudio globalProgression={progression} tuning={tuning} onChordsChange={handleChordNamesChange} />
               : voicingsSegment === 'target'
               ? <TargetNoteTab tuning={tuning} capo={capo} />
               : <VoicingsTab

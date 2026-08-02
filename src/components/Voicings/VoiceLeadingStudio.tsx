@@ -39,36 +39,30 @@ const degNum = (label: string) => parseInt(label.replace(/[^0-9]/g, ''), 10) || 
 const DEG_ORDER = [1, 3, 5, 7, 9, 11, 13, 2, 4, 6];   // display order for the degree chips
 const degLabelShort = (n: number, lang: 'en' | 'he') => n === 1 ? (lang === 'he' ? 'שורש' : 'Root') : String(n);
 
-// The studio keeps its own progression so switching tabs and coming back doesn't
-// wipe it. STORE holds the working chords; SEED remembers the last external
-// progression we seeded from, so a *new* one from elsewhere still takes over.
-const STORE = 'scaleup_vls_chords';
-const SEED = 'scaleup_vls_seed';
 const globalNames = (gp?: ChordInProgression[]) => (gp ?? []).map(c => c.chord.name).filter(Boolean).slice(0, 12);
+const DEMO = ['Cmaj7', 'Am7', 'Dm7', 'G7'];
 
-export function VoiceLeadingStudio({ desktop, globalProgression }: {
+export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange }: {
   desktop?: boolean; globalProgression?: ChordInProgression[]; tuning?: Tuning;
+  /** Report an edit so it flows back into the shared session progression. */
+  onChordsChange?: (names: string[]) => void;
 } = {}) {
   const [lang, setLang] = useState<'en' | 'he'>('en');
   const rtl = lang === 'he';
 
-  const [chords, setChords] = useState<string[]>(() => {
-    const g = globalNames(globalProgression);
-    const gsig = g.join('|');
-    let savedSeed = '', saved: unknown = null;
-    try { savedSeed = localStorage.getItem(SEED) ?? ''; saved = JSON.parse(localStorage.getItem(STORE) ?? 'null'); } catch { /* private mode */ }
-    // A new external progression (different from the last seed) takes over…
-    if (g.length && gsig !== savedSeed) {
-      try { localStorage.setItem(SEED, gsig); localStorage.setItem(STORE, JSON.stringify(g)); } catch { /* ignore */ }
-      return g;
-    }
-    // …otherwise restore what the user was working on here.
-    if (Array.isArray(saved) && saved.length) return saved.slice(0, 12) as string[];
-    return g.length ? g : ['Cmaj7', 'Am7', 'Dm7', 'G7'];
-  });
-  useEffect(() => { try { localStorage.setItem(STORE, JSON.stringify(chords)); } catch { /* ignore */ } }, [chords]);
-  // Show the restored/seeded progression right away, so returning to the tab keeps the grid.
-  useEffect(() => { if (chords.length) setResult(voiceLead(chords)); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  // The session progression is the source of truth — no private copy, so an
+  // edit here and an edit in By Name are the same edit. Only when the session
+  // is empty does the studio show a demo, which the first edit commits.
+  const sessionNames = globalNames(globalProgression);
+  const [demo, setDemo] = useState<string[]>(DEMO);
+  const chords = sessionNames.length ? sessionNames : demo;
+
+  const setChords = (next: string[] | ((prev: string[]) => string[])) => {
+    const value = typeof next === 'function' ? next(chords) : next;
+    setDemo(value);
+    onChordsChange?.(value);
+  };
+
   const [selVoice, setSelVoice] = useState<number | null>(null);   // follow a voice (a row)
   const [selDeg, setSelDeg] = useState<number | null>(null);       // highlight a degree across the grid
   const [result, setResult] = useState<VoicedProgression | null>(null);
@@ -77,6 +71,17 @@ export function VoiceLeadingStudio({ desktop, globalProgression }: {
   const [pRoot, setPRoot] = useState('C'); const [pTri, setPTri] = useState('M'); const [pExt, setPExt] = useState('');
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  // Voice the session progression whenever it changes — arriving from another
+  // tool, or an undo/redo — so the grid always shows what the app is working on.
+  const sessionKey = sessionNames.join('|');
+  const lastKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastKey.current === sessionKey) return;
+    lastKey.current = sessionKey;
+    setResult(sessionNames.length ? voiceLead(sessionNames) : null);
+    setSelVoice(null); setSelDeg(null);
+  }, [sessionKey]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = lang === 'he'
     ? { title: 'סטודיו הולכת קולות', calc: 'חשב', play: '▶ נגן', clear: 'נקה', voice: 'קול',
