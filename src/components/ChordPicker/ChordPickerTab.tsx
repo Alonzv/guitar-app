@@ -6,7 +6,7 @@ import { ChordStructure } from '../ChordBuilder/ChordStructure';
 import { ProgressionPanel } from '../ChordBuilder/ProgressionPanel';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
-import { T, card } from '../../theme';
+import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
 
 interface Props {
@@ -278,8 +278,13 @@ export function ChordPickerTab({
         </div>
       )}
 
-      {/* Add / Save now live inside the enlarged VoicingViewer popover — open
-          it by tapping a variation below. */}
+      {/* Adds the chord's primary shape, matching the action in By Ear. Adding a
+          specific variation still lives in the enlarged viewer — tap one below. */}
+      {chordName && voicings.length > 0 && (
+        <button onClick={() => addVoicing(voicings[0])} style={{ ...btn.primary(), width: '100%' }}>
+          + Add to Progression
+        </button>
+      )}
     </div>
   );
 
@@ -287,11 +292,7 @@ export function ChordPickerTab({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {chordName && voicings.length > 0 ? (
         <>
-          {desktop && (
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-              Voicing Variations · Tap to Enlarge
-            </p>
-          )}
+          {/* VoicingVariations carries its own heading — no second copy here. */}
           <VoicingVariations
             voicings={voicings}
             chordName={chordName ?? undefined}
