@@ -40,7 +40,6 @@ const DEG_ORDER = [1, 3, 5, 7, 9, 11, 13, 2, 4, 6];   // display order for the d
 const degLabelShort = (n: number, lang: 'en' | 'he') => n === 1 ? (lang === 'he' ? 'שורש' : 'Root') : String(n);
 
 const globalNames = (gp?: ChordInProgression[]) => (gp ?? []).map(c => c.chord.name).filter(Boolean).slice(0, 12);
-const DEMO = ['Cmaj7', 'Am7', 'Dm7', 'G7'];
 
 export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange }: {
   desktop?: boolean; globalProgression?: ChordInProgression[]; tuning?: Tuning;
@@ -50,17 +49,20 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
   const [lang, setLang] = useState<'en' | 'he'>('en');
   const rtl = lang === 'he';
 
-  // The session progression is the source of truth — no private copy, so an
-  // edit here and an edit in By Name are the same edit. Only when the session
-  // is empty does the studio show a demo, which the first edit commits.
+  // The session progression is the source of truth — no private copy and no
+  // placeholder chords, so what the studio shows is exactly what the app is
+  // working on. An empty session shows the empty state, and stays empty.
+  // (The local list is only used when the studio is rendered standalone,
+  // without a handler to report edits to.)
   const sessionNames = globalNames(globalProgression);
-  const [demo, setDemo] = useState<string[]>(DEMO);
-  const chords = sessionNames.length ? sessionNames : demo;
+  const [local, setLocal] = useState<string[]>([]);
+  const linked = !!onChordsChange;
+  const chords = linked ? sessionNames : local;
 
   const setChords = (next: string[] | ((prev: string[]) => string[])) => {
     const value = typeof next === 'function' ? next(chords) : next;
-    setDemo(value);
-    onChordsChange?.(value);
+    if (linked) onChordsChange!(value);
+    else setLocal(value);
   };
 
   const [selVoice, setSelVoice] = useState<number | null>(null);   // follow a voice (a row)
