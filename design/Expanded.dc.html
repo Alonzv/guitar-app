@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Azeret Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+    a { color: #5E86FF; } a:hover { color: #8AA8FF; }
+  </style>
+</helmet>
+
+<div style="width: 1040px; height: 860px; box-sizing: border-box; background: #111110; color: #F0EAD8; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px;">
+
+  <!-- ZONE A — the question -->
+  <div style="background: #1A1918; border: 1px solid #383530; border-left: 4px solid rgba(255,255,255,0.20); padding: 16px 18px; display: flex; align-items: center; gap: 20px;">
+    <p style="margin: 0; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C958C; flex-shrink: 0;">Chord</p>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <div style="background: #242220; border: 1px solid #383530; padding: 9px 14px; font-size: 15px; font-weight: 700; color: #F0EAD8; min-width: 62px;">G</div>
+      <div style="background: #242220; border: 1px solid #383530; padding: 9px 14px; font-size: 15px; font-weight: 700; color: #F0EAD8;">Major</div>
+      <div style="background: #242220; border: 1px solid #383530; padding: 9px 14px; font-size: 15px; font-weight: 400; color: rgba(255,255,255,0.7);">— triad</div>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C958C;">Notes</span>
+      <span style="font-size: 16px; font-weight: 700; color: #F0EAD8; letter-spacing: 0.06em;">G · B · D</span>
+    </div>
+  </div>
+
+  <!-- ZONE B — the answer, with one row open -->
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+      <p style="margin: 0; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C958C;">Intervals in this chord</p>
+      <span style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C958C;">6 found</span>
+    </div>
+
+    <div style="background: #1A1918; border: 1px solid #383530; border-left: 4px solid rgba(255,255,255,0.20);">
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">B → D</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Minor 3rd</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">3 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <!-- OPEN ROW — cobalt marks the one thing in focus -->
+      <div style="border-bottom: 1px solid #383530; border-left: 3px solid #5E86FF; background: rgba(94,134,255,0.07);">
+        <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px;">
+          <span style="font-size: 15px; font-weight: 700; color: #5E86FF; width: 93px; flex-shrink: 0;">G → B</span>
+          <span style="font-size: 14px; font-weight: 600; color: #5E86FF; flex-grow: 1;">Major 3rd</span>
+          <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">4 semitones</span>
+          <span style="font-size: 11px; color: #5E86FF; width: 20px; text-align: right;">▶</span>
+        </div>
+
+        <!-- Detail: the neck, shown only for the open interval -->
+        <div style="padding: 0 18px 18px; display: flex; flex-direction: column; gap: 12px;">
+
+          <div style="background: #FFFFFF; border: 1px solid #383530; padding: 12px 14px 8px;">
+            <svg viewBox="0 0 940 172" style="display: block; width: 100%;">
+              <rect x="0" y="0" width="940" height="172" fill="#FFFFFF"></rect>
+              <circle cx="219" cy="90" r="6" fill="rgba(0,0,0,0.06)"></circle>
+              <circle cx="359" cy="90" r="6" fill="rgba(0,0,0,0.06)"></circle>
+              <circle cx="499" cy="90" r="6" fill="rgba(0,0,0,0.06)"></circle>
+              <circle cx="639" cy="90" r="6" fill="rgba(0,0,0,0.06)"></circle>
+              <circle cx="849" cy="46" r="5" fill="rgba(0,0,0,0.06)"></circle>
+              <circle cx="849" cy="134" r="5" fill="rgba(0,0,0,0.06)"></circle>
+              <line x1="44" y1="24" x2="44" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="114" y1="24" x2="114" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="184" y1="24" x2="184" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="254" y1="24" x2="254" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="324" y1="24" x2="324" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="394" y1="24" x2="394" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="464" y1="24" x2="464" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="534" y1="24" x2="534" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="604" y1="24" x2="604" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="674" y1="24" x2="674" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="744" y1="24" x2="744" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="814" y1="24" x2="814" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <line x1="884" y1="24" x2="884" y2="134" stroke="#C9C2B8" stroke-width="2"></line>
+              <rect x="38" y="24" width="6" height="110" fill="#1A1818"></rect>
+              <line x1="44" y1="24" x2="884" y2="24" stroke="#C9C2B8" stroke-width="0.9"></line>
+              <line x1="44" y1="46" x2="884" y2="46" stroke="#C9C2B8" stroke-width="1.2"></line>
+              <line x1="44" y1="68" x2="884" y2="68" stroke="#C9C2B8" stroke-width="1.5"></line>
+              <line x1="44" y1="90" x2="884" y2="90" stroke="#C9C2B8" stroke-width="1.9"></line>
+              <line x1="44" y1="112" x2="884" y2="112" stroke="#C9C2B8" stroke-width="2.2"></line>
+              <line x1="44" y1="134" x2="884" y2="134" stroke="#C9C2B8" stroke-width="2.6"></line>
+              <text x="22" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">E</text>
+              <text x="22" y="50" text-anchor="middle" font-size="11" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">B</text>
+              <text x="22" y="72" text-anchor="middle" font-size="11" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">G</text>
+              <text x="22" y="94" text-anchor="middle" font-size="11" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">D</text>
+              <text x="22" y="116" text-anchor="middle" font-size="11" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">A</text>
+              <text x="22" y="138" text-anchor="middle" font-size="11" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">E</text>
+              <text x="219" y="156" text-anchor="middle" font-size="10" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">3</text>
+              <text x="359" y="156" text-anchor="middle" font-size="10" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">5</text>
+              <text x="499" y="156" text-anchor="middle" font-size="10" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">7</text>
+              <text x="639" y="156" text-anchor="middle" font-size="10" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">9</text>
+              <text x="849" y="156" text-anchor="middle" font-size="10" font-weight="700" fill="#1A1818" font-family="'Azeret Mono', monospace">12</text>
+              <line x1="219" y1="134" x2="149" y2="112" stroke="#2B54D4" stroke-width="2"></line>
+              <circle cx="219" cy="134" r="13" fill="#1A1818"></circle>
+              <text x="219" y="138" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF" font-family="'Azeret Mono', monospace">G</text>
+              <circle cx="149" cy="112" r="13" fill="#2B54D4"></circle>
+              <text x="149" y="116" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF" font-family="'Azeret Mono', monospace">B</text>
+            </svg>
+          </div>
+
+          <!-- One placement at a time, stepped — not eleven crossing lines -->
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; border: 1px solid #383530;">
+              <div style="padding: 7px 12px; font-size: 12px; color: rgba(255,255,255,0.7); border-right: 1px solid #383530;">‹</div>
+              <div style="padding: 7px 14px; font-size: 11px; color: #9C958C; letter-spacing: 0.1em;">SHAPE 1 / 10</div>
+              <div style="padding: 7px 12px; font-size: 12px; color: rgba(255,255,255,0.7); border-left: 1px solid #383530;">›</div>
+            </div>
+
+            <div style="display: flex; border: 1px solid #383530;">
+              <div style="padding: 7px 14px; font-size: 11px; color: #FFFFFF; background: #6B655C; font-weight: 600;">Together</div>
+              <div style="padding: 7px 14px; font-size: 11px; color: rgba(255,255,255,0.7); border-left: 1px solid #383530;">One by one</div>
+            </div>
+
+            <div style="padding: 7px 14px; font-size: 11px; color: rgba(255,255,255,0.7); border: 1px solid #383530;">Octave wider — Major 10th</div>
+
+            <span style="margin-left: auto; font-size: 11px; color: #9C958C;">low E fret 3 · A string fret 2</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">D → G</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Perfect 4th</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">5 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">G → D</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Perfect 5th</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">7 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">B → G</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Minor 6th</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">8 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">D → B</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Major 6th</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">9 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

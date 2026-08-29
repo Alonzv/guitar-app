@@ -1,0 +1,24 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1040, "h": 620, "title": "1 — The answer is a list" },
+    { "file": "Mobile.dc.html", "x": 1140, "y": 0, "w": 390, "h": 844, "title": "3 — Mobile" },
+    { "file": "Expanded.dc.html", "x": 0, "y": 780, "w": 1040, "h": 860, "title": "2 — One row open" }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -150,
+      "w": 520,
+      "text": "Brief: \"I want to know which intervals occur in a chord of my choice.\"\n\nThe old tool answered it with a 12-button grid where 6 buttons were greyed out — you had to read ABSENCE to get the answer. Here the list IS the answer: one row per interval that actually exists, nothing to decode."
+    },
+    {
+      "id": "neck-note",
+      "x": 1140,
+      "y": 900,
+      "w": 380,
+      "text": "The neck moved out of the always-on layout and into an opened row — and shows ONE placement at a time with a stepper, instead of 11 crossing lines at once.\n\n+8va became a plain-language chip inside that row: \"Octave wider — Major 10th\"."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

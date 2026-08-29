@@ -27,3 +27,7 @@ release
 *.sln
 *.sw?
 .claude/
+
+# Seeded design-canvas bundles — generated from design/*.dc.html, ~2.4MB each
+design/*.html
+!design/*.dc.html

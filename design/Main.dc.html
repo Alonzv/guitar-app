@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Azeret Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+    a { color: #5E86FF; } a:hover { color: #8AA8FF; }
+  </style>
+</helmet>
+
+<div style="width: 1040px; height: 620px; box-sizing: border-box; background: #111110; color: #F0EAD8; padding: 28px 32px; display: flex; flex-direction: column; gap: 22px;">
+
+  <!-- Sub-tab bar (existing app chrome) -->
+  <div style="display: flex; border: 1px solid #383530;">
+    <div style="flex: 1; text-align: center; padding: 12px 4px; font-size: 11px; letter-spacing: 0.04em; color: rgba(255,255,255,0.7);">EXPLORE</div>
+    <div style="flex: 1; text-align: center; padding: 12px 4px; font-size: 11px; letter-spacing: 0.04em; color: rgba(255,255,255,0.7); border-left: 1px solid #383530;">IDENTIFY</div>
+    <div style="flex: 1; text-align: center; padding: 12px 4px; font-size: 11px; letter-spacing: 0.04em; color: #FFFFFF; font-weight: 500; background: #6B655C; border-left: 1px solid #383530;">IN A CHORD</div>
+    <div style="flex: 1; text-align: center; padding: 12px 4px; font-size: 11px; letter-spacing: 0.04em; color: rgba(255,255,255,0.7); border-left: 1px solid #383530;">PRACTICE</div>
+  </div>
+
+  <!-- ZONE A — the question -->
+  <div style="background: #1A1918; border: 1px solid #383530; border-left: 4px solid rgba(255,255,255,0.20); padding: 16px 18px; display: flex; align-items: center; gap: 20px;">
+    <p style="margin: 0; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C958C; flex-shrink: 0;">Chord</p>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <div style="background: #242220; border: 1px solid #383530; padding: 9px 14px; font-size: 15px; font-weight: 700; color: #F0EAD8; min-width: 62px;">G</div>
+      <div style="background: #242220; border: 1px solid #383530; padding: 9px 14px; font-size: 15px; font-weight: 700; color: #F0EAD8;">Major</div>
+      <div style="background: #242220; border: 1px solid #383530; padding: 9px 14px; font-size: 15px; font-weight: 400; color: rgba(255,255,255,0.7);">— triad</div>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C958C;">Notes</span>
+      <span style="font-size: 16px; font-weight: 700; color: #F0EAD8; letter-spacing: 0.06em;">G · B · D</span>
+    </div>
+  </div>
+
+  <!-- ZONE B — the answer -->
+  <div style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+      <p style="margin: 0; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C958C;">Intervals in this chord</p>
+      <span style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C958C;">6 found</span>
+    </div>
+
+    <div style="background: #1A1918; border: 1px solid #383530; border-left: 4px solid rgba(255,255,255,0.20);">
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">B → D</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Minor 3rd</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">3 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">G → B</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Major 3rd</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">4 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">D → G</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Perfect 4th</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">5 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">G → D</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Perfect 5th</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">7 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px; border-bottom: 1px solid #383530;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">B → G</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Minor 6th</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">8 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 58px;">
+        <span style="font-size: 15px; font-weight: 700; color: #F0EAD8; width: 96px; flex-shrink: 0;">D → B</span>
+        <span style="font-size: 14px; font-weight: 500; color: #F0EAD8; flex-grow: 1;">Major 6th</span>
+        <span style="font-size: 11px; color: #9C958C; letter-spacing: 0.08em; width: 96px; text-align: right;">9 semitones</span>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.7); width: 20px; text-align: right;">▶</span>
+      </div>
+
+    </div>
+
+    <p style="margin: 2px 0 0; font-size: 11px; color: #9C958C; line-height: 1.5;">Tap a row to see it on the neck.</p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
