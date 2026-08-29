@@ -81,6 +81,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   const [triad, setTriad] = useState('m');
   const [ext, setExt] = useState('');
   const [semis, setSemis] = useState(8);          // default m6 (the example)
+  const [wide, setWide] = useState(false);        // show the interval an octave wider
   const [mode, setMode] = useState<Mode>('harmonic');
 
   const validExt = VALID_EXT[triad] ?? [''];
@@ -107,7 +108,12 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
     return s;
   }, [chordPcs]);
 
-  const effSemis = present.has(semis) ? semis : (INTERVALS.find(i => present.has(i.semis))?.semis ?? semis);
+  const baseSemis = present.has(semis) ? semis : (INTERVALS.find(i => present.has(i.semis))?.semis ?? semis);
+  // Widening by an octave turns an interval into its compound form: a major 3rd
+  // becomes a major 10th, a 5th a 12th, and so on. On guitar these are the
+  // shapes you actually grab — a 10th spreads across strings where a close 3rd
+  // does not — so they deserve to be findable without doubling the button grid.
+  const effSemis = baseSemis + (wide ? 12 : 0);
 
   // Every hand-playable placement of the interval between two chord tones.
   const pairs = useMemo<Pair[]>(() => {
@@ -142,7 +148,19 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   const play = (p: Pair) => playInterval(p.loMidi, p.hiMidi, mode);
   const playExample = () => { if (pairs.length) play([...pairs].sort((a, b) => a.loMidi - b.loMidi)[0]); };
 
-  const ivName = INTERVALS.find(i => i.semis === effSemis)?.name ?? '';
+  // Compound names: the degree number goes up by seven when the interval is
+  // widened by an octave (3rd → 10th, 5th → 12th, octave → double octave).
+  const widenName = (name: string) => {
+    if (name === 'Octave') return 'Double octave';
+    return name.replace(/(\d+)(st|nd|rd|th)$/, (_, n: string) => {
+      const d = Number(n) + 7;
+      const suffix = d === 11 || d === 12 || d === 13 ? 'th'
+        : d % 10 === 1 ? 'st' : d % 10 === 2 ? 'nd' : d % 10 === 3 ? 'rd' : 'th';
+      return `${d}${suffix}`;
+    });
+  };
+  const baseName = INTERVALS.find(i => i.semis === baseSemis)?.name ?? '';
+  const ivName = wide ? widenName(baseName) : baseName;
   // For every interval, which chord-tone pairs form it (e.g. M3 in Cmaj7 →
   // ["C→E", "G→B"]). Shown on the picker buttons so it's obvious which pair
   // each interval maps to — and that e.g. A→F# is the MAJOR 6th, not m6.
@@ -183,11 +201,25 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
       </div>
 
       <div style={card({ padding: '14px 16px' })}>
-        <p style={LBL}>Interval in the chord</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <p style={LBL}>Interval in the chord</p>
+          <button
+            onClick={() => setWide(w => !w)}
+            className="gc-notation"
+            title="Widen by an octave — a 3rd becomes a 10th"
+            style={{
+              marginBottom: 8, padding: '3px 9px', borderRadius: 0, cursor: 'pointer',
+              fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.08em', fontWeight: 700,
+              border: wide ? 'none' : `1px solid ${T.border}`,
+              background: wide ? T.secondary : 'transparent',
+              color: wide ? '#fff' : T.textDim,
+            }}
+          >+8va</button>
+        </div>
         <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
           {INTERVALS.map(iv => {
             const has = present.has(iv.semis);
-            const active = effSemis === iv.semis;
+            const active = baseSemis === iv.semis;
             const labels = pairLabels.get(iv.semis) ?? [];
             return (
               <button key={iv.semis} disabled={!has} onClick={() => setSemis(iv.semis)} title={iv.name}
