@@ -339,13 +339,14 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
           })}
         </div>
 
-        {/* Hebrew helper */}
+        {/* Hint — the surrounding UI is English, so this stays English too;
+            it used to be a stray hard-coded Hebrew line (and misspelt מיתר). */}
         <div style={{
           marginTop: 12, textAlign: 'center',
           fontFamily: 'var(--gc-mono)', fontSize: 11, color: T.textDim,
-          direction: 'rtl', letterSpacing: '0.05em',
+          letterSpacing: '0.05em',
         }}>
-          נגן את המייתר הפתוח לכוונן
+          Play the open string to tune it
         </div>
       </div>
 

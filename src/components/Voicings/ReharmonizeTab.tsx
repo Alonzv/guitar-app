@@ -316,7 +316,7 @@ export function ReharmonizeTab({
       {chords.length === 0 && (
         <div style={{ ...card(), textAlign: 'center', padding: '40px 16px' }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
-            Build a progression in the Paths tab first
+            Build a progression in Chords or VL Studio first
           </p>
         </div>
       )}

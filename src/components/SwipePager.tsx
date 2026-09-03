@@ -65,7 +65,10 @@ interface SwipePagerProps {
   children: React.ReactNode;
 }
 
-const N_TABS = 5;
+// Derived from the tabs actually passed in — a hard-coded count silently
+// stranded the last panel: the track was sized for five panes while six were
+// rendered, so the title strip moved to a tab the content track could not
+// reach and the previous panel stayed on screen.
 const TITLE_W = 150; // px per title cell
 
 export function SwipePager({
@@ -73,6 +76,7 @@ export function SwipePager({
   darkMode, onToggleDark,
   userMenu, sharedBanner, sessionBar, onLogoClick, children,
 }: SwipePagerProps) {
+  const nTabs = Math.max(1, tabTitles.length);
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [W, setW] = useState(0);
@@ -129,7 +133,7 @@ export function SwipePager({
     }
 
     let d = cdx;
-    if ((tab === 0 && d > 0) || (tab === N_TABS - 1 && d < 0)) d *= 0.35;
+    if ((tab === 0 && d > 0) || (tab === nTabs - 1 && d < 0)) d *= 0.35;
     setDx(d);
   };
 
@@ -140,7 +144,7 @@ export function SwipePager({
     const threshold = ww * 0.2;
     let t = tab;
     if (axisRef.current === 'h') {
-      if (dx <= -threshold) t = Math.min(N_TABS - 1, t + 1);
+      if (dx <= -threshold) t = Math.min(nTabs - 1, t + 1);
       else if (dx >= threshold) t = Math.max(0, t - 1);
     }
     axisRef.current = null;
@@ -288,7 +292,7 @@ export function SwipePager({
         <div ref={areaRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           <div style={{
             display: 'flex',
-            width: `${N_TABS * (ww || 400)}px`,
+            width: `${nTabs * (ww || 400)}px`,
             height: '100%',
             transform: `translate3d(${contentX}px,0,0)`,
             transition: trans,

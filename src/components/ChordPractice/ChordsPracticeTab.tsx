@@ -77,7 +77,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const [phase, setPhase] = useState<'spell' | 'done'>('spell');
   const [wrongs, setWrongs] = useState(0);          // wrong taps on the current chord
   const [errBtn, setErrBtn] = useState<string | null>(null);
-  const [hint, setHint] = useState<'retry' | 'reset' | null>(null);
+  const [hint, setHint] = useState<'retry' | 'wrongSpot' | 'reset' | null>(null);
 
   const [streak, setStreak] = useState(0);
   const [best, setBest] = useState<number>(loadBest);
@@ -114,7 +114,11 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
       setErrBtn(name);
       const w = wrongs + 1;
       setWrongs(w);
-      if (w >= 2) { setStreak(0); setHint('reset'); } else { setHint('retry'); }
+      // A chord tone picked out of turn is a different mistake from a note that
+      // isn't in the chord at all — saying "not in this chord" about the root
+      // tells a learner their correct answer was wrong.
+      const inChord = challenge.notes.some(n => pcOf(n) === pcOf(name));
+      if (w >= 2) { setStreak(0); setHint('reset'); } else { setHint(inChord ? 'wrongSpot' : 'retry'); }
       if (errTimer.current) clearTimeout(errTimer.current);
       errTimer.current = setTimeout(() => setErrBtn(null), 500);
     }
@@ -167,13 +171,13 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const t = {
     en: { theory: 'Theory', ear: 'Ear Training', basic: 'Basic', advanced: 'Advanced', streak: 'Streak', best: 'Best',
       start: 'Start', next: 'Next →', spell: 'Spell the chord — fill the boxes in order', noteBank: 'Note bank',
-      retry: 'Not in this chord — try again.', reset: 'Streak reset — check the formula.', done: 'Correct!', hear: '▶ Hear chord',
+      retry: 'Not in this chord — try again.', wrongSpot: 'That note is in the chord, but not in this position.', reset: 'Streak reset — check the formula.', done: 'Correct!', hear: '▶ Hear chord',
       startPrompt: 'Spell chords from their formulas, note by note.',
       earPrompt: 'Hear a chord and pick it from four options.', which: 'Which chord?',
       harm: '▶ Harmonic', arp: '▶ Arpeggio', earStart: 'Play a chord' },
     he: { theory: 'תאוריה', ear: 'שמיעה', basic: 'בסיסי', advanced: 'מתקדם', streak: 'רצף', best: 'שיא',
       start: 'התחל', next: 'הבא →', spell: 'אייתו את האקורד — מלאו את הקופסאות לפי הסדר', noteBank: 'בנק תווים',
-      retry: 'לא באקורד — נסו שוב.', reset: 'הרצף אופס — בדקו את הנוסחה.', done: 'נכון!', hear: '▶ השמע אקורד',
+      retry: 'לא באקורד — נסו שוב.', wrongSpot: 'התו הזה כן באקורד, אבל לא במקום הזה.', reset: 'הרצף אופס — בדקו את הנוסחה.', done: 'נכון!', hear: '▶ השמע אקורד',
       startPrompt: 'אייתו אקורדים מהנוסחה שלהם, תו אחר תו.',
       earPrompt: 'שמעו אקורד ובחרו אותו מתוך ארבע אפשרויות.', which: 'איזה אקורד?',
       harm: '▶ הרמוני', arp: '▶ ארפג׳ו', earStart: 'נגן אקורד' },
@@ -315,6 +319,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
                   </div>
                   <div style={{ minHeight: 34, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {hint === 'retry' && <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>✕ {t.retry}</span>}
+                    {hint === 'wrongSpot' && <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>✕ {t.wrongSpot}</span>}
                     {hint === 'reset' && <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>✕ {t.reset}</span>}
                   </div>
                 </>
