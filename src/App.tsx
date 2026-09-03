@@ -58,7 +58,7 @@ type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize' | 'target';
 type PracticeSub  = 'tuner' | 'metronome';
 type StudioSub    = 'tabbuilder' | 'audiotab';
 
-const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'PRACTICE', 'STUDIO'];
+const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'TOOLS', 'STUDIO'];
 
 const CHORDS_SEGS    = [
   { id: 'finder',     label: 'By Name'    },
@@ -416,7 +416,7 @@ export default function App() {
           {pagerTab === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
-              <ErrorBoundary label="Practice">
+              <ErrorBoundary label="Tools">
                 {(practiceSegment === 'tuner' || practiceSegment === 'metronome') && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginTop: 24 }}>
                     <div style={{ borderRight: `1px solid ${T.border}`, paddingRight: 40, paddingBottom: 24 }}>
@@ -550,7 +550,7 @@ export default function App() {
         {/* ── Panel 4: PRACTICE ───────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
-          <ErrorBoundary label="Practice">
+          <ErrorBoundary label="Tools">
             {practiceSegment === 'tuner'        && <Tuner />}
             {practiceSegment === 'metronome'    && <Metronome />}
           </ErrorBoundary>
