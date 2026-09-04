@@ -14,6 +14,8 @@ import { extractTabFromImage, fileToVisionPayload } from '../../utils/tabVision'
 import { exportNotesMidi } from '../../utils/midiExport';
 import { requestOpenTabInBuilder, consumePendingHarmonization, subscribeHarmonizationHandoff, type HarmonizationHandoff } from '../../services/handoff';
 import { TabNoteCell } from '../Tabs/TabNoteCell';
+import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
+import { onNavKey } from '../../services/navigate';
 
 // ── Grid model ───────────────────────────────────────────────────────────────
 // The editor deliberately mirrors Tab Builder's model and editing rules
@@ -182,6 +184,11 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   const { grid, bars } = melody;
   const barsSet = useMemo(() => new Set(bars), [bars]);
+  // A "see also" jump carries the key that was on screen.
+  useEffect(() => onNavKey(KEY_TOOLS.harmonize.id, k => {
+    setScaleRoot(k.root); setScaleType(k.mode);
+  }), []);
+
   const scaleName = scaleRoot ? `${scaleRoot} ${scaleType}` : '';
   const numCols = grid[0]?.length ?? DEFAULT_COLS;
 
@@ -1051,15 +1058,25 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     </div>
   );
 
+  const seeAlso = (
+    <SeeAlso
+      links={[KEY_TOOLS.extensions, KEY_TOOLS.wheel]}
+      navKey={{ root: scaleRoot || 'C', mode: scaleType === 'minor' ? 'minor' : 'major' }}
+    />
+  );
+
   if (desktop) {
     return (
       // minmax(0, 1fr) — NOT bare 1fr — stops the harmonized tab grid's
       // min-content width from forcing this whole track (and the page) to
       // blow out sideways; the tab grid's own overflow-x:auto then scrolls
       // inside its own box as intended instead.
-      <div style={{ display: 'grid', gridTemplateColumns: '400px minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
-        {leftCol}
-        <div style={{ position: 'sticky', top: 24, minWidth: 0 }}>{rightCol}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '400px minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
+          {leftCol}
+          <div style={{ position: 'sticky', top: 24, minWidth: 0 }}>{rightCol}</div>
+        </div>
+        {seeAlso}
       </div>
     );
   }
@@ -1067,6 +1084,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
       {leftCol}
       {rightCol}
+      {seeAlso}
     </div>
   );
 }

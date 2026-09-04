@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Scale } from '@tonaljs/tonal';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
+import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
+import { onNavKey } from '../../services/navigate';
 import { T, card } from '../../theme';
 
 // ── Diatonic Extensions ──────────────────────────────────────────────────────
@@ -141,6 +143,13 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
     },
     style: { cursor: 'pointer' } as React.CSSProperties,
   });
+
+  // A "see also" jump from the Wheel or the Harmonizer opens on their key.
+  useEffect(() => onNavKey(KEY_TOOLS.extensions.id, k => {
+    const list = k.mode === 'major' ? KEYS_MAJOR : KEYS_MINOR;
+    setMode(k.mode);
+    setKey(list.includes(k.root) ? k.root : (k.mode === 'major' ? 'C' : 'A'));
+  }), []);
 
   const switchMode = (m: 'major' | 'minor') => {
     setMode(m);
@@ -295,6 +304,11 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
           {legend}
         </div>
       )}
+
+      <SeeAlso
+        links={[KEY_TOOLS.wheel, KEY_TOOLS.harmonize]}
+        navKey={{ root: key, mode }}
+      />
 
       {peek && <ShapePopover name={peek.name} x={peek.x} y={peek.y} shapes={shapes} title={t.shapes} empty={t.noShapes} />}
     </div>

@@ -15,6 +15,7 @@ import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab';
 import { SessionBar } from './components/SessionBar';
 import { namesToProgression } from './utils/progressionBridge';
+import { subscribeNavigate } from './services/navigate';
 import { DiatonicExtensions } from './components/Chords/DiatonicExtensions';
 
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
@@ -270,6 +271,15 @@ export default function App() {
     writeLS('scaleup_pager_tab', '3');
     writeLS('scaleup_seg_voicings', 'reharmonize');
   }), []);
+
+  // ── "See also" jumps between the key-related tools ─────────────────────────
+  useEffect(() => subscribeNavigate(({ tab, sub }) => {
+    setWorkspaceOpen(false);
+    setPagerTab(tab); writeLS('scaleup_pager_tab', String(tab));
+    if (tab === 0) handleChordsSegChange(sub);
+    else if (tab === 1) handleScalesSegChange(sub);
+    else if (tab === 3) handleVoicingsSegChange(sub);
+  }), []);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Session sync ───────────────────────────────────────────────────────────
   // A voicing tool edited the chord list. Convert back to progression entries

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Key } from '@tonaljs/tonal';
 import { T } from '../../theme';
 import { playChord } from '../../utils/audioPlayback';
 import type { ChordInProgression } from '../../types/music';
 import { findChordVoicings } from '../../utils/chordVoicings';
+import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
+import { onNavKey } from '../../services/navigate';
 
 // ── Music data ─────────────────────────────────────────────────────────────────
 const ALL_ROOTS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -109,6 +111,14 @@ interface Props {
 export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => {
   const [root, setRoot] = useState<string>('C');
   const [mode, setMode] = useState<Mode>('major');
+
+  // A "see also" jump carries the key that was on screen, keeping its spelling:
+  // arriving in Eb minor must not be respelled to D# minor just so one of the
+  // sharp-spelled key buttons lights up. The wheel reads flat roots correctly.
+  useEffect(() => onNavKey(KEY_TOOLS.wheel.id, k => {
+    setRoot(k.root);
+    setMode(k.mode as Mode);
+  }), []);
 
   // CoF position index (0-11)
   const cofRoot  = COF_ORDER.includes(root) ? root : (SHARP_TO_COF[root] ?? root);
@@ -502,6 +512,11 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
           {chordDataPanel}
         </>
       )}
+
+      <SeeAlso
+        links={[KEY_TOOLS.extensions, KEY_TOOLS.harmonize]}
+        navKey={{ root, mode: mode === 'major' ? 'major' : 'minor' }}
+      />
     </div>
   );
 };
