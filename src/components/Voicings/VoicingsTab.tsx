@@ -18,6 +18,8 @@ type VoicingsSub = 'harmonizer' | 'reharmonize';
 
 interface Props {
   globalProgression?: ChordInProgression[];
+  /** Report an edit so it flows back into the shared session progression. */
+  onChordsChange?: (names: string[]) => void;
   tuning?: Tuning;
   activeSub?: VoicingsSub;
   onSubChange?: (s: VoicingsSub) => void;
@@ -130,19 +132,23 @@ const LABEL_STYLE: React.CSSProperties = {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
-export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub, onSubChange, desktop }: Props) {
+export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNINGS[0], activeSub, onSubChange, desktop }: Props) {
   // Chord builder
   const [root,  setRoot]  = useState('');
   const [triad, setTriad] = useState('');
   const [ext,   setExt]   = useState('');
 
-  // Progression — persisted across tab navigations
-  const [chords, setChords] = useState<string[]>(() => {
-    try { return JSON.parse(sessionStorage.getItem('voicings-chords') ?? '[]'); } catch { return []; }
-  });
-  useEffect(() => {
-    try { sessionStorage.setItem('voicings-chords', JSON.stringify(chords)); } catch { /* ignore */ }
-  }, [chords]);
+  // Progression — the shared session list, not a private copy. Keeping its own
+  // meant the session bar and this panel could show two different progressions
+  // at once, with no way to tell which one the tool was actually using.
+  const sessionNames = (globalProgression ?? []).map(c => c.chord.name).filter(Boolean);
+  const [local, setLocal] = useState<string[]>([]);
+  const linked = !!onChordsChange;
+  const chords = linked ? sessionNames : local;
+  const setChords = (next: string[] | ((prev: string[]) => string[])) => {
+    const value = typeof next === 'function' ? (next as (p: string[]) => string[])(chords) : next;
+    if (linked) onChordsChange!(value); else setLocal(value);
+  };
 
   // Neck filters — shared with ReharmonizeTab
   const [mode,        setMode]        = useState<VoicingMode>('full');
@@ -201,12 +207,51 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
     dragIndex.current = null;
   };
 
-  const importProgression = () => {
-    if (!globalProgression?.length) return;
-    setChords(globalProgression.slice(0, 8).map(c => c.chord.name));
-  };
 
   // ── Render ──────────────────────────────────────────────────────────────
+
+
+  // The progression editor lives with the tool that uses it (the right column),
+  // not in a separate card at the bottom of the left one — that split is why an
+  // accidental chord looked unfixable. Chips carry a grip and an ×, and the row
+  // says so, because drag-to-reorder has no affordance of its own.
+  const progressionEditor = (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+      {chords.map((c, i) => (
+        <span
+          key={i}
+          draggable
+          onDragStart={() => onDragStart(i)}
+          onDragOver={e => e.preventDefault()}
+          onDrop={() => onDrop(i)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '5px 11px', borderRadius: 0,
+            background: T.bgDeep, border: `1px solid ${T.border}`,
+            fontSize: 13, fontWeight: 400, color: T.text,
+            cursor: 'grab', userSelect: 'none',
+          }}
+        >
+          <span aria-hidden="true" style={{ color: T.textDim, fontSize: 11, letterSpacing: '-1px', lineHeight: 1 }}>⠿</span>
+          {c}
+          <button
+            onClick={() => setChords(prev => prev.filter((_, j) => j !== i))}
+            title={`Remove ${c}`}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: T.textMuted, fontSize: 15, lineHeight: 1 }}
+          >×</button>
+        </span>
+      ))}
+      {chords.length > 0 && (
+        <button
+          onClick={() => setChords([])}
+          style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)' }}
+        >Clear</button>
+      )}
+      <span style={{ width: '100%', fontSize: 10, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>
+        Drag to reorder · × to remove
+      </span>
+    </div>
+  );
 
   const reharmLeft = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -287,58 +332,6 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
         <ChordSpelling chordName={chordName} />
       </div>
 
-      {/* ── Progression ────────────────────────────────────────────── */}
-      {(chords.length > 0 || (globalProgression && globalProgression.length > 0)) && (
-        <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p style={LABEL_STYLE}>Progression {chords.length > 0 && `(${chords.length}/8)`}</p>
-
-          {chords.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-              {chords.map((c, i) => (
-                <span
-                  key={i}
-                  draggable
-                  onDragStart={() => onDragStart(i)}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={() => onDrop(i)}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '5px 11px', borderRadius: 0,
-                    background: T.bgDeep, border: `1px solid ${T.border}`,
-                    fontSize: 13, fontWeight: 400, color: T.text,
-                    cursor: 'grab', userSelect: 'none',
-                  }}
-                >
-                  {c}
-                  <button
-                    onClick={() => setChords(prev => prev.filter((_, j) => j !== i))}
-                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: T.textMuted, fontSize: 15, lineHeight: 1 }}
-                  >×</button>
-                </span>
-              ))}
-              <button
-                onClick={() => setChords([])}
-                style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)' }}
-              >Clear</button>
-            </div>
-          )}
-
-          {globalProgression && globalProgression.length > 0 && (
-            <button
-              onClick={importProgression}
-              style={{
-                alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 0,
-                border: `1px solid ${T.border}`, background: T.bgInput,
-                color: T.textMuted, fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}
-            >
-              ↓ Import ({globalProgression.length})
-            </button>
-          )}
-        </div>
-      )}
-
       {/* ── Mode + String group — single card, two segmented controls ── */}
       <div style={{ ...card({ padding: '10px 14px' }), display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 130 }}>
@@ -417,6 +410,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
           <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 36, alignItems: 'start' }}>
             {reharmLeft}
             <ReharmonizeTab
+              progressionEditor={progressionEditor}
               chords={chords}
               mode={mode}
               setMode={setMode}
@@ -432,6 +426,7 @@ export function VoicingsTab({ globalProgression, tuning = TUNINGS[0], activeSub,
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {reharmLeft}
             <ReharmonizeTab
+              progressionEditor={progressionEditor}
               chords={chords}
               mode={mode}
               setMode={setMode}

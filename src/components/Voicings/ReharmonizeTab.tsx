@@ -23,6 +23,8 @@ interface Props {
   setStringGroup: (sg: StringGroup) => void;
   tuning: Tuning;
   desktop?: boolean;
+  /** Editable chips for the progression being reharmonised, shown in this card. */
+  progressionEditor?: React.ReactNode;
   /** Library handoff: a saved reharm to restore without an API call. */
   restored?: { result: ReharmData; genre?: string | null; tension?: number | null } | null;
   onRestoredConsumed?: () => void;
@@ -204,6 +206,7 @@ function toNashville(chordName: string, keyRoot: string): string {
 
 export function ReharmonizeTab({
   chords,
+  progressionEditor,
   mode,
   setMode,
   stringGroup,
@@ -326,7 +329,7 @@ export function ReharmonizeTab({
           {/* Original Progression card */}
           <div style={{ ...card({ padding: '12px 14px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <p style={LABEL_STYLE}>Original</p>
+              <p style={LABEL_STYLE}>Progression{chords.length > 0 ? ` (${chords.length}/8)` : ''}</p>
               <button
                 onClick={() => setShowNashville(v => !v)}
                 style={{
@@ -340,8 +343,9 @@ export function ReharmonizeTab({
                 Nashville
               </button>
             </div>
+            {progressionEditor}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {chords.map((c, i) => (
+              {showNashville && chords.map((c, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <span style={{
                     padding: '5px 12px', borderRadius: 0,

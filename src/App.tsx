@@ -414,6 +414,7 @@ export default function App() {
                   : <VoicingsTab
                       desktop
                       globalProgression={progression}
+                      onChordsChange={handleChordNamesChange}
                       tuning={tuning}
                       activeSub={voicingsSegment}
                       onSubChange={s => handleVoicingsSegChange(s)}
@@ -550,6 +551,7 @@ export default function App() {
               ? <TargetNoteTab tuning={tuning} capo={capo} />
               : <VoicingsTab
                   globalProgression={progression}
+                  onChordsChange={handleChordNamesChange}
                   tuning={tuning}
                   activeSub={voicingsSegment}
                   onSubChange={s => handleVoicingsSegChange(s)}
