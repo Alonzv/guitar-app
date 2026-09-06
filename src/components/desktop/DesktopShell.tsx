@@ -1,8 +1,9 @@
 import React from 'react';
 import { T } from '../../theme';
 import { BrandMark } from '../BrandMark';
+import { PANEL_TITLES } from '../../constants/panels';
 
-const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'TOOLS', 'STUDIO'];
+
 
 interface Props {
   tab: number;

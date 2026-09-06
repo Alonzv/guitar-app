@@ -22,7 +22,6 @@ interface Props {
   onChordsChange?: (names: string[]) => void;
   tuning?: Tuning;
   activeSub?: VoicingsSub;
-  onSubChange?: (s: VoicingsSub) => void;
   desktop?: boolean;
 }
 
@@ -132,7 +131,7 @@ const LABEL_STYLE: React.CSSProperties = {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
-export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNINGS[0], activeSub, onSubChange, desktop }: Props) {
+export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNINGS[0], activeSub, desktop }: Props) {
   // Chord builder
   const [root,  setRoot]  = useState('');
   const [triad, setTriad] = useState('');
@@ -175,10 +174,8 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
     });
   }, [applyVoicingsHandoff]);
 
-  // Sub-tab (can be controlled externally via activeSub/onSubChange)
-  const [internalSubTab, setInternalSubTab] = useState<VoicingsSub>('reharmonize');
-  const subTab = activeSub ?? internalSubTab;
-  const setSubTab = (s: VoicingsSub) => { setInternalSubTab(s); onSubChange?.(s); };
+  // Sub-tab. Always driven by the shell's Segment — there is no internal bar.
+  const subTab: VoicingsSub = activeSub ?? 'reharmonize';
 
   // Derived chord name
   const suffix    = SUFFIX_MAP[triad]?.[ext] ?? '';
@@ -379,27 +376,6 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-      {/* ── Sub-tab selector (hidden when externally controlled) ──── */}
-      {!activeSub && (
-      <div style={{ display: 'flex', gap: 0 }}>
-        {([
-          { id: 'harmonizer',   label: 'Harmonize'    },
-          { id: 'reharmonize',  label: 'Re-Harmonize' },
-        ] as { id: VoicingsSub; label: string }[]).map(tab => (
-          <button key={tab.id} onClick={() => setSubTab(tab.id)} className="gc-sub-tab" style={{
-            flex: 1, padding: '11px 4px', borderRadius: 0,
-            background: subTab === tab.id ? T.secondary : T.bgInput,
-            color: subTab === tab.id ? '#fff' : T.textMuted,
-            fontSize: 14, cursor: 'pointer',
-            borderLeft: '3px solid var(--gc-bar-color)',
-            transition: 'background 0.1s',
-          }}>
-            <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 400 }}>{tab.label}</span></span>
-          </button>
-        ))}
-      </div>
-      )}
 
       {subTab === 'harmonizer' && (
         <MelodyHarmonizerTab tuning={tuning} desktop={desktop} />

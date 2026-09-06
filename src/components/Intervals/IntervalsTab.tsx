@@ -4,6 +4,7 @@ import { IntervalPlayground } from './IntervalPlayground';
 import { IntervalInChord } from './IntervalInChord';
 import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
+import { HelpButton } from '../HelpButton';
 
 type Sub = 'explore' | 'identify' | 'inchord' | 'practice';
 
@@ -59,7 +60,10 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
   };
 
   const tabBar = (
-    <div style={{ display: 'flex', gap: 0 }}>
+    // This tab builds its own bar instead of using <Segment>, which is why it
+    // was the only tab with no help button — mirror Segment's trailing "?".
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 0, flex: 1, minWidth: 0 }}>
       {SUBS.map(({ id, label }) => (
         <button key={id} onClick={() => pick(id)} className="gc-sub-tab" style={{
           flex: 1, padding: '11px 3px', borderRadius: 0,
@@ -72,6 +76,10 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
           <span style={{ fontWeight: 400 }}>{label}</span>
         </button>
       ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        <HelpButton topic={`intervals:${sub}`} />
+      </div>
     </div>
   );
 

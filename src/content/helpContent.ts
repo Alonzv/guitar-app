@@ -39,6 +39,66 @@ export const HELP: Record<string, HelpEntry> = {
       body: 'דף עזר: מה כל דרגה בסולם מז׳ור הופכת להיות כשמוסיפים לה 7, 9, 11 או 13. בוחרים סולם והאקורדים מופיעים בשמם המלא (Cmaj9, Dm11…) במקום ספרות רומיות. הדרגות מקובצות לפי משפחה — מז׳ור (1, 4), דומיננטה (5), מינור (2, 3, 6) ומוקטן (7) — כי ככה ההיגיון מתחוור. מקף מציין הרחבה שיוצרת דיסוננס באותה דרגה, שם לרוב עוצרים בהרחבה הקודמת.',
     },
   },
+  'intervals:explore': {
+    en: {
+      title: 'Explore',
+      body: 'An interval is simply the distance between two notes. Pick a starting note and an interval and this shows you what it looks like on the neck and what it sounds like, along with its name, its size in semitones and whether it sits consonant or tense. Start here when you meet an interval you do not know yet.',
+    },
+    he: {
+      title: 'חקירה',
+      body: 'אינטרוול הוא פשוט המרחק בין שני תווים. בוחרים תו התחלה ואינטרוול, והכלי מראה איך הוא נראה על הצוואר ואיך הוא נשמע — יחד עם השם שלו, המרחק בחצאי־טונים והאופי שלו (עיצורי או מתוח). מכאן מתחילים כשפוגשים אינטרוול שעדיין לא מכירים.',
+    },
+  },
+  'intervals:identify': {
+    en: {
+      title: 'Identify',
+      body: 'The reverse of Explore: you are shown two notes and you name the interval between them. Use it to check that what you learned actually stuck — recognising an interval is a different skill from being told what it is.',
+    },
+    he: {
+      title: 'זיהוי',
+      body: 'ההפך מ"חקירה": מוצגים לכם שני תווים ואתם אומרים איזה אינטרוול ביניהם. משמש כדי לבדוק שמה שלמדתם באמת נקלט — לזהות אינטרוול זו מיומנות אחרת מלקבל את התשובה מראש.',
+    },
+  },
+  'intervals:inchord': {
+    en: {
+      title: 'In a Chord',
+      body: 'Pick a chord and see every interval inside it, one row each — the interval, the chord-tone pairs that form it, and its size. An interval formed by more than one pair stays a single row, so the list stays short even for a 9th chord. Open a row to see that interval on the neck: every playable placement is marked, one highlighted at a time so the diagram never turns into a tangle. This is where you find out why a chord sounds the way it does.',
+    },
+    he: {
+      title: 'בתוך אקורד',
+      body: 'בוחרים אקורד ורואים את כל האינטרוולים שבתוכו, שורה לכל אחד — האינטרוול, זוגות התווים שיוצרים אותו, והמרחק שלו. אינטרוול שנוצר מיותר מזוג אחד נשאר שורה אחת, כך שהרשימה נשארת קצרה גם באקורד תשיעי. פתיחת שורה מראה את האינטרוול על הצוואר: כל המיקומים הנגישים מסומנים, ואחד מודגש בכל פעם כדי שהתרשים לא יהפוך לסבך. כאן מבינים למה אקורד נשמע כמו שהוא נשמע.',
+    },
+  },
+  'intervals:practice': {
+    en: {
+      title: 'Practice',
+      body: 'Ear training: two notes are played and you name the interval, with no diagram to read off. Choose whether they sound together or one after the other, pick a difficulty, and build a streak — it only grows on a first-try answer, so the number reflects what you actually hear rather than what you got on the retry.',
+    },
+    he: {
+      title: 'תרגול',
+      body: 'אימון שמיעה: מושמעים שני תווים ואתם מזהים את האינטרוול, בלי תרשים להיעזר בו. אפשר לבחור אם הם נשמעים יחד או בזה אחר זה, לבחור רמת קושי ולבנות רצף — הרצף גדל רק על תשובה נכונה מניסיון ראשון, כך שהמספר משקף מה באמת שמעתם ולא מה שתיקנתם בניסיון השני.',
+    },
+  },
+  'chords:practice': {
+    en: {
+      title: 'Practice',
+      body: 'Two drills for chords. Theory asks you to spell a chord from its formula, note by note, from a bank of notes. Ear Training plays a chord and asks you to pick it — the whole chord, root and quality, out of four options. Difficulty widens the pool of chord types; the streak grows only on a first-try answer, and a first mistake is forgiven before it resets.',
+    },
+    he: {
+      title: 'תרגול',
+      body: 'שני תרגילים לאקורדים. ב"תאוריה" מאייתים אקורד מהנוסחה שלו, תו אחר תו, מתוך בנק תווים. ב"שמיעה" מושמע אקורד ובוחרים אותו — את האקורד המלא, שורש וסוג, מתוך ארבע אפשרויות. רמת הקושי מרחיבה את מגוון סוגי האקורדים; הרצף גדל רק על תשובה נכונה מניסיון ראשון, וטעות ראשונה נסלחת לפני שהוא מתאפס.',
+    },
+  },
+  'scales:practice': {
+    en: {
+      title: 'Practice',
+      body: 'Two drills for scales. Theory asks you to spell a scale from its formula, note by note, with the interval pattern shown as a reminder. Ear Training plays a scale and asks you to pick it — root and type together, out of four options. Difficulty adds the pentatonics; the streak grows only on a first-try answer.',
+    },
+    he: {
+      title: 'תרגול',
+      body: 'שני תרגילים לסולמות. ב"תאוריה" מאייתים סולם מהנוסחה שלו, תו אחר תו, עם תבנית המרווחים כתזכורת. ב"שמיעה" מושמע סולם ובוחרים אותו — שורש וסוג יחד, מתוך ארבע אפשרויות. רמת הקושי מוסיפה את הפנטטוניים; הרצף גדל רק על תשובה נכונה מניסיון ראשון.',
+    },
+  },
   'chords:analyzer': {
     en: {
       title: 'Analyze',

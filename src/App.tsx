@@ -47,6 +47,7 @@ import { useIsDesktop }        from './hooks/useIsDesktop';
 import { subscribeHandoff, requestOpenTabInBuilder, subscribeHarmonizationHandoff, subscribeVoicingsHandoff } from './services/handoff';
 import type { TabContent } from './services/types';
 import { T } from './theme';
+import { PANEL_TITLES } from './constants/panels';
 
 // ── Types & constants ──────────────────────────────────────────────────────
 // 'analyzer' retired from the tab bar. ChordAnalyzerTab.tsx and its
@@ -59,7 +60,7 @@ type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize' | 'target';
 type PracticeSub  = 'tuner' | 'metronome';
 type StudioSub    = 'tabbuilder' | 'audiotab';
 
-const PANEL_TITLES = ['CHORDS', 'SCALES', 'INTERVALS', 'VOICINGS', 'TOOLS', 'STUDIO'];
+
 
 const CHORDS_SEGS    = [
   { id: 'finder',     label: 'By Name'    },
@@ -417,7 +418,6 @@ export default function App() {
                       onChordsChange={handleChordNamesChange}
                       tuning={tuning}
                       activeSub={voicingsSegment}
-                      onSubChange={s => handleVoicingsSegChange(s)}
                     />}
               </ErrorBoundary>
             </div>
@@ -554,7 +554,6 @@ export default function App() {
                   onChordsChange={handleChordNamesChange}
                   tuning={tuning}
                   activeSub={voicingsSegment}
-                  onSubChange={s => handleVoicingsSegChange(s)}
                 />}
           </ErrorBoundary>
         </div>
