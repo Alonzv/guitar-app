@@ -49,14 +49,14 @@ export const HELP: Record<string, HelpEntry> = {
       body: 'אינטרוול הוא פשוט המרחק בין שני תווים. בוחרים תו התחלה ואינטרוול, והכלי מראה איך הוא נראה על הצוואר ואיך הוא נשמע — יחד עם השם שלו, המרחק בחצאי־טונים והאופי שלו (עיצורי או מתוח). מכאן מתחילים כשפוגשים אינטרוול שעדיין לא מכירים.',
     },
   },
-  'intervals:identify': {
+  'intervals:measure': {
     en: {
-      title: 'Identify',
-      body: 'The reverse of Explore: you are shown two notes and you name the interval between them. Use it to check that what you learned actually stuck — recognising an interval is a different skill from being told what it is.',
+      title: 'Measure',
+      body: 'Tap any two notes on the neck and it names the distance between them. It measures the real pitches, not just the note names, so an E low down and a G high up read as a Minor 10th rather than a Minor 3rd. A third tap drops the oldest note, so you are always measuring a pair.',
     },
     he: {
-      title: 'זיהוי',
-      body: 'ההפך מ"חקירה": מוצגים לכם שני תווים ואתם אומרים איזה אינטרוול ביניהם. משמש כדי לבדוק שמה שלמדתם באמת נקלט — לזהות אינטרוול זו מיומנות אחרת מלקבל את התשובה מראש.',
+      title: 'מדידה',
+      body: 'נוגעים בשני תווים על הצוואר והכלי אומר מה המרחק ביניהם. הוא מודד את הצלילים האמיתיים ולא רק את שמות התווים, ולכן מי תחתון וסול גבוה יקראו דצימה מינורית ולא טרצה מינורית. נגיעה שלישית מוחקת את הישן ביותר, כך שתמיד מודדים זוג.',
     },
   },
   'intervals:inchord': {

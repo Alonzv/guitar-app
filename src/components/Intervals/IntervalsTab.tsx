@@ -6,11 +6,11 @@ import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
 import { HelpButton } from '../HelpButton';
 
-type Sub = 'explore' | 'identify' | 'inchord' | 'practice';
+type Sub = 'explore' | 'measure' | 'inchord' | 'practice';
 
 const SUBS: { id: Sub; label: string }[] = [
   { id: 'explore',  label: 'Explore'   },
-  { id: 'identify', label: 'Identify'  },
+  { id: 'measure',  label: 'Measure'   },
   { id: 'inchord',  label: 'In a Chord' },
   { id: 'practice', label: 'Practice'  },
 ];
@@ -47,6 +47,8 @@ const SUB_KEY = 'scaleup_seg_intervals';
 const readSub = (): Sub => {
   try {
     const v = localStorage.getItem(SUB_KEY);
+    // 'identify' promised a quiz and delivered a ruler; it is now 'measure'.
+    if (v === 'identify') return 'measure';
     if (v && SUBS.some(s => s.id === v)) return v as Sub;
   } catch { /* private mode */ }
   return 'explore';
@@ -85,7 +87,7 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
 
   const tool =
     sub === 'explore'  ? <IntervalExplore /> :
-    sub === 'identify' ? <IntervalPlayground /> :
+    sub === 'measure' ? <IntervalPlayground /> :
     sub === 'inchord'  ? <IntervalInChord desktop={desktop} /> :
     <EarTrainingTab desktop={desktop} />;
 
