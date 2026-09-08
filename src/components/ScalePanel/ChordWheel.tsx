@@ -448,34 +448,35 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
         </div>
       </div>
 
-      {/* Mode toggle */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <span
-          style={{
-            padding: '4px 10px', fontSize: 10,
-            fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
-            background: mode === 'major' ? T.primary : 'transparent',
-            color: mode === 'major' ? '#fff' : T.textMuted,
-            border: `1px solid ${mode === 'major' ? T.primary : T.border}`,
-            cursor: 'pointer',
-          }}
-          onClick={() => setMode('major')}
-        >
-          MAJOR
-        </span>
-        <span
-          style={{
-            padding: '4px 10px', fontSize: 10,
-            fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
-            background: mode === 'minor' ? T.secondary : 'transparent',
-            color: mode === 'minor' ? '#fff' : T.textMuted,
-            border: `1px solid ${mode === 'minor' ? T.secondary : T.border}`,
-            cursor: 'pointer',
-          }}
-          onClick={() => setMode('minor')}
-        >
-          minor
-        </span>
+      {/* Mode toggle. Buttons, not spans: this was the one control in the app
+          that a keyboard could not reach. `gc-notation` keeps the lower-case
+          "minor" lower-case against the global uppercase button rule. */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} role="group" aria-label="Key quality">
+        {([
+          { id: 'major' as Mode, label: 'MAJOR', on: T.primary },
+          { id: 'minor' as Mode, label: 'minor', on: T.secondary },
+        ]).map(m => {
+          const active = mode === m.id;
+          return (
+            <button
+              key={m.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setMode(m.id)}
+              className="gc-notation"
+              style={{
+                padding: '4px 10px', fontSize: 10, borderRadius: 0,
+                fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
+                background: active ? m.on : 'transparent',
+                color: active ? '#fff' : T.textMuted,
+                border: `1px solid ${active ? m.on : T.border}`,
+                cursor: 'pointer',
+              }}
+            >
+              {m.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Wheel */}
