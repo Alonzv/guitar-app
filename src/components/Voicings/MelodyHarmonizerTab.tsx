@@ -14,6 +14,10 @@ import { extractTabFromImage, fileToVisionPayload } from '../../utils/tabVision'
 import { exportNotesMidi } from '../../utils/midiExport';
 import { requestOpenTabInBuilder, consumePendingHarmonization, subscribeHarmonizationHandoff, type HarmonizationHandoff } from '../../services/handoff';
 import { TabNoteCell } from '../Tabs/TabNoteCell';
+import {
+  useTabEditing, emptyGrid as baseEmptyGrid, nextFret, circleDiameter,
+  BASE_CW, BASE_CH, BASE_FS, type Tech, type TabCell,
+} from '../Tabs/tabEditing';
 import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
 import { onNavKey } from '../../services/navigate';
 import { useLang } from '../../contexts/LanguageContext';
@@ -44,21 +48,20 @@ const ERR = {
 // The editor deliberately mirrors Tab Builder's model and editing rules
 // (TabBuilder.tsx) so building a melody here feels identical to building a
 // tab there. `anchor`/`added` are harmonizer-only extensions.
-type Tech = 'h' | 'p' | '/' | '\\' | 'b' | '~';
-interface HCell { fret: string; tech?: Tech; anchor?: boolean; added?: boolean }
+interface HCell extends TabCell { anchor?: boolean; added?: boolean }
 type HGrid = HCell[][];
 interface MelodyState { grid: HGrid; bars: number[] }
 
 const ROWS = STR_LABELS;             // e B G D A E  (row 0 = high e)
 const DEFAULT_COLS = 16;
 // Cell metrics — Tab Builder's BASE_CW/BASE_CH/font at 100% zoom.
-const CW = 28;
-const CH = 30;
-const FS = 13;
-const CIRCLE_D = Math.round(CH * 0.72);
+const CW = BASE_CW;
+const CH = BASE_CH;
+const FS = BASE_FS;
+const CIRCLE_D = circleDiameter(CH);
 
 function emptyGrid(cols = DEFAULT_COLS): HGrid {
-  return ROWS.map(() => Array.from({ length: cols }, () => ({ fret: '' })));
+  return baseEmptyGrid<HCell>(cols, () => ({ fret: '' }));
 }
 
 function emptyDisplayGrid(cols: number): HGrid {
@@ -304,8 +307,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     if (!sel) return;
     const [s, c] = sel;
     const cur = grid[s][c].fret;
-    if (cur.length === 1 && parseInt(cur + d) <= 24) setCell(s, c, { fret: cur + d });
-    else setCell(s, c, { fret: d });
+    setCell(s, c, { fret: nextFret(cur, d) });
   }, [sel, grid, setCell]);
 
   // Toggle a technique and advance to the next column, like Tab Builder.
@@ -349,50 +351,17 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     }));
   }, [sel, colIsAnchored, withHistory]);
 
-  // Shared by the global keydown listener (desktop) and the hidden input
-  // (mobile) — identical key map to Tab Builder, plus 'a' for the
-  // harmonizer's anchor tool.
-  const handleEditKey = useCallback((e: {
-    key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; preventDefault: () => void;
-  }) => {
-    if (!sel) return;
-    const [s, c] = sel;
+  const clearCell = useCallback((s: number, c: number) => {
+    setCell(s, c, { fret: '', tech: undefined, anchor: undefined });
+  }, [setCell]);
 
-    if (e.key >= '0' && e.key <= '9') {
-      e.preventDefault();
-      applyDigit(e.key);
-    } else if (e.key === 'Backspace' || e.key === 'Delete') {
-      e.preventDefault();
-      setCell(s, c, { fret: '', tech: undefined, anchor: undefined });
-    } else if (e.key === 'ArrowRight' || e.key === 'Tab') {
-      e.preventDefault();
-      if (c + 1 < numCols) setSel([s, c + 1]);
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      if (c > 0) setSel([s, c - 1]);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (s < 5) setSel([s + 1, c]);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (s > 0) setSel([s - 1, c]);
-    } else if (e.key === 'Escape') {
-      setSel(null);
-      fretInputRef.current?.blur();
-    } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
-      e.preventDefault();
-      undo();
-    } else if (['h', '/', 'b', '~'].includes(e.key)) {
-      e.preventDefault();
-      applyTech(e.key as Tech);
-    } else if (e.key === '|') {
-      e.preventDefault();
-      toggleBar();
-    } else if (e.key === 'a' || e.key === 'A') {
-      e.preventDefault();
-      toggleAnchor();
-    }
-  }, [sel, numCols, applyDigit, setCell, undo, applyTech, toggleBar, toggleAnchor]);
+  // Key map shared with Tab Builder, plus 'a' for this tool's anchor.
+  const handleEditKey = useTabEditing({
+    sel, setSel, numCols, applyDigit, clearCell, applyTech, undo,
+    toggleBar: () => toggleBar(),
+    onEscape: () => fretInputRef.current?.blur(),
+    extraKeys: { a: toggleAnchor },
+  });
 
   // Desktop keyboard entry — skipped while a real form control has focus
   // (the hidden fret input's own onKeyDown already routes to handleEditKey).

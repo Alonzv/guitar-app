@@ -13,6 +13,11 @@ import { subscribeHandoff, consumePendingTab } from '../../services/handoff';
 import type { TabContent } from '../../services/types';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { TabNoteCell } from '../Tabs/TabNoteCell';
+import {
+  useTabEditing, emptyGrid as baseEmptyGrid, nextFret, circleDiameter,
+  STR_ROWS, BASE_CW, BASE_CH, BASE_FS,
+  type Tech, type TabCell,
+} from '../Tabs/tabEditing';
 
 type Lang = 'he' | 'en';
 type ErrKey = 'empty' | 'ai' | 'gen';
@@ -42,9 +47,7 @@ const L: Record<Lang, {
   },
 };
 
-type Tech = 'h' | 'p' | '/' | '\\' | 'b' | '~';
-
-interface Cell { fret: string; tech?: Tech; }
+type Cell = TabCell;
 interface TabState {
   title: string;
   subtitle: string;
@@ -52,14 +55,10 @@ interface TabState {
   bars: number[];
 }
 
-const STRS = ['e', 'B', 'G', 'D', 'A', 'E'];
+const STRS = STR_ROWS;
 const COLS_PER_LINE = 32;
-const BASE_CW = 28;
-const BASE_CH = 30;
 
-function emptyGrid(cols: number): Cell[][] {
-  return STRS.map(() => Array.from({ length: cols }, () => ({ fret: '' })));
-}
+const emptyGrid = (cols: number): Cell[][] => baseEmptyGrid<Cell>(cols, () => ({ fret: '' }));
 
 // Coerce a stored TabContent (loose `tech?: string`) into the builder's TabState.
 function normalizeTabContent(c: TabContent): TabState {
@@ -196,8 +195,8 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const barsSet = new Set(bars);
   const cw = (BASE_CW * zoom) / 100;
   const ch = (BASE_CH * zoom) / 100;
-  const fs = Math.max(9, Math.round((13 * zoom) / 100));
-  const circleD = Math.round(ch * 0.72);
+  const fs = Math.max(9, Math.round((BASE_FS * zoom) / 100));
+  const circleD = circleDiameter(ch);
   const colsPerLine = Math.max(8, Math.floor((wrapW - 36) / cw));
   const numSys = Math.ceil(numCols / colsPerLine);
 
@@ -252,76 +251,14 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     if (!sel) return;
     const [s, c] = sel;
     const cur = grid[s][c].fret;
-    if (cur.length === 1 && parseInt(cur + d) <= 24) setCell(s, c, { fret: cur + d });
-    else setCell(s, c, { fret: d });
+    setCell(s, c, { fret: nextFret(cur, d) });
   }, [sel, grid, setCell]);
 
-  // Shared by the global keydown listener (desktop) and the hidden input (mobile)
-  const handleEditKey = useCallback((e: {
-    key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; preventDefault: () => void;
-  }) => {
-    if (!sel) return;
-    const [s, c] = sel;
+  const clearCell = useCallback((s: number, c: number) => {
+    setCell(s, c, { fret: '', tech: undefined });
+  }, [setCell]);
 
-    if (e.key >= '0' && e.key <= '9') {
-      e.preventDefault();
-      applyDigit(e.key);
-    } else if (e.key === 'Backspace' || e.key === 'Delete') {
-      e.preventDefault();
-      setCell(s, c, { fret: '', tech: undefined });
-    } else if (e.key === 'ArrowRight' || e.key === 'Tab') {
-      e.preventDefault();
-      if (c + 1 < numCols) setSel([s, c + 1]);
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      if (c > 0) setSel([s, c - 1]);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (s < 5) setSel([s + 1, c]);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (s > 0) setSel([s - 1, c]);
-    } else if (e.key === 'Escape') {
-      setSel(null);
-      fretInputRef.current?.blur();
-    } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
-      e.preventDefault();
-      undo();
-    } else if (['h', '/', 'b', '~'].includes(e.key)) {
-      e.preventDefault();
-      const tech = e.key as Tech;
-      const toggled: Tech | undefined = grid[s][c].tech === tech ? undefined : tech;
-      withHistory(p => {
-        const g = p.grid.map(r => [...r]);
-        g[s][c] = { ...g[s][c], tech: toggled };
-        return { ...p, grid: g };
-      });
-      if (toggled && c + 1 < numCols) setSel([s, c + 1]);
-    } else if (e.key === '|') {
-      e.preventDefault();
-      withHistory(p => ({
-        ...p,
-        bars: p.bars.includes(c) ? p.bars.filter(b => b !== c) : [...p.bars, c],
-      }));
-    }
-  }, [sel, grid, numCols, applyDigit, setCell, undo, withHistory]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      // Skip if focus is in a text field (title/subtitle, or the hidden fret input)
-      if ((e.target as HTMLElement).tagName === 'INPUT') return;
-      handleEditKey(e);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [handleEditKey]);
-
-  // Tap a cell → select it and open the numeric keyboard on mobile
-  const selectCell = useCallback((s: number, c: number) => {
-    setSel([s, c]);
-    fretInputRef.current?.focus();
-  }, []);
-
+  // Key map shared with the melody harmoniser — see components/Tabs/tabEditing.
   const applyTech = (tech: Tech) => {
     if (!sel) return;
     const [s, c] = sel;
@@ -342,6 +279,29 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       bars: p.bars.includes(c) ? p.bars.filter(b => b !== c) : [...p.bars, c],
     }));
   };
+
+  const handleEditKey = useTabEditing({
+    sel, setSel, numCols, applyDigit, clearCell, undo,
+    applyTech, toggleBar: () => toggleBar(),
+    onEscape: () => fretInputRef.current?.blur(),
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Skip if focus is in a text field (title/subtitle, or the hidden fret input)
+      if ((e.target as HTMLElement).tagName === 'INPUT') return;
+      handleEditKey(e);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleEditKey]);
+
+  // Tap a cell → select it and open the numeric keyboard on mobile
+  const selectCell = useCallback((s: number, c: number) => {
+    setSel([s, c]);
+    fretInputRef.current?.focus();
+  }, []);
+
 
   const addLine = () => {
     withHistory(p => ({
