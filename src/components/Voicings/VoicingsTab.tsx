@@ -3,6 +3,7 @@ import { Chord as TonalChord } from '@tonaljs/tonal';
 import type { ChordInProgression, Tuning } from '../../types/music';
 import type { VoicingMode, StringGroup } from '../../utils/voicingPaths';
 import { TUNINGS } from '../../utils/musicTheory';
+import { formatChordName } from '../../utils/chordIdentifier';
 import { T, card, alpha } from '../../theme';
 import { ReharmonizeTab } from './ReharmonizeTab';
 import { MelodyHarmonizerTab } from './MelodyHarmonizerTab';
@@ -230,10 +231,10 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
           }}
         >
           <span aria-hidden="true" style={{ color: T.textDim, fontSize: 11, letterSpacing: '-1px', lineHeight: 1 }}>⠿</span>
-          {c}
+          {formatChordName(c)}
           <button
             onClick={() => setChords(prev => prev.filter((_, j) => j !== i))}
-            title={`Remove ${c}`}
+            title={`Remove ${formatChordName(c)}`}
             style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: T.textMuted, fontSize: 15, lineHeight: 1 }}
           >×</button>
         </span>
@@ -307,8 +308,8 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
 
         {/* Add row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: T.text, flex: 1 }}>
-            {chordName}
+          <span dir="ltr" style={{ fontSize: 18, fontWeight: 800, color: T.text, flex: 1 }}>
+            {formatChordName(chordName)}
           </span>
           <button
             onClick={addChord}

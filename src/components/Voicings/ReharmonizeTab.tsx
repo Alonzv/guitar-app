@@ -14,6 +14,21 @@ import { exportMidi } from '../../utils/midiExport';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import type { ReharmData } from '../../services/types';
 import { T, card, alpha } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
+
+// Reharmonisation is the one tool that can fail for reasons outside the app,
+// so it is the one tool with error copy. Written for a guitarist: the old text
+// was Hebrew-only and told them to go and check an API key they do not have.
+const ERR = {
+  en: {
+    refused: 'Could not reharmonise this progression. Try again in a moment.',
+    network: 'No connection — check your network and try again.',
+  },
+  he: {
+    refused: 'לא הצלחנו להרמן את הפרוגרסיה הזו. נסו שוב בעוד רגע.',
+    network: 'אין חיבור — בדקו את הרשת ונסו שוב.',
+  },
+} as const;
 
 interface Props {
   chords: string[];
@@ -216,6 +231,7 @@ export function ReharmonizeTab({
   restored,
   onRestoredConsumed,
 }: Props) {
+  const { lang } = useLang();
   const [genre, setGenre] = useState('jazz');
   const [tension, setTension] = useState(3);
   const [showNashville, setShowNashville] = useState(false);
@@ -274,11 +290,11 @@ export function ReharmonizeTab({
         setReharmPaths(paths);
         setSelectedPathIdx(0);
       } else {
-        setError('לא ניתן לבצע הרמוניזציה מחדש. בדוק שמפתח ה-API מוגדר.');
+        setError(ERR[lang].refused);
       }
     }).catch(() => {
       setLoading(false);
-      setError('שגיאת רשת — נסה שוב.');
+      setError(ERR[lang].network);
     });
   };
 

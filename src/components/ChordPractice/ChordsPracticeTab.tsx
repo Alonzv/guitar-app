@@ -6,8 +6,8 @@ import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 
 // ── Chords → Practice ────────────────────────────────────────────────────────
-// Phase 2 of the unified Practice Mode: a Chord Speller (Theory) plus a
-// placeholder for Ear Training (Phase 3). Difficulty toggle + the shared
+// Two drills: a Chord Speller (Theory) and Ear Training, both built out.
+// Difficulty toggle + the shared
 // second-chance streak (first wrong answer is forgiven with a palette-Error
 // flash; a second wrong on the same chord resets the streak). Colours come only
 // from the palette — never generic green/red.

@@ -400,6 +400,9 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
           return (
             <button
               key={pt.label}
+              // gc-notation: without it the global uppercase button rule turns
+              // "vi" into "VI" and "Am" into "AM" — different chords entirely.
+              className="gc-notation"
               onClick={() => {
                 if (!onAddToProgression) return;
                 chords.forEach(chordName => handleAddChord(chordName));

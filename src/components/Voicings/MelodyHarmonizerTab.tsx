@@ -16,6 +16,29 @@ import { requestOpenTabInBuilder, consumePendingHarmonization, subscribeHarmoniz
 import { TabNoteCell } from '../Tabs/TabNoteCell';
 import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
 import { onNavKey } from '../../services/navigate';
+import { useLang } from '../../contexts/LanguageContext';
+
+// User-facing failure copy. These used to be Hebrew-only, and two of them told
+// a guitarist to go and check an API key they have no access to — a developer's
+// note left in the product. Each one now says what happened and what to try.
+const ERR = {
+  en: {
+    harmonize:    'Could not harmonise this. Check there are notes in the tab, then try again.',
+    network:      'No connection — check your network and try again.',
+    imageRead:    'Could not read that image file. Try a JPG or PNG.',
+    imageExtract: 'No tab found in that image. A sharper, straighter photo usually works.',
+    imageFailed:  'Something went wrong reading the image. Try again.',
+    revoice:      'Could not swap that chord right now. Try again.',
+  },
+  he: {
+    harmonize:    'לא הצלחנו להרמן את זה. בדקו שיש תווים בטאב ונסו שוב.',
+    network:      'אין חיבור — בדקו את הרשת ונסו שוב.',
+    imageRead:    'לא הצלחנו לקרוא את קובץ התמונה. נסו JPG או PNG.',
+    imageExtract: 'לא נמצא טאב בתמונה. תמונה חדה וישרה יותר בדרך כלל תעבוד.',
+    imageFailed:  'משהו השתבש בקריאת התמונה. נסו שוב.',
+    revoice:      'לא הצלחנו להחליף את האקורד כרגע. נסו שוב.',
+  },
+} as const;
 
 // ── Grid model ───────────────────────────────────────────────────────────────
 // The editor deliberately mirrors Tab Builder's model and editing rules
@@ -135,6 +158,7 @@ function loadSavedPrefs(): SavedPrefs {
 }
 
 export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
+  const { lang } = useLang();
   const [melody, setMelody] = useState<MelodyState>(loadSavedMelody);
   const [sel, setSel]           = useState<[number, number] | null>(null);
   const [hov, setHov]           = useState<[number, number] | null>(null);
@@ -470,9 +494,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           setActiveIdx(next.length - 1);
           setRevoiceSlot(null);
         }
-        else setError('לא ניתן להרמן כרגע. ודא שמפתח ה-API מוגדר ושיש מלודיה בטאב.');
+        else setError(ERR[lang].harmonize);
       })
-      .catch(() => { setLoadingKind(null); setError('שגיאת רשת — נסה שוב.'); });
+      .catch(() => { setLoadingKind(null); setError(ERR[lang].network); });
   };
   const handleHarmonize = () => { setRegenSeed(0); runHarmonize(0, 'harmonize'); };
   const handleRegenerate = () => { const s = regenSeed + 1; setRegenSeed(s); runHarmonize(s, 'regenerate'); };
@@ -485,14 +509,14 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       // a raw phone camera image would blow the API request size limit.
       const payload = await fileToVisionPayload(file);
       if (!payload) {
-        setError('לא ניתן לקרוא את קובץ התמונה — נסה JPG או PNG.');
+        setError(ERR[lang].imageRead);
         return;
       }
       const tc = await extractTabFromImage(payload.data, payload.mediaType);
       if (tc) withHistory(() => fromTabContent(tc));
-      else setError('לא ניתן לחלץ טאב מהתמונה. נסה תמונה ברורה יותר.');
+      else setError(ERR[lang].imageExtract);
     } catch {
-      setError('שגיאה בעיבוד התמונה.');
+      setError(ERR[lang].imageFailed);
     } finally {
       setVisionLoading(false);
     }
@@ -594,7 +618,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     try {
       const col = await revoiceColumn(grid, scaleName, styles, tuning, result, revoiceSlot);
       if (!col) {
-        setError('לא ניתן להחליף את האקורד כרגע — נסה שוב.');
+        setError(ERR[lang].revoice);
         return;
       }
       setResults(rs => rs.map((r, i) =>

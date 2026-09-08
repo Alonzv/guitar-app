@@ -6,7 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-palette.mjs && node scripts/check-ai-models.mjs && tsc -b && vite build",
+    "build": "node scripts/check-palette.mjs && node scripts/check-ai-models.mjs && node scripts/check-help.mjs && tsc -b && vite build",
     "check:palette": "node scripts/check-palette.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
