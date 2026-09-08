@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { FretPosition } from '../../types/music';
-import { STANDARD_OPEN_MIDI, fretToNote } from '../../utils/musicTheory';
+import { fretToNote } from '../../utils/musicTheory';
+import { IntervalNeck, strY, noteX, midiAt, DOT_R } from './IntervalNeck';
 import { playMidi, playInterval } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
@@ -15,16 +16,7 @@ const A_COLOR = 'var(--gc-success)';       // first note — matches Note A else
 const B_COLOR = T.primary;       // second note
 
 // Fretboard geometry — mirrors the Explore/Calculate necks for visual parity.
-const FB_W = 580, FB_H = 165;
-const NUT = 44;
-const FRET_SP = (FB_W - NUT - 16) / 12;
-const STR_SP = (FB_H - 30) / 5;
-const FB_TOP = 12;
-const DOT_R = 12;
 
-const strY = (s: number) => FB_TOP + (5 - s) * STR_SP;
-const noteX = (f: number) => f === 0 ? NUT - 14 : NUT + (f - 0.5) * FRET_SP;
-const midiAt = (p: FretPosition) => STANDARD_OPEN_MIDI[p.string] + p.fret;
 
 const MONO_LBL: React.CSSProperties = {
   margin: '0 0 8px', fontSize: 10, color: '#9C958C',
@@ -200,44 +192,7 @@ export function IntervalPlayground() {
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {/* 40% larger than the container so it reads clearly; overflow scrolls
               horizontally (string names stay pinned to the left of the board). */}
-          <svg viewBox={`0 0 ${FB_W} ${FB_H + 6}`} style={{ display: 'block', width: '140%', minWidth: 460, userSelect: 'none' }}>
-            <rect x={0} y={0} width={FB_W} height={FB_H + 6} fill="var(--gc-fretboard-bg)" />
-
-            {[3, 5, 7, 9].map(f => (
-              <circle key={f} cx={NUT + (f - 0.5) * FRET_SP} cy={FB_TOP + 2.5 * STR_SP}
-                r={5} fill="var(--gc-fretboard-pos)" />
-            ))}
-            <circle cx={NUT + 11.5 * FRET_SP} cy={FB_TOP + 1 * STR_SP} r={4} fill="var(--gc-fretboard-pos)" />
-            <circle cx={NUT + 11.5 * FRET_SP} cy={FB_TOP + 4 * STR_SP} r={4} fill="var(--gc-fretboard-pos)" />
-
-            {Array.from({ length: 13 }).map((_, i) => (
-              <line key={i}
-                x1={NUT + i * FRET_SP} y1={FB_TOP}
-                x2={NUT + i * FRET_SP} y2={FB_TOP + 5 * STR_SP}
-                stroke="var(--gc-fretboard-fret)" strokeWidth={2} />
-            ))}
-
-            <rect x={NUT - 6} y={FB_TOP} width={6} height={5 * STR_SP} fill="var(--gc-fretboard-nut)" />
-
-            {Array.from({ length: 6 }).map((_, s) => (
-              <line key={s}
-                x1={NUT} y1={strY(s)} x2={NUT + 12 * FRET_SP} y2={strY(s)}
-                stroke="var(--gc-fretboard-str)" strokeWidth={0.8 + (5 - s) * 0.32} />
-            ))}
-
-            {/* Open-string note names, left of the nut */}
-            {Array.from({ length: 6 }).map((_, s) => (
-              <text key={`open-${s}`} x={NUT - 30} y={strY(s) + 3.5}
-                textAnchor="middle" fontSize={12} fontWeight="700" fill="var(--gc-text)">
-                {fretToNote(s, 0)}
-              </text>
-            ))}
-
-            {[3, 5, 7, 9, 12].map(f => (
-              <text key={f} x={NUT + (f - 0.5) * FRET_SP} y={FB_TOP + 5 * STR_SP + 11}
-                textAnchor="middle" fontSize={11} fontWeight="700" fill="var(--gc-text)">{f}</text>
-            ))}
-
+          <IntervalNeck showOpenNotes width="140%" minWidth={460}>
             {/* Connector between the two chosen notes */}
             {a && b && (
               <line x1={noteX(a.fret)} y1={strY(a.string)} x2={noteX(b.fret)} y2={strY(b.string)}
@@ -267,7 +222,7 @@ export function IntervalPlayground() {
                   onClick={() => toggle({ string: s, fret: f })} />
               ))
             )}
-          </svg>
+          </IntervalNeck>
         </div>
       </div>
     </div>

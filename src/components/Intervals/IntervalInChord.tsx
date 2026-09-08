@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Chord as TonalChord, Note } from '@tonaljs/tonal';
 import { STANDARD_OPEN_MIDI, CHROMATIC } from '../../utils/musicTheory';
+import { IntervalNeck, strY, noteX } from './IntervalNeck';
 import { playInterval } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 import { toDisplayChord } from '../../utils/chordName';
@@ -18,12 +19,6 @@ const N_STR = 6, N_FRET = 12;
 const MAX_STRETCH = 5;   // fixed, hand-reachable double-stop span
 
 // Geometry — standard neck size, matching the other interval necks.
-const FB_W = 580, FB_H = 165, NUT = 44;
-const FRET_SP = (FB_W - NUT - 16) / 12;
-const STR_SP = (FB_H - 30) / 5;
-const FB_TOP = 12;
-const strY = (s: number) => FB_TOP + (5 - s) * STR_SP;
-const noteX = (f: number) => (f === 0 ? NUT - 14 : NUT + (f - 0.5) * FRET_SP);
 const pcName = (m: number) => CHROMATIC[((m % 12) + 12) % 12];
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -196,31 +191,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
     <div style={{ padding: desktop ? '0 18px 18px' : '0 12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ background: 'var(--gc-fretboard-bg)', border: `1px solid ${T.border}`, padding: '10px 10px 4px' }}>
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <svg viewBox={`0 0 ${FB_W} ${FB_H + 6}`} style={{ display: 'block', width: '100%', minWidth: 300, userSelect: 'none' }}>
-            <rect x={0} y={0} width={FB_W} height={FB_H + 6} fill="var(--gc-fretboard-bg)" />
-            {[3, 5, 7, 9].map(f => (
-              <circle key={f} cx={NUT + (f - 0.5) * FRET_SP} cy={FB_TOP + 2.5 * STR_SP} r={5} fill="var(--gc-fretboard-pos)" />
-            ))}
-            <circle cx={NUT + 11.5 * FRET_SP} cy={FB_TOP + STR_SP} r={4} fill="var(--gc-fretboard-pos)" />
-            <circle cx={NUT + 11.5 * FRET_SP} cy={FB_TOP + 4 * STR_SP} r={4} fill="var(--gc-fretboard-pos)" />
-            {Array.from({ length: 13 }).map((_, i) => (
-              <line key={i} x1={NUT + i * FRET_SP} y1={FB_TOP} x2={NUT + i * FRET_SP} y2={FB_TOP + 5 * STR_SP}
-                stroke="var(--gc-fretboard-fret)" strokeWidth={2} />
-            ))}
-            <rect x={NUT - 6} y={FB_TOP} width={6} height={5 * STR_SP} fill="var(--gc-fretboard-nut)" />
-            {Array.from({ length: 6 }).map((_, s) => (
-              <line key={s} x1={NUT} y1={strY(s)} x2={NUT + 12 * FRET_SP} y2={strY(s)}
-                stroke="var(--gc-fretboard-str)" strokeWidth={0.8 + (5 - s) * 0.32} />
-            ))}
-            {Array.from({ length: 6 }).map((_, s) => (
-              <text key={`o${s}`} x={NUT - 30} y={strY(s) + 3.5} textAnchor="middle" fontSize={11} fontWeight="700" fill="var(--gc-text)">
-                {pcName(OPEN[s])}
-              </text>
-            ))}
-            {[3, 5, 7, 9, 12].map(f => (
-              <text key={f} x={NUT + (f - 0.5) * FRET_SP} y={FB_TOP + 5 * STR_SP + 11} textAnchor="middle" fontSize={10} fontWeight="700" fill="var(--gc-text)">{f}</text>
-            ))}
-
+          <IntervalNeck showOpenNotes>
             {/* Every other placement, dim — the spread across the neck at a glance */}
             {pairs.map((p, i) => i === idx ? null : (
               <g key={`d${i}`}>
@@ -241,7 +212,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
             <text x={noteX(current.hi.fret)} y={strY(current.hi.string) + 3.5} textAnchor="middle" fontSize={10} fontWeight="700" fill="#fff">
               {spell(current.hiMidi)}
             </text>
-          </svg>
+          </IntervalNeck>
         </div>
       </div>
 

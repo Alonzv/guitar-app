@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
+import { IntervalNeck, strY, noteX, DOT_R, FB_H, FB_TOP, STR_SP } from './IntervalNeck';
 import { playScale, getSharedContext, getOutputNode, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 
@@ -42,16 +43,8 @@ const AREAS: { id: Area; label: string; range: [number, number] }[] = [
   { id: '9-12', label: '9–12',  range: [9, 12] },
 ];
 
-const FB_W = 580, FB_H = 165;
-const NUT = 44;
-const FRET_SP = (FB_W - NUT - 16) / 12;
-const STR_SP = (FB_H - 30) / 5;
-const FB_TOP = 12;
-const DOT_R = 12;
 const BRACKET_EXTRA = 30;
 
-const strY = (s: number) => FB_TOP + (5 - s) * STR_SP;
-const noteX = (f: number) => f === 0 ? NUT - 14 : NUT + (f - 0.5) * FRET_SP;
 
 function getPositions(note: string, fretRange: [number, number]) {
   const pc = CHROMATIC.indexOf(note);
@@ -245,36 +238,7 @@ export function IntervalExplore() {
             </div>
 
             <div style={{ overflowX: 'auto' }}>
-              <svg viewBox={`0 0 ${FB_W} ${svgH}`} style={{ display: 'block', width: '100%', minWidth: 300 }}>
-                <rect x={0} y={0} width={FB_W} height={svgH} fill="var(--gc-fretboard-bg)" />
-
-                {[3, 5, 7, 9].map(f => (
-                  <circle key={f} cx={NUT + (f - 0.5) * FRET_SP} cy={FB_TOP + 2.5 * STR_SP}
-                    r={5} fill="var(--gc-fretboard-pos)" />
-                ))}
-                <circle cx={NUT + 11.5 * FRET_SP} cy={FB_TOP + 1 * STR_SP} r={4} fill="var(--gc-fretboard-pos)" />
-                <circle cx={NUT + 11.5 * FRET_SP} cy={FB_TOP + 4 * STR_SP} r={4} fill="var(--gc-fretboard-pos)" />
-
-                {Array.from({ length: 13 }).map((_, i) => (
-                  <line key={i}
-                    x1={NUT + i * FRET_SP} y1={FB_TOP}
-                    x2={NUT + i * FRET_SP} y2={FB_TOP + 5 * STR_SP}
-                    stroke="var(--gc-fretboard-fret)" strokeWidth={2} />
-                ))}
-
-                <rect x={NUT - 6} y={FB_TOP} width={6} height={5 * STR_SP} fill="var(--gc-fretboard-nut)" />
-
-                {Array.from({ length: 6 }).map((_, s) => (
-                  <line key={s}
-                    x1={NUT} y1={strY(s)} x2={NUT + 12 * FRET_SP} y2={strY(s)}
-                    stroke="var(--gc-fretboard-str)" strokeWidth={0.8 + (5 - s) * 0.32} />
-                ))}
-
-                {[3, 5, 7, 9, 12].map(f => (
-                  <text key={f} x={NUT + (f - 0.5) * FRET_SP} y={FB_TOP + 5 * STR_SP + 10}
-                    textAnchor="middle" fontSize={8} fill="var(--gc-fretboard-pos)">{f}</text>
-                ))}
-
+              <IntervalNeck height={svgH}>
                 {pairs.map((p, i) => (
                   <line key={`conn-${i}`}
                     x1={noteX(p.rootFret)} y1={strY(p.string)}
@@ -320,7 +284,7 @@ export function IntervalExplore() {
                     </g>
                   );
                 })()}
-              </svg>
+              </IntervalNeck>
             </div>
           </div>
         </>
