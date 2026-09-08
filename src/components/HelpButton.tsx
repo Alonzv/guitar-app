@@ -1,34 +1,22 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { T } from '../theme';
+import { useLang } from '../contexts/LanguageContext';
 import { HELP } from '../content/helpContent';
-
-type Lang = 'en' | 'he';
-
-const LANG_KEY = 'scaleup_help_lang';
-function readLang(): Lang {
-  try { return localStorage.getItem(LANG_KEY) === 'he' ? 'he' : 'en'; } catch { return 'en'; }
-}
 
 /**
  * A small "?" button that opens a floating explanation of the current sub-tab.
- * `topic` is a key into HELP (e.g. "voicings:paths"). The popover toggles
- * between English and Hebrew and remembers the choice.
+ * `topic` is a key into HELP (e.g. "voicings:paths"). It reads the app-wide
+ * language rather than carrying a toggle of its own.
  */
 export function HelpButton({ topic }: { topic: string }) {
   const [open, setOpen] = useState(false);
-  const [lang, setLang] = useState<Lang>(readLang);
+  const { lang, rtl } = useLang();
 
   const entry = HELP[topic];
   if (!entry) return null;
 
-  const setLangPersist = (l: Lang) => {
-    setLang(l);
-    try { localStorage.setItem(LANG_KEY, l); } catch { /* ignore */ }
-  };
-
   const text = entry[lang];
-  const rtl = lang === 'he';
 
   return (
     <>
@@ -66,23 +54,8 @@ export function HelpButton({ topic }: { topic: string }) {
               animation: 'gcHelpPop 0.2s cubic-bezier(0.34, 1.4, 0.5, 1)',
             }}
           >
-            {/* Header: language toggle + close */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-                {(['en', 'he'] as Lang[]).map((l, i) => {
-                  const active = lang === l;
-                  return (
-                    <button key={l} onClick={() => setLangPersist(l)} style={{
-                      padding: '5px 12px', border: 'none', cursor: 'pointer',
-                      borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
-                      background: active ? T.secondary : T.bgInput,
-                      color: active ? '#fff' : T.textMuted,
-                      fontSize: 11, fontWeight: active ? 600 : 400,
-                      fontFamily: 'var(--gc-font)', letterSpacing: '-0.02em',
-                    }}>{l === 'en' ? 'EN' : 'עב'}</button>
-                  );
-                })}
-              </div>
+            {/* Header: close */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 14 }}>
               <button onClick={() => setOpen(false)} aria-label="Close" style={{
                 width: 28, height: 28, flexShrink: 0, borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: T.textMuted, fontSize: 15, cursor: 'pointer',

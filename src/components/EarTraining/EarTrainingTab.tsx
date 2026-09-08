@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { T, card } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLang } from '../../contexts/LanguageContext';
 import { playInterval, playMidi, playError } from '../../utils/audioPlayback';
 import { INTERVAL_ORDER, UI } from './data';
 import type { IntervalId, Lang } from './data';
@@ -67,7 +68,7 @@ export const EarTrainingTab: React.FC<Props> = () => {
   const dataRef = useRef(data);
   useEffect(() => { dataRef.current = data; }, [data]);
 
-  const lang: Lang = data.prefs.lang;
+  const { lang } = useLang();
   const rtl = lang === 'he';
 
   // ── Persistence: local mirror always, remote (debounced) when signed in ────
@@ -94,6 +95,12 @@ export const EarTrainingTab: React.FC<Props> = () => {
   const setPrefs = useCallback((patch: Partial<EarTrainingData['prefs']>) => {
     setData(d => ({ ...d, prefs: { ...d.prefs, ...patch } }));
   }, []);
+
+  // Language is an app-wide setting now, but it also rides along in the synced
+  // prefs record, so mirror it there rather than letting the two drift.
+  useEffect(() => {
+    if (dataRef.current.prefs.lang !== lang) setPrefs({ lang });
+  }, [lang, setPrefs]);
 
   const recordResult = useCallback((interval: IntervalId, correct: boolean) => {
     setData(d => {
@@ -126,25 +133,11 @@ export const EarTrainingTab: React.FC<Props> = () => {
 
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>
-      {/* Header: title + language + Learn/Practice */}
+      {/* Header: title + Learn/Practice */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>
           {rtl ? 'אימון שמיעה' : 'Ear Training'}
         </h2>
-        <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          {(['en', 'he'] as Lang[]).map((l, i) => (
-            <button key={l} onClick={() => setPrefs({ lang: l })}
-              style={{
-                padding: '6px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
-                fontWeight: lang === l ? 600 : 400,
-                borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
-                background: lang === l ? T.secondary : 'transparent',
-                color: lang === l ? '#fff' : T.textDim,
-              }}>
-              {l === 'en' ? 'EN' : 'HE'}
-            </button>
-          ))}
-        </div>
       </div>
 
       <PracticeMode

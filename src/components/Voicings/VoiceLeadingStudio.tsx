@@ -6,6 +6,7 @@ import type { KeyGuess } from '../../utils/harmonicAnalysis';
 import { voiceLead } from '../../utils/voiceLeading';
 import type { VoicedProgression } from '../../utils/voiceLeading';
 import { T, card, alpha } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 import { toDisplayChord } from '../../utils/chordName';
 
 // ── Voice Leading Studio ─────────────────────────────────────────────────────
@@ -46,8 +47,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
   /** Report an edit so it flows back into the shared session progression. */
   onChordsChange?: (names: string[]) => void;
 } = {}) {
-  const [lang, setLang] = useState<'en' | 'he'>('en');
-  const rtl = lang === 'he';
+  const { lang, rtl } = useLang();
 
   // The session progression is the source of truth — no private copy and no
   // placeholder chords, so what the studio shows is exactly what the app is
@@ -180,11 +180,6 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{t.title}</h2>
-        <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          {(['en', 'he'] as const).map((l, i) => (
-            <button key={l} onClick={() => setLang(l)} style={{ padding: '6px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: lang === l ? 600 : 400, borderLeft: i > 0 ? `1px solid ${T.border}` : 'none', background: lang === l ? T.secondary : 'transparent', color: lang === l ? '#fff' : T.textDim }}>{l === 'en' ? 'EN' : 'HE'}</button>
-          ))}
-        </div>
       </div>
 
       {/* Timeline */}

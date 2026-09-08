@@ -2,6 +2,7 @@ import React from 'react';
 import { T } from '../../theme';
 import { BrandMark } from '../BrandMark';
 import { PANEL_TITLES } from '../../constants/panels';
+import { LangToggle } from '../LangToggle';
 
 
 
@@ -92,6 +93,7 @@ export function DesktopShell({
 
         {/* Right: ghost icon buttons + user menu */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <LangToggle />
           <button
             onClick={onToggleDark}
             title={darkMode ? 'Light mode' : 'Dark mode'}

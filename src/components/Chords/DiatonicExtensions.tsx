@@ -5,6 +5,7 @@ import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
 import { onNavKey } from '../../services/navigate';
 import { T, card } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 
 // ── Diatonic Extensions ──────────────────────────────────────────────────────
 // Pick a key and see its seven degrees side by side. Each degree says plainly
@@ -98,10 +99,9 @@ const LBL: React.CSSProperties = {
 };
 
 export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
-  const [lang, setLang] = useState<'en' | 'he'>('en');
+  const { lang, rtl } = useLang();
   const [mode, setMode] = useState<'major' | 'minor'>('major');
   const [key, setKey] = useState('C');
-  const rtl = lang === 'he';
   const t = COPY[lang];
 
   const keys = mode === 'major' ? KEYS_MAJOR : KEYS_MINOR;
@@ -278,15 +278,6 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{t.title}</h2>
-        <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          {(['en', 'he'] as const).map((l, i) => (
-            <button key={l} onClick={() => setLang(l)} style={{
-              padding: '6px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
-              fontWeight: lang === l ? 600 : 400, borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
-              background: lang === l ? T.secondary : 'transparent', color: lang === l ? '#fff' : T.textDim,
-            }}>{l === 'en' ? 'EN' : 'HE'}</button>
-          ))}
-        </div>
       </div>
       <p style={{ margin: '0 0 16px', fontSize: 13, lineHeight: 1.6, color: T.textMuted }}>{t.intro}</p>
 

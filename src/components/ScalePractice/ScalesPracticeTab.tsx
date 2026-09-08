@@ -6,6 +6,7 @@ import { SCALE_DATA } from '../ScaleTrainer/data';
 import type { ScaleId } from '../ScaleTrainer/data';
 import { playScale, playError } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 
 // ── Scales → Practice ────────────────────────────────────────────────────────
 // Unified Practice Mode for scales: Theory (a Scale Speller) + Ear Training
@@ -16,7 +17,6 @@ import { T, card } from '../../theme';
 const BASIC: ScaleId[] = ['major', 'natural_minor'];
 const ADVANCED: ScaleId[] = ['major', 'natural_minor', 'major_pentatonic', 'minor_pentatonic'];
 
-type Lang = 'en' | 'he';
 type Mode = 'theory' | 'ear';
 type Diff = 'basic' | 'advanced';
 const rnd = (n: number) => Math.floor(Math.random() * n);
@@ -46,10 +46,9 @@ const LBL: React.CSSProperties = {
 };
 
 export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
-  const [lang, setLang] = useState<Lang>('en');
+  const { lang, rtl } = useLang();
   const [mode, setMode] = useState<Mode>('theory');
   const [diff, setDiff] = useState<Diff>('basic');
-  const rtl = lang === 'he';
   const scaleName = (s: ScaleId) => SCALE_DATA[s][lang].name;
 
   const [streak, setStreak] = useState(0);
@@ -145,14 +144,6 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{rtl ? 'תרגול סולמות' : 'Scale Practice'}</h2>
-        <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          {(['en', 'he'] as Lang[]).map((l, i) => (
-            <button key={l} onClick={() => setLang(l)} style={{
-              padding: '6px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: lang === l ? 600 : 400,
-              borderLeft: i > 0 ? `1px solid ${T.border}` : 'none', background: lang === l ? T.secondary : 'transparent', color: lang === l ? '#fff' : T.textDim,
-            }}>{l === 'en' ? 'EN' : 'HE'}</button>
-          ))}
-        </div>
       </div>
 
       <div style={{ display: 'flex', border: `1px solid ${T.border}`, marginBottom: 12 }}>

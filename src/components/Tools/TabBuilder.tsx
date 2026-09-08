@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 import {
   detectTabScale, extractTabNotes, suggestTabProgressions,
   type TabScaleResult, type ProgressionSuggestion,
@@ -137,9 +138,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const [analyzeScale, setAnalyzeScale]   = useState<TabScaleResult | null>(null);
   const [analyzeProgs, setAnalyzeProgs]   = useState<ProgressionSuggestion[] | null>(null);
   const [analyzeErr, setAnalyzeErr]       = useState<ErrKey | null>(null);
-  const [lang, setLang] = useState<Lang>(() => {
-    try { return (localStorage.getItem('scaleup_lang') as Lang) || 'en'; } catch { return 'en'; }
-  });
+  const { lang } = useLang();
   const [chordModal, setChordModal]   = useState<string | null>(null); // chord name → diagram
   const [scaleModal, setScaleModal]   = useState(false);               // scale → vertical neck
 
@@ -154,8 +153,6 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       }
     } catch { /* ignore */ }
   }, []);
-
-  useEffect(() => { try { localStorage.setItem('scaleup_lang', lang); } catch { /* ignore */ } }, [lang]);
 
   const t = L[lang];
 
@@ -888,19 +885,6 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
             {/* Heading + language toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingInlineEnd: 28 }}>
               <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{t.heading}</span>
-              <div style={{
-                display: 'flex', borderRadius: 0, overflow: 'hidden',
-                border: `1px solid ${T.border}`, marginInlineStart: 'auto',
-              }}>
-                {(['he', 'en'] as Lang[]).map(lg => (
-                  <button key={lg} onClick={() => setLang(lg)} style={{
-                    border: 'none', cursor: 'pointer', padding: '5px 11px',
-                    fontSize: 13, fontWeight: 400,
-                    background: lang === lg ? T.secondary : T.bgInput,
-                    color: lang === lg ? '#fff' : T.textMuted,
-                  }}>{lg === 'he' ? 'עברית' : 'EN'}</button>
-                ))}
-              </div>
             </div>
 
             {/* Detected scale — clickable */}

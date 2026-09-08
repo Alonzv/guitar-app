@@ -3,6 +3,7 @@ import { Chord as TonalChord, Note } from '@tonaljs/tonal';
 import { NOTE_BANK, pcOf } from '../ScaleTrainer/engine';
 import { playMidi, playError } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 
 // ── Chords → Practice ────────────────────────────────────────────────────────
 // Phase 2 of the unified Practice Mode: a Chord Speller (Theory) plus a
@@ -30,7 +31,6 @@ const ADVANCED: string[] = [...BASIC, 'dim', 'aug'];
 const ROOT_POOL = ['C', 'G', 'D', 'A', 'E', 'F', 'Bb', 'Eb'];
 const BANK = new Set<string>(NOTE_BANK as readonly string[]);
 
-type Lang = 'en' | 'he';
 type Mode = 'theory' | 'ear';
 type Diff = 'basic' | 'advanced';
 
@@ -67,10 +67,9 @@ const LBL: React.CSSProperties = {
 };
 
 export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
-  const [lang, setLang] = useState<Lang>('en');
+  const { lang, rtl } = useLang();
   const [mode, setMode] = useState<Mode>('theory');
   const [diff, setDiff] = useState<Diff>('basic');
-  const rtl = lang === 'he';
 
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [filled, setFilled] = useState(1);          // degree 1 (root) pre-filled
@@ -191,18 +190,8 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
 
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
-      {/* Header: title + lang */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{rtl ? 'תרגול אקורדים' : 'Chord Practice'}</h2>
-        <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          {(['en', 'he'] as Lang[]).map((l, i) => (
-            <button key={l} onClick={() => setLang(l)} style={{
-              padding: '6px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: lang === l ? 600 : 400,
-              borderLeft: i > 0 ? `1px solid ${T.border}` : 'none', background: lang === l ? T.secondary : 'transparent',
-              color: lang === l ? '#fff' : T.textDim,
-            }}>{l === 'en' ? 'EN' : 'HE'}</button>
-          ))}
-        </div>
       </div>
 
       {/* Theory / Ear toggle */}
