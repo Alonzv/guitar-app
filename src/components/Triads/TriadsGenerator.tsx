@@ -168,7 +168,8 @@ function pill(active: boolean, onClick: () => void, label: string) {
 
 export function TriadsGenerator({ desktop, globalProgression }: { desktop?: boolean; globalProgression?: ChordInProgression[] } = {}) {
   const [root,               setRoot]               = useState<Note>('C');
-  const [triadType,          setTriadType]          = useState<TriadType | null>(null);
+  // Same reason as Scale Explorer: open on something, not on a prompt.
+  const [triadType,          setTriadType]          = useState<TriadType | null>('major');
   const [triadMenuOpen,      setTriadMenuOpen]      = useState(false);
   // Chords imported from the user's progression (Chords tab). Click one to load
   // its root + closest triad quality into the generator.

@@ -65,8 +65,11 @@ const POSITION_WINDOWS = [[0,3],[2,5],[4,8],[6,10],[9,12]] as const;
 const POS_COLORS = [T.primary, T.secondary, '#5C5650', '#8A8378', '#9C958C'];
 
 export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
-  const [root, setRoot]             = useState<Note>('A');
-  const [scaleType, setScaleType]   = useState<string | null>(null);
+  // Opens on C major rather than an empty neck, the way the Chord Wheel does —
+  // a tool that shows nothing until you make two choices teaches nothing about
+  // itself. Both stay fully changeable.
+  const [root, setRoot]             = useState<Note>('C');
+  const [scaleType, setScaleType]   = useState<string | null>('major');
   const [scaleMenuOpen, setScaleMenuOpen] = useState(false);
   const [pos, setPos]               = useState<number | null>(null);
   const [viewMode, setViewMode]     = useState<'fretboard' | 'tab'>('fretboard');
