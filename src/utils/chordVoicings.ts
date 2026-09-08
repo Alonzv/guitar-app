@@ -18,8 +18,29 @@ function getRequiredNotes(chordNotes: string[]): string[] {
   return [chordNotes[0], chordNotes[1], chordNotes[3]].filter(Boolean);
 }
 
-function isPlayable(voicing: FretPosition[]): boolean {
-  if (voicing.length < 4) return false;
+export interface PlayabilityRules {
+  /** Fewest strings a shape may sound. Triad tools pass 3. */
+  minNotes?: number;
+  /** How many inner strings may be skipped — muting one mid-shape is hard. */
+  maxInnerGaps?: number;
+}
+
+// ── The one playability standard ─────────────────────────────────────────────
+// Every tool that offers a shape to play judges it here. It used to be copied
+// into voicingPaths.ts and TargetNoteTab.tsx with quietly different rules, so
+// the same grip could be offered by one tool and withheld by another. The
+// options exist so a call site states its exemption out loud instead of
+// forking the function.
+export function isPlayable(voicing: FretPosition[], rules: PlayabilityRules = {}): boolean {
+  const { minNotes = 4, maxInnerGaps = 1 } = rules;
+  if (voicing.length < minNotes) return false;
+
+  // Skipped inner strings: muting one mid-shape is awkward, two is a different
+  // technique altogether.
+  const strings = voicing.map(p => p.string).sort((a, b) => a - b);
+  let innerGaps = 0;
+  for (let i = 1; i < strings.length; i++) innerGaps += strings[i] - strings[i - 1] - 1;
+  if (innerGaps > maxInnerGaps) return false;
 
   const nonOpen = voicing.filter(p => p.fret > 0);
   if (nonOpen.length === 0) return true;

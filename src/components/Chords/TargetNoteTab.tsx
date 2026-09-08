@@ -4,6 +4,7 @@ import type { FretPosition, Tuning } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
 import { scalesContainingNotes, getScalePositions, type ScaleFit } from '../../utils/scaleUtils';
+import { isPlayable } from '../../utils/chordVoicings';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card } from '../../theme';
@@ -74,48 +75,6 @@ interface ResultItem {
 
 interface Props { tuning: Tuning; capo: number; desktop?: boolean; }
 
-// ── isPlayable (not exported from chordVoicings) ──────────────────────────
-function isPlayable(voicing: FretPosition[]): boolean {
-  if (voicing.length < 4) return false;
-
-  // Count skipped inner strings — muting an inner string is hard in practice
-  const strings = [...voicing.map(p => p.string)].sort((a, b) => a - b);
-  let innerGaps = 0;
-  for (let i = 1; i < strings.length; i++) innerGaps += strings[i] - strings[i - 1] - 1;
-  if (innerGaps > 1) return false;
-
-  const nonOpen = voicing.filter(p => p.fret > 0);
-  if (nonOpen.length === 0) return true;
-  const frets = nonOpen.map(p => p.fret);
-  const minF = Math.min(...frets);
-  const maxF = Math.max(...frets);
-  if (maxF - minF > 3) return false;
-  const aboveMin = nonOpen.filter(p => p.fret > minF);
-  const byFret = new Map<number, number[]>();
-  for (const p of aboveMin) {
-    if (!byFret.has(p.fret)) byFret.set(p.fret, []);
-    byFret.get(p.fret)!.push(p.string);
-  }
-  let extraFingers = 0;
-  for (const strings of byFret.values()) {
-    const sorted = [...strings].sort((a, b) => a - b);
-    let j = 0;
-    while (j < sorted.length) {
-      let end = j;
-      while (end + 1 < sorted.length && sorted[end + 1] === sorted[end] + 1) end++;
-      extraFingers++;
-      j = end + 1;
-    }
-  }
-  if (extraFingers > 3) return false;
-  if (aboveMin.length >= 2) {
-    const minStr = Math.min(...aboveMin.map(p => p.string));
-    const maxStr = Math.max(...aboveMin.map(p => p.string));
-    const multiFret = new Set(aboveMin.map(p => p.fret)).size > 1;
-    if (maxStr - minStr > 3 && multiFret) return false;
-  }
-  return true;
-}
 
 function avgFret(voicing: FretPosition[]): number {
   const nonOpen = voicing.filter(p => p.fret > 0);
