@@ -57,8 +57,11 @@ import { PANEL_TITLES } from './constants/panels';
 type ChordsSub    = 'builder' | 'finder' | 'extensions' | 'practice';
 type ScalesSub    = 'explorer' | 'triads' | 'wheel' | 'practice';
 type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize' | 'target';
-type PracticeSub  = 'tuner' | 'metronome';
-type StudioSub    = 'tabbuilder' | 'audiotab';
+// TOOLS holds the four non-theory tools. Tab Builder and Audio→Tab used to sit
+// in a STUDIO tab of their own; they moved here because what they share with
+// the tuner and the metronome is exactly what separates them from every other
+// tab — none of them teach anything, they are workbench.
+type ToolsSub     = 'tuner' | 'metronome' | 'tabbuilder' | 'audiotab';
 
 
 
@@ -80,13 +83,11 @@ const VOICINGS_SEGS  = [
   { id: 'reharmonize',  label: 'Reharm'    },
   { id: 'target',       label: 'Target'    },
 ];
-const PRACTICE_SEGS  = [
-  { id: 'tuner',        label: 'Tuner'     },
-  { id: 'metronome',    label: 'Metronome' },
-];
-const STUDIO_SEGS    = [
+const TOOLS_SEGS     = [
+  { id: 'tuner',      label: 'Tuner'       },
+  { id: 'metronome',  label: 'Metronome'   },
   { id: 'tabbuilder', label: 'Tab Builder' },
-  { id: 'audiotab',   label: 'Audio→Tab'  },
+  { id: 'audiotab',   label: 'Audio→Tab'   },
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -217,7 +218,12 @@ export default function App() {
   };
 
   // ── SwipePager state ──────────────────────────────────────────────────────
-  const [pagerTab, setPagerTab]             = useState(() => parseInt(readLS('scaleup_pager_tab', '0'), 10) || 0);
+  // Clamped: a browser that stored tab 5 back when STUDIO existed would
+  // otherwise restore to a panel that is no longer there.
+  const [pagerTab, setPagerTab]             = useState(() => {
+    const t = parseInt(readLS('scaleup_pager_tab', '0'), 10) || 0;
+    return Math.min(Math.max(t, 0), PANEL_TITLES.length - 1);
+  });
   // Always land on "By Name" when the app opens (not the last-used chords tab).
   const [chordsSegment, setChordsSegment]   = useState<ChordsSub>('finder');
   const [scalesSegment, setScalesSegment]   = useState<ScalesSub>(() => {
@@ -228,13 +234,10 @@ export default function App() {
     const v = readLS('scaleup_seg_voicings', 'voiceleading');   // 'paths' folded into VL Studio
     return (v === 'voiceleading' || v === 'harmonizer' || v === 'reharmonize' || v === 'target') ? v as VoicingsSub : 'voiceleading';
   });
-  const [practiceSegment, setPracticeSegment] = useState<PracticeSub>(() => {
-    const v = readLS('scaleup_seg_practice', 'tuner');    // 'eartraining' → Intervals, 'scaletrainer' → Scales
-    return (v === 'tuner' || v === 'metronome') ? v as PracticeSub : 'tuner';
-  });
-  const [studioSegment, setStudioSegment]   = useState<StudioSub>(() => {
-    const v = readLS('scaleup_seg_studio', 'tabbuilder');
-    return (v === 'tabbuilder' || v === 'audiotab') ? v : 'tabbuilder';
+  const [toolsSegment, setToolsSegment] = useState<ToolsSub>(() => {
+    // 'eartraining' → Intervals, 'scaletrainer' → Scales, both long gone.
+    const v = readLS('scaleup_seg_tools', readLS('scaleup_seg_practice', 'tuner'));
+    return TOOLS_SEGS.some(s => s.id === v) ? v as ToolsSub : 'tuner';
   });
 
   const handleTabChange = (t: number) => { setPagerTab(t); writeLS('scaleup_pager_tab', String(t)); };
@@ -243,16 +246,15 @@ export default function App() {
   const handleLogoClick = () => { handleTabChange(0); handleChordsSegChange('finder'); };
   const handleScalesSegChange   = (s: string) => { setScalesSegment(s as ScalesSub);   writeLS('scaleup_seg_scales',   s); };
   const handleVoicingsSegChange = (s: string) => { setVoicingsSegment(s as VoicingsSub); writeLS('scaleup_seg_voicings', s); };
-  const handlePracticeSegChange = (s: string) => { setPracticeSegment(s as PracticeSub); writeLS('scaleup_seg_practice', s); };
-  const handleStudioSegChange   = (s: string) => { setStudioSegment(s as StudioSub);   writeLS('scaleup_seg_studio',   s); };
+  const handleToolsSegChange    = (s: string) => { setToolsSegment(s as ToolsSub);     writeLS('scaleup_seg_tools',    s); };
 
-  // ── Handoff: Workspace "Open in Builder" → STUDIO/Tab Builder ─────────────
+  // ── Handoff: Workspace "Open in Builder" → TOOLS/Tab Builder ──────────────
   useEffect(() => subscribeHandoff(() => {
     setWorkspaceOpen(false);
-    setPagerTab(5);
-    setStudioSegment('tabbuilder');
-    writeLS('scaleup_pager_tab', '5');
-    writeLS('scaleup_seg_studio', 'tabbuilder');
+    setPagerTab(4);
+    setToolsSegment('tabbuilder');
+    writeLS('scaleup_pager_tab', '4');
+    writeLS('scaleup_seg_tools', 'tabbuilder');
   }), []);
 
   // ── Handoff: Library "Open in Harmonizer" → VOICINGS/Harmonize ────────────
@@ -300,10 +302,10 @@ export default function App() {
   };
   const handleOpenTab = (content: TabContent) => {
     requestOpenTabInBuilder(content);
-    setPagerTab(5);
-    setStudioSegment('tabbuilder');
-    writeLS('scaleup_pager_tab', '5');
-    writeLS('scaleup_seg_studio', 'tabbuilder');
+    setPagerTab(4);
+    setToolsSegment('tabbuilder');
+    writeLS('scaleup_pager_tab', '4');
+    writeLS('scaleup_seg_tools', 'tabbuilder');
   };
 
   const isDesktopBrowser = useIsDesktop();
@@ -423,34 +425,21 @@ export default function App() {
             </div>
           )}
 
-          {/* ── Panel 4: PRACTICE ────────────────────────────────────── */}
+          {/* ── Panel 4: TOOLS ───────────────────────────────────────── */}
           {pagerTab === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
+              <Segment items={TOOLS_SEGS} active={toolsSegment} onChange={handleToolsSegChange} helpPrefix="tools" />
               <ErrorBoundary label="Tools">
-                {(practiceSegment === 'tuner' || practiceSegment === 'metronome') && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginTop: 24 }}>
-                    <div style={{ borderRight: `1px solid ${T.border}`, paddingRight: 40, paddingBottom: 24 }}>
-                      <div style={{ maxWidth: 420, margin: '0 auto' }}><Tuner /></div>
-                    </div>
-                    <div style={{ paddingLeft: 40, paddingBottom: 24 }}>
-                      <div style={{ maxWidth: 420, margin: '0 auto' }}><Metronome /></div>
-                    </div>
-                  </div>
+                {/* Tuner and metronome are narrow instruments; they read better
+                    centred in a single column than stretched across the shell. */}
+                {toolsSegment === 'tuner' && (
+                  <div style={{ maxWidth: 420, margin: '24px auto 24px', width: '100%' }}><Tuner /></div>
                 )}
-              </ErrorBoundary>
-            </div>
-          )}
-
-          {/* ── Panel 5: STUDIO ──────────────────────────────────────── */}
-          {pagerTab === 5 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <div style={{ maxWidth: 560 }}>
-                <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} helpPrefix="studio" />
-              </div>
-              <ErrorBoundary label="Studio">
-                {studioSegment === 'tabbuilder' && <TabBuilder desktop />}
-                {studioSegment === 'audiotab'   && <AudioToTab desktop />}
+                {toolsSegment === 'metronome' && (
+                  <div style={{ maxWidth: 420, margin: '24px auto 24px', width: '100%' }}><Metronome /></div>
+                )}
+                {toolsSegment === 'tabbuilder' && <TabBuilder desktop />}
+                {toolsSegment === 'audiotab'   && <AudioToTab desktop />}
               </ErrorBoundary>
             </div>
           )}
@@ -558,21 +547,14 @@ export default function App() {
           </ErrorBoundary>
         </div>
 
-        {/* ── Panel 4: PRACTICE ───────────────────────────────────────────── */}
+        {/* ── Panel 4: TOOLS ──────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={PRACTICE_SEGS} active={practiceSegment} onChange={handlePracticeSegChange} helpPrefix="practice" />
+          <Segment items={TOOLS_SEGS} active={toolsSegment} onChange={handleToolsSegChange} helpPrefix="tools" />
           <ErrorBoundary label="Tools">
-            {practiceSegment === 'tuner'        && <Tuner />}
-            {practiceSegment === 'metronome'    && <Metronome />}
-          </ErrorBoundary>
-        </div>
-
-        {/* ── Panel 5: STUDIO ─────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={STUDIO_SEGS} active={studioSegment} onChange={handleStudioSegChange} helpPrefix="studio" />
-          <ErrorBoundary label="Studio">
-            {studioSegment === 'tabbuilder' && <TabBuilder />}
-            {studioSegment === 'audiotab'   && <AudioToTab />}
+            {toolsSegment === 'tuner'      && <Tuner />}
+            {toolsSegment === 'metronome'  && <Metronome />}
+            {toolsSegment === 'tabbuilder' && <TabBuilder />}
+            {toolsSegment === 'audiotab'   && <AudioToTab />}
           </ErrorBoundary>
         </div>
 

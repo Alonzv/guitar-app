@@ -3,7 +3,7 @@ import type { TabContent, HarmonizationMelody, HarmonizationResult, ReharmData }
 // ── Tab Builder handoff ─────────────────────────────────────────────────────
 // Lets the Workspace "Open in Builder" action push a saved tab into the live
 // Tab Builder, even though they live in different parts of the tree. App
-// listens so it can navigate to STUDIO → Tab Builder; TabBuilder consumes the
+// listens so it can navigate to TOOLS → Tab Builder; TabBuilder consumes the
 // payload on mount (or live, if already mounted).
 
 let pendingTab: TabContent | null = null;

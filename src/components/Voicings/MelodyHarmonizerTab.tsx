@@ -579,7 +579,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   // ── Open the arrangement in the full Tab Builder ───────────────────────────
   // requestOpenTabInBuilder queues the payload; App's handoff subscription
-  // navigates to STUDIO → Tab Builder, which consumes it on mount.
+  // navigates to TOOLS → Tab Builder, which consumes it on mount.
   const handleOpenInBuilder = () => {
     if (!result) return;
     requestOpenTabInBuilder(

@@ -184,8 +184,8 @@ export const HELP: Record<string, HelpEntry> = {
     },
   },
 
-  // ── PRACTICE ────────────────────────────────────────────────────────────────
-  'practice:tuner': {
+  // ── TOOLS ─────────────────────────────────────────────────────────────────
+  'tools:tuner': {
     en: {
       title: 'Tuner',
       body: 'A chromatic tuner that listens through your mic and shows how sharp or flat each string is in real time. Pick a tuning and tune each string until it reads in the centre.',
@@ -195,7 +195,7 @@ export const HELP: Record<string, HelpEntry> = {
       body: 'טיונר כרומטי שמאזין דרך המיקרופון ומראה בזמן אמת כמה כל מיתר גבוה או נמוך. בוחרים כיוון ומכווננים כל מיתר עד שהוא במרכז.',
     },
   },
-  'practice:metronome': {
+  'tools:metronome': {
     en: {
       title: 'Metronome',
       body: 'Keep time while you practise. Set the tempo and time signature and play along to a steady click, with an accented downbeat on each bar.',
@@ -205,11 +205,7 @@ export const HELP: Record<string, HelpEntry> = {
       body: 'שומר על קצב בזמן תרגול. קובעים טמפו ומשקל, ומנגנים לפי קליק יציב עם הדגשה על הפעמה הראשונה בכל תיבה.',
     },
   },
-
-
-
-  // ── STUDIO ────────────────────────────────────────────────────────────────
-  'studio:tabbuilder': {
+  'tools:tabbuilder': {
     en: {
       title: 'Tab Builder',
       body: 'Write guitar tablature by placing fret numbers on a six-string grid, add bars and techniques, then play it back, export a PDF/MIDI or save it to your Library.',
@@ -219,7 +215,7 @@ export const HELP: Record<string, HelpEntry> = {
       body: 'כותבים טבלטורה לגיטרה ע״י הצבת מספרי שריגים על גריד של שישה מיתרים, מוסיפים תיבות וטכניקות, ואז מנגנים, מייצאים PDF/MIDI או שומרים לאזור האישי.',
     },
   },
-  'studio:audiotab': {
+  'tools:audiotab': {
     en: {
       title: 'Audio to Tab',
       body: 'Upload or record a guitar part and the app transcribes it into tab automatically, using pitch detection plus an AI clean-up pass. Edit the result, then export or save it.',

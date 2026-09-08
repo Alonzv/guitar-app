@@ -14,7 +14,7 @@ import type { ChordInProgression } from '../../types/music';
 type Sub = 'progressions' | 'harmonizations' | 'reharms' | 'tabs' | 'audio';
 
 // One category per creation tool, ordered to mirror the app's own flow:
-// CHORDS → VOICINGS (Harmonize / Reharm) → STUDIO (Tabs / Audio).
+// CHORDS → VOICINGS (Harmonize / Reharm) → TOOLS (Tabs / Audio).
 const SUBS: { id: Sub; label: string }[] = [
   { id: 'progressions',   label: 'Progressions'  },
   { id: 'harmonizations', label: 'Harmonized'    },

@@ -484,7 +484,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
           <div>
             {/* Masthead */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 16, borderBottom: `1px solid ${T.border}`, marginBottom: 16 }}>
-              <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textDim }}>Studio / Tab</span>
+              <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textDim }}>Tools / Tab</span>
               <input
                 value={title}
                 placeholder="Untitled Song"

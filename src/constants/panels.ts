@@ -9,5 +9,4 @@ export const PANEL_TITLES: string[] = [
   'INTERVALS',
   'VOICINGS',
   'TOOLS',
-  'STUDIO',
 ];
