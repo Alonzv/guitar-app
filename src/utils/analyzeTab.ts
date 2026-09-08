@@ -1,4 +1,5 @@
 import { createAIMessage } from './aiClient';
+import { AI_MODEL } from './aiModels';
 import { Scale, Note as TonalNote } from '@tonaljs/tonal';
 import { fretToNote, CHROMATIC } from './musicTheory';
 
@@ -126,7 +127,7 @@ export async function suggestTabProgressions(
 
   try {
     const msg = await createAIMessage({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL.reasoning,
       max_tokens: 1100,
       messages: [
         {

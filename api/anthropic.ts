@@ -12,7 +12,10 @@
 //   - max_tokens capped
 //   - no streaming, no tools, no system prompts from the client
 
-const ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5']);
+// Must list exactly the ids in src/utils/aiModels.ts. The two files can't
+// share a module — api/ is compiled by the host, not by this repo's tsconfig —
+// so scripts/check-ai-models.mjs fails the build if they ever drift apart.
+const ALLOWED_MODELS = new Set(['claude-sonnet-5', 'claude-haiku-4-5-20251001']);
 const MAX_TOKENS_CAP = 4096;
 
 interface ProxyRequest {

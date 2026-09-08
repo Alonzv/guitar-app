@@ -4,6 +4,7 @@
 // actually transcribes audio.
 import type { BasicPitch } from '@spotify/basic-pitch';
 import { createAIMessage } from './aiClient';
+import { AI_MODEL } from './aiModels';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -433,7 +434,7 @@ export async function refineNotesWithAI(
       ]);
 
       const msg = await createAIMessage({
-        model: 'claude-sonnet-4-6',
+        model: AI_MODEL.reasoning,
         max_tokens: 4096,
         messages: [{
           role: 'user',

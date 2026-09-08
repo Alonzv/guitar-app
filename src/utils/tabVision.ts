@@ -1,4 +1,5 @@
 import { createAIMessage } from './aiClient';
+import { AI_MODEL } from './aiModels';
 import type { TabContent } from '../services/types';
 
 type ImgMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
@@ -85,7 +86,7 @@ export async function extractTabFromImage(
 ): Promise<TabContent | null> {
   try {
     const msg = await createAIMessage({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL.reasoning,
       max_tokens: 4096,
       messages: [
         {

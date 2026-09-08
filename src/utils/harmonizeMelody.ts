@@ -1,5 +1,6 @@
 import { Note as TonalNote } from '@tonaljs/tonal';
 import { createAIMessage } from './aiClient';
+import { AI_MODEL } from './aiModels';
 import type { Tuning } from '../types/music';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -170,7 +171,7 @@ export async function harmonizeMelody(
 
   try {
     const msg = await createAIMessage({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL.reasoning,
       max_tokens: 4096,
       // A hung request would otherwise leave the UI spinner running forever —
       // 90s is generous for a 4k-token completion, then we fail visibly.
@@ -434,7 +435,7 @@ export async function revoiceColumn(
 
   try {
     const msg = await createAIMessage({
-      model: 'claude-sonnet-4-6',
+      model: AI_MODEL.reasoning,
       max_tokens: 1000,
       messages: [{
         role: 'user',

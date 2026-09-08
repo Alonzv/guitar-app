@@ -1,4 +1,5 @@
 import { createAIMessage } from './aiClient';
+import { AI_MODEL } from './aiModels';
 
 export interface ReharmonizeResult {
   chords: string[];   // chord names compatible with tonaljs Chord.get()
@@ -38,7 +39,7 @@ export async function reharmonize(
     })();
 
     const msg = await createAIMessage({
-      model: 'claude-haiku-4-5',
+      model: AI_MODEL.fast,
       max_tokens: 500,
       messages: [
         {
@@ -126,7 +127,7 @@ export async function reharmonizeChord(input: {
 
   try {
     const msg = await createAIMessage({
-      model: 'claude-haiku-4-5',
+      model: AI_MODEL.fast,
       max_tokens: 260,
       messages: [{
         role: 'user',
