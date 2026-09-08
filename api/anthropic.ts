@@ -15,7 +15,7 @@
 // Must list exactly the ids in src/utils/aiModels.ts. The two files can't
 // share a module — api/ is compiled by the host, not by this repo's tsconfig —
 // so scripts/check-ai-models.mjs fails the build if they ever drift apart.
-const ALLOWED_MODELS = new Set(['claude-sonnet-5', 'claude-haiku-4-5-20251001']);
+const ALLOWED_MODELS = new Set(['claude-sonnet-5', 'claude-haiku-4-5']);
 const MAX_TOKENS_CAP = 4096;
 
 interface ProxyRequest {

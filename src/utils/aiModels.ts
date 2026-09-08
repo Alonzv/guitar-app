@@ -10,5 +10,5 @@
 
 export const AI_MODEL = {
   reasoning: 'claude-sonnet-5',
-  fast:      'claude-haiku-4-5-20251001',
+  fast:      'claude-haiku-4-5',
 } as const;
