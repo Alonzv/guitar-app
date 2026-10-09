@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { T } from '../../theme';
 import { unlockAudio, getSharedContext, getOutputNode, releaseNowPlaying } from '../../utils/audioPlayback';
+import { useOptionalSong } from '../../song/SongContext';
+import type { Meter } from '../../song/song';
 
 // ── Inline SVG note icons ──────────────────────────────────────────────────
 const NoteIcons = {
@@ -39,6 +41,7 @@ const TIME_SIGS = [
   { label: '6/8', beats: 6 },
 ];
 
+
 function beep(ctx: AudioContext, time: number, accent: boolean): void {
   const osc  = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -58,10 +61,23 @@ const SECTION: React.CSSProperties = {
 };
 
 export const Metronome: React.FC = () => {
-  const [bpm, setBpm]                   = useState(100);
-  const [bpmInput, setBpmInput]         = useState('100');
+  // Tempo and metre are the song's: they open on it, and a change here (±,
+  // typing, tap tempo, 4/4…) is the song's new tempo for every tool.
+  const song = useOptionalSong();
+  const songBpm = song?.song.bpm ?? 100;
+  const songMeter = song?.song.meter ?? '4/4';
+  const [bpm, setBpmState]              = useState(songBpm);
+  const [bpmInput, setBpmInput]         = useState(String(songBpm));
   const [subdivision, setSubdivision]   = useState(SUBDIVISIONS[0]);
-  const [timeSig, setTimeSig]           = useState(TIME_SIGS[0]);
+  const [timeSig, setTimeSigState]      = useState(TIME_SIGS.find(t => t.label === songMeter) ?? TIME_SIGS[0]);
+  const setBpm = (v: number) => { setBpmState(v); song?.update({ bpm: v }); };
+  const setTimeSig = (ts: typeof TIME_SIGS[number]) => { setTimeSigState(ts); song?.update({ meter: ts.label as Meter }); };
+  const [seen, setSeen] = useState({ bpm: songBpm, meter: songMeter });
+  if (seen.bpm !== songBpm || seen.meter !== songMeter) {
+    setSeen({ bpm: songBpm, meter: songMeter });
+    setBpmState(songBpm); setBpmInput(String(songBpm));
+    setTimeSigState(TIME_SIGS.find(t => t.label === songMeter) ?? TIME_SIGS[0]);
+  }
   const [playing, setPlaying]           = useState(false);
   const [beat, setBeat]                 = useState(-1);
 

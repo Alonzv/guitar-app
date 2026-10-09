@@ -6,6 +6,7 @@ import { playInterval } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 import { toDisplayChord } from '../../utils/chordName';
 import { previewChordName } from '../../utils/previewSound';
+import { useOptionalSong } from '../../song/SongContext';
 
 // ── In a Chord — which intervals occur inside a chord ─────────────────────────
 // The question is "which intervals are in this chord", so the answer is a list
@@ -80,11 +81,37 @@ const SELECT: React.CSSProperties = {
   borderLeft: '3px solid var(--gc-bar-color)',
 };
 
+// "Ebmaj7" → { root: 'D#', triad: 'M', ext: 'maj7' } in this tool's own terms,
+// or null when the chord is something its pickers can't show.
+function splitChordName(name: string): { root: string; triad: string; ext: string } | null {
+  const m = name.match(/^([A-G][b#]?)(.*)$/);
+  if (!m) return null;
+  const pc = Note.chroma(m[1]);
+  if (pc == null) return null;
+  const root = ROOTS.find(r => Note.chroma(r) === pc) ?? m[1];
+  const sfx = m[2] === 'M' ? '' : m[2];
+  for (const t of Object.keys(SUFFIX)) {
+    for (const [ext, full] of Object.entries(SUFFIX[t])) {
+      if (full === sfx || (t === 'M' && ext === '' && sfx === '')) return { root, triad: t, ext };
+    }
+  }
+  return null;
+}
+
 export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   const [root, setRoot] = useState('C');
   const [triad, setTriad] = useState('m');
   const [ext, setExt] = useState('');
   const [open, setOpen] = useState<number | null>(null);   // expanded row, by semitones
+
+  // Opens on the chord tapped in the song dock and follows it.
+  const picked = useOptionalSong()?.selectedChord?.chord.name ?? '';
+  const [seenPick, setSeenPick] = useState('');
+  if (picked !== seenPick) {
+    setSeenPick(picked);
+    const parts = picked ? splitChordName(picked) : null;
+    if (parts) { setRoot(parts.root); setTriad(parts.triad); setExt(parts.ext); setOpen(null); }
+  }
   const [shape, setShape] = useState(0);                   // highlighted placement
   const [wide, setWide] = useState(false);
   const [mode, setMode] = useState<Mode>('harmonic');

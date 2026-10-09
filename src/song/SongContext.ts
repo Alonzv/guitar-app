@@ -25,6 +25,10 @@ export interface SongApi {
   keyIsAuto: boolean;
   tuning: Tuning;
 
+  /** The chord tapped in the dock — tools that look at one chord open on it. */
+  selectedChord: ChordInProgression | null;
+  selectChord: (id: string | null) => void;
+
   /** Title, key, tempo, metre, tuning, capo… (not undoable). */
   update: (patch: Partial<Omit<Song, 'sections' | 'activeSection'>>) => void;
   /** Replace the active section's chords (undoable). */
@@ -58,6 +62,7 @@ export function useSongState(): SongApi {
   const [song, setSongState] = useState<Song>(loadSong);
   const [undoStack, setUndo] = useState<Song[]>([]);
   const [redoStack, setRedo] = useState<Song[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   // The ref moves with every change (not just on render) so several edits in
   // one handler — a template progression added chord by chord — each build on
   // the one before instead of all starting from the same snapshot.
@@ -84,6 +89,8 @@ export function useSongState(): SongApi {
   const api: SongApi = {
     song, section, progression: section.progression,
     key: song.keyOverride ?? detected, keyIsAuto: !song.keyOverride, tuning,
+    selectedChord: allChords(song).find(c => c.id === selectedId) ?? null,
+    selectChord: setSelectedId,
 
     update: patch => set({ ...ref.current, ...patch }, false),
     setProgression: next => {

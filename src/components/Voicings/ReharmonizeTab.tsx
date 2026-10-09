@@ -16,6 +16,11 @@ import type { ReharmData } from '../../services/types';
 import { T, card, alpha } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { ExampleChips } from '../ExampleChips';
+import { useOptionalSong } from '../../song/SongContext';
+import { useFlash } from '../../motion/useFlash';
+import { RollLabel } from '../RollLabel';
+import { namesToProgression } from '../../utils/progressionBridge';
+import { TUNINGS } from '../../utils/musicTheory';
 
 // Reharmonisation is the one tool that can fail for reasons outside the app,
 // so it is the one tool with error copy. Written for a guitarist: the old text
@@ -236,6 +241,9 @@ export function ReharmonizeTab({
   onLoadExample,
 }: Props) {
   const { lang } = useLang();
+  const song = useOptionalSong();
+  const [used, flashUsed] = useFlash();
+  const [kept, flashKept] = useFlash();
   const [genre, setGenre] = useState('jazz');
   const [tension, setTension] = useState(3);
   const [showNashville, setShowNashville] = useState(false);
@@ -694,6 +702,25 @@ export function ReharmonizeTab({
                   <p style={{ margin: 0, fontSize: 13, color: T.textMuted }}>
                     No voicing paths found — try Full mode or All strings.
                   </p>
+                </div>
+              )}
+
+              {/* Back to the song: replace the section's chords with the reharm,
+                  or keep it beside them as a variant to switch to later. */}
+              {song && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { song.setChordNames(result.chords); flashUsed(); }} style={{
+                    flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 12.5,
+                    background: T.primary, color: T.white, borderLeft: '4px solid var(--gc-bar-color)',
+                  }}><RollLabel>{used ? (lang === 'he' ? '✓ בשיר' : '✓ In the song') : (lang === 'he' ? 'השתמש בשיר' : 'Use in song')}</RollLabel></button>
+                  <button onClick={() => {
+                    const t = TUNINGS.find(x => x.name === song.song.tuningName) ?? TUNINGS[0];
+                    song.saveVariant(`Reharm · ${GENRES.find(g => g.id === genre)?.label ?? genre}`, namesToProgression(result.chords, t.notes));
+                    flashKept();
+                  }} style={{
+                    flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 12.5,
+                    background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
+                  }}><RollLabel>{kept ? (lang === 'he' ? '✓ נשמר כגרסה' : '✓ Kept as variant') : (lang === 'he' ? 'שמור כגרסה' : 'Keep as variant')}</RollLabel></button>
                 </div>
               )}
 

@@ -8,6 +8,9 @@ import {
 import { unlockAudio } from '../../utils/audioPlayback';
 import { exportNotesMidi } from '../../utils/midiExport';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
+import { useOptionalSong } from '../../song/SongContext';
+import { useFlash } from '../../motion/useFlash';
+import { RollLabel } from '../RollLabel';
 
 type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'error';
 
@@ -284,6 +287,8 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const [phaseLabel, setPhaseLabel]   = useState('');
   const [error, setError]             = useState('');
   const [tabData, setTabData]         = useState<TabData | null>(null);
+  const song = useOptionalSong();
+  const [sent, flashSent] = useFlash();
   const [waveform, setWaveform]       = useState<Float32Array | null>(null);
   const [notes, setNotes]             = useState<DetectedNote[]>([]);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
@@ -781,6 +786,22 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
           Export to MIDI
         </button>
       </div>
+
+      {/* Into the song, as its melody — Tab Builder and Harmonize pick it up. */}
+      {song && tabData && (
+        <button onClick={() => {
+          const cols = Math.max(1, tabData.totalColumns);
+          const grid = Array.from({ length: 6 }, () => Array.from({ length: cols }, () => ({ fret: '' })));
+          tabData.events.forEach(ev => { const row = 5 - ev.string; if (grid[row]?.[ev.column]) grid[row][ev.column] = { fret: String(ev.fret) }; });
+          song.update({ melody: { title: tabData.title || 'Transcription', subtitle: '', grid, bars: [] }, melodyFrom: 'audiotab' });
+          flashSent();
+        }} style={{
+          width: '100%', padding: '13px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14,
+          background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
+        }}>
+          <RollLabel>{sent ? '✓ The song’s melody now' : 'Use as the song’s melody'}</RollLabel>
+        </button>
+      )}
 
       {/* Save to personal library */}
       <SaveToLibraryButton

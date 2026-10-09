@@ -9,6 +9,7 @@ import { answeredRight, answeredWrong } from '../../practice/feedback';
 import { StreakBoard } from '../Practice/StreakBoard';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
+import { useOptionalSong } from '../../song/SongContext';
 
 // ── Scales → Practice ────────────────────────────────────────────────────────
 // Unified Practice Mode for scales: Theory (a Scale Speller) + Ear Training
@@ -20,15 +21,15 @@ const BASIC: ScaleId[] = ['major', 'natural_minor'];
 const ADVANCED: ScaleId[] = ['major', 'natural_minor', 'major_pentatonic', 'minor_pentatonic'];
 
 type Mode = 'theory' | 'ear';
-type Diff = 'basic' | 'advanced';
+type Diff = 'basic' | 'advanced' | 'song';
 const rnd = (n: number) => Math.floor(Math.random() * n);
 
 interface Challenge { scale: ScaleId; root: string; notes: string[]; midis: number[] }
 
-function makeChallenge(pool: ScaleId[]): Challenge {
+function makeChallenge(pool: ScaleId[], fixedRoot?: string): Challenge {
   for (let i = 0; i < 60; i++) {
     const scale = pool[rnd(pool.length)];
-    const roots = validRoots(scale);
+    const roots = fixedRoot && validRoots(scale).includes(fixedRoot) ? [fixedRoot] : validRoots(scale);
     if (!roots.length) continue;
     const root = roots[rnd(roots.length)];
     const notes = spellScale(root, scale);
@@ -36,6 +37,12 @@ function makeChallenge(pool: ScaleId[]): Challenge {
     return { scale, root, notes, midis: scaleMidiRun(scale, 48 + pcOf(root)) };
   }
   return { scale: 'major', root: 'C', notes: spellScale('C', 'major')!, midis: scaleMidiRun('major', 48) };
+}
+
+const songPool = (mode: 'major' | 'minor'): ScaleId[] =>
+  mode === 'minor' ? ['natural_minor', 'minor_pentatonic'] : ['major', 'major_pentatonic'];
+function challengeFor(d: Diff, songRoot: string | undefined, songMode: 'major' | 'minor'): Challenge {
+  return d === 'song' && songRoot ? makeChallenge(songPool(songMode), songRoot) : makeChallenge(d === 'advanced' ? ADVANCED : BASIC);
 }
 
 const STORE = 'scaleup_scale_practice_v2';
@@ -53,6 +60,11 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const [diff, setDiff] = useState<Diff>('basic');
   const scaleName = (s: ScaleId) => SCALE_DATA[s][lang].name;
 
+  // "My song": drill the scales of the song's key.
+  const songKey = useOptionalSong()?.key ?? null;
+  const songMode = songKey?.mode ?? 'major';
+  const songRoot = songKey ? NOTE_BANK.find(n => pcOf(n) === songKey.tonicPc && validRoots(songPool(songMode)[0]).includes(n)) : undefined;
+
   const [streak, setStreak] = useState(0);
   const answerArea = useRef<HTMLDivElement>(null);   // shakes on a wrong answer
   const [best, setBest] = useState<number>(loadBest);
@@ -69,9 +81,9 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   useEffect(() => () => { if (errTimer.current) clearTimeout(errTimer.current); }, []);
 
   const startSpell = useCallback((d: Diff = diff) => {
-    setCh(makeChallenge(d === 'advanced' ? ADVANCED : BASIC));
+    setCh(challengeFor(d, songRoot, songMode));
     setFilled(1); setPhase('spell'); setWrongs(0); setErrBtn(null); setHint(null);
-  }, [diff]);
+  }, [diff, songRoot, songMode]);
 
   const pick = useCallback((name: string) => {
     if (!ch || phase !== 'spell') return;
@@ -102,7 +114,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const playRun = (c: Challenge) => playScale(c.midis);
   const startEar = useCallback((d: Diff = diff) => {
     const p = d === 'advanced' ? ADVANCED : BASIC;
-    const correct = makeChallenge(p);
+    const correct = challengeFor(d, songRoot, songMode);
     const seen = new Set([optKey(correct)]);
     const opts = [correct];
     for (let g = 0; opts.length < 4 && g < 300; g++) {
@@ -112,7 +124,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     for (let i = opts.length - 1; i > 0; i--) { const j = rnd(i + 1); [opts[i], opts[j]] = [opts[j], opts[i]]; }
     setEarCh(correct); setEarOpts(opts); setWrongPicks(new Set()); setRevealed(false);
     setTimeout(() => playRun(correct), 160);
-  }, [diff]);
+  }, [diff, songRoot, songMode]);
   const guess = (opt: Challenge) => {
     if (!earCh || revealed) return;
     if (opt.root === earCh.root && opt.scale === earCh.scale) {
@@ -155,8 +167,8 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
         ))}
       </div>
       <div style={{ display: 'flex', border: `1px solid ${T.border}`, marginBottom: 16 }}>
-        {(['basic', 'advanced'] as Diff[]).map((d, i) => (
-          <button key={d} onClick={() => onDiff(d)} style={{ ...seg(diff === d), borderLeft: i > 0 ? `1px solid ${T.border}` : 'none' }}>{d === 'basic' ? t.basic : t.advanced}</button>
+        {((songRoot ? ['basic', 'advanced', 'song'] : ['basic', 'advanced']) as Diff[]).map((d, i) => (
+          <button key={d} onClick={() => onDiff(d)} style={{ ...seg(diff === d), borderLeft: i > 0 ? `1px solid ${T.border}` : 'none' }}>{d === 'basic' ? t.basic : d === 'advanced' ? t.advanced : (lang === 'he' ? 'השיר שלי' : 'My song')}</button>
         ))}
       </div>
 

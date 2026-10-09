@@ -7,6 +7,7 @@ import { fretToNote, STRING_COUNT, STANDARD_OPEN_MIDI } from '../../utils/musicT
 import { playScale } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 import { previewNote, previewMidi, previewRun } from '../../utils/previewSound';
+import { useOptionalSong } from '../../song/SongContext';
 import { DiceButton } from '../DiceButton';
 import { pickOne } from '../../utils/random';
 
@@ -74,6 +75,19 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   const [root, setRoot]             = useState<Note>('C');
   const [scaleType, setScaleType]   = useState<string | null>('major');
   const [scaleMenuOpen, setScaleMenuOpen] = useState(false);
+
+  // Opens on the song's key (its major or natural-minor scale) and follows it
+  // when the song's key changes; any other choice here stands until then.
+  const songKey = useOptionalSong()?.key ?? null;
+  const songKeyId = songKey ? `${songKey.tonicPc}:${songKey.mode}` : '';
+  const [seenKey, setSeenKey] = useState('');
+  if (songKeyId !== seenKey) {
+    setSeenKey(songKeyId);
+    if (songKey) {
+      setRoot(ALL_NOTES[songKey.tonicPc] as Note);
+      setScaleType(songKey.mode === 'major' ? 'major' : 'minor');
+    }
+  }
   const [pos, setPos]               = useState<number | null>(null);
   const [viewMode, setViewMode]     = useState<'fretboard' | 'tab'>('fretboard');
 

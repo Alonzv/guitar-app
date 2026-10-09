@@ -32,6 +32,8 @@ export interface Song {
   activeSection: string;
   /** The tune: written in Tab Builder, sung into Audio→Tab, harmonised in Harmonize. */
   melody: TabContent | null;
+  /** Which tool last wrote the melody — so a tool doesn't reload its own edits. */
+  melodyFrom?: string;
   updatedAt: number;
 }
 

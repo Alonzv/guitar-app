@@ -131,15 +131,20 @@ export function SongDock({ compact, onOpenMap }: { compact?: boolean; onOpenMap?
           </span>
         ) : progression.map(item => {
           const now = sounding.shape(shapeKey(item.fretPositions));
+          const picked = song.selectedChord?.id === item.id;
           return (
+            // Tapping a chord plays it and makes it the chord that one-chord
+            // tools (Triads, Intervals in a Chord) open on.
             <button key={item.id} data-gc-dock-item className="gc-notation"
-              onClick={() => playChord(item.fretPositions, tuning.openFreqs, capo)}
-              title={he ? 'נגן' : 'Play'}
+              onClick={() => { playChord(item.fretPositions, tuning.openFreqs, capo); song.selectChord(picked ? null : item.id); }}
+              title={he ? 'נגן ובחר' : 'Play and select'}
+              aria-pressed={picked}
               style={{
                 flexShrink: 0, height: 26, padding: '0 9px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
                 borderTop: `1px solid ${now ? T.primary : T.border}`, borderRight: `1px solid ${now ? T.primary : T.border}`,
                 borderBottom: `1px solid ${now ? T.primary : T.border}`, borderLeft: '3px solid var(--gc-bar-color)',
                 background: now ? T.primary : T.bgInput, color: now ? T.white : T.text,
+                boxShadow: picked ? `inset 0 -3px 0 0 ${T.text}` : undefined,
               }}>
               {formatChordName(item.chord.name)}
             </button>

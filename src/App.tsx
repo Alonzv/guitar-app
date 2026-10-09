@@ -409,8 +409,8 @@ export default function App() {
                     tuning={tuning} onTuningChange={setTuning} capo={capo}
                   />
                 )}
-                {chordsSegment === 'target' && <TargetNoteTab desktop tuning={tuning} capo={capo} />}
-                {chordsSegment === 'extensions' && <DiatonicExtensions desktop />}
+                {chordsSegment === 'target' && <TargetNoteTab desktop tuning={tuning} capo={capo} onAddToProgression={handleAddToProgression} />}
+                {chordsSegment === 'extensions' && <DiatonicExtensions desktop onAddToProgression={handleAddToProgression} />}
                 {chordsSegment === 'practice' && <ChordsPracticeTab desktop />}
               </ErrorBoundary>
             </div>
@@ -462,7 +462,7 @@ export default function App() {
                 {/* Tuner and metronome are narrow instruments; they read better
                     centred in a single column than stretched across the shell. */}
                 {toolsSegment === 'tuner' && (
-                  <div style={{ maxWidth: 420, margin: '24px auto 24px', width: '100%' }}><Tuner /></div>
+                  <div style={{ maxWidth: 420, margin: '24px auto 24px', width: '100%' }}><Tuner tuning={tuning} /></div>
                 )}
                 {toolsSegment === 'metronome' && (
                   <div style={{ maxWidth: 420, margin: '24px auto 24px', width: '100%' }}><Metronome /></div>
@@ -538,8 +538,8 @@ export default function App() {
                 tuning={tuning} onTuningChange={setTuning} capo={capo}
               />
             )}
-            {chordsSegment === 'target' && <TargetNoteTab tuning={tuning} capo={capo} />}
-            {chordsSegment === 'extensions' && <DiatonicExtensions />}
+            {chordsSegment === 'target' && <TargetNoteTab tuning={tuning} capo={capo} onAddToProgression={handleAddToProgression} />}
+            {chordsSegment === 'extensions' && <DiatonicExtensions onAddToProgression={handleAddToProgression} />}
             {chordsSegment === 'practice' && <ChordsPracticeTab />}
           </ErrorBoundary>
         </div>
@@ -581,7 +581,7 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Segment items={TOOLS_SEGS} active={toolsSegment} onChange={handleToolsSegChange} helpPrefix="tools" />
           <ErrorBoundary label="Tools">
-            {toolsSegment === 'tuner'      && <Tuner />}
+            {toolsSegment === 'tuner'      && <Tuner tuning={tuning} />}
             {toolsSegment === 'metronome'  && <Metronome />}
             {toolsSegment === 'tabbuilder' && <TabBuilder />}
             {toolsSegment === 'audiotab'   && <AudioToTab />}

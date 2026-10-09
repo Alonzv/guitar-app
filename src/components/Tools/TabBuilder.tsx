@@ -18,6 +18,9 @@ import {
   STR_ROWS, BASE_CW, BASE_CH, BASE_FS,
   type Tech, type TabCell,
 } from '../Tabs/tabEditing';
+import { useOptionalSong } from '../../song/SongContext';
+import { useFlash } from '../../motion/useFlash';
+import { RollLabel } from '../RollLabel';
 
 type Lang = 'he' | 'en';
 type ErrKey = 'empty' | 'ai' | 'gen';
@@ -106,6 +109,13 @@ function tabHasContent(tab: TabState) {
 }
 
 export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
+  const song = useOptionalSong();
+  const [sent, flashSent] = useFlash();
+  const songBtn = (disabled: boolean): React.CSSProperties => ({
+    padding: '6px 12px', borderRadius: 0, fontSize: 11, cursor: disabled ? 'default' : 'pointer',
+    background: T.bgInput, color: disabled ? T.textDim : T.text, border: `1px solid ${T.border}`,
+    borderLeft: '3px solid var(--gc-bar-color)', opacity: disabled ? 0.6 : 1,
+  });
   const [tab, setTab] = useState<TabState>(() => {
     // A pending "Open in Builder" handoff wins over the autosaved draft.
     const pending = consumePendingTab();
@@ -702,6 +712,32 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* The song's melody: send this tab to it (Harmonize and the rest pick it
+          up), or pull in a melody another tool wrote. */}
+      {song && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+          <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Song melody</span>
+          <button onClick={() => {
+            song.update({ melody: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars }, melodyFrom: 'tabbuilder' });
+            flashSent();
+          }} disabled={!tabHasContent(tab)} style={songBtn(!tabHasContent(tab))}>
+            <RollLabel>{sent ? '✓ Sent to song' : 'Use this tab'}</RollLabel>
+          </button>
+          {song.song.melody && song.song.melodyFrom !== 'tabbuilder' && (
+            <button onClick={() => {
+              const m = song.song.melody!;
+              const cols = Math.max(colsPerLine * 3, Math.ceil((m.grid[0]?.length ?? 0) / colsPerLine) * colsPerLine);
+              withHistory(p => {
+                const grid = emptyGrid(cols);
+                m.grid.forEach((row, r) => row.forEach((cell, c) => { if (grid[r]?.[c]) grid[r][c] = { fret: cell.fret ?? '', tech: cell.tech as Tech | undefined }; }));
+                return { ...p, grid, bars: m.bars ?? [] };
+              });
+              setSel(null);
+            }} style={songBtn(false)}>Load the song's melody</button>
+          )}
         </div>
       )}
 

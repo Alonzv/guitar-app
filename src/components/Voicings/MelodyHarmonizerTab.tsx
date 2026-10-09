@@ -162,7 +162,17 @@ function loadSavedPrefs(): SavedPrefs {
 
 export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const { lang } = useLang();
-  const [melody, setMelody] = useState<MelodyState>(loadSavedMelody);
+  // The melody is the song's: it opens on the song's melody (if another tool
+  // wrote one) and every edit here is written back for the other tools.
+  const song = useOptionalSong();
+  const songMelody = song?.song.melody ?? null;
+  const fromElsewhere = !!songMelody && song?.song.melodyFrom !== 'harmonizer';
+  const [melody, setMelody] = useState<MelodyState>(() => (fromElsewhere ? fromTabContent(songMelody!) : loadSavedMelody()));
+  const [seenMelody, setSeenMelody] = useState(songMelody);
+  if (songMelody !== seenMelody) {
+    setSeenMelody(songMelody);
+    if (fromElsewhere) setMelody(fromTabContent(songMelody!));
+  }
   const [sel, setSel]           = useState<[number, number] | null>(null);
   const [hov, setHov]           = useState<[number, number] | null>(null);
   const [canUndo, setCanUndo]   = useState(false);
@@ -231,7 +241,13 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   // Autosave — melody on every edit, prefs on change.
   useEffect(() => {
     try { localStorage.setItem(LS_MELODY, JSON.stringify(melody)); } catch { /* quota — ignore */ }
-  }, [melody]);
+    // …and into the song, for Tab Builder and the rest.
+    if (!song || (!gridHasNotes(melody.grid) && !song.song.melody)) return;
+    song.update({
+      melody: { title: '', subtitle: '', grid: melody.grid.map(r => r.map(c => ({ fret: c.fret, tech: c.tech }))), bars: melody.bars },
+      melodyFrom: 'harmonizer',
+    });
+  }, [melody]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     try { localStorage.setItem(LS_PREFS, JSON.stringify({ scaleRoot, scaleType, styles, bpm })); } catch { /* ignore */ }
   }, [scaleRoot, scaleType, styles, bpm]);

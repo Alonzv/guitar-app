@@ -6,6 +6,7 @@ import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { previewVoicing, previewChordName } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
+import type { ChordInProgression } from '../../types/music';
 import { keyName } from '../../utils/harmonicAnalysis';
 
 // ── Diatonic Extensions ──────────────────────────────────────────────────────
@@ -99,7 +100,11 @@ const LBL: React.CSSProperties = {
   letterSpacing: '0.14em', textTransform: 'uppercase',
 };
 
-export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
+export function DiatonicExtensions({ desktop, onAddToProgression }: {
+  desktop?: boolean;
+  /** Adds a chord (in the shape tapped in its popover) to the song. */
+  onAddToProgression?: (item: ChordInProgression) => void;
+} = {}) {
   const { lang, rtl } = useLang();
   const [mode, setMode] = useState<'major' | 'minor'>('major');
   const [key, setKey] = useState('C');
@@ -117,7 +122,9 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
 
   // ── Chord-shape popover ────────────────────────────────────────────────────
   // Hovering (or tapping, for touch) a chord name floats its shapes on the neck.
-  const [peek, setPeek] = useState<{ name: string; x: number; y: number } | null>(null);
+  // A hover shows the popover; a tap pins it, and a pinned popover's shapes
+  // can be tapped to add that chord to the song.
+  const [peek, setPeek] = useState<{ name: string; x: number; y: number; pinned?: boolean } | null>(null);
   const shapeCount = desktop ? 3 : 2;
   const shapes = useMemo(
     () => (peek ? findChordVoicings(peek.name, shapeCount) : []),
@@ -130,22 +137,32 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
     return () => window.removeEventListener('scroll', close, true);
   }, [peek]);
 
-  const peekAt = (name: string, el: HTMLElement) => {
+  const peekAt = (name: string, el: HTMLElement, pinned = false) => {
     const r = el.getBoundingClientRect();
-    setPeek({ name, x: r.left + r.width / 2, y: r.bottom });
+    setPeek({ name, x: r.left + r.width / 2, y: r.bottom, pinned });
   };
+  // A pinned popover closes on a tap anywhere else.
+  useEffect(() => {
+    if (!peek?.pinned) return;
+    const close = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('[data-shape-popover], [data-peek-name]')) setPeek(null);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [peek?.pinned]);
   const peekProps = (name: string) => ({
-    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => peekAt(name, e.currentTarget),
-    onMouseLeave: () => setPeek(null),
+    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { if (!peek?.pinned) peekAt(name, e.currentTarget); },
+    onMouseLeave: () => setPeek(p => (p?.pinned ? p : null)),
     // Touch has no hover — tapping toggles the same popover.
     onClick: (e: React.MouseEvent<HTMLElement>) => {
       // A tap always sounds the chord, whether it opens or closes the popover.
       const shape = findChordVoicings(name, 1)[0];
       if (shape) previewVoicing(shape); else previewChordName(name);
-      if (peek?.name === name) { setPeek(null); return; }
-      peekAt(name, e.currentTarget);
+      if (peek?.name === name && peek.pinned) { setPeek(null); return; }
+      peekAt(name, e.currentTarget, true);
     },
     style: { cursor: 'pointer' } as React.CSSProperties,
+    'data-peek-name': name,
   });
 
   // Opens on the song's key, and follows it when the song's key changes.
@@ -309,7 +326,12 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
       )}
 
 
-      {peek && <ShapePopover name={peek.name} x={peek.x} y={peek.y} shapes={shapes} title={t.shapes} empty={t.noShapes} />}
+      {peek && <ShapePopover name={peek.name} x={peek.x} y={peek.y} shapes={shapes} title={t.shapes} empty={t.noShapes}
+        onPick={peek.pinned && onAddToProgression ? (v => {
+          onAddToProgression({ id: `chord-${Date.now()}`, chord: { name: peek.name, notes: [], aliases: [] }, fretPositions: v });
+          setPeek(null);
+        }) : undefined}
+        pickHint={lang === 'he' ? 'הקישו על צורה כדי להוסיף לשיר' : 'Tap a shape to add it to the song'} />}
     </div>
   );
 }
@@ -317,8 +339,9 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
 // Floating chord-shape panel. Sized so each diagram is properly readable —
 // wide enough to see the dots, not blown up out of proportion — and clamped so
 // it never runs off the edge of the viewport.
-function ShapePopover({ name, x, y, shapes, title, empty }: {
+function ShapePopover({ name, x, y, shapes, title, empty, onPick, pickHint }: {
   name: string; x: number; y: number; shapes: { string: number; fret: number }[][]; title: string; empty: string;
+  onPick?: (shape: { string: number; fret: number }[]) => void; pickHint?: string;
 }) {
   const DIAGRAM = 168;                       // per-shape width — clear, not miniature
   const cols = Math.max(shapes.length, 1);
@@ -330,11 +353,11 @@ function ShapePopover({ name, x, y, shapes, title, empty }: {
   const top = flipUp ? Math.max(8, y - estH - 28) : y + 8;
 
   return (
-    <div dir="ltr" style={{
+    <div dir="ltr" data-shape-popover className="gc-drop-in" style={{
       position: 'fixed', left, top, width, zIndex: 1000,
       background: T.bgCard, border: `1px solid ${T.border}`,
       borderLeft: '4px solid var(--gc-bar-color)', padding: PAD,
-      boxShadow: 'var(--gc-offset)', pointerEvents: 'none',
+      boxShadow: 'var(--gc-offset)', pointerEvents: onPick ? 'auto' : 'none',
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
         <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>{name}</span>
@@ -345,11 +368,15 @@ function ShapePopover({ name, x, y, shapes, title, empty }: {
       ) : (
         <div style={{ display: 'flex', gap: 10 }}>
           {shapes.map((v, i) => (
-            <div key={i} style={{ width: DIAGRAM, flexShrink: 0 }}>
+            <div key={i} onClick={onPick ? () => onPick(v) : undefined} className={onPick ? 'gc-pressable' : undefined}
+              style={{ width: DIAGRAM, flexShrink: 0, cursor: onPick ? 'pointer' : 'default' }}>
               <MiniFretboard voicing={v} showStringLabels showFretNumbers />
             </div>
           ))}
         </div>
+      )}
+      {onPick && shapes.length > 0 && pickHint && (
+        <p style={{ margin: '8px 0 0', fontSize: 11, color: T.textMuted }}>{pickHint}</p>
       )}
     </div>
   );

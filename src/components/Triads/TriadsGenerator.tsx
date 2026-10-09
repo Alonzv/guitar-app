@@ -7,6 +7,7 @@ import { T, card, alpha } from '../../theme';
 import { TwoPane } from '../desktop/TwoPane';
 import type { Note, ChordInProgression } from '../../types/music';
 import { previewVoicing, previewRun, pcToMidi } from '../../utils/previewSound';
+import { useOptionalSong } from '../../song/SongContext';
 import { DiceButton } from '../DiceButton';
 import { pickOne } from '../../utils/random';
 
@@ -190,6 +191,24 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
     setRoot(ALL_NOTES[chroma] as Note);
     setTriadType(type);
   };
+  // Opens on the chord tapped in the song dock (or the song key's tonic triad)
+  // and follows it; picking something here stands until that changes.
+  const song = useOptionalSong();
+  const follow = song?.selectedChord?.chord.name
+    ?? (song?.key ? `${['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'][song.key.tonicPc]}${song.key.mode === 'minor' ? 'm' : ''}` : '');
+  const [seenFollow, setSeenFollow] = useState('');
+  if (follow !== seenFollow) {
+    setSeenFollow(follow);
+    if (follow) {
+      const info = TonalChord.get(follow);
+      const chroma = info.tonic ? TonalNote.chroma(info.tonic) : null;
+      if (chroma != null) {
+        setRoot(ALL_NOTES[chroma] as Note);
+        setTriadType(info.quality === 'Minor' ? 'minor' : info.quality === 'Diminished' ? 'diminished' : info.quality === 'Augmented' ? 'augmented' : 'major');
+      }
+    }
+  }
+
   // Multi-select filters — an empty Set means "All" (no restriction).
   const [selectedSets,       setSelectedSets]       = useState<Set<number>>(new Set());
   const [displayMode,        setDisplayMode]        = useState<DisplayMode>('notes');
