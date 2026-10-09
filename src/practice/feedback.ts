@@ -19,7 +19,7 @@ export function answeredWrong(area?: Element | null): void {
 }
 
 /** Two quick rising notes — a perfect fifth, bright and short. */
-function chime(): void {
+export function chime(): void {
   unlockAudio().then(() => {
     const ctx = getSharedContext();
     const t0 = ctx.currentTime + 0.02;

@@ -6,10 +6,13 @@ import { IconMic } from '../Icons';
 import { getSharedContext, unlockAudio, setMicSession, clearMicSession } from '../../utils/audioPlayback';
 import { previewFret } from '../../utils/previewSound';
 import { detectPitch } from '../../utils/pitch';
+import { chime } from '../../practice/feedback';
 
 const noteName = (s: string) => s.replace(/\d/g, '');
 
 interface Props { tuning?: Tuning }
+
+const LOCK_MS = 700;
 
 function findClosest(freq: number, strings: { name: string; freq: number }[]) {
   let best = strings[0];
@@ -52,6 +55,11 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const streamRef    = useRef<MediaStream | null>(null);
   const rafRef       = useRef<number | null>(null);
   const freqBufRef   = useRef<number[]>([]);
+  // Strings that have been brought in tune this session — a string locks once
+  // it has held within ±5¢ for LOCK_MS; all six earn the TUNED stamp.
+  const [tuned, setTuned] = useState<Set<number>>(new Set());
+  const tunedRef = useRef(tuned);
+  const lockRef  = useRef<{ idx: number; since: number }>({ idx: -1, since: 0 });
   const lastValidRef = useRef<number>(0);
   const frameRef     = useRef(0);
 
@@ -89,6 +97,17 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
             hz:    Math.round(mean * 10) / 10,
             cents: Math.round(cents),
           });
+          const idx = stringsRef.current.indexOf(string);
+          const now = Date.now();
+          if (Math.abs(cents) <= 5) {
+            if (lockRef.current.idx !== idx) lockRef.current = { idx, since: now };
+            else if (now - lockRef.current.since > LOCK_MS && !tunedRef.current.has(idx)) {
+              const next = new Set(tunedRef.current).add(idx);
+              tunedRef.current = next;
+              setTuned(next);
+              chime();
+            }
+          } else lockRef.current = { idx: -1, since: 0 };
         }
       }
     } else {
@@ -176,6 +195,11 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
     ? Math.min(100, Math.max(0, 50 + (cents / 50) * 50))
     : 50;
 
+  // The lowest string not yet in tune — the one to play next.
+  const nextString = [0, 1, 2, 3, 4, 5].find(i => !tuned.has(i)) ?? -1;
+  // Four logo bars that fill as the note closes in on pitch.
+  const meterBars = !display ? 0 : absCents <= 5 ? 4 : absCents <= 12 ? 3 : absCents <= 25 ? 2 : 1;
+
   // Detect which string is currently active (note match)
   const activeStringIdx = display
     ? tuning.notes.findIndex(n => n.replace(/\d/g, '') === display.note)
@@ -227,7 +251,13 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 4, letterSpacing: '0.06em', fontFamily: 'var(--gc-mono)' }}>
           <span>♭</span>
-          <span style={{ color: tuneColor, fontWeight: 600 }}>
+          <span style={{ color: tuneColor, fontWeight: 600, display: 'inline-flex', alignItems: 'flex-end', gap: 8 }}>
+            <svg width="20" height="16" viewBox="0 0 20 16" aria-hidden>
+              {[0, 1, 2, 3].map(i => (
+                <rect key={i} x={i * 5} y={16 - (5 + i * 3.5)} width="3.5" height={5 + i * 3.5}
+                  fill={i < meterBars ? T.text : T.border} style={{ transition: 'fill var(--gc-dur-fast) var(--gc-ease-out)' }} />
+              ))}
+            </svg>
             {!display ? '' : absCents <= 5 ? 'IN TUNE' : cents > 0 ? `+${cents}¢` : `${cents}¢`}
           </span>
           <span>♯</span>
@@ -240,18 +270,21 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
           {STRING_LABELS.map((label, i) => {
             const active = activeStringIdx === i;
+            const locked = tuned.has(i);
+            const next = listening && !locked && i === nextString;
             return (
               // Tapping a string plays its reference pitch to tune against by ear.
               <button key={label} className="gc-notation" onClick={() => previewFret({ string: i, fret: 0 }, tuning.openFreqs)} title={`Hear ${label}`} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 height: 40, cursor: 'pointer',
-                background: active ? (absCents <= 5 ? T.secondary : T.primary) : T.bgInput,
-                border: `1.5px solid ${active ? (absCents <= 5 ? T.secondary : T.primary) : T.border}`,
-                color: active ? '#fff' : T.textMuted,
-                fontFamily: 'var(--gc-mono)', fontSize: 13, fontWeight: active ? 700 : 400,
-                userSelect: 'none',
+                background: active ? (absCents <= 5 ? T.secondary : T.primary) : locked ? T.text : T.bgInput,
+                border: `1.5px solid ${active ? (absCents <= 5 ? T.secondary : T.primary) : next ? T.text : T.border}`,
+                color: active || locked ? T.bgDeep : T.textMuted,
+                fontFamily: 'var(--gc-mono)', fontSize: 13, fontWeight: active || locked ? 700 : 400,
+                userSelect: 'none', position: 'relative',
               }}>
-                {label}
+                <span key={locked ? 'l' : 'u'} className={locked ? 'gc-pop' : undefined}>{locked ? `${label} ✓` : label}</span>
+                {next && <span style={{ position: 'absolute', bottom: -9, left: '50%', transform: 'translateX(-50%)', fontSize: 9, color: T.text }}>▲</span>}
               </button>
             );
           })}
@@ -260,11 +293,19 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
         {/* Hint — the surrounding UI is English, so this stays English too;
             it used to be a stray hard-coded Hebrew line (and misspelt מיתר). */}
         <div style={{
-          marginTop: 12, textAlign: 'center',
+          marginTop: 14, textAlign: 'center',
           fontFamily: 'var(--gc-mono)', fontSize: 11, color: T.textDim,
-          letterSpacing: '0.05em',
+          letterSpacing: '0.05em', position: 'relative',
         }}>
-          Play the open string to tune it
+          {tuned.size === 6
+            ? <button onClick={() => { tunedRef.current = new Set(); setTuned(new Set()); }} style={{ fontSize: 11, padding: '4px 10px', cursor: 'pointer', background: 'transparent', border: `1px solid ${T.border}`, color: T.text }}>Tune again</button>
+            : listening && nextString >= 0 ? `Next: play the open ${STRING_LABELS[nextString]} string` : 'Play the open string to tune it'}
+          {tuned.size === 6 && (
+            <div className="gc-stamp" style={{
+              position: 'absolute', left: '50%', top: -64, padding: '6px 16px', border: `3px solid ${T.text}`,
+              background: T.bgCard, color: T.text, fontWeight: 800, fontSize: 20, letterSpacing: '0.1em', whiteSpace: 'nowrap',
+            }}>TUNED</div>
+          )}
         </div>
       </div>
 
