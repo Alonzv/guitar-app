@@ -428,13 +428,13 @@ const ScaleStrip: React.FC<{
 const Pill: React.FC<{
   label: string; active: boolean; onClick: () => void; color?: string;
 }> = ({ label, active, onClick, color }) => (
-  <button onClick={onClick} style={{
+  <button data-active={!!active} onClick={onClick} style={{
     padding: '4px 10px', borderRadius: 0,
     border: active ? 'none' : `1px solid ${T.border}`,
     cursor: 'pointer', fontSize: 11, fontWeight: active ? 500 : 400,
     background: active ? (color ?? T.secondary) : T.bgInput,
     color: active ? T.white : T.textMuted,
-    transition: 'all 0.12s', flexShrink: 0,
+    flexShrink: 0,
     borderLeft: '3px solid var(--gc-bar-color)',
   }}>
     {label}

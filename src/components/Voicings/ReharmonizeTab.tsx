@@ -346,14 +346,14 @@ export function ReharmonizeTab({
           <div style={{ ...card({ padding: '12px 14px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <p style={LABEL_STYLE}>Progression{chords.length > 0 ? ` (${chords.length}/8)` : ''}</p>
-              <button
+              <button data-active={!!showNashville}
                 onClick={() => setShowNashville(v => !v)}
                 style={{
                   padding: '3px 10px', borderRadius: 0, border: 'none',
                   cursor: 'pointer', fontSize: 11, fontWeight: 600,
                   background: showNashville ? T.secondary : T.bgInput,
                   color: showNashville ? '#fff' : T.textMuted,
-                  transition: 'background 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
+                  borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >
                 Nashville
@@ -388,7 +388,7 @@ export function ReharmonizeTab({
               <p style={LABEL_STYLE}>Genre</p>
               <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
                 {GENRES.map(g => (
-                  <button
+                  <button data-active={genre === g.id}
                     key={g.id}
                     onClick={() => setGenre(g.id)}
                     style={{
@@ -398,7 +398,6 @@ export function ReharmonizeTab({
                       fontWeight: genre === g.id ? 600 : 400,
                       background: genre === g.id ? T.secondary : T.bgInput,
                       color: genre === g.id ? '#fff' : T.textMuted,
-                      transition: 'background 0.15s',
                       whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                     }}
                   >
@@ -442,12 +441,11 @@ export function ReharmonizeTab({
                 <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
                 <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
                   {(['full', 'triads'] as VoicingMode[]).map(m => (
-                    <button key={m} onClick={() => setMode(m)} style={{
+                    <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
                       flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
                       fontSize: 12, fontWeight: 400,
                       background: mode === m ? T.secondary : T.bgInput,
                       color: mode === m ? '#fff' : T.textMuted,
-                      transition: 'background 0.15s',
                     }}>
                       {m === 'full' ? 'Full' : 'Triads'}
                     </button>
@@ -463,12 +461,11 @@ export function ReharmonizeTab({
                     { id: 'bass',   label: 'Low'  },
                     { id: 'treble', label: 'High' },
                   ] as { id: StringGroup; label: string }[]).map(sg => (
-                    <button key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
+                    <button data-active={stringGroup === sg.id} key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
                       flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
                       fontSize: 12, fontWeight: 400,
                       background: stringGroup === sg.id ? T.secondary : T.bgInput,
                       color: stringGroup === sg.id ? '#fff' : T.textMuted,
-                      transition: 'background 0.15s',
                     }}>
                       {sg.label}
                     </button>
@@ -489,7 +486,6 @@ export function ReharmonizeTab({
               fontWeight: 400, fontSize: 15,
               background: (chords.length === 0 || loading) ? T.border : T.secondary,
               color: (chords.length === 0 || loading) ? T.textDim : '#fff',
-              transition: 'background 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               borderLeft: '4px solid var(--gc-bar-color)',
             }}
@@ -538,7 +534,7 @@ export function ReharmonizeTab({
               <div className="gc-result-card" style={{ gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                   <p style={LABEL_STYLE}>Re-Harmonized</p>
-                  <button
+                  <button data-active={!!isPlaying}
                     onClick={handlePlay}
                     className="gc-btn-heavy"
                     style={{
@@ -547,7 +543,7 @@ export function ReharmonizeTab({
                       background: isPlaying ? T.coral : T.secondary,
                       color: '#fff',
                       border: 'none',
-                      transition: 'background 0.15s', borderLeft: `3px solid ${T.secondary}`,
+                      borderLeft: `3px solid ${T.secondary}`,
                     }}
                   >
                     {isPlaying ? 'STOP' : 'PLAY'}
@@ -610,7 +606,7 @@ export function ReharmonizeTab({
                       {reharmPaths.map((path, pi) => {
                         const active = pi === selectedPathIdx;
                         return (
-                          <button
+                          <button data-active={!!active}
                             key={path.id}
                             onClick={() => setSelectedPathIdx(pi)}
                             style={{
@@ -621,7 +617,7 @@ export function ReharmonizeTab({
                               background: active ? T.secondary : T.bgDeep,
                               color: active ? '#fff' : T.textMuted,
                               fontSize: 12, fontWeight: active ? 500 : 400,
-                              cursor: 'pointer', transition: 'all 0.15s',
+                              cursor: 'pointer', 
                               whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                             }}
                           >
@@ -717,7 +713,7 @@ export function ReharmonizeTab({
                     border: `1.5px solid ${T.secondary}`,
                     cursor: 'pointer', fontWeight: 400, fontSize: 14,
                     background: 'transparent', color: T.secondary,
-                    transition: 'background 0.15s', borderLeft: '4px solid var(--gc-bar-color)',
+                    borderLeft: '4px solid var(--gc-bar-color)',
                   }}
                 >
                   Export MIDI

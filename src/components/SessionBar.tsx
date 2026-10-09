@@ -37,7 +37,7 @@ export function SessionBar({ progression, tuning, capo = 0, keyLabel }: Props) {
   };
 
   return (
-    <div style={{
+    <div data-gc-dock style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '7px 0 8px', marginBottom: 14,
       borderBottom: `1px solid ${T.border}`,
@@ -58,8 +58,8 @@ export function SessionBar({ progression, tuning, capo = 0, keyLabel }: Props) {
         overflow: 'hidden', whiteSpace: 'nowrap',
       }}>
         {progression.map(item => (
-          <span key={item.id} style={{
-            fontSize: 12.5, fontWeight: 600, color: T.text, flexShrink: 0,
+          <span key={item.id} data-gc-dock-item style={{
+            display: 'inline-block', fontSize: 12.5, fontWeight: 600, color: T.text, flexShrink: 0,
           }}>{formatChordName(item.chord.name)}</span>
         ))}
       </div>

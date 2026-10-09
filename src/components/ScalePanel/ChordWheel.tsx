@@ -438,7 +438,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
-              <button key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!sel} key={n} onClick={() => setRoot(n)} style={{
                 padding: desktop ? '9px 2px' : '6px 2px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? (desktop ? 10 : 9) : (desktop ? 12 : 11), fontWeight: sel ? 700 : 400,
                 border: `1px solid ${sel ? T.primary : T.border}`,
@@ -461,7 +461,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
         ]).map(m => {
           const active = mode === m.id;
           return (
-            <button
+            <button data-active={!!active}
               key={m.id}
               type="button"
               aria-pressed={active}

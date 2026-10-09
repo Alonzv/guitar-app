@@ -352,14 +352,14 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
       {/* Start / Stop */}
       {error && <p style={{ color: T.coral, fontSize: 12, margin: 0 }}>{error}</p>}
-      <button
+      <button data-active={!!listening}
         onClick={listening ? stop : start}
         className="gc-btn-heavy"
         style={{
           width: '100%', padding: '16px 0', borderRadius: 0,
           background: listening ? T.coral : T.primary,
           color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
-          transition: 'background 0.2s', border: 'none',
+          border: 'none',
           borderLeft: '4px solid var(--gc-bar-color)',
           letterSpacing: '0.06em',
         }}

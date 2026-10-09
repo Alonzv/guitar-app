@@ -236,14 +236,14 @@ export const Metronome: React.FC = () => {
       </div>
 
       {/* START / STOP */}
-      <button
+      <button data-active={!!playing}
         onClick={handleStartStop}
         style={{
           width: '100%', padding: '18px 0',
           background: playing ? T.coral : T.primary,
           color: '#fff', fontWeight: 800, fontSize: 18, cursor: 'pointer',
           border: 'none', borderLeft: '4px solid var(--gc-bar-color)',
-          transition: 'background 0.2s', letterSpacing: '0.06em',
+          letterSpacing: '0.06em',
         }}
       >
         {playing ? 'STOP' : '► START'}
@@ -254,13 +254,12 @@ export const Metronome: React.FC = () => {
         {TIME_SIGS.map(ts => {
           const active = timeSig.label === ts.label;
           return (
-            <button key={ts.label} onClick={() => setTimeSig(ts)} style={{
+            <button data-active={!!active} key={ts.label} onClick={() => setTimeSig(ts)} style={{
               padding: '10px 4px', border: `1.5px solid ${active ? T.primary : T.border}`,
               background: active ? T.primary : T.bgInput,
               color: active ? '#fff' : T.textMuted,
               fontFamily: 'var(--gc-mono)', fontSize: 14, fontWeight: active ? 700 : 400,
               cursor: 'pointer', letterSpacing: '0.04em',
-              transition: 'all 0.15s',
             }}>
               {ts.label}
             </button>
@@ -276,7 +275,7 @@ export const Metronome: React.FC = () => {
             width: '100%', padding: '10px 0',
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.textMuted, fontWeight: 400, fontSize: 13, cursor: 'pointer',
-            transition: 'background 0.1s', borderLeft: '3px solid var(--gc-bar-color)',
+            borderLeft: '3px solid var(--gc-bar-color)',
           }}
         >
           Tap Tempo
@@ -288,7 +287,7 @@ export const Metronome: React.FC = () => {
             {SUBDIVISIONS.map(sub => {
               const active = subdivision.clicksPerBeat === sub.clicksPerBeat;
               return (
-                <button
+                <button data-active={!!active}
                   key={sub.label}
                   onClick={() => setSubdivision(sub)}
                   style={{
@@ -298,7 +297,6 @@ export const Metronome: React.FC = () => {
                     color: active ? T.primary : T.textMuted,
                     cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400,
                     fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em',
-                    transition: 'all 0.15s',
                   }}
                 >
                   {sub.label.toUpperCase()}

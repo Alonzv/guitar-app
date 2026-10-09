@@ -3,6 +3,7 @@ import { T } from '../theme';
 import { LangToggle } from './LangToggle';
 import { BrandMark } from './BrandMark';
 import { HelpButton } from './HelpButton';
+import { useSlider } from '../motion/useSlider';
 
 // ── Segment control ──────────────────────────────────────────────────────────
 
@@ -17,24 +18,27 @@ interface SegmentProps {
 }
 
 export function Segment({ items, active, onChange, helpPrefix }: SegmentProps) {
+  // One dark block slides between tabs; the buttons themselves stay clear.
+  const slider = useSlider(items.findIndex(it => it.id === active));
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, marginBottom: 18, flexShrink: 0 }}>
-      <div style={{ display: 'flex', border: `1px solid ${T.border}`, flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', border: `1px solid ${T.border}`, flex: 1, minWidth: 0, position: 'relative' }}>
+        <div className="gc-slide" style={{ ...slider.style, top: 0, bottom: 0, background: T.secondary }} />
         {items.map((it, i) => (
           <button
             key={it.id}
+            ref={slider.itemRef(i)}
             onClick={() => onChange(it.id)}
             style={{
-              flex: 1, textAlign: 'center',
+              flex: 1, textAlign: 'center', position: 'relative',
               padding: '10px 4px', minHeight: 44,
               fontFamily: 'var(--gc-font)',
               fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase',
               cursor: 'pointer', borderRadius: 0,
               borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
-              background: it.id === active ? T.secondary : 'transparent',
+              background: 'transparent',
               color: it.id === active ? '#fff' : T.textDim,
               fontWeight: it.id === active ? 500 : 400,
-              transition: 'background .12s ease, color .12s ease',
             }}
           >
             {it.label}
@@ -178,6 +182,7 @@ export function SwipePager({
         <span
           onClick={onLogoClick}
           role={onLogoClick ? 'button' : undefined}
+          className="gc-no-bar"
           tabIndex={onLogoClick ? 0 : undefined}
           aria-label={onLogoClick ? 'ScaleUp — go to Chords, By Name' : undefined}
           onKeyDown={onLogoClick ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLogoClick(); } }) : undefined}

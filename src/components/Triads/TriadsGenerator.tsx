@@ -155,7 +155,7 @@ function toggleInSet<T>(set: Set<T>, value: T): Set<T> {
 // ── Filter pill helper ────────────────────────────────────────────────────────
 function pill(active: boolean, onClick: () => void, label: string) {
   return (
-    <button key={label} onClick={onClick} style={{
+    <button data-active={!!active} key={label} onClick={onClick} style={{
       padding: '4px 10px', borderRadius: 0, cursor: 'pointer',
       fontSize: 11, fontWeight: active ? 500 : 400,
       background: active ? T.text : T.bgInput,
@@ -336,13 +336,13 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#'), sel = n === root;
             return (
-              <button key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!sel} key={n} onClick={() => setRoot(n)} style={{
                 padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 11 : 13, fontWeight: sel ? 500 : 400,
-                border:      sel ? `2px solid ${T.primary}` : `2px solid transparent`,
-                background:  sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
-                color:       sel ? T.primary   : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
+                background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
+                color: sel ? T.primary : sharp ? T.textMuted : T.text,
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>{n}</button>
             );
           })}
@@ -374,12 +374,12 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
               {(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => {
                 const sel = triadType === type;
                 return (
-                  <button key={type} onClick={() => { setTriadType(type); setTriadMenuOpen(false); }} style={{
+                  <button data-active={!!sel} key={type} onClick={() => { setTriadType(type); setTriadMenuOpen(false); }} style={{
                     padding: '9px 10px', borderRadius: 0, cursor: 'pointer', textAlign: 'left',
-                    border:      sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
-                    background:  sel ? T.secondaryBg : T.bgInput,
-                    color:       sel ? T.secondary   : T.textMuted,
-                    transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                    border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
+                    background: sel ? T.secondaryBg : T.bgInput,
+                    color: sel ? T.secondary : T.textMuted,
+                    borderLeft: '3px solid var(--gc-bar-color)',
                   }}>
                     <span style={{ fontSize: 13, fontWeight: 400 }}>{d.label}</span>
                     <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>

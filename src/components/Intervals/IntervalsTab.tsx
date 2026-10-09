@@ -4,7 +4,7 @@ import { IntervalPlayground } from './IntervalPlayground';
 import { IntervalInChord } from './IntervalInChord';
 import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
-import { HelpButton } from '../HelpButton';
+import { Segment } from '../SwipePager';
 
 type Sub = 'explore' | 'measure' | 'inchord' | 'practice';
 
@@ -61,28 +61,9 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
     try { localStorage.setItem(SUB_KEY, s); } catch { /* private mode */ }
   };
 
+  // Same bar as every other panel (it used to be the one hand-built exception).
   const tabBar = (
-    // This tab builds its own bar instead of using <Segment>, which is why it
-    // was the only tab with no help button — mirror Segment's trailing "?".
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
-      <div style={{ display: 'flex', gap: 0, flex: 1, minWidth: 0 }}>
-      {SUBS.map(({ id, label }) => (
-        <button key={id} onClick={() => pick(id)} className="gc-sub-tab" style={{
-          flex: 1, padding: '11px 3px', borderRadius: 0,
-          cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap',
-          background: sub === id ? T.secondary : T.bgInput,
-          color: sub === id ? '#fff' : T.textMuted,
-          borderLeft: '3px solid var(--gc-bar-color)',
-          transition: 'background 0.1s',
-        }}>
-          <span style={{ fontWeight: 400 }}>{label}</span>
-        </button>
-      ))}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-        <HelpButton topic={`intervals:${sub}`} />
-      </div>
-    </div>
+    <Segment items={SUBS} active={sub} onChange={id => pick(id as Sub)} helpPrefix="intervals" />
   );
 
   const tool =
@@ -92,7 +73,7 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
     <EarTrainingTab desktop={desktop} />;
 
   const mainContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div>
       {tabBar}
       {sub === 'practice'
         ? <div style={{ maxWidth: desktop ? 680 : undefined, margin: '0 auto', width: '100%' }}>{tool}</div>

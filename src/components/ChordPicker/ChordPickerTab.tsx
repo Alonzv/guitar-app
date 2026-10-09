@@ -8,6 +8,8 @@ import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
+import { RollLabel } from '../RollLabel';
+import { useFlash } from '../../motion/useFlash';
 
 interface Props {
   onAddToProgression: (item: ChordInProgression) => void;
@@ -130,11 +132,13 @@ export function ChordPickerTab({
   const handleExtensionSelect = (key: string) => { setSelectedExtension(key); setViewerIndex(null); };
 
   // Add a specific voicing (from the enlarged viewer) straight to the progression.
+  const [added, flashAdded] = useFlash();
   const addVoicing = (voicing: FretPosition[]) => {
     const found = identifyChord(voicing, tuning);
     const chord = found.length > 0 ? found[0] : { name: chordName ?? 'Unknown', notes: [], aliases: [] };
     onAddToProgression({ id: `chord-${Date.now()}`, chord, fretPositions: [...voicing] });
     setViewerIndex(null);
+    flashAdded();
   };
 
   const displayName = chordName ? formatChordName(chordName) : null;
@@ -163,7 +167,7 @@ export function ChordPickerTab({
           {ROOTS.map(root => {
             const active = selectedRoot === root;
             return (
-              <button
+              <button data-active={!!active}
                 key={root}
                 className="gc-notation"
                 onClick={() => handleRootSelect(root)}
@@ -173,7 +177,6 @@ export function ChordPickerTab({
                   fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? '#fff' : T.textMuted,
-                  transition: 'filter 0.15s, background 0.15s',
                   borderLeft: `3px solid ${active ? T.primary : 'var(--gc-bar-color)'}`,
                 }}
               >
@@ -191,7 +194,7 @@ export function ChordPickerTab({
           {TRIADS.map(t => {
             const active = selectedTriad === t.key;
             return (
-              <button
+              <button data-active={!!active}
                 key={t.key}
                 className="gc-pill gc-notation"
                 onClick={() => handleTriadSelect(t.key)}
@@ -201,7 +204,6 @@ export function ChordPickerTab({
                   fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? '#fff' : T.textMuted,
-                  transition: 'filter 0.15s, background 0.15s',
                   borderLeft: `3px solid ${active ? T.primary : 'var(--gc-bar-color)'}`,
                 }}
               >
@@ -220,7 +222,7 @@ export function ChordPickerTab({
             {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => {
               const active = selectedExtension === e.key;
               return (
-                <button
+                <button data-active={!!active}
                   key={e.key}
                   onClick={() => handleExtensionSelect(e.key)}
                   style={{
@@ -229,7 +231,6 @@ export function ChordPickerTab({
                     fontWeight: active ? 700 : 400,
                     background: active ? T.secondary : T.bgInput,
                     color: active ? '#fff' : T.textMuted,
-                    transition: 'background 0.15s',
                     border: `1px solid ${active ? T.secondary : T.border}`,
                     borderLeft: `3px solid ${active ? T.secondary : 'var(--gc-bar-color)'}`,
                     minHeight: 36,
@@ -282,7 +283,7 @@ export function ChordPickerTab({
           specific variation still lives in the enlarged viewer — tap one below. */}
       {chordName && voicings.length > 0 && (
         <button onClick={() => addVoicing(voicings[0])} style={{ ...btn.primary(), width: '100%' }}>
-          + Add to Progression
+          <RollLabel>{added ? '✓ Added' : '+ Add to Progression'}</RollLabel>
         </button>
       )}
     </div>

@@ -16,6 +16,8 @@ import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab'
 import { SessionBar } from './components/SessionBar';
 import { namesToProgression } from './utils/progressionBridge';
 import { subscribeNavigate } from './services/navigate';
+import { flyToDock } from './motion';
+import { formatChordName } from './utils/chordIdentifier';
 import { DiatonicExtensions } from './components/Chords/DiatonicExtensions';
 
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
@@ -200,6 +202,13 @@ export default function App() {
 
 
   // ── Progression handlers ───────────────────────────────────────────────────
+  // Every "add" path lands here, so the chord's flight from the button that was
+  // pressed into the session bar happens once for the whole app.
+  const handleAddToProgression = (item: ChordInProgression) => {
+    pushHistory([...progressionRef.current, item]);
+    flyToDock(formatChordName(item.chord.name));
+  };
+
   const handleReorderProgression = (id: string, dir: -1 | 1) => {
     const idx = progression.findIndex(c => c.id === id);
     if (idx === -1) return;
@@ -354,7 +363,7 @@ export default function App() {
                   <ChordBuilderTab
                     desktop
                     progression={progression}
-                    onAddToProgression={item => pushHistory([...progression, item])}
+                    onAddToProgression={handleAddToProgression}
                     onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
                     onClearProgression={() => pushHistory([])}
                     onReorderProgression={handleReorderProgression}
@@ -368,7 +377,7 @@ export default function App() {
                 {chordsSegment === 'finder' && (
                   <ChordPickerTab
                     desktop
-                    onAddToProgression={item => pushHistory([...progression, item])}
+                    onAddToProgression={handleAddToProgression}
                     progression={progression}
                     onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
                     onClearProgression={() => pushHistory([])}
@@ -392,7 +401,7 @@ export default function App() {
               <ErrorBoundary label="Scales">
                 {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
                 {scalesSegment === 'triads'    && <TriadsGenerator desktop globalProgression={progression} />}
-                {scalesSegment === 'wheel'     && <ChordWheel desktop onAddToProgression={item => pushHistory([...progression, item])} />}
+                {scalesSegment === 'wheel'     && <ChordWheel desktop onAddToProgression={handleAddToProgression} />}
                 {scalesSegment === 'practice'  && <ScalesPracticeTab desktop />}
               </ErrorBoundary>
             </div>
@@ -483,7 +492,7 @@ export default function App() {
             {chordsSegment === 'builder' && (
               <ChordBuilderTab
                 progression={progression}
-                onAddToProgression={item => pushHistory([...progression, item])}
+                onAddToProgression={handleAddToProgression}
                 onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
                 onClearProgression={() => pushHistory([])}
                 onReorderProgression={handleReorderProgression}
@@ -496,7 +505,7 @@ export default function App() {
             )}
             {chordsSegment === 'finder' && (
               <ChordPickerTab
-                onAddToProgression={item => pushHistory([...progression, item])}
+                onAddToProgression={handleAddToProgression}
                 progression={progression}
                 onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
                 onClearProgression={() => pushHistory([])}
@@ -518,7 +527,7 @@ export default function App() {
           <ErrorBoundary label="Scales">
             {scalesSegment === 'explorer'  && <ScaleExplorer />}
             {scalesSegment === 'triads'    && <TriadsGenerator globalProgression={progression} />}
-            {scalesSegment === 'wheel'     && <ChordWheel onAddToProgression={item => pushHistory([...progression, item])} />}
+            {scalesSegment === 'wheel'     && <ChordWheel onAddToProgression={handleAddToProgression} />}
             {scalesSegment === 'practice'  && <ScalesPracticeTab />}
           </ErrorBoundary>
         </div>

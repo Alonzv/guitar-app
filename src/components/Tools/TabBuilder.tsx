@@ -502,7 +502,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
               {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, key }, i, arr) => {
                 const isArmed = id === '|' ? !!(sel && barsSet.has(sel[1])) : selTech === id;
                 return (
-                  <button
+                  <button data-active={!!isArmed}
                     key={id}
                     onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
                     title={!sel ? 'Select a note first' : `${label} [${key}]`}
@@ -518,7 +518,6 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                       fontFamily: 'var(--gc-font)', fontSize: 12,
                       color: isArmed ? T.text : T.textMuted,
                       opacity: sel ? 1 : 0.6,
-                      transition: 'background 0.12s, color 0.12s',
                     }}
                   >
                     <span>{label}</span>
@@ -659,7 +658,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
             {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }, { id: 'x', label: 'Rest', sym: 'x', key: 'X' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, sym, key }, i, arr) => {
               const isArmed = id === '|' ? !!(sel && barsSet.has(sel[1])) : selTech === id;
               return (
-                <button
+                <button data-active={!!isArmed}
                   key={id}
                   onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
                   title={!sel ? 'Select a note first' : `${label} [${key}]`}
@@ -675,7 +674,6 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                     fontFamily: 'var(--gc-font)', fontSize: 12,
                     color: isArmed ? T.text : T.textMuted,
                     opacity: sel ? 1 : 0.6,
-                    transition: 'background 0.12s, color 0.12s',
                   }}
                 >
                   <span>{label}</span>

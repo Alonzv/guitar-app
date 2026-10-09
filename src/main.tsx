@@ -5,6 +5,10 @@ import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { unlockAudio } from './utils/audioPlayback'
+import { installMotion } from './motion'
+
+// Press, selection and enable feedback for every button in the app.
+installMotion()
 
 // Register a one-time native (non-React) listener so AudioContext is
 // unlocked on the very first touch — before React processes any event.

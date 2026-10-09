@@ -234,7 +234,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
           {presentDegs.map(d => {
             const active = selDeg === d;
             return (
-              <button key={d} onClick={() => pickDeg(d)} style={{
+              <button data-active={!!active} key={d} onClick={() => pickDeg(d)} style={{
                 padding: '5px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 border: active ? 'none' : `1px solid ${T.border}`, borderLeft: `3px solid ${active ? THREAD : 'var(--gc-bar-color)'}`,
                 background: active ? THREAD : T.bgInput, color: active ? '#fff' : T.textMuted,

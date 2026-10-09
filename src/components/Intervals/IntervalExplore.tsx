@@ -133,7 +133,7 @@ export function IntervalExplore() {
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
-              <button key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!sel} key={n} onClick={() => setRoot(n)} style={{
                 padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
                 border: `1px solid ${sel ? T.primary : T.border}`,
@@ -153,7 +153,7 @@ export function IntervalExplore() {
           {INTERVALS.map(iv => {
             const sel = iv.semitones === interval;
             return (
-              <button
+              <button data-active={!!sel}
                 key={iv.semitones}
                 className="gc-notation"
                 onClick={() => setInterval(sel ? null : iv.semitones)}
@@ -197,7 +197,7 @@ export function IntervalExplore() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${T.border}` }}>
                 {(['melodic', 'harmonic'] as const).map(m => (
-                  <button key={m} onClick={() => setMode(m)} style={{
+                  <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
                     padding: '5px 10px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
                     background: mode === m ? T.secondary : T.bgInput,
                     color: mode === m ? '#fff' : T.textMuted,
@@ -217,7 +217,7 @@ export function IntervalExplore() {
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 6 }}>
               <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
               {AREAS.map(a => (
-                <button key={a.id} onClick={() => setArea(a.id)} style={{
+                <button data-active={area === a.id} key={a.id} onClick={() => setArea(a.id)} style={{
                   padding: '2px 8px', borderRadius: 0, cursor: 'pointer',
                   fontSize: 9, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
                   background: area === a.id ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.1)',

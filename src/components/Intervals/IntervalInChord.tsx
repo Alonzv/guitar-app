@@ -227,7 +227,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
 
         <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
           {(['harmonic', 'melodic'] as Mode[]).map((m, i) => (
-            <button key={m} onClick={() => setMode(m)} style={{
+            <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
               padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
               fontWeight: mode === m ? 600 : 400, border: 'none',
               borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
@@ -237,7 +237,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
           ))}
         </div>
 
-        <button onClick={() => setWide(w => { setShape(0); return !w; })} className="gc-notation" style={{
+        <button data-active={!!wide} onClick={() => setWide(w => { setShape(0); return !w; })} className="gc-notation" style={{
           padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
           fontWeight: wide ? 600 : 400,
           border: wide ? 'none' : `1px solid ${T.border}`,

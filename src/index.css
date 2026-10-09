@@ -97,13 +97,130 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: -0.02em; text-transform: uppercase; transition: transform 0.08s ease; }
+button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: -0.02em; text-transform: uppercase; }
 
 /* Music notation is case-sensitive: m2 is a minor 2nd, M2 a major 2nd; Cm and
    CM are different chords. The blanket uppercase above erases that distinction,
    so anything showing a note, chord or interval name opts out. */
 .gc-notation, button.gc-notation { text-transform: none; }
-button:active { transform: scale(0.96); }
+
+/* ─────────────────────────────────────────────────────────────
+   Motion — one timing scale for the whole app (200–400ms).
+   The black left bar is the thing that moves: it thickens on
+   hover, swells on press, and selection pours out of it.
+   Press/selection state is driven by src/motion (classes
+   gc-pressed / gc-fill-in / gc-fill-out), not by :active, so a
+   quick tap still shows the full press.
+───────────────────────────────────────────────────────────── */
+:root {
+  --gc-dur-fast: 200ms;
+  --gc-dur-base: 280ms;
+  --gc-dur-slow: 400ms;
+  --gc-ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1);
+  --gc-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --gc-ease-snap:   cubic-bezier(0.3, 1.25, 0.5, 1);
+  /* Press: the button sinks 6px and its 3px bar swells to 12px — the bar
+     grows in proportion to the depth (+1.5px of bar per 1px of sink). */
+  --gc-press-depth: 6px;
+  --gc-press-bar:   9px;   /* added on top of the 3px border bar */
+  --gc-hover-bar:   3px;
+}
+
+/* Every pressable surface shares one transition. !important because many
+   components still carry an inline `transition` that would otherwise
+   silently cancel the press. */
+:is(button, [role="button"], .gc-pressable) {
+  transition:
+    transform        var(--gc-dur-base) var(--gc-ease-spring),
+    box-shadow       var(--gc-dur-base) var(--gc-ease-out),
+    background-color var(--gc-dur-base) var(--gc-ease-out),
+    color            var(--gc-dur-base) var(--gc-ease-out),
+    border-color     var(--gc-dur-base) var(--gc-ease-out),
+    filter           var(--gc-dur-fast) var(--gc-ease-out),
+    opacity          var(--gc-dur-base) var(--gc-ease-out) !important;
+}
+
+/* Press — sink and swell the bar. Going down is quick and settles;
+   coming back up (the base transition above) springs. */
+:is(button, [role="button"], .gc-pressable).gc-pressed {
+  transform: translateY(var(--gc-press-depth)) !important;
+  box-shadow: inset var(--gc-press-bar) 0 0 0 var(--gc-bar-color) !important;
+  filter: brightness(0.93);
+  transition:
+    transform        var(--gc-dur-fast) var(--gc-ease-out),
+    box-shadow       var(--gc-dur-fast) var(--gc-ease-out),
+    background-color var(--gc-dur-base) var(--gc-ease-out),
+    color            var(--gc-dur-base) var(--gc-ease-out),
+    filter           var(--gc-dur-fast) var(--gc-ease-out) !important;
+}
+
+/* Bare text buttons (the desktop nav) have no bar to swell — they only sink. */
+:is(button, [role="button"], .gc-pressable).gc-no-bar.gc-pressed { box-shadow: none !important; }
+
+/* Hover — mouse only, so a touch never leaves a button stuck "hovered". */
+@media (hover: hover) and (pointer: fine) {
+  :is(button, [role="button"], .gc-pressable):not(:disabled):not(.gc-pressed):not(.gc-no-bar):hover {
+    box-shadow: inset var(--gc-hover-bar) 0 0 0 var(--gc-bar-color);
+  }
+}
+
+/* Selection — the new state pours out of the left bar. A button that opts in
+   with data-active gets an overlay in its previous colour that withdraws:
+   toward the right when it turns on (fill sweeps out of the bar), toward the
+   left when it turns off (fill retreats into the bar). */
+:is(button, [role="button"], .gc-pressable)[data-active] { position: relative; }
+:is(button, [role="button"], .gc-pressable):is(.gc-fill-in, .gc-fill-out) {
+  transition:
+    transform  var(--gc-dur-base) var(--gc-ease-spring),
+    box-shadow var(--gc-dur-base) var(--gc-ease-out),
+    filter     var(--gc-dur-fast) var(--gc-ease-out) !important;
+}
+.gc-fill-in::after, .gc-fill-out::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: var(--gc-fill-from);
+  animation: gc-fill-withdraw var(--gc-dur-base) var(--gc-ease-out) forwards;
+}
+.gc-fill-in::after  { transform-origin: right center; }
+.gc-fill-out::after { transform-origin: left center; }
+@keyframes gc-fill-withdraw { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* A button that just became usable pulses its bar once to draw the eye. */
+.gc-enable-pulse { animation: gc-bar-pulse var(--gc-dur-slow) var(--gc-ease-out); }
+@keyframes gc-bar-pulse {
+  0%   { box-shadow: inset 0 0 0 0 var(--gc-bar-color); }
+  45%  { box-shadow: inset var(--gc-press-bar) 0 0 0 var(--gc-bar-color); }
+  100% { box-shadow: inset 0 0 0 0 var(--gc-bar-color); }
+}
+
+/* Wrong input — two short steps sideways. */
+.gc-shake { animation: gc-shake var(--gc-dur-fast) var(--gc-ease-out); }
+@keyframes gc-shake {
+  0%, 100% { translate: 0; }
+  25% { translate: -6px; }
+  60% { translate: 5px; }
+}
+
+/* Confirm — a label rolls up to its next text (see RollLabel). */
+.gc-roll { display: inline-grid; overflow: hidden; vertical-align: bottom; }
+.gc-roll > span { grid-area: 1 / 1; white-space: nowrap; }
+.gc-roll-in  { animation: gc-roll-in  var(--gc-dur-base) var(--gc-ease-out) both; }
+.gc-roll-out { animation: gc-roll-out var(--gc-dur-base) var(--gc-ease-out) both; }
+@keyframes gc-roll-in  { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes gc-roll-out { from { transform: none; } to { transform: translateY(-100%); } }
+
+/* A chord landing in the session bar after flying there. */
+.gc-land { animation: gc-land var(--gc-dur-base) var(--gc-ease-spring); }
+@keyframes gc-land {
+  0%   { transform: translateY(-6px); opacity: 0.2; }
+  100% { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(button, [role="button"], .gc-pressable).gc-pressed { transform: none !important; }
+  .gc-fill-in::after, .gc-fill-out::after { display: none; }
+  .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land { animation: none !important; }
+  .gc-slide { transition: none !important; }
+}
 
 /* Long-press-safe surfaces: kill the iOS text-selection magnifier and the
    Copy/Look-Up callout bar so a Haptic-Touch long press opens our own editor
@@ -114,11 +231,6 @@ button:active { transform: scale(0.96); }
   user-select: none !important;
 }
 
-/* Header ghost icon buttons — springy rotate on press */
-.gc-icon-btn:active { transform: scale(0.86) rotate(-8deg); }
-
-/* Heavy/full-width action buttons — gentle press */
-.gc-btn-heavy:active { transform: scale(0.98); }
 
 /* ─────────────────────────────────────────────────────────────
    Responsive design tokens — referenced via var() in inline styles
@@ -335,36 +447,6 @@ body.dark {
 /* Label text always visible (no icon-only mode needed without emoji) */
 .gc-tab-label { display: inline; }
 
-/* Base transition — spring curve makes release feel like a breath */
-.gc-tab {
-  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
-}
-
-/* Hover — "pressed into shadow" shift */
-.gc-tab:hover {
-  transform: translate(-2px, 0);
-  border-left-color: transparent !important;
-  filter: brightness(1.12);
-}
-
-/* Click — quick press in, spring breath out */
-.gc-tab:active {
-  transform: scale(0.93) !important;
-  transition: transform 0.06s ease-in;
-}
-
-button:not(.gc-tab):not(:disabled):hover {
-  transform: translate(-2px, 0);
-  border-left-color: transparent !important;
-  filter: brightness(1.08);
-  transition: transform 0.08s, border-left-color 0.08s, filter 0.08s;
-}
-
-/* Voicing tiles are <div> elements — give them hover feedback */
-.gc-voicing-tile:hover {
-  filter: brightness(1.12);
-}
 
 /* ─────────────────────────────────────────────────────────────
    Suggestion grid  (chord suggestions)
@@ -477,13 +559,6 @@ button:not(.gc-tab):not(:disabled):hover {
   font-family: inherit;
   letter-spacing: -0.02em;
   text-transform: uppercase;
-  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
-}
-
-.gc-sub-tab:active {
-  transform: scale(0.93) !important;
-  transition: transform 0.06s ease-in;
 }
 
 /* ─────────────────────────────────────────────────────────────

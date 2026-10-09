@@ -65,7 +65,7 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
           return (
             <div
               key={i}
-              className="gc-voicing-tile"
+              className="gc-voicing-tile gc-pressable"
               onClick={() => onSelect(voicing, i)}
               style={{
                 cursor: 'pointer',

@@ -263,12 +263,12 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
           <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Root Note</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
             {ROOTS.map(r => (
-              <button key={r} onClick={() => setRoot(r)} style={{
+              <button data-active={root === r} key={r} onClick={() => setRoot(r)} style={{
                 padding: '7px 0', borderRadius: 0,
                 background: root === r ? T.primary : T.bgDeep,
                 color: root === r ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                transition: 'background 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>{r}</button>
             ))}
           </div>
@@ -279,12 +279,12 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
           <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Quality</p>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {TRIADS.map(t => (
-              <button key={t.key} onClick={() => { setTriad(t.key); setExt(''); }} style={{
+              <button data-active={triad === t.key} key={t.key} onClick={() => { setTriad(t.key); setExt(''); }} style={{
                 padding: '7px 12px', borderRadius: 0,
                 background: triad === t.key ? T.secondary : T.bgDeep,
                 color: triad === t.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                transition: 'background 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>{t.display}</button>
             ))}
           </div>
@@ -295,12 +295,12 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
           <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Extension</p>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {EXTENSIONS.filter(e => validExts.includes(e.key)).map(e => (
-              <button key={e.key} onClick={() => setExt(e.key)} style={{
+              <button data-active={activeExt === e.key} key={e.key} onClick={() => setExt(e.key)} style={{
                 padding: '6px 11px', borderRadius: 0,
                 background: activeExt === e.key ? T.secondary : T.bgDeep,
                 color: activeExt === e.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                transition: 'background 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>{e.display}</button>
             ))}
           </div>
@@ -319,7 +319,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
               background: (root && triad && chords.length < 8) ? T.secondary : T.border,
               color: '#fff', fontWeight: 400, fontSize: 14,
               cursor: (root && triad && chords.length < 8) ? 'pointer' : 'not-allowed',
-              transition: 'background 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
+              borderLeft: '3px solid var(--gc-bar-color)',
             }}
           >
             + Add
@@ -336,13 +336,12 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
           <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
           <div style={{ display: 'flex', gap: 0, flex: 1 }}>
             {(['full', 'triads'] as VoicingMode[]).map(m => (
-              <button key={m} onClick={() => setMode(m)} style={{
+              <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
                 flex: 1, padding: '7px 4px', borderRadius: 0,
                 cursor: 'pointer', fontSize: 12, fontWeight: 400,
                 background: mode === m ? T.secondary : T.bgInput,
                 color: mode === m ? '#fff' : T.textMuted,
                 borderLeft: '3px solid var(--gc-bar-color)',
-                transition: 'background 0.1s',
               }}>
                 {m === 'full' ? 'Full' : 'Triads'}
               </button>
@@ -358,13 +357,12 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
               { id: 'bass',   label: 'Low'  },
               { id: 'treble', label: 'High' },
             ] as { id: StringGroup; label: string }[]).map(sg => (
-              <button key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
+              <button data-active={stringGroup === sg.id} key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
                 flex: 1, padding: '7px 4px', borderRadius: 0,
                 cursor: 'pointer', fontSize: 12, fontWeight: 400,
                 background: stringGroup === sg.id ? T.secondary : T.bgInput,
                 color: stringGroup === sg.id ? '#fff' : T.textMuted,
                 borderLeft: '3px solid var(--gc-bar-color)',
-                transition: 'background 0.1s',
               }}>
                 {sg.label}
               </button>

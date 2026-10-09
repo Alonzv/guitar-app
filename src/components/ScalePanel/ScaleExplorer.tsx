@@ -120,13 +120,13 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
             const sharp    = n.includes('#');
             const selected = n === root;
             return (
-              <button key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!selected} key={n} onClick={() => setRoot(n)} style={{
                 padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 11 : 13, fontWeight: selected ? 500 : 400,
                 border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: selected ? T.primary : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>
                 {n}
               </button>
@@ -167,7 +167,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                   {g.scales.map(s => {
                     const sel = scaleType === s.id;
                     return (
-                      <button key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); }} style={{
+                      <button data-active={!!sel} key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); }} style={{
                         padding: '6px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
                         fontWeight: sel ? 500 : 400,
                         border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
@@ -238,7 +238,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
           {/* ── View toggle ── */}
           <div style={{ display: 'flex', gap: 0 }}>
             {(['fretboard', 'tab'] as const).map(v => (
-              <button key={v} onClick={() => setViewMode(v)} style={{
+              <button data-active={viewMode === v} key={v} onClick={() => setViewMode(v)} style={{
                 flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
                 fontSize: 13, fontWeight: viewMode === v ? 500 : 400,
                 background: viewMode === v ? T.primary : T.bgCard,
@@ -253,7 +253,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
           {/* ── Position selector ── */}
           <div className="gc-pos-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: T.textMuted }}>Position:</span>
-            <button onClick={() => setPos(null)} style={{
+            <button data-active={pos === null} onClick={() => setPos(null)} style={{
               padding: '4px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
               background: pos === null ? T.text : T.bgInput,
               color: pos === null ? T.bgDeep : T.textMuted,

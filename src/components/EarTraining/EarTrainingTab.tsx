@@ -28,7 +28,7 @@ function Pill({ active, onClick, children, disabled }: {
   active: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean;
 }) {
   return (
-    <button
+    <button data-active={!!active}
       onClick={onClick}
       disabled={disabled}
       style={{
@@ -39,7 +39,6 @@ function Pill({ active, onClick, children, disabled }: {
         background: active ? T.secondary : T.bgInput,
         color: active ? '#fff' : (disabled ? T.textDim : T.textMuted),
         opacity: disabled ? 0.5 : 1,
-        transition: 'background .12s ease',
       }}
     >
       {children}

@@ -5,6 +5,7 @@ import { AuthModal } from '../Auth/AuthModal';
 import { savedProgressions, savedTabs, savedHarmonizations, savedReharms, audioTabs, uploadAudioClip } from '../../services/workspace';
 import type { TabContent, HarmonizationMelody, HarmonizationResult, ReharmData } from '../../services/types';
 import type { ChordInProgression } from '../../types/music';
+import { RollLabel } from '../RollLabel';
 
 // A description of what to persist — returned lazily so we always capture the
 // latest editor state at click time.
@@ -104,11 +105,10 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
         background: saved ? T.secondaryBg : T.primary,
         color: saved ? T.secondary : T.white,
         borderLeft: '3px solid var(--gc-bar-color)',
-        transition: 'background 0.15s, color 0.15s',
         display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
         ...style,
       }}>
-        {saved ? <>✓ Saved</> : status === 'saving' ? 'Saving…' : <>{label}</>}
+        <RollLabel>{saved ? '✓ Saved' : status === 'saving' ? 'Saving…' : label}</RollLabel>
       </button>
       {authOpen && <AuthModal onClose={() => { pendingRef.current = false; setAuthOpen(false); }} />}
     </>

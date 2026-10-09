@@ -10,6 +10,8 @@ import { findChordVoicings } from '../../utils/chordVoicings';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
+import { RollLabel } from '../RollLabel';
+import { useFlash } from '../../motion/useFlash';
 
 interface Props {
   progression: ChordInProgression[];
@@ -75,11 +77,13 @@ export function ChordBuilderTab({
     setSelectedVariationIndex(undefined);
   };
 
+  const [added, flashAdded] = useFlash();
   const handleAdd = () => {
     const chords = identifyChord(activeDots, tuning.notes, capo);
     if (chords.length === 0) return;
     onAddToProgression({ id: `chord-${Date.now()}`, chord: chords[0], fretPositions: [...activeDots] });
     setActiveDots([]);
+    flashAdded();
   };
 
   const chords = useMemo(() => identifyChord(activeDots, tuning.notes, capo), [activeDots, tuning, capo]);
@@ -137,14 +141,13 @@ export function ChordBuilderTab({
         <div className="gc-result-card" style={{ alignItems: 'center', justifyContent: 'center', gap: 12, padding: '16px 12px' }}>
           <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} />
           {chords.length > 0 && (
-            <button
+            <button data-active={!!showVariations}
               onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}
               style={{
                 padding: '6px 16px', borderRadius: 0, border: `1px solid ${T.border}`,
                 cursor: 'pointer', fontSize: 12, fontWeight: 500,
                 background: showVariations ? T.primaryBg : T.bgInput,
                 color: showVariations ? T.primary : T.textMuted,
-                transition: 'filter 0.15s',
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}
             >
@@ -181,7 +184,7 @@ export function ChordBuilderTab({
           Clear
         </button>
         <button onClick={handleAdd} disabled={chords.length === 0} style={{ ...btn.primary(chords.length === 0), flex: 2 }}>
-          + Add to Progression
+          <RollLabel>{added ? '✓ Added' : '+ Add to Progression'}</RollLabel>
         </button>
       </div>
       {chords.length > 0 && (

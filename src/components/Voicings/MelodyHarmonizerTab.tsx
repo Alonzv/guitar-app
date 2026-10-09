@@ -723,7 +723,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         const anchored = colIsAnchored(sel[1]);
         const hasNotes = colHasNotes(sel[1]);
         return (
-          <button
+          <button data-active={!!anchored}
             onClick={toggleAnchor}
             disabled={!hasNotes}
             title="Marks the whole column (time-slot) as a harmonic anchor"
@@ -744,7 +744,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         {TECH_BTNS.map(t => {
           const isArmed = t.id === '|' ? barsSet.has(sel[1]) : selTech === t.id;
           return (
-            <button
+            <button data-active={!!isArmed}
               key={t.id}
               onClick={() => t.id === '|' ? toggleBar() : applyTech(t.id as Tech)}
               title={`${t.label} [${t.key}]`}
@@ -822,7 +822,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           {HARMONY_STYLES.map(s => {
             const active = styles.includes(s.id);
             return (
-              <button key={s.id}
+              <button data-active={!!active} key={s.id}
                 // Chord-Melody is a complete arrangement style whose rules
                 // (bass only at anchors, sustain between them) directly
                 // contradict Melodic's free counter-line — selecting it
@@ -911,7 +911,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                   />
                   BPM
                 </label>
-                <button
+                <button data-active={!!muteHarmony}
                   onClick={() => setMuteHarmony(m => !m)}
                   style={{
                     padding: '6px 12px', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
@@ -921,7 +921,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                 >
                   {muteHarmony ? 'Harmony muted' : 'Harmony on'}
                 </button>
-                <button onClick={handlePlay} className="gc-btn-heavy" style={{
+                <button data-active={!!playing} onClick={handlePlay} className="gc-btn-heavy" style={{
                   padding: '7px 18px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em',
                   background: playing ? T.coral : T.primary, color: '#fff', borderLeft: '3px solid var(--gc-bar-color)',
                 }}>
@@ -947,7 +947,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>VARIATION</span>
                 {results.map((_, i) => (
-                  <button
+                  <button data-active={i === activeIdx}
                     key={i}
                     onClick={() => { setActiveIdx(i); setRevoiceSlot(null); }}
                     style={{
