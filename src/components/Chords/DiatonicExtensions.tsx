@@ -4,7 +4,7 @@ import { findChordVoicings } from '../../utils/chordVoicings';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
-import { previewVoicing, previewChordName } from '../../utils/previewSound';
+import { previewRun, previewChordName, chordMidis } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
 import type { ChordInProgression } from '../../types/music';
 import { keyName } from '../../utils/harmonicAnalysis';
@@ -155,9 +155,10 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
     onMouseLeave: () => setPeek(p => (p?.pinned ? p : null)),
     // Touch has no hover — tapping toggles the same popover.
     onClick: (e: React.MouseEvent<HTMLElement>) => {
-      // A tap always sounds the chord, whether it opens or closes the popover.
-      const shape = findChordVoicings(name, 1)[0];
-      if (shape) previewVoicing(shape); else previewChordName(name);
+      // A tap sounds the chord built up from its root, note by note, so each
+      // added 7th, 9th, 11th or 13th is heard landing on top of the stack.
+      const tower = chordMidis(name, 3);
+      if (tower.length) previewRun(tower); else previewChordName(name);
       if (peek?.name === name && peek.pinned) { setPeek(null); return; }
       peekAt(name, e.currentTarget, true);
     },

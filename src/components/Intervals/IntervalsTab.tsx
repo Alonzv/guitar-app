@@ -4,6 +4,7 @@ import { IntervalInChord } from './IntervalInChord';
 import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
 import { Segment } from '../SwipePager';
+import { playMidi } from '../../utils/audioPlayback';
 
 export type IntervalsSub = 'explore' | 'measure' | 'inchord' | 'practice';
 type Sub = IntervalsSub;
@@ -30,6 +31,22 @@ const INTERVAL_REF = [
   { abbrev: 'M7',  semitones: 11, name: 'Major 7th',     quality: 'Mild',       feel: 'Leading tone' },
   { abbrev: 'P8',  semitones: 12, name: 'Octave',        quality: 'Perfect',    feel: 'Same, doubled' },
 ];
+
+// Songs whose opening notes make the interval — the first two notes are it.
+const HINTS: { abbrev: string; hint: string; motif: number[] }[] = [
+  { abbrev: 'P5', hint: 'Star Wars theme',                motif: [60, 67, 65, 64, 62, 72, 67] },
+  { abbrev: 'P4', hint: 'Here Comes the Bride',           motif: [60, 65, 65, 65] },
+  { abbrev: 'M3', hint: 'When the Saints Go Marching In', motif: [60, 64, 65, 67] },
+  { abbrev: 'm3', hint: 'Smoke on the Water riff',        motif: [55, 58, 60, 55, 58, 61, 60] },
+  { abbrev: 'M6', hint: 'My Bonnie Lies Over the Ocean',  motif: [60, 69, 67, 65, 67, 65, 62] },
+  { abbrev: 'TT', hint: 'The Simpsons theme',             motif: [60, 64, 66, 69] },
+];
+
+let motifTimers: ReturnType<typeof setTimeout>[] = [];
+function playMotif(midis: number[]) {
+  motifTimers.forEach(clearTimeout);
+  motifTimers = midis.map((m, i) => setTimeout(() => playMidi(m, i === 0 ? 0.5 : 0.4), i * 330));
+}
 
 const QUALITY_COLOR: Record<string, string> = {
   Perfect:    T.primary,
@@ -103,18 +120,16 @@ export function IntervalsTab({ desktop, sub, onSubChange }: {
       <div style={card({ padding: '12px 14px' })}>
         <p style={SECTION}>Ear training hints</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {[
-            { abbrev: 'P5', hint: 'Star Wars theme' },
-            { abbrev: 'P4', hint: 'Here Comes the Bride' },
-            { abbrev: 'M3', hint: 'When the Saints Go Marching In' },
-            { abbrev: 'm3', hint: 'Smoke on the Water riff' },
-            { abbrev: 'M6', hint: 'My Bonnie Lies Over the Ocean' },
-            { abbrev: 'TT', hint: 'The Simpsons theme' },
-          ].map(({ abbrev, hint }) => (
-            <div key={abbrev} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+          {/* Tap a song to hear how its opening makes the interval. */}
+          {HINTS.map(({ abbrev, hint, motif }) => (
+            <button key={abbrev} onClick={() => playMotif(motif)} className="gc-notation" title="Hear it" style={{
+              display: 'flex', gap: 8, alignItems: 'baseline', padding: '3px 0', background: 'transparent',
+              border: 'none', cursor: 'pointer', textAlign: 'left', letterSpacing: 'normal',
+            }}>
               <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', color: T.primary, fontWeight: 600, flexShrink: 0, minWidth: 28 }}>{abbrev}</span>
-              <span style={{ fontSize: 11, color: T.textMuted }}>{hint}</span>
-            </div>
+              <span style={{ fontSize: 11, color: T.textMuted, flex: 1 }}>{hint}</span>
+              <span style={{ fontSize: 9, color: T.textDim }}>▶</span>
+            </button>
           ))}
         </div>
       </div>

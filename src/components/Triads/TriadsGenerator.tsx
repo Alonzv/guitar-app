@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
-import { playScale } from '../../utils/audioPlayback';
+import { playScale, playChord } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 import { TwoPane } from '../desktop/TwoPane';
 import type { Note, ChordInProgression } from '../../types/music';
@@ -304,6 +304,21 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
     if (base != null) previewRun(TRIADS[type].intervals.map(i => base + i));
   };
 
+  // Walk the neck: every shape on screen, lowest fret first — each lights on
+  // its diagram as it sounds, so the triad is heard climbing the neck.
+  const [walking, setWalking] = useState(false);
+  const walkTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => walkTimers.current.forEach(clearTimeout), []);
+  const walkNeck = () => {
+    walkTimers.current.forEach(clearTimeout); walkTimers.current = [];
+    if (walking) { setWalking(false); return; }
+    const route = [...allVisibleCards].sort((a, b) => a.minFret - b.minFret || a.setIdx - b.setIdx);
+    if (!route.length) return;
+    setWalking(true);
+    route.forEach((c, i) => walkTimers.current.push(setTimeout(() => playChord(c.fretPositions), i * 650)));
+    walkTimers.current.push(setTimeout(() => setWalking(false), route.length * 650 + 400));
+  };
+
   const handlePlay = () => {
     const midi = [...notes, notes[0]].map(n => TonalNote.midi(`${n}4`) ?? 60);
     playScale(midi);
@@ -445,6 +460,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
               style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 400, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderLeft: '3px solid var(--gc-bar-color)' }}
             >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
             <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>PLAY</button>
+            <button onClick={walkNeck} data-active={walking} title="Play every shape below, from the nut up the neck" style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: walking ? T.primary : T.secondaryBg, color: walking ? '#fff' : T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>{walking ? '■ WALK' : 'WALK THE NECK'}</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

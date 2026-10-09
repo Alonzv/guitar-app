@@ -19,6 +19,7 @@ import {
   type Tech, type TabCell,
 } from '../Tabs/tabEditing';
 import { useOptionalSong } from '../../song/SongContext';
+import { TUNINGS } from '../../utils/musicTheory';
 import { useFlash } from '../../motion/useFlash';
 import { RollLabel } from '../RollLabel';
 
@@ -202,6 +203,34 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   const { title, subtitle, grid, bars } = tab;
   const numCols = grid[0]?.length ?? 0;
+
+  // ── Play the tab ────────────────────────────────────────────────────────
+  // Column by column — one eighth note each at the song's tempo, in the song's
+  // tuning — with the column that is sounding lit as a playhead.
+  const [playCol, setPlayCol] = useState<number | null>(null);
+  const playTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => playTimers.current.forEach(clearTimeout), []);
+  const stopTab = () => { playTimers.current.forEach(clearTimeout); playTimers.current = []; setPlayCol(null); };
+  const playTab = () => {
+    if (playCol != null) { stopTab(); return; }
+    const g = grid;
+    let last = -1;
+    for (let c = 0; c < numCols; c++) if (g.some(row => row[c]?.fret !== '')) last = c;
+    if (last < 0) return;
+    const stepMs = (60 / (song?.song.bpm ?? 90)) * 1000 / 2;
+    const freqs = (TUNINGS.find(t => t.name === song?.song.tuningName) ?? TUNINGS[0]).openFreqs;
+    unlockAudio().then(() => {
+      for (let c = 0; c <= last; c++) {
+        playTimers.current.push(setTimeout(() => {
+          setPlayCol(c);
+          const positions = g.map((row, r) => ({ string: 5 - r, fret: parseInt(row[c]?.fret ?? '', 10) }))
+            .filter(p => !isNaN(p.fret));
+          if (positions.length) playChord(positions, freqs, song?.song.capo ?? 0);
+        }, c * stepMs));
+      }
+      playTimers.current.push(setTimeout(() => setPlayCol(null), (last + 1) * stepMs + 300));
+    });
+  };
   const barsSet = new Set(bars);
   const cw = (BASE_CW * zoom) / 100;
   const ch = (BASE_CH * zoom) / 100;
@@ -497,6 +526,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                   <span style={divider} />
 
                   {/* Primary cluster */}
+                  <button onClick={playTab} data-active={playCol != null} disabled={!tabHasContent(tab)} style={{ ...ghost, color: playCol != null ? T.white : T.text, background: playCol != null ? T.primary : 'transparent' }}>{playCol != null ? '■ STOP' : '▶ PLAY'}</button>
                   <button onClick={handleAnalyze} style={primary}>ANALYZE</button>
                   <button onClick={handleExport} disabled={busy} style={{ ...ghost, cursor: busy ? 'wait' : 'pointer' }}>{busy ? '…' : 'PDF'}</button>
                   <SaveToLibraryButton size="sm" label="SAVE" style={{ height: 34, borderRadius: 0, fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em' }} getPayload={() => tabHasContent(tab) ? ({ kind: 'tab', name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null} />
@@ -607,6 +637,14 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                 fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
               }}>
               Analyze
+            </button>
+            <button onClick={playTab} disabled={!tabHasContent(tab)}
+              style={{
+                background: playCol != null ? T.primary : T.bgInput, color: playCol != null ? '#fff' : T.text, border: 'none',
+                borderRadius: 0, padding: '7px 10px', cursor: 'pointer',
+                fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
+              }}>
+              {playCol != null ? '■' : '▶'}
             </button>
             <button onClick={handleExport} disabled={busy}
               style={{
@@ -785,7 +823,8 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                         <TabNoteCell
                           cell={cell}
                           cw={cw} ch={ch} fs={fs} circleD={circleD}
-                          isSel={isSel} isHov={isHov} editable
+                          isSel={isSel} isHov={isHov || c === playCol} editable
+                          markColor={c === playCol ? 'var(--gc-success-soft)' : undefined}
                           onClick={() => selectCell(si, c)}
                           onMouseEnter={() => setHov([si, c])}
                         />
