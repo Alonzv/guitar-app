@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { IntervalNeck, strY, noteX, DOT_R, FB_H, FB_TOP, STR_SP } from './IntervalNeck';
-import { playScale, getSharedContext, getOutputNode, unlockAudio } from '../../utils/audioPlayback';
+import { playScale, playInterval } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 import { previewMidi, previewInterval } from '../../utils/previewSound';
 import { DiceButton } from '../DiceButton';
@@ -96,21 +96,7 @@ export function IntervalExplore() {
     if (mode === 'melodic') {
       playScale([rootMidi, intervalMidi]);
     } else {
-      const ctx = getSharedContext();
-      unlockAudio().then(() => {
-        const t = ctx.currentTime + 0.05;
-        [rootMidi, intervalMidi].forEach(midi => {
-          const freq = 440 * Math.pow(2, (midi - 69) / 12);
-          const osc  = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.2, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
-          osc.connect(gain); gain.connect(getOutputNode());
-          osc.start(t); osc.stop(t + 1.8);
-        });
-      });
+      playInterval(rootMidi, intervalMidi, 'harmonic');
     }
   };
 

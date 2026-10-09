@@ -2,7 +2,8 @@ import { useState, useRef, useMemo } from 'react';
 import type { ChordInProgression, Tuning } from '../../types/music';
 import { formatChordName } from '../../utils/chordIdentifier';
 import { detectKey } from '../../utils/progressionHelper';
-import { playChord } from '../../utils/audioPlayback';
+import { playChord, shapeKey } from '../../utils/audioPlayback';
+import { useSounding } from '../../motion/useSounding';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card } from '../../theme';
 
@@ -64,6 +65,8 @@ export function ProgressionPanel({
   canUndo, canRedo, onUndo, onRedo,
   tuning, capo,
 }: Props) {
+  // A tile lifts while its chord is the one sounding (Play, or played anywhere).
+  const sounding = useSounding();
   const [progressionName, setProgressionName] = useState('');
   const [exporting, setExporting] = useState(false);
   const [playingAll, setPlayingAll] = useState(false);
@@ -185,7 +188,7 @@ export function ProgressionPanel({
         {progression.map((item, i) => {
           const accent = CHORD_ACCENTS[i % CHORD_ACCENTS.length];
           return (
-            <div key={item.id} style={{
+            <div key={item.id} className={sounding.shape(shapeKey(item.fretPositions)) ? 'gc-tile-now' : undefined} style={{
               position: 'relative', minWidth: 80, flexShrink: 0,
               padding: '10px 12px 10px', borderRadius: 0,
               background: accent,

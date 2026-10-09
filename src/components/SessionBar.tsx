@@ -1,7 +1,8 @@
 import { useRef } from 'react';
 import type { ChordInProgression, Tuning } from '../types/music';
 import { formatChordName } from '../utils/chordIdentifier';
-import { playChord, unlockAudio } from '../utils/audioPlayback';
+import { playChord, unlockAudio, shapeKey } from '../utils/audioPlayback';
+import { useSounding } from '../motion/useSounding';
 import { T } from '../theme';
 
 // ── Session bar ──────────────────────────────────────────────────────────────
@@ -21,6 +22,8 @@ interface Props {
 
 export function SessionBar({ progression, tuning, capo = 0, keyLabel }: Props) {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // The chord whose shape is sounding is lit — wherever it was played from.
+  const sounding = useSounding();
   if (progression.length === 0) return null;
 
   const play = () => {
@@ -59,7 +62,11 @@ export function SessionBar({ progression, tuning, capo = 0, keyLabel }: Props) {
       }}>
         {progression.map(item => (
           <span key={item.id} data-gc-dock-item style={{
-            display: 'inline-block', fontSize: 12.5, fontWeight: 600, color: T.text, flexShrink: 0,
+            display: 'inline-block', fontSize: 12.5, fontWeight: 600, flexShrink: 0, padding: '1px 5px',
+            ...(sounding.shape(shapeKey(item.fretPositions))
+              ? { background: T.primary, color: T.white }
+              : { background: 'transparent', color: T.text }),
+            transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out), color var(--gc-dur-fast) var(--gc-ease-out)',
           }}>{formatChordName(item.chord.name)}</span>
         ))}
       </div>

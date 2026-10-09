@@ -161,6 +161,36 @@ export function unlockAudio(): Promise<void> {
   return _unlocking;
 }
 
+// ── What is sounding ──────────────────────────────────────────────────────
+// Every note the app plays is announced here with when it starts and how long
+// it rings, so a fretboard can light the dot that is sounding at that moment —
+// the playhead. `pos` + `shape` identify a fretted note inside a chord shape,
+// so a voicing tile glows only when its own shape is the one being played.
+
+export interface NoteEvent {
+  midi: number;
+  pos?: FretPos;
+  /** shapeKey() of the voicing this note belongs to. */
+  shape?: string;
+  delayMs: number;
+  durMs: number;
+}
+type NoteListener = (events: NoteEvent[]) => void;
+const noteListeners = new Set<NoteListener>();
+
+export function onNotes(fn: NoteListener): () => void {
+  noteListeners.add(fn);
+  return () => { noteListeners.delete(fn); };
+}
+export function emitNotes(events: NoteEvent[]): void {
+  if (events.length) noteListeners.forEach(fn => fn(events));
+}
+/** A stable key for a set of fretted positions, independent of order. */
+export function shapeKey(positions: FretPos[]): string {
+  return positions.map(p => `${p.string}:${p.fret}`).sort().join(',');
+}
+const freqToMidi = (f: number) => Math.round(69 + 12 * Math.log2(f / 440));
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function synthesizeNote(ctx: AudioContext, freq: number, startTime: number): void {
@@ -212,6 +242,7 @@ export function playScale(midiNotes: number[]): void {
       const freq = 440 * Math.pow(2, (midi - 69) / 12);
       synthesizeScaleNote(ctx, freq, ctx.currentTime + 0.3 + i * 0.35);
     });
+    emitNotes(midiNotes.map((midi, i) => ({ midi, delayMs: 300 + i * 350, durMs: 340 })));
     // Dismiss Now Playing after last note finishes: 0.3 + n*0.35 + 0.4s
     suppressNowPlaying(midiNotes.length * 350 + 750);
   });
@@ -267,10 +298,12 @@ export function playInterval(
     if (mode === 'harmonic') {
       synthesizeIntervalNote(ctx, midiA, t0, 1.5);
       synthesizeIntervalNote(ctx, midiB, t0, 1.5);
+      emitNotes([{ midi: midiA, delayMs: 120, durMs: 900 }, { midi: midiB, delayMs: 120, durMs: 900 }]);
       suppressNowPlaying(2200);
     } else {
       synthesizeIntervalNote(ctx, midiA, t0, 0.7);
       synthesizeIntervalNote(ctx, midiB, t0 + 0.62, 1.1);
+      emitNotes([{ midi: midiA, delayMs: 120, durMs: 560 }, { midi: midiB, delayMs: 740, durMs: 700 }]);
       suppressNowPlaying(2400);
     }
   });
@@ -302,6 +335,7 @@ export function playMidi(midi: number, dur = 0.9): void {
   unlockAudio().then(() => {
     const ctx = getSharedContext();
     synthesizeIntervalNote(ctx, midi, ctx.currentTime + 0.1, dur);
+    emitNotes([{ midi, delayMs: 100, durMs: Math.min(dur * 1000, 700) }]);
     suppressNowPlaying(dur * 1000 + 800);
   });
 }
@@ -317,10 +351,15 @@ export function playChord(
     const ctx = getSharedContext();
     const sorted = [...fretPositions].sort((a, b) => a.string - b.string);
     // Use 0.3s start offset to give the context time to start after unlock
+    const shape = shapeKey(fretPositions);
     sorted.forEach((pos, i) => {
       const freq = openFreqs[pos.string] * Math.pow(2, (pos.fret + capo) / 12);
       synthesizeNote(ctx, freq, ctx.currentTime + 0.3 + i * 0.065);
     });
+    emitNotes(sorted.map((pos, i) => ({
+      midi: freqToMidi(openFreqs[pos.string] * Math.pow(2, (pos.fret + capo) / 12)),
+      pos, shape, delayMs: 300 + i * 65, durMs: 650,
+    })));
     // Dismiss Now Playing after all strings finish: 0.3 + 5*0.065 + 1.6s ≈ 2.2s
     suppressNowPlaying(2500);
   });

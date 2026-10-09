@@ -1,5 +1,5 @@
 import { Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
-import { playChord, playMidi, playInterval, unlockAudio, getSharedContext, getOutputNode } from './audioPlayback';
+import { playChord, playMidi, playInterval, unlockAudio, getSharedContext, getOutputNode, emitNotes } from './audioPlayback';
 import type { FretPosition } from '../types/music';
 
 // ── Selection sounds ─────────────────────────────────────────────────────────
@@ -95,6 +95,7 @@ export function strum(midis: number[], gap = 0.05) {
     const ctx = getSharedContext();
     const t0 = ctx.currentTime + 0.05;
     midis.forEach((m, i) => pluck(ctx, m, t0 + i * gap));
+    emitNotes(midis.map((midi, i) => ({ midi, delayMs: 50 + i * gap * 1000, durMs: Math.max(260, gap * 1000) })));
   });
 }
 

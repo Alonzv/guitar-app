@@ -224,6 +224,22 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 @keyframes gc-drop-in { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
 @keyframes gc-list-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
 
+/* Fretboard dots. The outer group carries the position and slides when a
+   dot moves to a new fret (a new voicing, root or mode); the face pops in
+   when a dot appears and swells while its note is sounding — the playhead. */
+.gc-dot-pos  { transition: transform var(--gc-dur-slow) var(--gc-ease-snap); }
+.gc-dot-face { transform-box: fill-box; transform-origin: center; animation: gc-dot-in var(--gc-dur-base) var(--gc-ease-snap); }
+.gc-dot-glow { transform-box: fill-box; transform-origin: center; }
+.gc-dot-glow.gc-glow { animation: gc-glow var(--gc-dur-slow) var(--gc-ease-out); }
+.gc-dot-ring { transform-box: fill-box; transform-origin: center; animation: gc-ring var(--gc-dur-slow) var(--gc-ease-out) forwards; pointer-events: none; }
+@keyframes gc-dot-in { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes gc-glow { 0% { transform: scale(1); } 30% { transform: scale(1.38); } 100% { transform: scale(1); } }
+@keyframes gc-ring { from { transform: scale(1); opacity: 0.9; } to { transform: scale(2.1); opacity: 0; } }
+
+/* A progression tile while its chord sounds — lifts on its bar. */
+.gc-tile-now { animation: gc-tile-now var(--gc-dur-slow) var(--gc-ease-out); box-shadow: inset 6px 0 0 0 var(--gc-success); }
+@keyframes gc-tile-now { 0% { transform: translateY(0); } 35% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
+
 /* The die turns over when rolled. */
 .gc-die { animation: gc-die-roll var(--gc-dur-slow) var(--gc-ease-snap); }
 @keyframes gc-die-roll { from { transform: rotate(-180deg) scale(0.6); } to { transform: none; } }
@@ -232,8 +248,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   :is(button, [role="button"], .gc-pressable).gc-pressed { transform: none !important; }
   .gc-fill-in::after, .gc-fill-out::after { display: none; }
   .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land, .gc-die,
-  .gc-fade-in, .gc-drop-in, .gc-list-in { animation: none !important; }
-  .gc-slide { transition: none !important; }
+  .gc-fade-in, .gc-drop-in, .gc-list-in, .gc-tile-now { animation: none !important; }
+  .gc-slide, .gc-dot-pos { transition: none !important; }
+  .gc-dot-face, .gc-dot-glow, .gc-dot-ring { animation: none !important; }
 }
 
 /* Long-press-safe surfaces: kill the iOS text-selection magnifier and the

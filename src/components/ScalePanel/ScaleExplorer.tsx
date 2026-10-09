@@ -86,13 +86,37 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     return allPos.filter(p => p.fret >= min && p.fret <= max);
   }, [allPos, pos]);
 
+  // Each dot is named by its scale degree and which occurrence of that degree
+  // it is along its string (counted over the whole neck, not the position
+  // window). A new root or mode then moves dots along their strings — the
+  // 3rd of C major slides to the 3rd of D major, Major's 3rd drops a fret
+  // into Dorian's — instead of the neck being redrawn.
+  const dotIds = useMemo(() => {
+    const ids = new Map<string, string>();
+    const seen = new Map<string, number>();
+    [...allPos].sort((a, b) => a.string - b.string || a.fret - b.fret).forEach(p => {
+      const note = fretToNote(p.string, p.fret);
+      const deg = scale.notes.findIndex(n => samePitch(n, note));
+      const k = `${p.string}:${deg}`;
+      const n = seen.get(k) ?? 0;
+      seen.set(k, n + 1);
+      ids.set(`${p.string}-${p.fret}`, `${k}:${n}`);
+    });
+    return ids;
+  }, [allPos, scale]);
+
   const dots: DisplayDot[] = useMemo(() =>
     displayPos.map(p => {
       const note   = fretToNote(p.string, p.fret);
       const isRoot = samePitch(note, root);
-      return { ...p, color: isRoot ? T.primary : (pos !== null ? POS_COLORS[pos] : T.secondary), label: note };
+      return {
+        ...p, id: dotIds.get(`${p.string}-${p.fret}`),
+        color: isRoot ? T.primary : (pos !== null ? POS_COLORS[pos] : T.secondary),
+        // Spelled as the scale spells it (D major has C#, never Db).
+        label: scale.notes.find(n => samePitch(n, note)) ?? note,
+      };
     }),
-    [displayPos, root, pos]
+    [displayPos, root, pos, dotIds, scale]
   );
 
   const roll = () => {

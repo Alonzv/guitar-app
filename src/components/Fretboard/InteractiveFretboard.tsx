@@ -2,6 +2,8 @@ import React from 'react';
 import type { FretPosition } from '../../types/music';
 import { fretToNote, FRET_COUNT, STRING_COUNT } from '../../utils/musicTheory';
 import { T } from '../../theme';
+import { useSounding } from '../../motion/useSounding';
+import { Dot } from './Dot';
 
 interface Props {
   activeDots: FretPosition[];
@@ -27,8 +29,8 @@ const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 const strW = (s: number) => 2.0 + s * 0.40;
 
 export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, readonly, tuning, capo = 0 }) => {
-  const isActive  = (s: number, f: number) => activeDots.some(d => d.string === s && d.fret === f);
   const hasAnyDot = activeDots.length > 0;
+  const sounding = useSounding();
 
   return (
     <div className="gc-fretboard-wrap">
@@ -77,7 +79,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
           <text key={f} x={NUT_X + (f - 0.5) * FRET_SP} y={SVG_H - 3}
             textAnchor="middle" fontSize={8}
             fontWeight={[3,5,7,9,12].includes(f) ? '700' : '400'}
-            fill={[3,5,7,9,12].includes(f) ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.38)'}>{f}</text>
+            fill={[3,5,7,9,12].includes(f) ? T.textMuted : T.textDim}>{f}</text>
         ))}
 
         {/* String labels (open note) + mute × */}
@@ -102,26 +104,31 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
           );
         })}
 
-        {/* Clickable areas + dots */}
+        {/* Placed notes. Keyed by string, so loading another voicing slides each
+            note along its string; a note lights up while it sounds. */}
+        {activeDots.map((d, i) => {
+          const nth = activeDots.slice(0, i).filter(o => o.string === d.string).length;
+          return (
+            <g key={`dot-${d.string}-${nth}`} style={{ pointerEvents: 'none' }}>
+              <Dot x={fretX(d.fret)} y={strY(d.string)} r={DOT_R} glow={sounding.pos(d.string, d.fret)}>
+                <circle r={DOT_R} fill={T.primary} stroke="#fff" strokeWidth={1.9} />
+                <text y={4} textAnchor="middle" fontSize={9} fill="#fff" fontWeight="700">{fretToNote(d.string, d.fret, tuning, capo)}</text>
+              </Dot>
+            </g>
+          );
+        })}
+
+        {/* Clickable areas */}
         {Array.from({ length: STRING_COUNT }).map((_, s) =>
           Array.from({ length: FRET_COUNT + 1 }).map((_, f) => {
-            const active = isActive(s, f);
             const cx = fretX(f);
             const cy = strY(s);
             return (
-              <g key={`${s}-${f}`}
+              <rect key={`${s}-${f}`}
                 onClick={() => { if (readonly) return; navigator.vibrate?.(30); onToggle({ string: s, fret: f }); }}
-                style={{ cursor: readonly ? 'default' : 'pointer' }}>
-                <rect x={cx - DOT_R - 3} y={cy - DOT_R - 3}
-                  width={(DOT_R + 3) * 2} height={(DOT_R + 3) * 2} fill="transparent" />
-                {active && (
-                  <>
-                    <circle cx={cx} cy={cy} r={DOT_R} fill={T.primary} stroke="#fff" strokeWidth={1.9} />
-                    <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9}
-                      fill="#fff" fontWeight="700">{fretToNote(s, f, tuning, capo)}</text>
-                  </>
-                )}
-              </g>
+                style={{ cursor: readonly ? 'default' : 'pointer' }}
+                x={cx - DOT_R - 3} y={cy - DOT_R - 3}
+                width={(DOT_R + 3) * 2} height={(DOT_R + 3) * 2} fill="transparent" />
             );
           })
         )}

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Key } from '@tonaljs/tonal';
+import React, { useState, useEffect, useRef } from 'react';
+import { Key, Note } from '@tonaljs/tonal';
 import { T } from '../../theme';
 import { playChord } from '../../utils/audioPlayback';
 import type { ChordInProgression } from '../../types/music';
@@ -106,6 +106,19 @@ const FLAT_TO_SHARP:  Record<string, string> = { 'Db':'C#', 'Eb':'D#', 'Ab':'G#'
 // D# → Ebm and A# → Bbm because COF_MINOR uses flat spelling for those
 const SHARP_TO_MINOR: Record<string, string> = { 'D#': 'Ebm', 'A#': 'Bbm' };
 
+// Where a chord sits on the wheel: majors on the outer ring, minors and
+// diminished chords on the inner one (labelled by their minor neighbour).
+type Slot = { ring: 'outer' | 'inner'; i: number } | null;
+function slotOf(chord: string): Slot {
+  const m = chord.match(/^([A-G][b#]?)(.*)$/);
+  if (!m) return null;
+  const chroma = Note.chroma(m[1]);
+  const minor = /^(m(?!aj)|dim|°)/.test(m[2]);
+  const list = minor ? COF_MINOR.map(n => n.slice(0, -1)) : COF_ORDER;
+  const i = list.findIndex(n => Note.chroma(n) === chroma);
+  return i < 0 ? null : { ring: minor ? 'inner' : 'outer', i };
+}
+
 interface Props {
   onAddToProgression?: (item: ChordInProgression) => void;
   desktop?: boolean;
@@ -155,6 +168,28 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
     const stdTuning = ['E2','A2','D3','G3','B3','E4'];
     const voicings  = findChordVoicings(chordName, 4, stdTuning);
     return voicings[0] ?? [];
+  };
+
+  // ── Progression tour ─────────────────────────────────────────────────────
+  // ▶ on a common progression plays it chord by chord and draws its path
+  // across the wheel as it goes, so the shape of the progression is visible.
+  const [tour, setTour] = useState<{ label: string; slots: Slot[]; step: number } | null>(null);
+  const tourTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => tourTimers.current.forEach(clearTimeout), []);
+  const stopTour = () => { tourTimers.current.forEach(clearTimeout); tourTimers.current = []; setTour(null); };
+  const playTour = (label: string, chords: string[]) => {
+    const was = tour?.label;
+    stopTour();
+    if (was === label) return;
+    const slots = chords.map(slotOf);
+    chords.forEach((c, i) => {
+      tourTimers.current.push(setTimeout(() => {
+        setTour({ label, slots, step: i });
+        const fp = getVoicing(c);
+        if (fp.length) playChord(fp, OPEN_FREQS, 0);
+      }, i * 900));
+    });
+    tourTimers.current.push(setTimeout(() => setTour(null), chords.length * 900 + 500));
   };
 
   const handleAddChord = (chordName: string) => {
@@ -284,6 +319,24 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
             </g>
           );
         })}
+
+        {/* Progression tour — the path so far and the chord sounding now */}
+        {tour && (() => {
+          const pts = tour.slots.slice(0, tour.step + 1).filter((sl): sl is NonNullable<Slot> => !!sl)
+            .map(sl => midPt(startAngle(sl.i), sl.ring === 'outer' ? (R_O_O + R_O_I) / 2 : (R_I_O + R_I_I) / 2));
+          if (!pts.length) return null;
+          const last = pts[pts.length - 1];
+          return (
+            <g style={{ pointerEvents: 'none' }}>
+              {pts.length > 1 && (
+                <polyline points={pts.map(p => `${p.x},${p.y}`).join(' ')} fill="none"
+                  stroke="var(--gc-success)" strokeWidth={3} strokeLinejoin="round" opacity={0.9} />
+              )}
+              <circle key={tour.step} className="gc-dot-ring" cx={last.x} cy={last.y} r={16} fill="none" stroke="var(--gc-success)" strokeWidth={3} />
+              <circle cx={last.x} cy={last.y} r={6} fill="var(--gc-success)" />
+            </g>
+          );
+        })()}
       </g>
 
       {/* Dashed arc indicator — fixed at top, outer ring for major / inner for minor */}
@@ -412,30 +465,48 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
         <p style={MONO_LBL}>Common Progressions</p>
         {PROG_TEMPLATES.map(pt => {
           const chords = pt.indices.map(i => diatonic[i]?.chord ?? '?');
+          const isPlaying = tour?.label === pt.label;
           return (
-            <button
-              key={pt.label}
-              // gc-notation: without it the global uppercase button rule turns
-              // "vi" into "VI" and "Am" into "AM" — different chords entirely.
-              className="gc-notation"
-              onClick={() => {
-                if (!onAddToProgression) return;
-                chords.forEach(chordName => handleAddChord(chordName));
-              }}
-              style={{
-                display: 'block', width: '100%', textAlign: 'left',
-                padding: '10px 12px', marginBottom: 6,
-                border: `1px solid ${T.border}`, borderLeft: `3px solid ${T.primary}`,
-                background: T.bgCard, cursor: 'pointer',
-              }}
-            >
-              <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.primary, letterSpacing: '0.06em', marginRight: 10 }}>
-                {pt.label}
-              </span>
-              <span style={{ fontSize: 11, color: T.textMuted }}>
-                {chords.join(' – ')}
-              </span>
-            </button>
+            <div key={pt.label} style={{ display: 'flex', marginBottom: 6, alignItems: 'stretch' }}>
+              <button
+                onClick={() => playTour(pt.label, chords)}
+                aria-label={`Play ${chords.join(' ')}`}
+                data-active={isPlaying}
+                style={{
+                  width: 40, flexShrink: 0, border: `1px solid ${T.border}`, borderRight: 'none',
+                  background: isPlaying ? T.primary : T.bgCard, color: isPlaying ? T.white : T.text,
+                  cursor: 'pointer', fontSize: 11,
+                }}
+              >{isPlaying ? '■' : '▶'}</button>
+              <button
+                // gc-notation: without it the global uppercase button rule turns
+                // "vi" into "VI" and "Am" into "AM" — different chords entirely.
+                className="gc-notation"
+                onClick={() => {
+                  if (!onAddToProgression) return;
+                  chords.forEach(chordName => handleAddChord(chordName));
+                }}
+                title="Add to progression"
+                style={{
+                  display: 'block', flex: 1, textAlign: 'left',
+                  padding: '10px 12px',
+                  border: `1px solid ${T.border}`, borderLeft: `3px solid ${T.primary}`,
+                  background: T.bgCard, cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.primary, letterSpacing: '0.06em', marginRight: 10 }}>
+                  {pt.label}
+                </span>
+                <span style={{ fontSize: 11, color: T.textMuted }}>
+                  {chords.map((c, ci) => (
+                    <span key={ci}>
+                      {ci > 0 && ' – '}
+                      <span style={isPlaying && tour!.step === ci ? { color: T.text, fontWeight: 700 } : undefined}>{c}</span>
+                    </span>
+                  ))}
+                </span>
+              </button>
+            </div>
           );
         })}
       </div>
