@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { IntervalExplore } from './IntervalExplore';
 import { IntervalPlayground } from './IntervalPlayground';
 import { IntervalInChord } from './IntervalInChord';
@@ -6,7 +5,8 @@ import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
 import { Segment } from '../SwipePager';
 
-type Sub = 'explore' | 'measure' | 'inchord' | 'practice';
+export type IntervalsSub = 'explore' | 'measure' | 'inchord' | 'practice';
+type Sub = IntervalsSub;
 
 const SUBS: { id: Sub; label: string }[] = [
   { id: 'explore',  label: 'Explore'   },
@@ -43,23 +43,12 @@ const SECTION: React.CSSProperties = {
   textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
 };
 
-const SUB_KEY = 'scaleup_seg_intervals';
-const readSub = (): Sub => {
-  try {
-    const v = localStorage.getItem(SUB_KEY);
-    // 'identify' promised a quiz and delivered a ruler; it is now 'measure'.
-    if (v === 'identify') return 'measure';
-    if (v && SUBS.some(s => s.id === v)) return v as Sub;
-  } catch { /* private mode */ }
-  return 'explore';
-};
-
-export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
-  const [sub, setSub] = useState<Sub>(readSub);
-  const pick = (s: Sub) => {
-    setSub(s);
-    try { localStorage.setItem(SUB_KEY, s); } catch { /* private mode */ }
-  };
+// The sub-tab lives in App with every other panel's, so navigation (the
+// command palette, the tools map) can open any of them directly.
+export function IntervalsTab({ desktop, sub, onSubChange }: {
+  desktop?: boolean; sub: string; onSubChange: (s: string) => void;
+}) {
+  const pick = (s: Sub) => onSubChange(s);
 
   // Same bar as every other panel (it used to be the one hand-built exception).
   const tabBar = (

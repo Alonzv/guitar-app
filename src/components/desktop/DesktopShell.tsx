@@ -3,6 +3,7 @@ import { T } from '../../theme';
 import { BrandMark } from '../BrandMark';
 import { PANEL_TITLES } from '../../constants/panels';
 import { LangToggle } from '../LangToggle';
+import { SearchButton } from '../SearchButton';
 import { SoundToggle } from '../SoundToggle';
 import { useSlider } from '../../motion/useSlider';
 
@@ -16,6 +17,8 @@ interface Props {
   userMenu?: React.ReactNode;
   sharedBanner?: React.ReactNode;
   onLogoClick?: () => void;
+  /** Opens the command palette. */
+  onSearch?: () => void;
   children: React.ReactNode;
 }
 
@@ -24,6 +27,7 @@ export function DesktopShell({
   darkMode, onToggleDark,
   userMenu, sharedBanner,
   onLogoClick,
+  onSearch,
   children,
 }: Props) {
   const slider = useSlider(tab);
@@ -42,7 +46,7 @@ export function DesktopShell({
         backgroundColor: T.bgDeep, flexShrink: 0,
       }}>
 
-        {/* Left: mark + wordmark lockup. Clickable → Chords / By Name.
+        {/* Left: mark + wordmark lockup. Clickable → the tools map.
             Kept a <span> (not <button>) so the global uppercase button style
             doesn't turn "ScaleUp" into "SCALEUP". */}
         <span
@@ -50,7 +54,7 @@ export function DesktopShell({
           role={onLogoClick ? 'button' : undefined}
           className="gc-no-bar"
           tabIndex={onLogoClick ? 0 : undefined}
-          aria-label={onLogoClick ? 'ScaleUp — go to Chords, By Name' : undefined}
+          aria-label={onLogoClick ? 'ScaleUp — all tools' : undefined}
           onKeyDown={onLogoClick ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLogoClick(); } }) : undefined}
           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: onLogoClick ? 'pointer' : 'default' }}
         >
@@ -101,6 +105,7 @@ export function DesktopShell({
 
         {/* Right: ghost icon buttons + user menu */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {onSearch && <SearchButton onClick={onSearch} />}
           <SoundToggle />
           <LangToggle />
           <button

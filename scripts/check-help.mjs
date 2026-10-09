@@ -26,7 +26,7 @@ for (const [, list, prefix] of pairs) {
     if (!help.has(topic)) { console.log('  MISSING help topic:', topic); bad++; }
   }
 }
-// the Intervals tab builds its own bar
+// the Intervals tab lists its sub-tabs in IntervalsTab.tsx, not App.tsx
 for (const id of [...R('src/components/Intervals/IntervalsTab.tsx').matchAll(/id: '([a-z]+)'/g)].map(m => m[1])) {
   const topic = `intervals:${id}`;
   counted.push(topic);

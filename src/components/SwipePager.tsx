@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T } from '../theme';
 import { LangToggle } from './LangToggle';
+import { SearchButton } from './SearchButton';
 import { SoundToggle } from './SoundToggle';
 import { BrandMark } from './BrandMark';
 import { HelpButton } from './HelpButton';
@@ -21,6 +22,7 @@ interface SegmentProps {
 export function Segment({ items, active, onChange, helpPrefix }: SegmentProps) {
   // One dark block slides between tabs; the buttons themselves stay clear.
   const slider = useSlider(items.findIndex(it => it.id === active));
+  const dense = items.length > 4;
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, marginBottom: 18, flexShrink: 0 }}>
       <div style={{ display: 'flex', border: `1px solid ${T.border}`, flex: 1, minWidth: 0, position: 'relative' }}>
@@ -32,9 +34,10 @@ export function Segment({ items, active, onChange, helpPrefix }: SegmentProps) {
             onClick={() => onChange(it.id)}
             style={{
               flex: 1, textAlign: 'center', position: 'relative',
-              padding: '10px 4px', minHeight: 44,
-              fontFamily: 'var(--gc-font)',
-              fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase',
+              // Five tabs on a phone only fit with tighter type.
+              padding: dense ? '10px 2px' : '10px 4px', minHeight: 44,
+              fontFamily: 'var(--gc-font)', whiteSpace: 'nowrap',
+              fontSize: dense ? 10 : 11, letterSpacing: dense ? '0' : '0.04em', textTransform: 'uppercase',
               cursor: 'pointer', borderRadius: 0,
               borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
               background: 'transparent',
@@ -68,6 +71,8 @@ interface SwipePagerProps {
   /** Slim chrome line naming what the app is currently working on. */
   sessionBar?: React.ReactNode;
   onLogoClick?: () => void;
+  /** Opens the command palette. */
+  onSearch?: () => void;
   children: React.ReactNode;
 }
 
@@ -80,7 +85,7 @@ const TITLE_W = 150; // px per title cell
 export function SwipePager({
   tab, onTabChange, tabTitles,
   darkMode, onToggleDark,
-  userMenu, sharedBanner, sessionBar, onLogoClick, children,
+  userMenu, sharedBanner, sessionBar, onLogoClick, onSearch, children,
 }: SwipePagerProps) {
   const nTabs = Math.max(1, tabTitles.length);
   const [dx, setDx] = useState(0);
@@ -185,7 +190,7 @@ export function SwipePager({
           role={onLogoClick ? 'button' : undefined}
           className="gc-no-bar"
           tabIndex={onLogoClick ? 0 : undefined}
-          aria-label={onLogoClick ? 'ScaleUp — go to Chords, By Name' : undefined}
+          aria-label={onLogoClick ? 'ScaleUp — all tools' : undefined}
           onKeyDown={onLogoClick ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLogoClick(); } }) : undefined}
           style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: onLogoClick ? 'pointer' : 'default' }}
         >
@@ -197,6 +202,7 @@ export function SwipePager({
         </span>
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {onSearch && <SearchButton compact onClick={onSearch} />}
           <SoundToggle compact />
           <LangToggle compact />
           <button

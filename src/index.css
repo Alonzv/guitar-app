@@ -215,6 +215,15 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   100% { transform: none; opacity: 1; }
 }
 
+/* Overlays: the backdrop fades, the panel drops in, list rows follow in a
+   short stagger (delay set inline, capped so the last row lands by 400ms). */
+.gc-fade-in { animation: gc-fade-in var(--gc-dur-fast) var(--gc-ease-out); }
+.gc-drop-in { animation: gc-drop-in var(--gc-dur-base) var(--gc-ease-snap); }
+.gc-list-in { animation: gc-list-in var(--gc-dur-base) var(--gc-ease-out) both; }
+@keyframes gc-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gc-drop-in { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+@keyframes gc-list-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+
 /* The die turns over when rolled. */
 .gc-die { animation: gc-die-roll var(--gc-dur-slow) var(--gc-ease-snap); }
 @keyframes gc-die-roll { from { transform: rotate(-180deg) scale(0.6); } to { transform: none; } }
@@ -222,7 +231,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 @media (prefers-reduced-motion: reduce) {
   :is(button, [role="button"], .gc-pressable).gc-pressed { transform: none !important; }
   .gc-fill-in::after, .gc-fill-out::after { display: none; }
-  .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land, .gc-die { animation: none !important; }
+  .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land, .gc-die,
+  .gc-fade-in, .gc-drop-in, .gc-list-in { animation: none !important; }
   .gc-slide { transition: none !important; }
 }
 

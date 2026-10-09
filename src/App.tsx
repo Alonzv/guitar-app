@@ -35,6 +35,10 @@ import { ScalesPracticeTab } from './components/ScalePractice/ScalesPracticeTab'
 import { TabBuilder }        from './components/Tools/TabBuilder';
 import { AudioToTab }        from './components/Tools/AudioToTab';
 import { WorkspaceOverlay }  from './components/Workspace/WorkspaceOverlay';
+import { CommandPalette, type PaletteAction } from './components/CommandPalette';
+import { ToolsMap }          from './components/ToolsMap';
+import { useLang }           from './contexts/LanguageContext';
+import { soundEnabled, setSoundEnabled } from './utils/previewSound';
 
 // ── Shell ──────────────────────────────────────────────────────────────────
 import { SwipePager, Segment } from './components/SwipePager';
@@ -56,9 +60,11 @@ import { PANEL_TITLES } from './constants/panels';
 // 'chords:analyzer' help entry are kept on disk (currently unreferenced) so the
 // sub-tab can be restored by re-adding the id, the CHORDS_SEGS entry, the
 // import and the two render lines.
-type ChordsSub    = 'builder' | 'finder' | 'extensions' | 'practice';
+type ChordsSub    = 'builder' | 'finder' | 'target' | 'extensions' | 'practice';
 type ScalesSub    = 'explorer' | 'triads' | 'wheel' | 'practice';
-type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize' | 'target';
+// Target moved to CHORDS: it finds chords around a note, which is a chord
+// question, not a voicing one.
+type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize';
 // TOOLS holds the four non-theory tools. Tab Builder and Audio→Tab used to sit
 // in a STUDIO tab of their own; they moved here because what they share with
 // the tuner and the metronome is exactly what separates them from every other
@@ -70,6 +76,7 @@ type ToolsSub     = 'tuner' | 'metronome' | 'tabbuilder' | 'audiotab';
 const CHORDS_SEGS    = [
   { id: 'finder',     label: 'By Name'    },
   { id: 'builder',    label: 'By Ear'     },
+  { id: 'target',     label: 'Target'     },
   { id: 'extensions', label: 'Extensions' },
   { id: 'practice',   label: 'Practice'   },
 ];
@@ -83,7 +90,6 @@ const VOICINGS_SEGS  = [
   { id: 'voiceleading', label: 'VL Studio' },
   { id: 'harmonizer',   label: 'Harmonize' },
   { id: 'reharmonize',  label: 'Reharm'    },
-  { id: 'target',       label: 'Target'    },
 ];
 const TOOLS_SEGS     = [
   { id: 'tuner',      label: 'Tuner'       },
@@ -246,7 +252,7 @@ export default function App() {
   });
   const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => {
     const v = readLS('scaleup_seg_voicings', 'voiceleading');   // 'paths' folded into VL Studio
-    return (v === 'voiceleading' || v === 'harmonizer' || v === 'reharmonize' || v === 'target') ? v as VoicingsSub : 'voiceleading';
+    return (v === 'voiceleading' || v === 'harmonizer' || v === 'reharmonize') ? v as VoicingsSub : 'voiceleading';
   });
   const [toolsSegment, setToolsSegment] = useState<ToolsSub>(() => {
     // 'eartraining' → Intervals, 'scaletrainer' → Scales, both long gone.
@@ -254,10 +260,31 @@ export default function App() {
     return TOOLS_SEGS.some(s => s.id === v) ? v as ToolsSub : 'tuner';
   });
 
+  const [intervalsSegment, setIntervalsSegment] = useState<string>(() => {
+    const v = readLS('scaleup_seg_intervals', 'explore');
+    // 'identify' promised a quiz and delivered a ruler; it is now 'measure'.
+    if (v === 'identify') return 'measure';
+    return ['explore', 'measure', 'inchord', 'practice'].includes(v) ? v : 'explore';
+  });
+  const handleIntervalsSegChange = (s: string) => { setIntervalsSegment(s); writeLS('scaleup_seg_intervals', s); };
+
   const handleTabChange = (t: number) => { setPagerTab(t); writeLS('scaleup_pager_tab', String(t)); };
   const handleChordsSegChange   = (s: string) => { setChordsSegment(s as ChordsSub);   writeLS('scaleup_seg_chords',   s); };
-  // Logo click → home base: Chords / By Name.
-  const handleLogoClick = () => { handleTabChange(0); handleChordsSegChange('finder'); };
+  // ── Finding a tool: the tools map (logo) and the command palette (⌘K) ────
+  // The map opens by itself on a first visit so a newcomer sees every tool.
+  const [mapOpen, setMapOpen] = useState(() => readLS('scaleup_seen_map', '0') !== '1');
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const closeMap = useCallback(() => { setMapOpen(false); writeLS('scaleup_seen_map', '1'); }, []);
+  const handleLogoClick = () => setMapOpen(true);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(o => !o); }
+      else if (e.key === '/' && !typing) { e.preventDefault(); setPaletteOpen(true); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const handleScalesSegChange   = (s: string) => { setScalesSegment(s as ScalesSub);   writeLS('scaleup_seg_scales',   s); };
   const handleVoicingsSegChange = (s: string) => { setVoicingsSegment(s as VoicingsSub); writeLS('scaleup_seg_voicings', s); };
   const handleToolsSegChange    = (s: string) => { setToolsSegment(s as ToolsSub);     writeLS('scaleup_seg_tools',    s); };
@@ -295,7 +322,9 @@ export default function App() {
     setPagerTab(tab); writeLS('scaleup_pager_tab', String(tab));
     if (tab === 0) handleChordsSegChange(sub);
     else if (tab === 1) handleScalesSegChange(sub);
+    else if (tab === 2) handleIntervalsSegChange(sub);
     else if (tab === 3) handleVoicingsSegChange(sub);
+    else if (tab === 4) handleToolsSegChange(sub);
   }), []);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Session sync ───────────────────────────────────────────────────────────
@@ -324,6 +353,28 @@ export default function App() {
 
   const isDesktopBrowser = useIsDesktop();
 
+  const currentToolId = `${PANEL_TITLES[pagerTab].toLowerCase()}:${
+    [chordsSegment, scalesSegment, intervalsSegment, voicingsSegment, toolsSegment][pagerTab]}`;
+
+  const { lang, setLang } = useLang();
+  const he = lang === 'he';
+  const paletteActions: PaletteAction[] = [
+    { id: 'map',   label: he ? 'כל הכלים (מפה)' : 'All tools (map)', hint: he ? 'לוגו' : 'logo', run: () => setMapOpen(true) },
+    { id: 'dark',  label: darkMode ? (he ? 'מצב בהיר' : 'Light mode') : (he ? 'מצב כהה' : 'Dark mode'), run: () => setDarkMode(d => !d) },
+    { id: 'sound', label: soundEnabled() ? (he ? 'השתקת צלילי לחיצה' : 'Mute tap sounds') : (he ? 'הפעלת צלילי לחיצה' : 'Turn tap sounds on'), run: () => setSoundEnabled(!soundEnabled()) },
+    { id: 'lang',  label: he ? 'English' : 'עברית', run: () => setLang(he ? 'en' : 'he') },
+    { id: 'ws',    label: he ? 'האזור האישי' : 'My workspace', run: () => setWorkspaceOpen(true) },
+  ];
+
+  const finders = (
+    <>
+      <ToolsMap open={mapOpen} onClose={closeMap} currentId={currentToolId}
+        onSearch={() => { closeMap(); setPaletteOpen(true); }} desktop={isDesktopBrowser} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)}
+        currentId={currentToolId} actions={paletteActions} />
+    </>
+  );
+
   const sharedBanner = showSharedBanner && sharedProgression ? (
     <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
       <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
@@ -340,6 +391,7 @@ export default function App() {
   if (isDesktopBrowser) {
     return (
       <>
+        {finders}
         {workspaceOpen && (
           <WorkspaceOverlay
             desktop
@@ -356,6 +408,7 @@ export default function App() {
           userMenu={<UserMenu onOpenWorkspace={() => setWorkspaceOpen(true)} />}
           sharedBanner={sharedBanner}
           onLogoClick={handleLogoClick}
+          onSearch={() => setPaletteOpen(true)}
         >
           <SessionBar progression={progression} tuning={tuning} capo={capo} />
 
@@ -393,6 +446,7 @@ export default function App() {
                     tuning={tuning} capo={capo}
                   />
                 )}
+                {chordsSegment === 'target' && <TargetNoteTab desktop tuning={tuning} capo={capo} />}
                 {chordsSegment === 'extensions' && <DiatonicExtensions desktop />}
                 {chordsSegment === 'practice' && <ChordsPracticeTab desktop />}
               </ErrorBoundary>
@@ -415,7 +469,7 @@ export default function App() {
           {/* ── Panel 2: INTERVALS ───────────────────────────────────── */}
           {pagerTab === 2 && (
             <ErrorBoundary label="Intervals">
-              <IntervalsTab desktop />
+              <IntervalsTab desktop sub={intervalsSegment} onSubChange={handleIntervalsSegChange} />
             </ErrorBoundary>
           )}
 
@@ -426,8 +480,6 @@ export default function App() {
               <ErrorBoundary label="Voicings">
                 {voicingsSegment === 'voiceleading'
                   ? <VoiceLeadingStudio desktop globalProgression={progression} tuning={tuning} onChordsChange={handleChordNamesChange} />
-                  : voicingsSegment === 'target'
-                  ? <TargetNoteTab desktop tuning={tuning} capo={capo} />
                   : <VoicingsTab
                       desktop
                       globalProgression={progression}
@@ -468,6 +520,7 @@ export default function App() {
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <>
+      {finders}
       {workspaceOpen && (
         <WorkspaceOverlay
           onClose={() => setWorkspaceOpen(false)}
@@ -486,6 +539,7 @@ export default function App() {
         sharedBanner={sharedBanner}
         sessionBar={<SessionBar progression={progression} tuning={tuning} capo={capo} />}
         onLogoClick={handleLogoClick}
+        onSearch={() => setPaletteOpen(true)}
       >
 
         {/* Session bar is rendered inside each panel on mobile via the pager,
@@ -521,6 +575,7 @@ export default function App() {
                 tuning={tuning} capo={capo}
               />
             )}
+            {chordsSegment === 'target' && <TargetNoteTab tuning={tuning} capo={capo} />}
             {chordsSegment === 'extensions' && <DiatonicExtensions />}
             {chordsSegment === 'practice' && <ChordsPracticeTab />}
           </ErrorBoundary>
@@ -540,7 +595,7 @@ export default function App() {
         {/* ── Panel 2: INTERVALS ──────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <ErrorBoundary label="Intervals">
-            <IntervalsTab />
+            <IntervalsTab sub={intervalsSegment} onSubChange={handleIntervalsSegChange} />
           </ErrorBoundary>
         </div>
 
@@ -550,8 +605,6 @@ export default function App() {
           <ErrorBoundary label="Voicings">
             {voicingsSegment === 'voiceleading'
               ? <VoiceLeadingStudio globalProgression={progression} tuning={tuning} onChordsChange={handleChordNamesChange} />
-              : voicingsSegment === 'target'
-              ? <TargetNoteTab tuning={tuning} capo={capo} />
               : <VoicingsTab
                   globalProgression={progression}
                   onChordsChange={handleChordNamesChange}
