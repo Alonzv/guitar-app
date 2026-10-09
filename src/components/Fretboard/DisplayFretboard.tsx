@@ -12,6 +12,8 @@ export interface DisplayDot extends FretPosition {
   /** Identity that follows the note across changes (e.g. its scale degree),
    *  so the dot slides to its new fret instead of blinking. */
   id?: string;
+  /** Ringed — a note to aim for (the chord tones while jamming). */
+  target?: boolean;
 }
 
 interface Props {
@@ -99,6 +101,7 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact, onDotClick })
             style={onDotClick ? { cursor: 'pointer' } : undefined}>
             <Dot x={fretX(dot.fret)} y={strY(dot.string)} r={DOT_R}
               glow={sounding.midi(STANDARD_OPEN_MIDI[dot.string] + dot.fret)}>
+              {dot.target && <circle r={DOT_R + 4} fill="none" stroke="var(--gc-success)" strokeWidth={2.5} />}
               <circle r={DOT_R} fill={dot.color} stroke="#fff" strokeWidth={1.9} opacity={dot.opacity ?? 0.92} />
               <text y={4} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">{label}</text>
             </Dot>

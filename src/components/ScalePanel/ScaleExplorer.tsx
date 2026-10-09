@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
-import { Scale, Note as TonalNote } from '@tonaljs/tonal';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { Scale, Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
 import type { Note } from '../../types/music';
 import { DisplayFretboard, type DisplayDot } from '../Fretboard/DisplayFretboard';
 import { getScalePositions } from '../../utils/scaleUtils';
 import { fretToNote, STRING_COUNT, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
-import { playScale } from '../../utils/audioPlayback';
+import { playScale, playChord, unlockAudio } from '../../utils/audioPlayback';
+import { findChordVoicings } from '../../utils/chordVoicings';
+import { formatChordName } from '../../utils/chordIdentifier';
 import { T, card } from '../../theme';
 import { previewNote, previewMidi, previewRun } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
@@ -92,6 +94,48 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   const [viewMode, setViewMode]     = useState<'fretboard' | 'tab'>('fretboard');
 
   const scale       = useMemo(() => scaleType ? Scale.get(`${root} ${scaleType}`) : Scale.get(''), [root, scaleType]);
+
+  // ── Jam ───────────────────────────────────────────────────────────────────
+  // A backing loop to improvise over: I–IV–V–I built from the scale itself
+  // (its own triads, so Dorian gets Dorian chords), one bar each at the song's
+  // tempo. The notes of the chord that is playing are ringed on the neck —
+  // the ones to land on.
+  const song = useOptionalSong();
+  const bpm = song?.song.bpm ?? 90;
+  const [jam, setJam] = useState<{ chords: string[]; step: number } | null>(null);
+  const jamTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopJam = () => { if (jamTimer.current) clearTimeout(jamTimer.current); jamTimer.current = null; setJam(null); };
+  useEffect(() => () => { if (jamTimer.current) clearTimeout(jamTimer.current); }, []);
+  const jamChords = (): string[] => {
+    const notes = scale.notes;
+    let triads: string[][];
+    if (notes.length === 7) {
+      triads = [0, 3, 4, 0].map(d => [notes[d], notes[(d + 2) % 7], notes[(d + 4) % 7]]);
+    } else {
+      // Pentatonic / blues / symmetric scales: the plain major or minor I–IV–V.
+      const minor = /minor|blues/.test(scaleType ?? '');
+      const parent = Scale.get(`${root} ${minor ? 'minor' : 'major'}`).notes;
+      triads = [0, 3, 4, 0].map(d => [parent[d], parent[(d + 2) % 7], parent[(d + 4) % 7]]);
+    }
+    return triads.map(t => TonalChord.detect(t)[0] ?? `${t[0]}`);
+  };
+  const toggleJam = () => {
+    if (jam) { stopJam(); return; }
+    const chords = jamChords();
+    const barMs = (60 / bpm) * 4 * 1000;
+    const step = (i: number) => {
+      const name = chords[i % chords.length];
+      const shape = findChordVoicings(name.replace(/M$/, ''), 1)[0];
+      if (shape) playChord(shape);
+      setJam({ chords, step: i % chords.length });
+      jamTimer.current = setTimeout(() => step(i + 1), barMs);
+    };
+    unlockAudio().then(() => step(0));
+  };
+  const jamTones = useMemo(() => {
+    if (!jam) return null;
+    return new Set(TonalChord.get(jam.chords[jam.step].replace(/M$/, '')).notes.map(n => TonalNote.chroma(n)));
+  }, [jam]);
   const allPos      = useMemo(() => scaleType ? getScalePositions(root, scaleType) : [], [root, scaleType]);
 
   const displayPos  = useMemo(() => {
@@ -128,9 +172,10 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
         color: isRoot ? T.primary : (pos !== null ? POS_COLORS[pos] : T.secondary),
         // Spelled as the scale spells it (D major has C#, never Db).
         label: scale.notes.find(n => samePitch(n, note)) ?? note,
+        target: !!jamTones?.has(TonalNote.chroma(note)),
       };
     }),
-    [displayPos, root, pos, dotIds, scale]
+    [displayPos, root, pos, dotIds, scale, jamTones]
   );
 
   const roll = () => {
@@ -266,6 +311,11 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                     fontWeight: 400, cursor: 'pointer',
                   }}
                 >PLAY</button>
+                <button onClick={toggleJam} data-active={!!jam} title="Loop chords in this key to improvise over"
+                  style={{
+                    padding: '4px 14px', borderRadius: 0, fontSize: 12, cursor: 'pointer',
+                    background: jam ? T.primary : T.bgInput, color: jam ? '#fff' : T.text, border: `1px solid ${jam ? T.primary : T.border}`,
+                  }}>{jam ? '■ JAM' : 'JAM'}</button>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -289,6 +339,21 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
               })}
             </div>
           </div>
+
+          {/* ── Jam: the loop, with the chord that is playing lit ── */}
+          {jam && (
+            <div className="gc-drop-in" dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Jam · {bpm} bpm</span>
+              {jam.chords.map((c, i) => (
+                <span key={i} className="gc-notation" style={{
+                  padding: '4px 10px', fontSize: 13, fontWeight: 700,
+                  background: i === jam.step ? T.primary : T.bgInput, color: i === jam.step ? '#fff' : T.text,
+                  transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out)',
+                }}>{formatChordName(c)}</span>
+              ))}
+              <span style={{ fontSize: 11, color: T.textMuted }}>· ringed notes = the chord's tones</span>
+            </div>
+          )}
 
           {/* ── View toggle ── */}
           <div style={{ display: 'flex', gap: 0 }}>
