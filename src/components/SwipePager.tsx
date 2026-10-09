@@ -6,6 +6,7 @@ import { SoundToggle } from './SoundToggle';
 import { BrandMark } from './BrandMark';
 import { HelpButton } from './HelpButton';
 import { useSlider } from '../motion/useSlider';
+import { useDockOpen } from '../song/dockState';
 
 // ── Segment control ──────────────────────────────────────────────────────────
 
@@ -23,6 +24,8 @@ export function Segment({ items, active, onChange, helpPrefix }: SegmentProps) {
   // One dark block slides between tabs; the buttons themselves stay clear.
   const slider = useSlider(items.findIndex(it => it.id === active));
   const dense = items.length > 4;
+  // With the song dock folded, the sub-tabs take the room it gave back.
+  const big = !useDockOpen();
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, marginBottom: 18, flexShrink: 0 }}>
       <div style={{ display: 'flex', border: `1px solid ${T.border}`, flex: 1, minWidth: 0, position: 'relative' }}>
@@ -35,14 +38,14 @@ export function Segment({ items, active, onChange, helpPrefix }: SegmentProps) {
             style={{
               flex: 1, textAlign: 'center', position: 'relative',
               // Five tabs on a phone only fit with tighter type.
-              padding: dense ? '10px 2px' : '10px 4px', minHeight: 44,
+              padding: dense ? '10px 2px' : '10px 4px', minHeight: big ? 54 : 44,
               fontFamily: 'var(--gc-font)', whiteSpace: 'nowrap',
-              fontSize: dense ? 10 : 11, letterSpacing: dense ? '0' : '0.04em', textTransform: 'uppercase',
+              fontSize: dense ? (big ? 10.5 : 10) : (big ? 13 : 11), letterSpacing: dense ? '0' : '0.04em', textTransform: 'uppercase',
               cursor: 'pointer', borderRadius: 0,
               borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
               background: 'transparent',
               color: it.id === active ? '#fff' : T.textDim,
-              fontWeight: it.id === active ? 500 : 400,
+              fontWeight: it.id === active ? (big ? 700 : 500) : 400,
             }}
           >
             {it.label}

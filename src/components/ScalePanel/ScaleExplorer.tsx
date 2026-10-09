@@ -326,14 +326,14 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                 return (
                   <button key={i} onClick={() => previewMidi(TonalNote.midi(`${note}4`) ?? 60)} className="gc-notation" style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    padding: '8px 10px', borderRadius: 0, gap: 3, flex: 1, minWidth: 48,
+                    padding: '8px 6px', borderRadius: 0, gap: 3, flex: 1, minWidth: 48,
                     background: isR ? T.primaryBg : T.bgInput,
                     border: `1px solid ${isR ? T.primary : T.border}`,
                     borderTop: isR ? `3px solid ${T.primary}` : `3px solid ${T.border}`,
                   }}>
                     <span style={{ fontSize: 11, fontWeight: 400, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
                     <span style={{ fontSize: 18, fontWeight: isR ? 800 : 600, color: isR ? T.primary : T.text, lineHeight: 1.1 }}>{note}</span>
-                    <span style={{ fontSize: 9, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
+                    <span style={{ fontSize: 9, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{deg.name}</span>
                   </button>
                 );
               })}
