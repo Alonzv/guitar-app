@@ -21,29 +21,6 @@ export function useMicNotes(onNote: (midi: number) => void) {
     raf?: number; run: number[]; last: number | null; silent: number;
   }>({ run: [], last: null, silent: 0 });
 
-  const tick = useCallback(() => {
-    const r = refs.current;
-    if (!r.analyser) return;
-    const buf = new Float32Array(r.analyser.fftSize);
-    r.analyser.getFloatTimeDomainData(buf);
-    const { freq } = detectPitch(buf, getSharedContext().sampleRate, 1100);
-    if (freq > 0) {
-      const midi = Math.round(69 + 12 * Math.log2(freq / 440));
-      r.silent = 0;
-      r.run = [...r.run.slice(-(STEADY_FRAMES - 1)), midi];
-      if (r.run.length === STEADY_FRAMES && r.run.every(m => m === midi) && midi !== r.last) {
-        r.last = midi;
-        setHeard(midi);
-        cb.current(midi);
-      }
-    } else if (++r.silent > 10) {
-      // A short silence lets the same note count again when it is replayed.
-      r.run = []; r.last = null;
-      setHeard(null);
-    }
-    r.raf = requestAnimationFrame(tick);
-  }, []);
-
   const stop = useCallback(() => {
     const r = refs.current;
     if (r.raf) cancelAnimationFrame(r.raf);
@@ -75,6 +52,29 @@ export function useMicNotes(onNote: (midi: number) => void) {
       const sink = ctx.createGain();
       sink.gain.value = 0;
       analyser.connect(sink); sink.connect(ctx.destination);
+      // Each frame: read the mic, and count a note once it has held steady.
+      const tick = () => {
+        const r = refs.current;
+        if (!r.analyser) return;
+        const buf = new Float32Array(r.analyser.fftSize);
+        r.analyser.getFloatTimeDomainData(buf);
+        const { freq } = detectPitch(buf, getSharedContext().sampleRate, 1100);
+        if (freq > 0) {
+          const midi = Math.round(69 + 12 * Math.log2(freq / 440));
+          r.silent = 0;
+          r.run = [...r.run.slice(-(STEADY_FRAMES - 1)), midi];
+          if (r.run.length === STEADY_FRAMES && r.run.every(m => m === midi) && midi !== r.last) {
+            r.last = midi;
+            setHeard(midi);
+            cb.current(midi);
+          }
+        } else if (++r.silent > 10) {
+          // A short silence lets the same note count again when it is replayed.
+          r.run = []; r.last = null;
+          setHeard(null);
+        }
+        r.raf = requestAnimationFrame(tick);
+      };
       refs.current = { stream, source, analyser, sink, run: [], last: null, silent: 0 };
       setListening(true);
       refs.current.raf = requestAnimationFrame(tick);
@@ -82,7 +82,7 @@ export function useMicNotes(onNote: (midi: number) => void) {
       const name = e instanceof Error ? e.name : '';
       setError(name === 'NotAllowedError' ? 'Microphone blocked — allow it in the browser to answer by playing.' : 'Could not open the microphone.');
     }
-  }, [tick]);
+  }, []);
 
   useEffect(() => stop, [stop]);
 
