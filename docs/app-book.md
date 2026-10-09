@@ -8,31 +8,17 @@
 
 1. [סקירה כללית](#סקירה-כללית)
 2. [ארכיטקטורה](#ארכיטקטורה)
-3. [מערכת הצבעים והעיצוב](#מערכת-הצבעים-והעיצוב)
-4. [טיפוסי הנתונים הבסיסיים](#טיפוסי-הנתונים-הבסיסיים)
-5. [כלי עזר ואלגוריתמים](#כלי-עזר-ואלגוריתמים)
-6. [לשונית Theory](#לשונית-theory)
-   - [Chords — By Ear](#chords--by-ear)
-   - [Chords — By Name](#chords--by-name)
-   - [Chords — Analyze](#chords--analyze)
-   - [Chords — Target Note](#chords--target-note)
-   - [Scales](#scales)
-   - [Triads](#triads)
-   - [Intervals](#intervals)
-   - [Wheel — Circle of Fifths](#wheel--circle-of-fifths)
-7. [לשונית Voicings](#לשונית-voicings)
-   - [Paths](#paths)
-   - [Voice Leading](#voice-leading)
-   - [Re-Harmonize](#re-harmonize)
-8. [לשונית Tools](#לשונית-tools)
-   - [Tuner](#tuner)
-   - [Metronome](#metronome)
-   - [Audio→Tab](#audiotab)
-   - [Tab Builder](#tab-builder)
-9. [רכיבי Fretboard](#רכיבי-fretboard)
-10. [ניהול Progression](#ניהול-progression)
-11. [אינטגרציות חיצוניות](#אינטגרציות-חיצוניות)
-12. [פורמטי יצוא](#פורמטי-יצוא)
+3. [השיר — פרויקט הלחנה אחד](#השיר--פרויקט-הלחנה-אחד)
+4. [ניווט: מפת הכלים ולוח הפקודות](#ניווט-מפת-הכלים-ולוח-הפקודות)
+5. [תנועה, סאונד ומשוב](#תנועה-סאונד-ומשוב)
+6. [מערכת הצבעים והעיצוב](#מערכת-הצבעים-והעיצוב)
+7. [טיפוסי הנתונים הבסיסיים](#טיפוסי-הנתונים-הבסיסיים)
+8. [כלי עזר ואלגוריתמים](#כלי-עזר-ואלגוריתמים)
+9. [הפאנלים והכלים](#הפאנלים-והכלים)
+10. [תרגול](#תרגול)
+11. [רכיבי Fretboard](#רכיבי-fretboard)
+12. [אינטגרציות חיצוניות](#אינטגרציות-חיצוניות)
+13. [פורמטי יצוא](#פורמטי-יצוא)
 
 ---
 
@@ -45,6 +31,8 @@ ScaleUp היא אפליקציית ווב (PWA) ללימוד תיאוריה מו�
 - ניתוח AI מבוסס Claude API
 - כלי אודיו בזמן אמת (כוונון, מטרונום, תמלול)
 - מגוון פורמטי יצוא (PDF, MIDI, AlphaTex)
+- **שיר אחד** שכל הכלים עובדים עליו יחד — אקורדים בקטעים, מלודיה, סולם, טמפו וכיוון משותפים
+- תרגול עם רצף, יעד יומי ותשובה בנגינה על הגיטרה
 
 האפליקציה תומכת בעברית ואנגלית.
 
@@ -54,62 +42,121 @@ ScaleUp היא אפליקציית ווב (PWA) ללימוד תיאוריה מו�
 
 ```
 src/
-├── App.tsx                  # Root — ניהול tabs, dark mode, progression, undo/redo
-├── theme.ts                 # Design tokens — T.primary, T.secondary, card(), btn()
-├── types/
-│   └── music.ts             # כל טיפוסי הנתונים המשותפים
+├── App.tsx                  # Root — שני ה-shells (דסקטופ / מובייל), ניווט בין פאנלים
+├── song/                    # השיר: מודל, state + undo/redo, שמירה במכשיר ובענן
+├── motion/                  # שכבת התנועה: לחיצה, בחירה, החלקה, "מעוף" למגש, playhead
+├── practice/                # רצף, יעד יומי, משוב לתשובות, האזנה לגיטרה (מיקרופון)
+├── data/tools.ts            # קטלוג הכלים — מקור לוח הפקודות ומפת הכלים
+├── theme.ts                 # Design tokens — T.primary, card(), btn()
+├── index.css                # טוקני צבע, טוקני תנועה (200/280/400ms) והנפשות
 ├── utils/
 │   ├── musicTheory.ts       # CHROMATIC, TUNINGS, המרות note↔fret
-│   ├── scaleUtils.ts        # זיהוי סולמות, עמדות CAGED
-│   ├── chordVoicings.ts     # גנרטור ווקאינגים נגינים
-│   ├── chordIdentifier.ts   # זיהוי שם אקורד מנוטות
-│   ├── voicingPaths.ts      # beam-search למסלולי ווקאינג
-│   ├── progressionHelper.ts # זיהוי טונאליות, הצעות אקורדים
-│   ├── reharmonize.ts       # Re-harmonization via Claude API
-│   ├── musicalAnalysis.ts   # ניתוח פרוגרסיה via Claude API
-│   ├── audioToTab.ts        # תמלול אודיו → טאב
-│   ├── analyzeTab.ts        # ניתוח טאב ידני + הצעות
-│   ├── audioPlayback.ts     # Web Audio synthesis
-│   ├── pdfExport.ts         # יצוא PDF (jsPDF)
-│   └── midiExport.ts        # יצוא MIDI
+│   ├── harmonicAnalysis.ts  # זיהוי סולם אחד לכל האפליקציה + ספרות רומיות
+│   ├── audioPlayback.ts     # Web Audio + "אוטובוס" התווים שמנגנים (playhead)
+│   ├── previewSound.ts      # צלילי בחירה (ההשתקה בכותרת שולטת בהם)
+│   ├── pitch.ts             # זיהוי גובה YIN — טיונר ותשובות בנגינה
+│   └── …                    # chordVoicings, voiceLeading, reharmonize, audioToTab, export
 └── components/
-    ├── ChordBuilder/        # By Ear
-    ├── ChordPicker/         # By Name
-    ├── Chords/              # Target Note
-    ├── ScalePanel/          # Scales + Circle of Fifths
-    ├── Triads/              # Triads Generator
-    ├── Intervals/           # Explore + Calculate
-    ├── Voicings/            # Paths + Voice Leading + Re-Harmonize
-    └── Tools/               # Tuner + Metronome + Audio→Tab + Tab Builder
+    ├── Song/                # SongDock (המגש מעל כל כלי), SongMap (מפת השיר)
+    ├── CommandPalette.tsx   # ⌘K
+    ├── ToolsMap.tsx         # מפת הכלים
+    ├── Practice/            # StreakBoard, PlayToAnswer
+    ├── Fretboard/           # Display / Interactive / Mini + Dot (נקודה מונפשת)
+    ├── ChordPicker, ChordBuilder, Chords   # CHORDS
+    ├── ScalePanel, Triads                  # SCALES
+    ├── Intervals, EarTraining              # INTERVALS
+    ├── Voicings                            # VOICINGS
+    └── Tools                               # TOOLS
 ```
 
 ### ניהול מצב (State Management)
 
-אין Redux או Zustand — המצב מנוהל לוקאלית עם `useState` + `useRef`. המצב הגלובלי היחיד שמועבר בין קומפוננטות הוא **הפרוגרסיה** (`ChordInProgression[]`), שמנוהלת ב-`App.tsx` עם מחסנית undo/redo מלאה.
+אין Redux או Zustand. המצב המשותף היחיד הוא **השיר** (`song/SongContext.ts`): App מחזיק אותו דרך `useSongState()` ומעביר אותו בקונטקסט; כל כלי קורא ממנו עם `useSong()` / `useOptionalSong()`. מחסנית undo/redo אחת (עד 50 צעדים) מכסה את כל השיר. מצב מקומי של כל כלי נשאר `useState`.
+
+---
+
+## השיר — פרויקט הלחנה אחד
+
+כל הכלים עובדים על שיר אחד (`song/song.ts`):
+
+| שדה | תוכן |
+|-----|------|
+| `title` | שם השיר |
+| `keyOverride` | סולם שנבחר; `null` = מזוהה מהאקורדים (`harmonicAnalysis.detectKey`) |
+| `bpm`, `meter` | טמפו ומשקל — משותפים למטרונום, לנגינת המגש, ל-Jam ול-Tab Builder |
+| `tuningName`, `capo` | כיוון וקאפו — משותפים ל-By Name, By Ear, Tuner ונגינה |
+| `sections[]` | קטעים (Verse, Chorus…), לכל אחד אקורדים (`ChordInProgression[]`) וגרסאות חלופיות |
+| `melody`, `melodyFrom` | המלודיה (TabContent) ואיזה כלי כתב אותה אחרון |
+
+**המגש (`SongDock`)** — מעל כל כלי: ▶ מנגן את הקטע (תיבה לאקורד בטמפו השיר), ⟳ לופ, שם, טאבים לקטעים ו-+, בחירת גרסה, סולם (Auto או ידני), BPM ומשקל. לחיצה על אקורד מנגנת ובוחרת אותו.
+
+**מה כל כלי לוקח ונותן:**
+
+| כלי | לוקח | נותן |
+|-----|------|------|
+| By Name / By Ear / Wheel / Extensions / Target | סולם, כיוון | אקורדים לקטע ("עפים" למגש) |
+| Scale Explorer, Wheel, Extensions, Harmonize | הסולם | — (נפתחים עליו ועוקבים אחריו) |
+| Triads, Intervals → In a Chord | האקורד שנבחר במגש | — |
+| VL Studio | אקורדי הקטע | עריכות לאקורדי הקטע |
+| Reharm | אקורדי הקטע | "Use in song" / "Keep as variant" |
+| Harmonize | המלודיה | עריכות למלודיה |
+| Tab Builder / Audio→Tab | המלודיה | "Use this tab" / "Use as the song's melody" |
+| Metronome | טמפו, משקל | טמפו ומשקל (כולל Tap ו-Speed trainer) |
+| Tuner | הכיוון | — |
+| Practice | אקורדי השיר וסולמו | — (רמת "My song") |
+
+**מפת השיר (`SongMap`)** — כל הקטעים, ניגון השיר כולו עם קליק, עריכת קטעים וגרסאות, מצב המלודיה, יצוא MIDI/PDF, ו-"השירים שלי".
+
+**שמירה** — השיר נשמר במכשיר בכל שינוי (`scaleup_song`, וספרייה ב-`scaleup_songs`). למשתמש מחובר הוא נשמר גם בטבלת `songs` ב-Supabase (`supabase/schema.sql`), 2.5 שניות אחרי שהעריכה נעצרת; העותק החדש מנצח.
+
+---
+
+## ניווט: מפת הכלים ולוח הפקודות
+
+- **מפת הכלים** (`ToolsMap`) — הלוגו פותח אותה, והיא נפתחת לבד בביקור ראשון: 5 פאנלים × כלים, לכל כלי משפט אחד על מה שהוא נותן.
+- **לוח הפקודות** (`CommandPalette`) — ⌘K / Ctrl+K / "/" או כפתור החיפוש בכותרת. מחפש לפי כוונה בעברית ובאנגלית ("איזה אקורד זה", "לכוון") מתוך `data/tools.ts`, ומריץ פעולות (מצב כהה, השתקה, שפה, שיר חדש, מפת השיר).
+- כל המעברים עוברים דרך `services/navigate.ts`.
+
+---
+
+## תנועה, סאונד ומשוב
+
+**זמנים** — שלושה בלבד: `--gc-dur-fast` 200ms, `--gc-dur-base` 280ms, `--gc-dur-slow` 400ms. חריגים: playhead (מתוזמן לפי הצליל) וסיבוב גלגל החמישיות.
+
+**לחיצה** (`motion/index.ts`) — הכפתור שוקע 6px והפס השמאלי מתעבה מ-3px ל-12px; הלחיצה נמשכת לפחות 200ms, וקופצת חזרה בקפיץ. ריחוף רק בעכבר. `.gc-no-bar` לכפתורי טקסט חשופים, `.gc-no-press` לביטול.
+
+**בחירה** — כפתור עם `data-active` מקבל "שפיכה" של הצבע מהפס כשהוא נבחר ו"איסוף" לתוכו כשהוא מבוטל. טאבים וניווט: מחוון אחד מחליק (`motion/useSlider.ts`).
+
+**אישור** — `RollLabel` מגלגל טקסט ("✓ Added"); `flyToDock` מעיף את האקורד מהכפתור אל המגש; כפתור שהופך לזמין פועם; טעות — רעידה.
+
+**סאונד** — כל בחירה מושמעת (`utils/previewSound.ts`): שורש → תו, אקורד → האצבוע הראשון, סולם → ריצה, אינטרוול → שני התווים. כפתור הרמקול בכותרת משתיק רק את צלילי הבחירה.
+
+**Playhead** — כל תו שמושמע מוכרז ב-`audioPlayback.onNotes`; `useSounding()` מאפשר לכל צוואר להדליק את הנקודה שנשמעת (`Fretboard/Dot.tsx`), ולנקודות להחליק למקומן החדש כשהאצבוע/השורש/המודוס משתנה.
+
+כשמופעל "הפחת תנועה" במערכת ההפעלה — ההנפשות כבויות.
 
 ---
 
 ## מערכת הצבעים והעיצוב
 
-### פלטת Midnight Magic Show
+### פלטה
+
+מונוכרום — שחור, לבן ואפור — עם הכחול של הלוגו כצבע הדגשה. אין צבעים שרירותיים בקוד: `scripts/check-palette.mjs` מפיל את ה-build על צבע שאינו בפלטה.
 
 | טוקן | Light | Dark | שימוש |
 |------|-------|------|-------|
-| `--gc-bg-deep` | `#F0EBE0` | `#111110` | רקע הדף |
-| `--gc-bg-card` | `#E8E2D6` | `#1A1918` | כרטיסים |
-| `--gc-bg-input` | `#DDD6C8` | `#242220` | שדות קלט |
-| `--gc-border` | `#B8B0A0` | `#383530` | גבולות |
-| `--gc-primary` | `#CC1C1C` | `#E02020` | כפתורים ראשיים (אדום) |
-| `--gc-secondary` | `#1E3898` | `#2A4CC8` | tabs פעילים (כחול מלכותי) |
-| `--gc-coral` | `#C8A020` | `#D4A820` | accent זהוב |
-| `--gc-text` | `#1A1810` | `#F0EAD8` | טקסט ראשי |
+| `--gc-bg-deep` | `#FFFFFF` | `#111110` | רקע הדף |
+| `--gc-bg-card` | `#FFFFFF` | `#1A1918` | כרטיסים |
+| `--gc-bg-input` | `#F0F0F0` | `#242220` | שדות וכפתורים לא פעילים |
+| `--gc-border` | `#D0D0D0` | `#383530` | גבולות |
+| `--gc-primary` | `#1A1818` | `#6B655C` | כפתורים ומצב פעיל |
+| `--gc-brand-accent` | `#110CF0` | `#4F7BFF` | ה-"Up" בלוגו בלבד |
+| `--gc-success` | `#2B54D4` | `#5E86FF` | נכון, playhead, טבעות "תו מטרה" |
+| `--gc-bar-color` | `#000` | `rgba(255,255,255,.2)` | הפס בצד שמאל של כרטיסים וכפתורים |
 
-### אפקטים טקסטורה (Retro/Collage)
+### שפה ויזואלית
 
-- **Film grain** — שכבת SVG `feTurbulence` קבועה על כל הדף (opacity 6%)
-- **Halftone dots** — גריד נקודות רדיאלי ברקע הדף (18px pitch)
-- **Header accent** — אשכול נקודות צבעוני (primary + coral) בפינה ימנית עליונה, נמוג עם `mask-image`
-- **Brand stamp** — מסגרת זהובה עם רוטציה של -0.6° על "ScaleUp"
+פינות חדות, בלי צללים, פס שחור בצד שמאל של כל כרטיס וכפתור. הפס הוא גם מה שזז — ראו [תנועה, סאונד ומשוב](#תנועה-סאונד-ומשוב).
 
 ### גופנים
 
@@ -270,10 +317,10 @@ Major > Minor > Dorian/Mixolydian > Phrygian/Lydian > Pentatonics > Harmonic/Mel
 
 **זיהוי טונאליות והצעות אקורדים.**
 
-**זיהוי מפתח:**
-- משווה שורשי האקורדים מול כל 24 מפתחות (major + minor)
-- ניקוד לפי fit דיאטוני
-- Tie-breakers: נוכחות טוניקה, האקורד הראשון הוא טוניקה
+**זיהוי מפתח:** `detectKey()` כאן מחזיר טקסט ("A minor") ומאציל ל-`harmonicAnalysis.detectKey` — מזהה אחד לכל האפליקציה:
+- כל 24 הסולמות; אקורד שכל תוויו בסולם +2, שורש בסולם +0.5
+- האקורד הראשון כטוניקה +0.8 (ועוד +0.3 אם האיכות שלו מתאימה למודוס), האחרון +0.4
+- רצף של אקורדי 7 דומיננטיים (בלוז) — האקורד הראשון קובע את הסולם
 
 **מנוע הצעות:**
 - **דיאטוני:** מחפש את המספר הרומי של האקורד האחרון → מציע המשך לפי כללי הרמוניה
@@ -329,241 +376,56 @@ TabData (grid: column × string × fret)
 - iOS unlock: `navigator.audioSession.type = 'playback'`
 - **playChord()** — arpeggio מנים נמוך לגבוה, sawtooth + lowpass filter, envelope דינמי
 - **playScale()** — sine wave סדרתי, envelope עדין
+- **onNotes / emitNotes** — כל תו שמושמע מוכרז (גובה, מיקום, הצורה שהוא שייך לה, מתי ולכמה זמן) — זה מה שמניע את ה-playhead על הצוואר, במגש ובאריחים
 
 ---
 
-## לשונית Theory
+## הפאנלים והכלים
 
-### Chords — By Ear
+| פאנל | כלים |
+|------|------|
+| **CHORDS** | By Name · By Ear · Target · Extensions · Practice |
+| **SCALES** | Explorer · Triads · Wheel · Practice |
+| **INTERVALS** | Explore · Measure · In a Chord · Practice |
+| **VOICINGS** | VL Studio · Harmonize · Reharm |
+| **TOOLS** | Tuner · Metronome · Tab Builder · Audio→Tab |
 
-**קובץ:** `ChordBuilder/ChordBuilderTab.tsx`
+לכל כלי כפתור "?" עם הסבר (`content/helpContent.ts`; `scripts/check-help.mjs` מוודא שלאף טאב לא חסר הסבר).
 
-הכלי הראשי לבניית אקורדים על ידי לחיצה על הפרטבורד.
+### CHORDS
 
-**תכונות:**
-- פרטבורד אינטראקטיבי (6 נימים × 12 פרטות) — לחיצה מוסיפה/מסירה נוטה
-- בחירת כיוון (11 presets: Standard, Drop D, Open E/D/G/A/C, DADGAD, half-down, D-standard, Drop C)
-- Capo (0–11 פרטות) — כל החישובים מתאימים אוטומטית
-- זיהוי אקורד בזמן אמת (3-step algorithm)
-- תצוגת שם האקורד + אינברסיה + אפקט הcapo
-- פירוט intervals (root, 3rd, 5th, 7th + צבעים)
-- variations — 2D grid של mini-fretboards עם 6 ווקאינגים חלופיים
-- הוספה לפרוגרסיה + undo/redo
+- **By Name** (`ChordPicker/ChordPickerTab.tsx`) — שורש + טריאדה + אקסטנשן → 6 אצבועים נגינים (`findChordVoicings`). נפתח על האקורד האחרון (C בפעם הראשונה), כל בחירה מושמעת, "Surprise me" מגריל אקורד.
+- **By Ear** (`ChordBuilder/ChordBuilderTab.tsx`) — מניחים תווים על הצוואר (כל תו מושמע) ומקבלים זיהוי בזמן אמת (`chordIdentifier.ts`, 3 שלבים), היפוכים ו-variations. בחירת variation מחליקה את הנקודות למקומן.
+- **Target** (`Chords/TargetNoteTab.tsx`) — כל האצבועים שמכילים תו מסוים על מיתר מסוים. נפתח על G במיתר e; תוצאה → "+ Add to song".
+- **Extensions** (`Chords/DiatonicExtensions.tsx`) — 7 הדרגות של הסולם עם 7/9/11/13. לחיצה על אקורד מנגנת אותו "נבנה" מהשורש למעלה ונועצת את הצורות שלו; לחיצה על צורה מוסיפה אותה לשיר.
+- **ProgressionPanel** — אקורדי הקטע: סידור, transpose (מחשב אצבועים חדשים לשמות החדשים), undo/redo, שיתוף, PDF, שמירה לספרייה. האריח שנשמע "מתרומם".
 
-**ChordName.tsx**
-- שם ראשי גדול + שמות חלופיים (aliases grid)
-- "Capo 2 — sounds like Am" (כשcapo פעיל)
-- רשימת נוטות
+### SCALES
 
-**ChordStructure.tsx**
-- פירוט intervals צבעוני:
-  - Root = primary (אדום)
-  - 3rd = secondary (כחול)
-  - 5th = gold (זהב)
-  - 7th = purple
+- **Explorer** (`ScalePanel/ScaleExplorer.tsx`) — כל סולם/מודוס על הצוואר, 5 פוזיציות, Tab. נקודות מזוהות לפי דרגה — שורש חדש מחליק את כל הדפוס, מודוס חדש מזיז רק את התווים שמשתנים. **JAM**: לופ I–IV–V–I מטריאדות הסולם עצמו בטמפו השיר, תווי האקורד הנוכחי מסומנים בטבעת.
+- **Triads** (`Triads/TriadsGenerator.tsx`) — כל צורות הטריאדה לפי סט מיתרים, היפוך ואזור. **WALK THE NECK** מנגן את כל הצורות מהנמוכה לגבוהה.
+- **Wheel** (`ScalePanel/ChordWheel.tsx`) — מעגל החמישיות, אקורדי הסולם לפי פונקציה, ופרוגרסיות נפוצות: ▶ מנגן ומשרטט את המסלול על הגלגל.
 
-**VoicingVariations.tsx**
-- grid של mini-fretboards, לחיצה טוענת ווקאינג לעורך הראשי
+### INTERVALS
 
----
+- **Explore** — שורש + אינטרוול על הצוואר (נפתח על M3), כולל רמזי שירים לחיצים שמנגנים את פתיחת השיר.
+- **Measure** — נוגעים בשני תווים ומקבלים את המרחק האמיתי (כולל דצימות).
+- **In a Chord** — כל האינטרוולים בתוך אקורד; נפתח על האקורד שנבחר במגש.
 
-### Chords — By Name
+### VOICINGS
 
-**קובץ:** `ChordPicker/ChordPickerTab.tsx`
+- **VL Studio** (`Voicings/VoiceLeadingStudio.tsx`) — ארבעה קולות (SATB) על אקורדי הקטע, ספרות רומיות, אזהרות קווינטות/אוקטבות מקבילות וקפיצות. מתחת לטבלה — **קווי קול** (קו לכל קול; שטוח = תו משותף, אלכסון = צעד, מקווקו = קפיצה) ו-playhead בנגינה.
+- **Harmonize** (`Voicings/MelodyHarmonizerTab.tsx`) — מלודיה בטאב → הרמוניה (AI). המלודיה היא מלודיית השיר. כפתור Example טוען מלודיה לדוגמה.
+- **Reharm** (`Voicings/ReharmonizeTab.tsx`) — ריהרמוניזציה לפי ז'אנר ומתח (AI). האקורדים שהשתנו מסומנים; **Before / After** בלופ אחד שמחליף צד באמצע; "Use in song" / "Keep as variant".
 
-בניית אקורד לפי בחירת root + איכות.
+### TOOLS
 
-**שלבי בחירה:**
-1. **Root** — 12 כפתורים (C עד B)
-2. **Triad** — Major, Minor, dim, aug, sus2, sus4
-3. **Extension** — 7, maj7, 9, add9, 6, 11, 13 (מסוננים לפי triad)
-4. **Voicing** — 6 ווקאינגים נגינים בgrid
+- **Tuner** (`Tools/Tuner.tsx`) — מיתר שמכוון ±5¢ במשך 0.7 שנ' "ננעל" (✓), המיתר הבא מסומן, 6 מיתרים → חותמת TUNED, ומד של 4 עמודות הלוגו. לחיצה על מיתר משמיעה צליל ייחוס.
+- **Metronome** (`Tools/Metronome.tsx`) — טמפו ומשקל של השיר, Tap tempo, subdivisions, פס שמתרוקן בכל פעמה, **Speed trainer** (+4 BPM כל 4 תיבות עד יעד).
+- **Tab Builder** (`Tools/TabBuilder.tsx`) — עורך טאב עם טכניקות, ניתוח, PDF, שמירה; ▶ PLAY עם playhead; ריף לדוגמה; שליחה למלודיית השיר וטעינה ממנה.
+- **Audio→Tab** (`Tools/AudioToTab.tsx`) — הקלטה/העלאה → תמלול (ראו `audioToTab.ts` למעלה) → טאב, PDF, MIDI; "Use as the song's melody".
 
-**פלט:** אקורד עם ווקאינג נבחר → הוספה לפרוגרסיה.
-
----
-
-### Chords — Analyze
-
-**קובץ:** `ChordBuilder/ChordAnalyzerTab.tsx`
-
-ניתוח הרמוני של הפרוגרסיה הנוכחית.
-
-**תכונות:**
-- זיהוי מפתח (e.g., "C major / A minor")
-- תצוגת נוטות הסולם
-- כל אקורד בפרוגרסיה מקבל:
-  - מספר רומי (I, ii, V7 וכו')
-  - צבע לפי פונקציה הרמונית:
-    - **Tonic** (I, vi) = primary
-    - **Subdominant** (IV, ii) = secondary/green
-    - **Dominant** (V, vii°) = coral/orange
-    - **Non-diatonic** = muted gray
-
----
-
-### Chords — Target Note
-
-**קובץ:** `Chords/TargetNoteTab.tsx`
-
-מצא ווקאינגים שמכילים נוטה ספציפית על נים ספציפי.
-
-**קלט:**
-- Root + איכות אקורד
-- נים יעד (0–5)
-- פרטה יעד (0–22)
-
-**פלט:**
-- כל הווקאינגים המכילים את הנוטה הנעוצה
-- ממוינים לפי פרטה ממוצעת (נמוך = עדיף)
-- עוברים את כל חוקי הנגינה (barre, span, reach)
-
-**שימוש:** "רוצה לנגן Cmaj7 עם E בנים 1 פרטה 2" → מציג את כל האפשרויות.
-
----
-
-### Scales
-
-**קבצים:** `ScalePanel/ScalesTab.tsx`, `ScalePanel/ScaleExplorer.tsx`
-
-סייר סולמות אינטראקטיבי עם visualizer פרטבורד.
-
-**בחירות:**
-- **Root** — 12 כפתורים
-- **סוג סולם** — מקובץ לקטגוריות:
-  - *Essential:* Major, Minor, Major Pent, Minor Pent, Blues
-  - *Minor Variants:* Harmonic, Melodic
-  - *Modes:* Dorian, Phrygian, Lydian, Mixolydian, Locrian, Phrygian Dominant
-  - *Other:* Whole Tone, Diminished, Augmented, Double Harmonic
-- **עמדה (CAGED)** — 5 עמדות (פרטות 0–3, 2–5, 4–8, 6–10, 9–12)
-
-**תצוגות:**
-- Fretboard — Root מודגש, דרגות צבעוניות
-- Tab — ASCII tab עם מיקומי הסולם
-- כפתור Play — מנגן את הסולם בסדרה
-
----
-
-### Triads
-
-**קובץ:** `Triads/TriadsGenerator.tsx`
-
-גנרטור טריאדות עם אינברסיות וsets נימים.
-
-**פרמטרים:**
-- **סוג טריאדה** — Major, Minor, Diminished, Augmented
-- **Root** — 12 כפתורים
-- **אינברסיה** — Root, 1st Inversion, 2nd Inversion
-- **Set נימים** — E-A-D, A-D-G, D-G-B, G-B-E (כל קבוצת 3 נימים עוקבים)
-- **אזור פרטה** — All, 1–4, 5–8, 9–12
-- **מצב תצוגה** — Notes (שמות נוטות) / Intervals (סמלי intervals)
-
-**פלט:** grid של mini-fretboards נגינים עם צביעת degrees.
-
----
-
-### Intervals
-
-**קבצים:** `Intervals/IntervalsTab.tsx`, `IntervalExplore.tsx`, `IntervalCalculate.tsx`
-
-**Explore:**
-- Root + interval (14 אפשרויות: 1, b2, 2, b3, 3, 4, b5, 5, b6, 6, b7, 7, 8+)
-- Fretboard מציג את שני הצלילים
-- Play — מנגן שתי נוטות בסדרה
-- תצוגת שם ה-interval + סמל
-
-**Calculate:**
-- קלט: שני מיקומים על הפרטבורד
-- פלט: שם ה-interval ביניהם
-
----
-
-### Wheel — Circle of Fifths
-
-**קובץ:** `Tools/WheelTab.tsx`, `ScalePanel/CircleOfFifths.tsx`
-
-גלגל חמישיות אינטראקטיבי.
-
-- 12 מיקומים (outer = major, inner = relative minor)
-- לחיצה על טוניקה — מציג את כל אקורדי המפתח:
-  - I, IV, V, vi, ii, iii, vii° (major)
-  - i, iv, v, ii° (minor)
-- צבעים לפי פונקציה הרמונית (Tonic/Subdominant/Dominant)
-- אנימציית rotation חלקה
-- כל אקורד ניתן להוסיף לפרוגרסיה
-
----
-
-## לשונית Voicings
-
-### Paths
-
-**קובץ:** `Voicings/VoicingsTab.tsx`
-
-סייר מסלולי ווקאינג לפרוגרסיות שלמות.
-
-**בניית הפרוגרסיה:**
-- Root + Triad + Extension (ממשק זהה לBy Name)
-- הוספת אקורדים לרצף
-
-**פרמטרי החיפוש:**
-- **Genre** — Any, Americana, Swamp, Neo-Soul, Blues, Rock, Country
-- **Mode** — Full chords / Triads only
-- **Strings** — All / Bass (נימים 1–3) / Treble (נימים 4–6)
-
-**תצוגת מסלולים:**
-5 מסלולים ממוינים לפי עלות, כל אחד כולל:
-- Mini-fretboard לכל אקורד בפרוגרסיה
-- Label: "Open Drones", "Open Position", "Lower Neck", "Mid Neck", "Upper Neck", "High Neck"
-- תיאור נרטיבי (e.g., "Open strings drone while fretted notes ring above")
-- Smoothness score (0–5 ⭐)
-
-**Interval isolate:** הדגשת degree ספציפי (root, 3rd, 5th, 7th) בכל ווקאינג.
-
----
-
-### Voice Leading
-
-ניתוח מוזיקלי של מסלול הווקאינגים הנבחר:
-
-- Claude API מנתח את אופי הפרוגרסיה + הז'אנר
-- מחזיר בעברית:
-  - אופי הרמוני (e.g., "תנועה סלולרית עם פינות בולטות")
-  - טיפים נגינה
-  - עצת פוזיציה
-  - הMסלול המומלץ מתוך 5 האפשרויות
-
----
-
-### Re-Harmonize
-
-**קובץ:** `utils/reharmonize.ts`
-
-**כלי AI לשינוי הרמוניה.**
-
-**קלט:**
-- פרוגרסיה נוכחית
-- ז'אנר
-- רמת מתח (1–5):
-  - 1 = extensions בסיסיים
-  - 3 = tritone substitutions
-  - 5 = altered dominants + substitute chords מקצוניים
-
-**תהליך (Claude Haiku API):**
-- קלט: אקורדים + ז'אנר + רמת מתח
-- פלט: פרוגרסיה re-harmonized + ניתוח תיאורטי + הסבר טכניקות
-
-**פלט למשתמש (בעברית):**
-- הפרוגרסיה החדשה
-- ניתוח אופי הרמוני
-- הסבר הטכניקות שנעשה בהן שימוש (e.g., "Tritone sub: G7 → Db7")
-- כפתורי השמעה + השוואה
-
----
-
-## לשונית Tools
-
-### Tuner
+#### Tuner — YIN
 
 **קובץ:** `Tools/Tuner.tsx`
 
@@ -601,128 +463,25 @@ TabData (grid: column × string × fret)
 
 ---
 
-### Metronome
-
-**קובץ:** `Tools/Metronome.tsx`
-
-מטרונום דיגיטלי עם subdivisions.
-
-**תכונות:**
-- BPM: 40–240 (input + ± buttons)
-- **Tap Tempo** — מחשב BPM ממיצוע 4 הלחיצות האחרונות
-- Subdivisions: רבעים / שמיניות / שישה-עשריות
-- **אקצנט** על beat 1 — תדר 1100 Hz vs 880 Hz
-- אינדיקטור beat ויזואלי
-
-**מימוש:**
-- `AudioContext` + `OscillatorNode` — accuracy מוזיקלית (ללא drift של setTimeout)
-- `lookAheadMs = 25ms` — scheduling מראש למניעת glitches
-- Beat counter + accent על multiples של subdivisions
-
 ---
 
-### Audio→Tab
+## תרגול
 
-**קובץ:** `Tools/AudioToTab.tsx`
+שלושה תרגולים — אקורדים (CHORDS), סולמות (SCALES), אינטרוולים (INTERVALS) — עם רכיבים משותפים:
 
-תמלול קובץ אודיו → טאב גיטרה.
-
-**שלבי הprocessing:**
-1. Upload קובץ (MP3/WAV/FLAC/OGG)
-2. בחירת כלי (Acoustic / Electric / Bass / Ukulele)
-3. בחירת mix (Solo / Full Mix)
-4. שרת MT3 (אופציונלי) — URL של FastAPI server חיצוני
-5. **עיבוד** (progress indicators לכל שלב):
-   - Basic Pitch ML
-   - Cleanup (merge, harmonics, duration filter)
-   - AI Refine (Claude Sonnet)
-   - Fingering optimization
-
-**תצוגת הטאב:**
-- SVG מותאם עם labels לנימים + פרטות
-- עמודות עם גווני עומק לפי אורך נוטה
-- עריכה: לחיצה על תא → הזנת פרטה
-
-**יצוא:**
-- PDF (jsPDF — שורות של 20 עמודות, labels, bar marks)
-- MIDI (playback)
-- AlphaTex (נוטציית tablature)
-
----
-
-### Tab Builder
-
-**קובץ:** `Tools/TabBuilder.tsx`
-
-עורך טאב ידני עם ניתוח מוזיקלי.
-
-**ממשק:**
-- grid 6 שורות × N עמודות (נימים מגבוה לנמוך)
-- תאים עריכים — לחיצה → הזנת פרטה (0–22)
-- שורת טכניקות — bend (b), slide (/ \\), hammer-on (h), pull-off (p)
-
-**ניתוח אוטומטי:**
-1. **זיהוי סולם** — מנתח את כל הנוטות, מחזיר סולם מתאים אחד עם אחוז כיסוי
-2. **הצעות פרוגרסיה (AI)** — Claude Sonnet מייצר 3 פרוגרסיות לסולם + מלודיה:
-   - Vibe label (e.g., "Dark & Heavy")
-   - תיאור בעברית ואנגלית
-   - אקורדים תואמים (validated via Tonal.js)
-
-**Playback:** MIDI synthesis של הנוטות
-
-**יצוא:** PDF, MIDI, AlphaTex
+- **StreakBoard** (`components/Practice/StreakBoard.tsx`) — רצף שמתגלגל ספרה-ספרה, שיא שמהבהב בשיא חדש, 4 עמודות הלוגו שמתמלאות לקראת אבן הדרך, חותמת "Streak ×5" בכל חמישית, ויעד יומי משותף (20 שאלות, `practice/daily.ts`) עם רצף ימים.
+- **משוב** (`practice/feedback.ts`) — תשובה נכונה: צליל עולה + ספירה ליעד; שגויה: זמזום, רטט, רעידה של אזור התשובה. הטעות הראשונה בשאלה נסלחת (`practice/streak.ts`).
+- **ענו בנגינה** (`practice/useMicNotes.ts`, `PlayToAnswer`) — המיקרופון מקשיב (YIN, `utils/pitch.ts`), ותו שמוחזק יציב עונה: באיות — ממלא את הקופסה הבאה; באינטרוולים — נגינת התו השני עונה (תווים אחרים מתעלמים).
+- **My song** — רמה שמתרגלת את אקורדי השיר ואת סולם השיר.
 
 ---
 
 ## רכיבי Fretboard
 
-### InteractiveFretboard.tsx
-- 6 × 12 לחיץ
-- Toggle נוטה בלחיצה
-- תצוגת dots עם צביעה מותאמת (interval colors)
-
-### MiniFretboard.tsx
-- תצוגה compact לvoicing tiles
-- צביעה לפי interval
-- read-only
-
-### DisplayFretboard.tsx
-- Read-only לסולמות / intervals
-- Dot labels (שמות נוטות)
-- Dot colors ממופות
-
-### VerticalScaleFretboard.tsx
-- Layout אנכי לתצוגת Tab
-
----
-
-## ניהול Progression
-
-**קובץ:** `ChordBuilder/ProgressionPanel.tsx`
-
-**תצוגה:**
-- רצף אופקי של mini-chord tiles
-- תג זיהוי מפתח
-- זמן נגינה כולל
-
-**עריכה:**
-- הסרת אקורד בודד
-- סידור מחדש (חיצים ↑↓)
-- transpose (±1 semitone) — שינוי כל השורשים
-- מחיקת הכל
-- Undo/Redo (מחסנית עד 50 צעדים)
-
-**שיתוף ויצוא:**
-- Copy as text ("Am – C – G – D")
-- Share URL — base64 encoding של `{n: name, f: fretPositions}[]` ב-hash
-- Play all — arpeggio סדרתי
-- Export PDF — diagram + notes לכל אקורד
-
-**הצעות:**
-- Genre selector
-- הצעות הבאות לפי מפתח שזוהה
-- Roman numeral input custom
-- Hover preview של ווקאינג מוצע
+- **InteractiveFretboard** — 6 × 12 לחיץ (By Ear); תו שמונח מושמע ומחליק במיתר כשטוענים אצבוע אחר.
+- **DisplayFretboard** — תצוגה (Scale Explorer); נקודות לחיצות, מזוהות לפי `id` כדי להחליק, `target` מוסיף טבעת (Jam).
+- **MiniFretboard** — אריחי אצבועים; נדלק רק כשהצורה שלו היא זו שמושמעת.
+- **Dot** — הנקודה המשותפת: מיקום (מחליק), כניסה (pop), והדלקה עם טבעת בזמן שהתו נשמע.
 
 ---
 
@@ -797,4 +556,4 @@ FastAPI server חיצוני לתמלול:
 ---
 
 *מסמך זה נוצר אוטומטית מניתוח קוד המקור של ScaleUp.*
-*גרסה: יוני 2026*
+*גרסה: אוקטובר 2026*
