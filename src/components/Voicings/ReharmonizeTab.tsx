@@ -248,6 +248,9 @@ export function ReharmonizeTab({
   const [kept, flashKept] = useFlash();
   const [genre, setGenre] = useState('jazz');
   const [tension, setTension] = useState(3);
+  const liveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const busy = useRef(false);   // a request in flight (the live timer's closure can't see `loading`)
+  useEffect(() => () => { if (liveTimer.current) clearTimeout(liveTimer.current); }, []);
   const [showNashville, setShowNashville] = useState(false);
   const [result, setResult] = useState<ReharmonizeResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -278,10 +281,13 @@ export function ReharmonizeTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restored]);
 
-  const handleReharmonize = () => {
-    if (chords.length === 0 || loading) return;
+  // `live`: a re-run from the tension slider — the current result stays on
+  // screen until the new one arrives instead of the panel going blank.
+  const handleReharmonize = (t: number = tension, live = false) => {
+    if (chords.length === 0 || busy.current) return;
+    busy.current = true;
     setLoading(true);
-    setResult(null);
+    if (!live) setResult(null);
     setError(null);
     setReharmPaths([]);
     setSelectedPathIdx(0);
@@ -291,8 +297,8 @@ export function ReharmonizeTab({
 
     const genreLabel = GENRES.find(g => g.id === genre)?.label ?? genre;
 
-    reharmonize(chords, genreLabel, tension).then(r => {
-      setLoading(false);
+    reharmonize(chords, genreLabel, t).then(r => {
+      setLoading(false); busy.current = false;
       if (r) {
         setResult(r);
         const paths = findVoicingPaths(r.chords, {
@@ -307,7 +313,7 @@ export function ReharmonizeTab({
         setError(ERR[lang].refused);
       }
     }).catch(() => {
-      setLoading(false);
+      setLoading(false); busy.current = false;
       setError(ERR[lang].network);
     });
   };
@@ -456,7 +462,7 @@ export function ReharmonizeTab({
                   background: T.secondaryBg, color: T.secondary,
                   fontSize: 11, fontWeight: 400,
                 }}>
-                  {tension} — {tensionLabel(tension)}
+                  {tension} — {tensionLabel(tension)}{result && loading ? ' · …' : ''}
                 </span>
               </div>
               <input
@@ -465,7 +471,16 @@ export function ReharmonizeTab({
                 max={5}
                 step={1}
                 value={tension}
-                onChange={e => setTension(Number(e.target.value))}
+                onChange={e => {
+                  const v = Number(e.target.value);
+                  setTension(v);
+                  // With a result on screen the slider is live: settle on a level
+                  // and the reharm is redone at it.
+                  if (result) {
+                    if (liveTimer.current) clearTimeout(liveTimer.current);
+                    liveTimer.current = setTimeout(() => handleReharmonize(v, true), 700);
+                  }
+                }}
                 style={{ width: '100%', accentColor: T.primary, cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -517,7 +532,7 @@ export function ReharmonizeTab({
 
           {/* Re-Harmonize button */}
           <button
-            onClick={handleReharmonize}
+            onClick={() => handleReharmonize()}
             disabled={chords.length === 0 || loading}
             style={{
               width: '100%',
