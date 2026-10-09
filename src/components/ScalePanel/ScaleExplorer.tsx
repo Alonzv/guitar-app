@@ -7,6 +7,8 @@ import { fretToNote, STRING_COUNT, STANDARD_OPEN_MIDI } from '../../utils/musicT
 import { playScale } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 import { previewNote, previewMidi, previewRun } from '../../utils/previewSound';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -93,6 +95,13 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     [displayPos, root, pos]
   );
 
+  const roll = () => {
+    const r = pickOne(ALL_NOTES) as Note;
+    const type = pickOne(SCALE_GROUPS.flatMap(g => g.scales)).id;
+    setRoot(r); setScaleType(type); setPos(null);
+    previewRun(scaleMidis(r, type));
+  };
+
   const scaleMidis = (r: Note, type: string) => {
     const sc = Scale.get(`${r} ${type}`);
     return [...sc.notes.map(n => TonalNote.midi(`${n}4`) ?? 60), TonalNote.midi(`${r}5`) ?? 72]
@@ -119,9 +128,10 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
 
       {/* ── Root note ── */}
       <div style={card()}>
-        <p className="gc-sec-label" style={{ margin: '0 0 10px' }}>
-          Root Note
-        </p>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p className="gc-sec-label" style={{ margin: '0 0 10px' }}>Root Note</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 7 }}>
           {ALL_NOTES.map(n => {
             const sharp    = n.includes('#');

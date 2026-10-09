@@ -313,6 +313,20 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     }));
   };
 
+  // An A minor pentatonic run in 5th position — up the top four strings and back.
+  const loadExample = () => {
+    const run: [number, number][] = [   // [row (0 = high e), fret]
+      [3, 5], [3, 7], [2, 5], [2, 7], [1, 5], [1, 8], [0, 5], [0, 8],
+      [0, 5], [1, 8], [1, 5], [2, 7], [2, 5], [3, 7], [3, 5],
+    ];
+    withHistory(p => {
+      const grid = emptyGrid(p.grid[0]?.length ?? colsPerLine * 3);
+      run.forEach(([row, fret], col) => { grid[row][col] = { ...grid[row][col], fret: String(fret) }; });
+      return { ...p, title: p.title || 'A minor pentatonic run', grid, bars: [] };
+    });
+    setSel(null);
+  };
+
   const clearGrid = () => {
     withHistory(p => ({
       ...p,
@@ -688,6 +702,17 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* An empty tab offers a riff to start from. */}
+      {!tabHasContent(tab) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12, fontSize: 12, color: T.textMuted }}>
+          <span>Tap a string to place a note</span>
+          <button onClick={loadExample} style={{
+            padding: '6px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
+            background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)',
+          }}>Load an example riff</button>
         </div>
       )}
 

@@ -4,6 +4,8 @@ import { IntervalNeck, strY, noteX, DOT_R, FB_H, FB_TOP, STR_SP } from './Interv
 import { playScale, getSharedContext, getOutputNode, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
 import { previewMidi, previewInterval } from '../../utils/previewSound';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 interface IntervalInfo {
   semitones: number;
@@ -66,7 +68,8 @@ const MONO_LBL: React.CSSProperties = {
 
 export function IntervalExplore() {
   const [root,     setRoot]     = useState('E');
-  const [interval, setInterval] = useState<number | null>(null);
+  // Opens on a major third so the neck shows something from the first look.
+  const [interval, setInterval] = useState<number | null>(4);
   const [area,     setArea]     = useState<Area>('full');
   const [mode,     setMode]     = useState<'melodic' | 'harmonic'>('melodic');
 
@@ -74,6 +77,12 @@ export function IntervalExplore() {
   const fretRange = AREAS.find(a => a.id === area)!.range;
   const rootMidi  = 60 + CHROMATIC.indexOf(root);
   const intervalMidi = interval !== null ? rootMidi + interval : rootMidi;
+
+  const roll = () => {
+    const r = pickOne(ALL_NOTES);
+    const iv = pickOne(INTERVALS).semitones;
+    setRoot(r); setInterval(iv); hear(r, iv);
+  };
 
   // Every pick is heard: the root alone, or the root and its interval.
   const hear = (r: string, semis: number | null) => {
@@ -135,7 +144,10 @@ export function IntervalExplore() {
 
       {/* Root picker */}
       <div>
-        <p style={MONO_LBL}>Root Note</p>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p style={MONO_LBL}>Root Note</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#');

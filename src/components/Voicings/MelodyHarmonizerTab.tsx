@@ -386,6 +386,19 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     ...p,
     grid: p.grid.map(r => [...r, ...Array.from({ length: 4 }, () => ({ fret: '' }))]),
   }));
+  // A melody to try the harmonizer on: the opening of "Ode to Joy" in C, on
+  // the top two strings. Sets the scale too, so Harmonize works straight away.
+  const loadExample = () => {
+    const line: [number, number][] = [   // [row (0 = high e), fret]
+      [0, 0], [0, 0], [0, 1], [0, 3], [0, 3], [0, 1], [0, 0], [1, 3],
+      [1, 1], [1, 1], [1, 3], [0, 0], [0, 0], [1, 3], [1, 3],
+    ];
+    const grid = emptyGrid(Math.max(DEFAULT_COLS, line.length));
+    line.forEach(([row, fret], col) => { grid[row][col] = { ...grid[row][col], fret: String(fret) }; });
+    withHistory(() => ({ grid, bars: [] }));
+    setScaleRoot('C'); setScaleType('major'); setSel(null);
+  };
+
   const clearGrid = () => { withHistory(() => ({ grid: emptyGrid(), bars: [] })); setSel(null); };
 
   // ── Display grid (melody + harmony collapsed onto consecutive columns) ────
@@ -772,6 +785,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             <button onClick={() => fileRef.current?.click()} disabled={visionLoading} style={secBtn(visionLoading)}>
               {visionLoading ? 'Reading…' : 'Image'}
             </button>
+            <button onClick={loadExample} style={secBtn(false)}>Example</button>
             <button onClick={clearGrid} style={secBtn(false)}>Clear</button>
           </div>
         </div>
@@ -1046,6 +1060,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
             Enter a melody, pick a scale, choose harmony types, then Harmonize.
           </p>
+          {!gridHasNotes(melody.grid) && (
+            <button onClick={loadExample} style={{ ...secBtn(false), marginTop: 16 }}>Try an example melody</button>
+          )}
         </div>
       )}
     </div>

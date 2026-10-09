@@ -8,6 +8,7 @@ import type { VoicedProgression } from '../../utils/voiceLeading';
 import { T, card, alpha } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { toDisplayChord } from '../../utils/chordName';
+import { ExampleChips } from '../ExampleChips';
 
 // ── Voice Leading Studio ─────────────────────────────────────────────────────
 // Build a progression, press Calculate, and see it arranged into four smooth
@@ -87,12 +88,12 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
 
   const t = lang === 'he'
     ? { title: 'סטודיו הולכת קולות', calc: 'חשב', play: '▶ נגן', clear: 'נקה', voice: 'קול',
-        build: 'בנו מהלך אקורדים ולחצו על "חשב"', addChord: 'הוסף', follow: (v: string) => `עוקב אחרי קול ${v}`,
+        build: 'הוסיפו אקורדים עם + למעלה', addChord: 'הוסף', follow: (v: string) => `עוקב אחרי קול ${v}`,
         key: 'סולם', auto: 'אוטומטי', outKey: 'מחוץ לסולם', leap: 'קפיצה', hold: 'צליל משותף מוחזק',
         par5: 'קוינטות מקבילות', par8: 'אוקטבות מקבילות', omit: 'הושמט (אין מספיק קולות)',
         mark: 'הדגש דרגה', degOf: (d: string) => `מדגיש את דרגה ${d} בכל האקורדים` }
     : { title: 'Voice Leading Studio', calc: 'Calculate', play: '▶ Play', clear: 'Clear', voice: 'Voice',
-        build: 'Build a progression, then press Calculate', addChord: 'Add', follow: (v: string) => `Following voice ${v}`,
+        build: 'Add chords with + above', addChord: 'Add', follow: (v: string) => `Following voice ${v}`,
         key: 'Key', auto: 'Auto', outKey: 'out of key', leap: 'leap', hold: 'common tone held',
         par5: 'parallel 5ths', par8: 'parallel octaves', omit: 'omitted (not enough voices)',
         mark: 'Highlight degree', degOf: (d: string) => `Highlighting the ${d} in every chord` };
@@ -246,8 +247,9 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
 
       {/* Result — four-voice grid */}
       {!result ? (
-        <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
+        <div style={{ ...card({ padding: 28 }), textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 18 }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted }}>{t.build}</p>
+          {!chords.length && <ExampleChips onPick={ex => setChords(ex)} />}
         </div>
       ) : (
         <div style={{ overflowX: 'auto', paddingBottom: 8 }}>

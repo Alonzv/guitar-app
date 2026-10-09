@@ -444,7 +444,8 @@ const Pill: React.FC<{
 
 // ── Main component ────────────────────────────────────────────────────────
 export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
-  const [targetPos, setTargetPos]             = useState<TargetPos | null>(null);
+  // Opens on G on the high e string so there are chords to look at at once.
+  const [targetPos, setTargetPos]             = useState<TargetPos | null>({ string: 5, fret: 3 });
   const [selectedIntervals, setSelectedIntervals] = useState<Set<string>>(new Set(['1']));
   const [positionLock, setPositionLock]       = useState<'top' | 'bass' | 'anywhere'>('anywhere');
   const [complexity, setComplexity]           = useState<'triads' | '7ths' | '9ths' | 'full'>('triads');

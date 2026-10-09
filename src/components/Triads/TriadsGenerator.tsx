@@ -7,6 +7,8 @@ import { T, card, alpha } from '../../theme';
 import { TwoPane } from '../desktop/TwoPane';
 import type { Note, ChordInProgression } from '../../types/music';
 import { previewVoicing, previewRun, pcToMidi } from '../../utils/previewSound';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 const OPEN_MIDI = STANDARD_OPEN_MIDI;
 
@@ -270,6 +272,12 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
     return () => document.removeEventListener('keydown', onKey);
   }, [safeIdx, allVisibleCards.length]);
 
+  const roll = () => {
+    const r = pickOne(ALL_NOTES) as Note;
+    const type = pickOne(Object.keys(TRIADS) as TriadType[]);
+    setRoot(r); setTriadType(type); hearTriad(r, type);
+  };
+
   // A new root or quality is heard at once, as a close triad from the root up.
   const hearTriad = (r: string | null, type: TriadType | null) => {
     if (!r || !type) return;
@@ -339,7 +347,10 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
 
       {/* Root selector */}
       <div style={card()}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#'), sel = n === root;

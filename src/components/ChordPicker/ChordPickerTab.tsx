@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { ChordInProgression, FretPosition, Tuning } from '../../types/music';
 import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
 import { VoicingViewer } from './VoicingViewer';
@@ -11,6 +11,8 @@ import { TUNINGS } from '../../utils/musicTheory';
 import { RollLabel } from '../RollLabel';
 import { useFlash } from '../../motion/useFlash';
 import { previewNote, previewVoicing } from '../../utils/previewSound';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 interface Props {
   onAddToProgression: (item: ChordInProgression) => void;
@@ -95,15 +97,29 @@ const SELECT_STYLE: React.CSSProperties = {
   borderLeft: '3px solid var(--gc-bar-color)',
 };
 
+const PICK_KEY = 'scaleup_byname_pick';
+function readPick(): { root: string | null; triad: string | null; ext: string } {
+  try {
+    const v = JSON.parse(localStorage.getItem(PICK_KEY) ?? 'null');
+    if (v && typeof v.root === 'string' && typeof v.triad === 'string') return { root: v.root, triad: v.triad, ext: v.ext ?? '' };
+  } catch { /* private mode / bad JSON */ }
+  return { root: 'C', triad: 'M', ext: '' };
+}
+
 export function ChordPickerTab({
   onAddToProgression, progression,
   onRemoveFromProgression, onClearProgression, onReorderProgression, onTransposeProgression,
   canUndo, canRedo, onUndo, onRedo,
   tuning: tuningProp, capo, desktop,
 }: Props) {
-  const [selectedRoot,      setSelectedRoot]      = useState<string | null>(null);
-  const [selectedTriad,     setSelectedTriad]     = useState<string | null>(null);
-  const [selectedExtension, setSelectedExtension] = useState<string>('');
+  // Opens on the last chord picked (C major the first time), so the tool shows
+  // its voicings straight away instead of waiting for two choices.
+  const [selectedRoot,      setSelectedRoot]      = useState<string | null>(() => readPick().root);
+  const [selectedTriad,     setSelectedTriad]     = useState<string | null>(() => readPick().triad);
+  const [selectedExtension, setSelectedExtension] = useState<string>(() => readPick().ext);
+  useEffect(() => {
+    try { localStorage.setItem(PICK_KEY, JSON.stringify({ root: selectedRoot, triad: selectedTriad, ext: selectedExtension })); } catch { /* private mode */ }
+  }, [selectedRoot, selectedTriad, selectedExtension]);
   // Index of the variation shown enlarged in the VoicingViewer popover, or null.
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [tuningName, setTuningName] = useState<string>(tuningProp?.name ?? TUNINGS[0].name);
@@ -132,6 +148,14 @@ export function ChordPickerTab({
     if (sfx === null) { previewNote(root); return; }
     const shape = findChordVoicings(`${root}${sfx}`, 1, tuning)[0];
     if (shape) previewVoicing(shape, tuningObj.openFreqs);
+  };
+  const roll = () => {
+    const root = pickOne(ROOTS);
+    const triad = pickOne(TRIADS).key;
+    const exts = VALID_EXTENSIONS[triad] ?? [''];
+    const ext = Math.random() < 0.5 ? '' : pickOne(exts);
+    setSelectedRoot(root); setSelectedTriad(triad); setSelectedExtension(ext); setViewerIndex(null);
+    hear(root, triad, ext);
   };
   const handleRootSelect = (root: string) => {
     setSelectedRoot(root); setViewerIndex(null);
@@ -179,7 +203,10 @@ export function ChordPickerTab({
 
       {/* ── Root note ── */}
       <div style={card()}>
-        <p style={LABEL_STYLE}>Root Note</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p style={LABEL_STYLE}>Root Note</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: desktop ? 7 : 6 }}>
           {ROOTS.map(root => {
             const active = selectedRoot === root;

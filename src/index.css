@@ -215,10 +215,14 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   100% { transform: none; opacity: 1; }
 }
 
+/* The die turns over when rolled. */
+.gc-die { animation: gc-die-roll var(--gc-dur-slow) var(--gc-ease-snap); }
+@keyframes gc-die-roll { from { transform: rotate(-180deg) scale(0.6); } to { transform: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   :is(button, [role="button"], .gc-pressable).gc-pressed { transform: none !important; }
   .gc-fill-in::after, .gc-fill-out::after { display: none; }
-  .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land { animation: none !important; }
+  .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land, .gc-die { animation: none !important; }
   .gc-slide { transition: none !important; }
 }
 

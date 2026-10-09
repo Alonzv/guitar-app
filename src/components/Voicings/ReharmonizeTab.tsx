@@ -15,6 +15,7 @@ import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import type { ReharmData } from '../../services/types';
 import { T, card, alpha } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
+import { ExampleChips } from '../ExampleChips';
 
 // Reharmonisation is the one tool that can fail for reasons outside the app,
 // so it is the one tool with error copy. Written for a guitarist: the old text
@@ -43,6 +44,8 @@ interface Props {
   /** Library handoff: a saved reharm to restore without an API call. */
   restored?: { result: ReharmData; genre?: string | null; tension?: number | null } | null;
   onRestoredConsumed?: () => void;
+  /** Fills an empty progression with an example to try. */
+  onLoadExample?: (chords: string[]) => void;
 }
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -230,6 +233,7 @@ export function ReharmonizeTab({
   desktop,
   restored,
   onRestoredConsumed,
+  onLoadExample,
 }: Props) {
   const { lang } = useLang();
   const [genre, setGenre] = useState('jazz');
@@ -333,10 +337,12 @@ export function ReharmonizeTab({
 
       {/* Empty state */}
       {chords.length === 0 && (
-        <div style={{ ...card(), textAlign: 'center', padding: '40px 16px' }}>
+        <div style={{ ...card(), textAlign: 'center', padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
-            Build a progression in Chords or VL Studio first
+            {lang === 'he' ? 'בנו את הפרוגרסיה שתרצו לשנות' : 'Build the progression you want to reharmonize'}
+            {desktop ? (lang === 'he' ? ' — בעמודה משמאל' : ' — on the left') : (lang === 'he' ? ' — למעלה' : ' — above')}
           </p>
+          {onLoadExample && <ExampleChips onPick={onLoadExample} />}
         </div>
       )}
 

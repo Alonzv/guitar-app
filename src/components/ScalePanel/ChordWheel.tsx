@@ -7,6 +7,8 @@ import { findChordVoicings } from '../../utils/chordVoicings';
 import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
 import { onNavKey } from '../../services/navigate';
 import { previewVoicing } from '../../utils/previewSound';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 // ── Music data ─────────────────────────────────────────────────────────────────
 const ALL_ROOTS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -158,7 +160,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
   const handleAddChord = (chordName: string) => {
     if (!onAddToProgression) return;
     onAddToProgression({
-      id: `cw-${Date.now()}`,
+      id: `cw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       chord: { name: chordName, notes: [], aliases: [] },
       fretPositions: getVoicing(chordName),
     });
@@ -167,6 +169,12 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
   const handlePlayChord = (chordName: string) => {
     const fp = getVoicing(chordName);
     if (fp.length) playChord(fp, OPEN_FREQS, 0);
+  };
+
+  const roll = () => {
+    const r = pickOne(ALL_ROOTS);
+    const m: Mode = Math.random() < 0.5 ? 'major' : 'minor';
+    setRoot(r); setMode(m); hearKey(r, m);
   };
 
   // Choosing a key sounds its tonic chord.
@@ -439,7 +447,10 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {/* Key picker — compact on mobile */}
       <div>
-        <p style={MONO_LBL}>Key</p>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p style={MONO_LBL}>Key</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: desktop ? 4 : 3 }}>
           {ALL_ROOTS.map(n => {
             const sharp = n.includes('#');
