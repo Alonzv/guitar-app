@@ -256,6 +256,10 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .gc-beat-drain { animation: gc-beat-drain linear forwards; transform-origin: center; }
 @keyframes gc-beat-drain { from { transform: scaleX(1); opacity: 1; } to { transform: scaleX(0); opacity: 0.4; } }
 
+/* Audio→Tab: a detected onset drops onto the tab strip. */
+.gc-fall { transform-box: fill-box; transform-origin: center; animation: gc-fall var(--gc-dur-slow) var(--gc-ease-snap) both; }
+@keyframes gc-fall { from { transform: translateY(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
 /* The die turns over when rolled. */
 .gc-die { animation: gc-die-roll var(--gc-dur-slow) var(--gc-ease-snap); }
 @keyframes gc-die-roll { from { transform: rotate(-180deg) scale(0.6); } to { transform: none; } }
@@ -264,7 +268,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   :is(button, [role="button"], .gc-pressable).gc-pressed { transform: none !important; }
   .gc-fill-in::after, .gc-fill-out::after { display: none; }
   .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land, .gc-die,
-  .gc-fade-in, .gc-drop-in, .gc-list-in, .gc-tile-now, .gc-stamp, .gc-record, .gc-pop { animation: none !important; }
+  .gc-fade-in, .gc-drop-in, .gc-list-in, .gc-tile-now, .gc-stamp, .gc-record, .gc-pop, .gc-fall { animation: none !important; }
   .gc-slide, .gc-dot-pos { transition: none !important; }
   .gc-dot-face, .gc-dot-glow, .gc-dot-ring { animation: none !important; }
 }
