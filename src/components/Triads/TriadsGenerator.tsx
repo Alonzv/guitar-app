@@ -1,11 +1,15 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
-import { playScale } from '../../utils/audioPlayback';
+import { playScale, playChord } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 import { TwoPane } from '../desktop/TwoPane';
 import type { Note, ChordInProgression } from '../../types/music';
+import { previewVoicing, previewRun, pcToMidi } from '../../utils/previewSound';
+import { useOptionalSong } from '../../song/SongContext';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 const OPEN_MIDI = STANDARD_OPEN_MIDI;
 
@@ -155,7 +159,7 @@ function toggleInSet<T>(set: Set<T>, value: T): Set<T> {
 // ── Filter pill helper ────────────────────────────────────────────────────────
 function pill(active: boolean, onClick: () => void, label: string) {
   return (
-    <button key={label} onClick={onClick} style={{
+    <button data-active={!!active} key={label} onClick={onClick} style={{
       padding: '4px 10px', borderRadius: 0, cursor: 'pointer',
       fontSize: 11, fontWeight: active ? 500 : 400,
       background: active ? T.text : T.bgInput,
@@ -187,6 +191,24 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
     setRoot(ALL_NOTES[chroma] as Note);
     setTriadType(type);
   };
+  // Opens on the chord tapped in the song dock (or the song key's tonic triad)
+  // and follows it; picking something here stands until that changes.
+  const song = useOptionalSong();
+  const follow = song?.selectedChord?.chord.name
+    ?? (song?.key ? `${['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'][song.key.tonicPc]}${song.key.mode === 'minor' ? 'm' : ''}` : '');
+  const [seenFollow, setSeenFollow] = useState('');
+  if (follow !== seenFollow) {
+    setSeenFollow(follow);
+    if (follow) {
+      const info = TonalChord.get(follow);
+      const chroma = info.tonic ? TonalNote.chroma(info.tonic) : null;
+      if (chroma != null) {
+        setRoot(ALL_NOTES[chroma] as Note);
+        setTriadType(info.quality === 'Minor' ? 'minor' : info.quality === 'Diminished' ? 'diminished' : info.quality === 'Augmented' ? 'augmented' : 'major');
+      }
+    }
+  }
+
   // Multi-select filters — an empty Set means "All" (no restriction).
   const [selectedSets,       setSelectedSets]       = useState<Set<number>>(new Set());
   const [displayMode,        setDisplayMode]        = useState<DisplayMode>('notes');
@@ -269,6 +291,34 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
     return () => document.removeEventListener('keydown', onKey);
   }, [safeIdx, allVisibleCards.length]);
 
+  const roll = () => {
+    const r = pickOne(ALL_NOTES) as Note;
+    const type = pickOne(Object.keys(TRIADS) as TriadType[]);
+    setRoot(r); setTriadType(type); hearTriad(r, type);
+  };
+
+  // A new root or quality is heard at once, as a close triad from the root up.
+  const hearTriad = (r: string | null, type: TriadType | null) => {
+    if (!r || !type) return;
+    const base = pcToMidi(r, 3);
+    if (base != null) previewRun(TRIADS[type].intervals.map(i => base + i));
+  };
+
+  // Walk the neck: every shape on screen, lowest fret first — each lights on
+  // its diagram as it sounds, so the triad is heard climbing the neck.
+  const [walking, setWalking] = useState(false);
+  const walkTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => walkTimers.current.forEach(clearTimeout), []);
+  const walkNeck = () => {
+    walkTimers.current.forEach(clearTimeout); walkTimers.current = [];
+    if (walking) { setWalking(false); return; }
+    const route = [...allVisibleCards].sort((a, b) => a.minFret - b.minFret || a.setIdx - b.setIdx);
+    if (!route.length) return;
+    setWalking(true);
+    route.forEach((c, i) => walkTimers.current.push(setTimeout(() => playChord(c.fretPositions), i * 650)));
+    walkTimers.current.push(setTimeout(() => setWalking(false), route.length * 650 + 400));
+  };
+
   const handlePlay = () => {
     const midi = [...notes, notes[0]].map(n => TonalNote.midi(`${n}4`) ?? 60);
     playScale(midi);
@@ -331,18 +381,21 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
 
       {/* Root selector */}
       <div style={card()}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#'), sel = n === root;
             return (
-              <button key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!sel} key={n} onClick={() => { setRoot(n); hearTriad(n, triadType); }} style={{
                 padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 11 : 13, fontWeight: sel ? 500 : 400,
-                border:      sel ? `2px solid ${T.primary}` : `2px solid transparent`,
-                background:  sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
-                color:       sel ? T.primary   : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
+                background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
+                color: sel ? T.primary : sharp ? T.textMuted : T.text,
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>{n}</button>
             );
           })}
@@ -374,12 +427,12 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
               {(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => {
                 const sel = triadType === type;
                 return (
-                  <button key={type} onClick={() => { setTriadType(type); setTriadMenuOpen(false); }} style={{
+                  <button data-active={!!sel} key={type} onClick={() => { setTriadType(type); setTriadMenuOpen(false); hearTriad(root, type); }} style={{
                     padding: '9px 10px', borderRadius: 0, cursor: 'pointer', textAlign: 'left',
-                    border:      sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
-                    background:  sel ? T.secondaryBg : T.bgInput,
-                    color:       sel ? T.secondary   : T.textMuted,
-                    transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                    border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
+                    background: sel ? T.secondaryBg : T.bgInput,
+                    color: sel ? T.secondary : T.textMuted,
+                    borderLeft: '3px solid var(--gc-bar-color)',
                   }}>
                     <span style={{ fontSize: 13, fontWeight: 400 }}>{d.label}</span>
                     <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
@@ -407,6 +460,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
               style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 400, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderLeft: '3px solid var(--gc-bar-color)' }}
             >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
             <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>PLAY</button>
+            <button onClick={walkNeck} data-active={walking} title="Play every shape below, from the nut up the neck" style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: walking ? T.primary : T.secondaryBg, color: walking ? '#fff' : T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>{walking ? '■ WALK' : 'WALK THE NECK'}</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -526,7 +580,8 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {sortedCards.map(c => (
             <div key={`${c.setIdx}_${c.inv}`}
-              onClick={() => setExpandedIdx(c.globalIdx)}
+              onClick={() => { setExpandedIdx(c.globalIdx); previewVoicing(c.fretPositions); }}
+                    className="gc-pressable"
               style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -566,7 +621,8 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
                 {cards.map(c => (
                   <div key={`${c.setIdx}_${c.inv}`}
-                    onClick={() => setExpandedIdx(c.globalIdx)}
+                    onClick={() => { setExpandedIdx(c.globalIdx); previewVoicing(c.fretPositions); }}
+                    className="gc-pressable"
                     style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>

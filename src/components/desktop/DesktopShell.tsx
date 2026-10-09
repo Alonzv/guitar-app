@@ -3,6 +3,9 @@ import { T } from '../../theme';
 import { BrandMark } from '../BrandMark';
 import { PANEL_TITLES } from '../../constants/panels';
 import { LangToggle } from '../LangToggle';
+import { SearchButton } from '../SearchButton';
+import { SoundToggle } from '../SoundToggle';
+import { useSlider } from '../../motion/useSlider';
 
 
 
@@ -14,6 +17,8 @@ interface Props {
   userMenu?: React.ReactNode;
   sharedBanner?: React.ReactNode;
   onLogoClick?: () => void;
+  /** Opens the command palette. */
+  onSearch?: () => void;
   children: React.ReactNode;
 }
 
@@ -22,8 +27,10 @@ export function DesktopShell({
   darkMode, onToggleDark,
   userMenu, sharedBanner,
   onLogoClick,
+  onSearch,
   children,
 }: Props) {
+  const slider = useSlider(tab);
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
@@ -39,14 +46,15 @@ export function DesktopShell({
         backgroundColor: T.bgDeep, flexShrink: 0,
       }}>
 
-        {/* Left: mark + wordmark lockup. Clickable → Chords / By Name.
+        {/* Left: mark + wordmark lockup. Clickable → the tools map.
             Kept a <span> (not <button>) so the global uppercase button style
             doesn't turn "ScaleUp" into "SCALEUP". */}
         <span
           onClick={onLogoClick}
           role={onLogoClick ? 'button' : undefined}
+          className="gc-no-bar"
           tabIndex={onLogoClick ? 0 : undefined}
-          aria-label={onLogoClick ? 'ScaleUp — go to Chords, By Name' : undefined}
+          aria-label={onLogoClick ? 'ScaleUp — all tools' : undefined}
           onKeyDown={onLogoClick ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLogoClick(); } }) : undefined}
           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: onLogoClick ? 'pointer' : 'default' }}
         >
@@ -59,13 +67,17 @@ export function DesktopShell({
 
         {/* Center: horizontal tab nav */}
         <nav>
-          <div style={{ display: 'flex', gap: 34, alignItems: 'flex-end' }}>
+          {/* Inactive tabs keep a small dot; the active underline is one bar that
+              slides from tab to tab. */}
+          <div style={{ display: 'flex', gap: 34, alignItems: 'flex-end', position: 'relative' }}>
             {PANEL_TITLES.map((title, i) => {
               const active = i === tab;
               return (
                 <button
                   key={i}
+                  ref={slider.itemRef(i)}
                   onClick={() => onTabChange(i)}
+                  className="gc-no-bar"
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                     background: 'transparent', cursor: 'pointer', padding: '0 2px',
@@ -74,25 +86,27 @@ export function DesktopShell({
                     color: active ? T.text : T.textMuted,
                     letterSpacing: '0.04em', textTransform: 'uppercase',
                     border: 'none',
-                    transition: 'color 0.15s',
                   }}
                 >
                   {title}
                   <span style={{
-                    display: 'block',
-                    width: active ? 22 : 4,
-                    height: active ? 3 : 4,
-                    background: active ? T.primary : T.border,
-                    transition: 'width 0.2s ease, background 0.2s ease',
+                    display: 'block', width: 4, height: 4,
+                    background: T.border, opacity: active ? 0 : 1,
+                    transition: 'opacity var(--gc-dur-base) var(--gc-ease-out)',
                   }} />
                 </button>
               );
             })}
+            <div className="gc-slide" style={{ ...slider.style, bottom: 0, height: 3, display: 'flex', justifyContent: 'center' }}>
+              <span style={{ width: 22, height: 3, background: T.primary }} />
+            </div>
           </div>
         </nav>
 
         {/* Right: ghost icon buttons + user menu */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {onSearch && <SearchButton onClick={onSearch} />}
+          <SoundToggle />
           <LangToggle />
           <button
             onClick={onToggleDark}

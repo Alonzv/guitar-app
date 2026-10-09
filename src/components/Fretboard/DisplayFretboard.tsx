@@ -1,15 +1,27 @@
 import React from 'react';
 import type { FretPosition } from '../../types/music';
-import { fretToNote, FRET_COUNT, STRING_COUNT } from '../../utils/musicTheory';
+import { fretToNote, FRET_COUNT, STRING_COUNT, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
+import { useSounding } from '../../motion/useSounding';
+import { Dot } from './Dot';
 import { T } from '../../theme';
 
 export interface DisplayDot extends FretPosition {
   color: string;
   label?: string;
   opacity?: number;
+  /** Identity that follows the note across changes (e.g. its scale degree),
+   *  so the dot slides to its new fret instead of blinking. */
+  id?: string;
+  /** Ringed — a note to aim for (the chord tones while jamming). */
+  target?: boolean;
 }
 
-interface Props { dots: DisplayDot[]; compact?: boolean }
+interface Props {
+  dots: DisplayDot[];
+  compact?: boolean;
+  /** Makes each dot tappable — e.g. to hear the note. */
+  onDotClick?: (dot: DisplayDot) => void;
+}
 
 const SVG_W = 660;
 const SVG_H = 168;
@@ -26,7 +38,9 @@ const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 // String thickness: high-e thin → low-E thick
 const strW = (s: number) => 2.0 + s * 0.40;
 
-export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
+export const DisplayFretboard: React.FC<Props> = ({ dots, compact, onDotClick }) => {
+  const sounding = useSounding();
+  return (
   <div className={compact ? 'gc-fretboard-compact' : 'gc-fretboard-wrap'}>
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block' }}>
 
@@ -70,7 +84,7 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
       {/* Fret numbers */}
       {[3, 5, 7, 9, 12].map(f => (
         <text key={f} x={NUT_X + (f - 0.5) * FRET_SP} y={SVG_H - 3}
-          textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.6)">{f}</text>
+          textAnchor="middle" fontSize={9} fill={T.textDim}>{f}</text>
       ))}
 
       {/* String labels */}
@@ -79,18 +93,22 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
           textAnchor="middle" fontSize={10} fill={T.textMuted}>{fretToNote(s, 0)}</text>
       ))}
 
-      {/* Scale dots */}
-      {dots.map((dot, i) => {
-        const cx = fretX(dot.fret);
-        const cy = strY(dot.string);
+      {/* Scale dots — each lights up while its pitch is sounding */}
+      {dots.map(dot => {
         const label = dot.label ?? fretToNote(dot.string, dot.fret);
         return (
-          <g key={i}>
-            <circle cx={cx} cy={cy} r={DOT_R} fill={dot.color} stroke="#fff" strokeWidth={1.9} opacity={dot.opacity ?? 0.92} />
-            <text x={cx} y={cy + 4} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">{label}</text>
+          <g key={dot.id ?? `${dot.string}-${dot.fret}`} onClick={onDotClick ? () => onDotClick(dot) : undefined}
+            style={onDotClick ? { cursor: 'pointer' } : undefined}>
+            <Dot x={fretX(dot.fret)} y={strY(dot.string)} r={DOT_R}
+              glow={sounding.midi(STANDARD_OPEN_MIDI[dot.string] + dot.fret)}>
+              {dot.target && <circle r={DOT_R + 4} fill="none" stroke="var(--gc-success)" strokeWidth={2.5} />}
+              <circle r={DOT_R} fill={dot.color} stroke="#fff" strokeWidth={1.9} opacity={dot.opacity ?? 0.92} />
+              <text y={4} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">{label}</text>
+            </Dot>
           </g>
         );
       })}
     </svg>
   </div>
-);
+  );
+};

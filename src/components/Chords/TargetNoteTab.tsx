@@ -8,6 +8,10 @@ import { isPlayable } from '../../utils/chordVoicings';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card } from '../../theme';
+import { previewFret, previewVoicing } from '../../utils/previewSound';
+import { useFlash } from '../../motion/useFlash';
+import type { ChordInProgression } from '../../types/music';
+import { RollLabel } from '../RollLabel';
 
 const SEMITONE_DEGREE: Record<number, string> = {
   0: 'root', 1: '♭2nd', 2: '2nd', 3: '♭3rd', 4: '3rd', 5: '4th',
@@ -73,7 +77,11 @@ interface ResultItem {
   priority: number;
 }
 
-interface Props { tuning: Tuning; capo: number; desktop?: boolean; }
+interface Props {
+  tuning: Tuning; capo: number; desktop?: boolean;
+  /** Adds the chosen voicing to the song. */
+  onAddToProgression?: (item: ChordInProgression) => void;
+}
 
 
 function avgFret(voicing: FretPosition[]): number {
@@ -428,13 +436,13 @@ const ScaleStrip: React.FC<{
 const Pill: React.FC<{
   label: string; active: boolean; onClick: () => void; color?: string;
 }> = ({ label, active, onClick, color }) => (
-  <button onClick={onClick} style={{
+  <button data-active={!!active} onClick={onClick} style={{
     padding: '4px 10px', borderRadius: 0,
     border: active ? 'none' : `1px solid ${T.border}`,
     cursor: 'pointer', fontSize: 11, fontWeight: active ? 500 : 400,
     background: active ? (color ?? T.secondary) : T.bgInput,
     color: active ? T.white : T.textMuted,
-    transition: 'all 0.12s', flexShrink: 0,
+    flexShrink: 0,
     borderLeft: '3px solid var(--gc-bar-color)',
   }}>
     {label}
@@ -442,8 +450,10 @@ const Pill: React.FC<{
 );
 
 // ── Main component ────────────────────────────────────────────────────────
-export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
-  const [targetPos, setTargetPos]             = useState<TargetPos | null>(null);
+export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToProgression }) => {
+  const [added, flashAdded] = useFlash();
+  // Opens on G on the high e string so there are chords to look at at once.
+  const [targetPos, setTargetPos]             = useState<TargetPos | null>({ string: 5, fret: 3 });
   const [selectedIntervals, setSelectedIntervals] = useState<Set<string>>(new Set(['1']));
   const [positionLock, setPositionLock]       = useState<'top' | 'bass' | 'anywhere'>('anywhere');
   const [complexity, setComplexity]           = useState<'triads' | '7ths' | '9ths' | 'full'>('triads');
@@ -517,7 +527,10 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
         <InputFretboard
           selected={targetPos}
           tuning={tuning.notes}
-          onSelect={pos => setTargetPos(pos.string === -1 ? null : pos)}
+          onSelect={pos => {
+            setTargetPos(pos.string === -1 ? null : pos);
+            if (pos.string !== -1) previewFret(pos, tuning.openFreqs, capo);
+          }}
         />
         <div style={{
           marginTop: 8, fontSize: 12, minHeight: 22,
@@ -637,7 +650,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
                 return (
                   <button
                     key={idx}
-                    onClick={() => setExpandedIdx(idx)}
+                    onClick={() => { setExpandedIdx(idx); previewVoicing(item.voicing, tuning.openFreqs, capo); }}
                     style={{
                       cursor: 'pointer', border: 'none',
                       textAlign: 'left', display: 'block', width: '100%',
@@ -738,6 +751,22 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
                 borderLeft: '4px solid var(--gc-bar-color)',
               }}
             >PLAY</button>
+            {onAddToProgression && (
+              <button
+                onClick={() => {
+                  onAddToProgression({
+                    id: `chord-${Date.now()}`,
+                    chord: { name: expandedResult!.chordName, notes: [], aliases: [] },
+                    fretPositions: [...expandedResult!.voicing],
+                  });
+                  flashAdded();
+                }}
+                style={{
+                  padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14,
+                  background: T.primary, color: T.white, borderLeft: '4px solid var(--gc-bar-color)',
+                }}
+              ><RollLabel>{added ? '✓ Added' : '+ Add to song'}</RollLabel></button>
+            )}
 
             <SaveToLibraryButton
               style={{ width: '100%', justifyContent: 'center' }}

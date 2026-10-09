@@ -1,11 +1,17 @@
-import { useState, useMemo } from 'react';
-import { Scale, Note as TonalNote } from '@tonaljs/tonal';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { Scale, Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
 import type { Note } from '../../types/music';
 import { DisplayFretboard, type DisplayDot } from '../Fretboard/DisplayFretboard';
 import { getScalePositions } from '../../utils/scaleUtils';
-import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
-import { playScale } from '../../utils/audioPlayback';
+import { fretToNote, STRING_COUNT, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
+import { playScale, playChord, unlockAudio } from '../../utils/audioPlayback';
+import { findChordVoicings } from '../../utils/chordVoicings';
+import { formatChordName } from '../../utils/chordIdentifier';
 import { T, card } from '../../theme';
+import { previewNote, previewMidi, previewRun } from '../../utils/previewSound';
+import { useOptionalSong } from '../../song/SongContext';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -71,10 +77,65 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   const [root, setRoot]             = useState<Note>('C');
   const [scaleType, setScaleType]   = useState<string | null>('major');
   const [scaleMenuOpen, setScaleMenuOpen] = useState(false);
+
+  // Opens on the song's key (its major or natural-minor scale) and follows it
+  // when the song's key changes; any other choice here stands until then.
+  const songKey = useOptionalSong()?.key ?? null;
+  const songKeyId = songKey ? `${songKey.tonicPc}:${songKey.mode}` : '';
+  const [seenKey, setSeenKey] = useState('');
+  if (songKeyId !== seenKey) {
+    setSeenKey(songKeyId);
+    if (songKey) {
+      setRoot(ALL_NOTES[songKey.tonicPc] as Note);
+      setScaleType(songKey.mode === 'major' ? 'major' : 'minor');
+    }
+  }
   const [pos, setPos]               = useState<number | null>(null);
   const [viewMode, setViewMode]     = useState<'fretboard' | 'tab'>('fretboard');
 
   const scale       = useMemo(() => scaleType ? Scale.get(`${root} ${scaleType}`) : Scale.get(''), [root, scaleType]);
+
+  // ── Jam ───────────────────────────────────────────────────────────────────
+  // A backing loop to improvise over: I–IV–V–I built from the scale itself
+  // (its own triads, so Dorian gets Dorian chords), one bar each at the song's
+  // tempo. The notes of the chord that is playing are ringed on the neck —
+  // the ones to land on.
+  const song = useOptionalSong();
+  const bpm = song?.song.bpm ?? 90;
+  const [jam, setJam] = useState<{ chords: string[]; step: number } | null>(null);
+  const jamTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopJam = () => { if (jamTimer.current) clearTimeout(jamTimer.current); jamTimer.current = null; setJam(null); };
+  useEffect(() => () => { if (jamTimer.current) clearTimeout(jamTimer.current); }, []);
+  const jamChords = (): string[] => {
+    const notes = scale.notes;
+    let triads: string[][];
+    if (notes.length === 7) {
+      triads = [0, 3, 4, 0].map(d => [notes[d], notes[(d + 2) % 7], notes[(d + 4) % 7]]);
+    } else {
+      // Pentatonic / blues / symmetric scales: the plain major or minor I–IV–V.
+      const minor = /minor|blues/.test(scaleType ?? '');
+      const parent = Scale.get(`${root} ${minor ? 'minor' : 'major'}`).notes;
+      triads = [0, 3, 4, 0].map(d => [parent[d], parent[(d + 2) % 7], parent[(d + 4) % 7]]);
+    }
+    return triads.map(t => TonalChord.detect(t)[0] ?? `${t[0]}`);
+  };
+  const toggleJam = () => {
+    if (jam) { stopJam(); return; }
+    const chords = jamChords();
+    const barMs = (60 / bpm) * 4 * 1000;
+    const step = (i: number) => {
+      const name = chords[i % chords.length];
+      const shape = findChordVoicings(name.replace(/M$/, ''), 1)[0];
+      if (shape) playChord(shape);
+      setJam({ chords, step: i % chords.length });
+      jamTimer.current = setTimeout(() => step(i + 1), barMs);
+    };
+    unlockAudio().then(() => step(0));
+  };
+  const jamTones = useMemo(() => {
+    if (!jam) return null;
+    return new Set(TonalChord.get(jam.chords[jam.step].replace(/M$/, '')).notes.map(n => TonalNote.chroma(n)));
+  }, [jam]);
   const allPos      = useMemo(() => scaleType ? getScalePositions(root, scaleType) : [], [root, scaleType]);
 
   const displayPos  = useMemo(() => {
@@ -83,14 +144,52 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     return allPos.filter(p => p.fret >= min && p.fret <= max);
   }, [allPos, pos]);
 
+  // Each dot is named by its scale degree and which occurrence of that degree
+  // it is along its string (counted over the whole neck, not the position
+  // window). A new root or mode then moves dots along their strings — the
+  // 3rd of C major slides to the 3rd of D major, Major's 3rd drops a fret
+  // into Dorian's — instead of the neck being redrawn.
+  const dotIds = useMemo(() => {
+    const ids = new Map<string, string>();
+    const seen = new Map<string, number>();
+    [...allPos].sort((a, b) => a.string - b.string || a.fret - b.fret).forEach(p => {
+      const note = fretToNote(p.string, p.fret);
+      const deg = scale.notes.findIndex(n => samePitch(n, note));
+      const k = `${p.string}:${deg}`;
+      const n = seen.get(k) ?? 0;
+      seen.set(k, n + 1);
+      ids.set(`${p.string}-${p.fret}`, `${k}:${n}`);
+    });
+    return ids;
+  }, [allPos, scale]);
+
   const dots: DisplayDot[] = useMemo(() =>
     displayPos.map(p => {
       const note   = fretToNote(p.string, p.fret);
       const isRoot = samePitch(note, root);
-      return { ...p, color: isRoot ? T.primary : (pos !== null ? POS_COLORS[pos] : T.secondary), label: note };
+      return {
+        ...p, id: dotIds.get(`${p.string}-${p.fret}`),
+        color: isRoot ? T.primary : (pos !== null ? POS_COLORS[pos] : T.secondary),
+        // Spelled as the scale spells it (D major has C#, never Db).
+        label: scale.notes.find(n => samePitch(n, note)) ?? note,
+        target: !!jamTones?.has(TonalNote.chroma(note)),
+      };
     }),
-    [displayPos, root, pos]
+    [displayPos, root, pos, dotIds, scale, jamTones]
   );
+
+  const roll = () => {
+    const r = pickOne(ALL_NOTES) as Note;
+    const type = pickOne(SCALE_GROUPS.flatMap(g => g.scales)).id;
+    setRoot(r); setScaleType(type); setPos(null);
+    previewRun(scaleMidis(r, type));
+  };
+
+  const scaleMidis = (r: Note, type: string) => {
+    const sc = Scale.get(`${r} ${type}`);
+    return [...sc.notes.map(n => TonalNote.midi(`${n}4`) ?? 60), TonalNote.midi(`${r}5`) ?? 72]
+      .map((m, i, arr) => (i > 0 && m < arr[i - 1] ? m + 12 : m));
+  };
 
   const generateTab = () => {
     const stringNames = ['e', 'B', 'G', 'D', 'A', 'E'];
@@ -112,21 +211,22 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
 
       {/* ── Root note ── */}
       <div style={card()}>
-        <p className="gc-sec-label" style={{ margin: '0 0 10px' }}>
-          Root Note
-        </p>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p className="gc-sec-label" style={{ margin: '0 0 10px' }}>Root Note</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 7 }}>
           {ALL_NOTES.map(n => {
             const sharp    = n.includes('#');
             const selected = n === root;
             return (
-              <button key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!selected} key={n} onClick={() => { setRoot(n); previewNote(n); }} style={{
                 padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 11 : 13, fontWeight: selected ? 500 : 400,
                 border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: selected ? T.primary : sharp ? T.textMuted : T.text,
-                transition: 'all 0.12s', borderLeft: '3px solid var(--gc-bar-color)',
+                borderLeft: '3px solid var(--gc-bar-color)',
               }}>
                 {n}
               </button>
@@ -167,7 +267,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                   {g.scales.map(s => {
                     const sel = scaleType === s.id;
                     return (
-                      <button key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); }} style={{
+                      <button data-active={!!sel} key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); previewRun(scaleMidis(root, s.id)); }} style={{
                         padding: '6px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
                         fontWeight: sel ? 500 : 400,
                         border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
@@ -211,6 +311,11 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                     fontWeight: 400, cursor: 'pointer',
                   }}
                 >PLAY</button>
+                <button onClick={toggleJam} data-active={!!jam} title="Loop chords in this key to improvise over"
+                  style={{
+                    padding: '4px 14px', borderRadius: 0, fontSize: 12, cursor: 'pointer',
+                    background: jam ? T.primary : T.bgInput, color: jam ? '#fff' : T.text, border: `1px solid ${jam ? T.primary : T.border}`,
+                  }}>{jam ? '■ JAM' : 'JAM'}</button>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -219,7 +324,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                 const interval = scale.intervals[i] ?? '';
                 const deg = INTERVAL_DEGREE[interval] ?? { num: String(i + 1), name: '' };
                 return (
-                  <div key={i} style={{
+                  <button key={i} onClick={() => previewMidi(TonalNote.midi(`${note}4`) ?? 60)} className="gc-notation" style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                     padding: '8px 10px', borderRadius: 0, gap: 3, flex: 1, minWidth: 48,
                     background: isR ? T.primaryBg : T.bgInput,
@@ -229,20 +334,35 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                     <span style={{ fontSize: 11, fontWeight: 400, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
                     <span style={{ fontSize: 18, fontWeight: isR ? 800 : 600, color: isR ? T.primary : T.text, lineHeight: 1.1 }}>{note}</span>
                     <span style={{ fontSize: 9, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           </div>
 
+          {/* ── Jam: the loop, with the chord that is playing lit ── */}
+          {jam && (
+            <div className="gc-drop-in" dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Jam · {bpm} bpm</span>
+              {jam.chords.map((c, i) => (
+                <span key={i} className="gc-notation" style={{
+                  padding: '4px 10px', fontSize: 13, fontWeight: 700,
+                  background: i === jam.step ? T.primary : T.bgInput, color: i === jam.step ? '#fff' : T.text,
+                  transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out)',
+                }}>{formatChordName(c)}</span>
+              ))}
+              <span style={{ fontSize: 11, color: T.textMuted }}>· ringed notes = the chord's tones</span>
+            </div>
+          )}
+
           {/* ── View toggle ── */}
           <div style={{ display: 'flex', gap: 0 }}>
             {(['fretboard', 'tab'] as const).map(v => (
-              <button key={v} onClick={() => setViewMode(v)} style={{
+              <button data-active={viewMode === v} key={v} onClick={() => setViewMode(v)} style={{
                 flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
                 fontSize: 13, fontWeight: viewMode === v ? 500 : 400,
                 background: viewMode === v ? T.primary : T.bgCard,
-                color: viewMode === v ? T.text : T.textMuted,
+                color: viewMode === v ? T.white : T.textMuted,
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}>
                 {v === 'fretboard' ? 'Fretboard' : 'Tab'}
@@ -253,7 +373,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
           {/* ── Position selector ── */}
           <div className="gc-pos-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: T.textMuted }}>Position:</span>
-            <button onClick={() => setPos(null)} style={{
+            <button data-active={pos === null} onClick={() => setPos(null)} style={{
               padding: '4px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
               background: pos === null ? T.text : T.bgInput,
               color: pos === null ? T.bgDeep : T.textMuted,
@@ -263,7 +383,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
               Full Neck
             </button>
             {POSITION_WINDOWS.map((_, i) => (
-              <button key={i} onClick={() => setPos(pos === i ? null : i)}
+              <button key={i} data-active={pos === i} onClick={() => setPos(pos === i ? null : i)}
                 title={`Frets ${POSITION_WINDOWS[i][0]}–${POSITION_WINDOWS[i][1]}`}
                 style={{
                   width: 'var(--gc-pos-btn)', height: 'var(--gc-pos-btn)',
@@ -284,7 +404,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
           {viewMode === 'fretboard' ? (
             <div style={card()}>
               {dots.length > 0
-                ? <DisplayFretboard dots={dots} compact />
+                ? <DisplayFretboard dots={dots} compact onDotClick={d => previewMidi(STANDARD_OPEN_MIDI[d.string] + d.fret)} />
                 : <p style={{ textAlign: 'center', color: T.textDim, fontSize: 13, margin: 0 }}>No notes in this position</p>
               }
             </div>

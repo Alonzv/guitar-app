@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Chord as TonalChord, Note } from '@tonaljs/tonal';
 import { NOTE_BANK, pcOf } from '../ScaleTrainer/engine';
-import { playMidi, playError } from '../../utils/audioPlayback';
+import { playMidi } from '../../utils/audioPlayback';
+import { answeredRight, answeredWrong } from '../../practice/feedback';
+import { StreakBoard } from '../Practice/StreakBoard';
+import { PlayToAnswer } from '../Practice/PlayToAnswer';
+import { useMicNotes } from '../../practice/useMicNotes';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
+import { useOptionalSong } from '../../song/SongContext';
 
 // ── Chords → Practice ────────────────────────────────────────────────────────
 // Two drills: a Chord Speller (Theory) and Ear Training, both built out.
@@ -32,15 +37,28 @@ const ROOT_POOL = ['C', 'G', 'D', 'A', 'E', 'F', 'Bb', 'Eb'];
 const BANK = new Set<string>(NOTE_BANK as readonly string[]);
 
 type Mode = 'theory' | 'ear';
-type Diff = 'basic' | 'advanced';
+type Diff = 'basic' | 'advanced' | 'song';
 
 interface Challenge { root: string; quality: string; chordName: string; notes: string[]; degrees: string[]; midis: number[] }
 
-function makeChallenge(diff: Diff): Challenge {
+// A song chord in this drill's terms, when the drill can ask for it.
+const QUALITY_OF: Record<string, string> = { '': 'maj', M: 'maj', m: 'min', maj7: 'maj7', m7: 'min7', '7': 'dom7', dim: 'dim', aug: 'aug' };
+function songChordPairs(names: string[]): { root: string; quality: string }[] {
+  const out: { root: string; quality: string }[] = [];
+  for (const n of names) {
+    const m = n.match(/^([A-G][b#]?)(.*)$/);
+    const quality = m ? QUALITY_OF[m[2]] : undefined;
+    if (m && quality && !out.some(o => o.root === m[1] && o.quality === quality)) out.push({ root: m[1], quality });
+  }
+  return out;
+}
+
+function makeChallenge(diff: Diff, songPairs: { root: string; quality: string }[] = []): Challenge {
   const pool = diff === 'advanced' ? ADVANCED : BASIC;
   for (let attempt = 0; attempt < 200; attempt++) {
-    const root = ROOT_POOL[Math.floor(Math.random() * ROOT_POOL.length)];
-    const quality = pool[Math.floor(Math.random() * pool.length)];
+    const pick = diff === 'song' && songPairs.length ? songPairs[Math.floor(Math.random() * songPairs.length)] : null;
+    const root = pick?.root ?? ROOT_POOL[Math.floor(Math.random() * ROOT_POOL.length)];
+    const quality = pick?.quality ?? pool[Math.floor(Math.random() * pool.length)];
     const chordName = root + TONAL_SUFFIX[quality];
     const notes = TonalChord.get(chordName).notes;
     if (!notes.length) continue;
@@ -70,6 +88,12 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const { lang, rtl } = useLang();
   const [mode, setMode] = useState<Mode>('theory');
   const [diff, setDiff] = useState<Diff>('basic');
+  // "My song": spell and hear the chords of the song being written.
+  const songNames = (useOptionalSong()?.song.sections ?? []).flatMap(sec => sec.progression.map(c => c.chord.name)).join('|');
+  const songPairs = useMemo(() => songChordPairs(songNames.split('|')).filter(p => {
+    const notes = TonalChord.get(p.root + TONAL_SUFFIX[p.quality]).notes;
+    return notes.length > 0 && notes.every(n => BANK.has(n));
+  }), [songNames]);
 
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [filled, setFilled] = useState(1);          // degree 1 (root) pre-filled
@@ -81,12 +105,13 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const [streak, setStreak] = useState(0);
   const [best, setBest] = useState<number>(loadBest);
   const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const answerArea = useRef<HTMLDivElement>(null);   // shakes on a wrong answer
   useEffect(() => () => { if (errTimer.current) clearTimeout(errTimer.current); }, []);
 
   const start = useCallback((d: Diff = diff) => {
-    setChallenge(makeChallenge(d));
+    setChallenge(makeChallenge(d, songPairs));
     setFilled(1); setPhase('spell'); setWrongs(0); setErrBtn(null); setHint(null);
-  }, [diff]);
+  }, [diff, songPairs]);
 
   const handlePick = useCallback((name: string) => {
     if (!challenge || phase !== 'spell') return;
@@ -105,11 +130,11 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
         if (wrongs === 0) {   // streak grows only on a clean, first-try chord
           setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
         }
+        answeredRight();
         setPhase('done');
       }
     } else {
-      playError();
-      navigator.vibrate?.(30);
+      answeredWrong(answerArea.current);
       setErrBtn(name);
       const w = wrongs + 1;
       setWrongs(w);
@@ -124,6 +149,14 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   }, [challenge, phase, filled, wrongs]);
 
   const playChord = () => { if (challenge) challenge.midis.forEach(m => playMidi(m, 1.1)); };
+
+  // Answer by playing: the played note's pitch picks the bank note with it.
+  const mic = useMicNotes(midi => {
+    if (!challenge || phase !== 'spell') return;
+    const pc = ((midi % 12) + 12) % 12;
+    const expected = challenge.notes[filled];
+    handlePick(pcOf(expected) === pc ? expected : (NOTE_BANK.find(n => pcOf(n) === pc) ?? expected));
+  });
 
   // ── Ear training — play a chord, pick the whole chord from 4 options ────────
   const [earCh, setEarCh] = useState<Challenge | null>(null);
@@ -140,25 +173,26 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     ch.midis.forEach((m, i) => arpTimers.current.push(setTimeout(() => playMidi(m, 0.7), i * 300)));
   };
   const startEar = useCallback((d: Diff = diff) => {
-    const correct = makeChallenge(d);
+    const correct = makeChallenge(d, songPairs);
     const seen = new Set([optKey(correct)]);
     const opts = [correct];
     for (let g = 0; opts.length < 4 && g < 300; g++) {
-      const dis = makeChallenge(d);
+      const dis = makeChallenge(d === 'song' ? 'advanced' : d);
       if (!seen.has(optKey(dis))) { seen.add(optKey(dis)); opts.push(dis); }
     }
     for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
     setEarCh(correct); setEarOpts(opts); setWrongPicks(new Set()); setRevealed(false);
     setTimeout(() => playHarmonic(correct), 140);
-  }, [diff]);
+  }, [diff, songPairs]);
   const guess = (opt: Challenge) => {
     if (!earCh || revealed) return;
     if (opt.root === earCh.root && opt.quality === earCh.quality) {
       setRevealed(true);
+      answeredRight();
       if (wrongPicks.size === 0)   // first-try correct only
         setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
     } else {
-      playError();
+      answeredWrong(answerArea.current);
       const nw = new Set(wrongPicks); nw.add(optKey(opt)); setWrongPicks(nw);
       if (nw.size >= 2) { setStreak(0); setRevealed(true); }   // second wrong → reset + reveal
     }
@@ -189,7 +223,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   });
 
   return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
+    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', width: '100%', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{rtl ? 'תרגול אקורדים' : 'Chord Practice'}</h2>
       </div>
@@ -205,24 +239,14 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
 
       {/* Difficulty */}
       <div style={{ display: 'flex', border: `1px solid ${T.border}`, marginBottom: 16 }}>
-        {(['basic', 'advanced'] as Diff[]).map((d, i) => (
+        {((songPairs.length ? ['basic', 'advanced', 'song'] : ['basic', 'advanced']) as Diff[]).map((d, i) => (
           <button key={d} onClick={() => { setDiff(d); if (challenge) start(d); if (earCh) startEar(d); }} style={{ ...seg(diff === d), borderLeft: i > 0 ? `1px solid ${T.border}` : 'none' }}>
-            {d === 'basic' ? t.basic : t.advanced}
+            {d === 'basic' ? t.basic : d === 'advanced' ? t.advanced : (lang === 'he' ? 'השיר שלי' : 'My song')}
           </button>
         ))}
       </div>
 
-      {/* Streak cards — both modes */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.streak}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{streak}</p>
-        </div>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.best}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{best}</p>
-        </div>
-      </div>
+      <StreakBoard streak={streak} best={best} lang={lang} />
 
       {mode === 'ear' ? (
         !earCh ? (
@@ -237,7 +261,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               <button onClick={() => playArpeggio(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.arp}</button>
             </div>
             <p style={LBL}>{t.which}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <div ref={answerArea} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               {earOpts.map(opt => {
                 const isAnswer = revealed && opt.root === earCh.root && opt.quality === earCh.quality;
                 const isWrong = wrongPicks.has(optKey(opt));
@@ -277,7 +301,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
                   const isCurrent = phase === 'spell' && i === filled;
                   return (
                     <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                      <div style={{
+                      <div className={isFilled && i > 0 ? 'gc-pop' : undefined} style={{
                         width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 16, fontWeight: 700,
                         background: isFilled ? (i === 0 ? T.primary : T.success) : T.bgInput,
@@ -292,8 +316,9 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
 
               {phase === 'spell' ? (
                 <>
+                  <PlayToAnswer lang={lang} mic={mic} />
                   <p style={LBL}>{t.noteBank}</p>
-                  <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
+                  <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
                     {NOTE_BANK.map(n => {
                       const isErr = errBtn === n;
                       return (

@@ -195,7 +195,7 @@ function scoreBasedDetect(pitchClasses: string[], bassNote?: string): Chord[] {
 export function formatChordName(name: string): string {
   // House style: "major" is never a capital M next to a note — CM → C, and a
   // minor chord with a major 7th reads Cm(maj7), not CmM7. See utils/chordName.
-  return toDisplayChord(name.replace(/^([A-G][b#]?)M(\/.*)?$/, '$1$2'));
+  return toDisplayChord(name);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

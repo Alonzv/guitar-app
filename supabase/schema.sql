@@ -262,3 +262,23 @@ create policy "Users delete own audio" on storage.objects
   for delete using (
     bucket_id = 'audio' and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ── Songs (the composition every tool works on) ─────────────────────────────
+-- One row per song: the whole Song object (sections, key, tempo, tuning,
+-- melody…) as JSON. `local_id` is the id the app gave the song on the device,
+-- so the same song syncs to the same row from any tool.
+create table if not exists public.songs (
+  id          uuid default gen_random_uuid() primary key,
+  user_id     uuid references public.profiles(id) on delete cascade not null,
+  local_id    text not null,
+  name        text not null default 'Untitled song',
+  data        jsonb not null default '{}',
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now(),
+  unique (user_id, local_id)
+);
+
+alter table public.songs enable row level security;
+drop policy if exists "Users crud own songs" on public.songs;
+create policy "Users crud own songs" on public.songs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

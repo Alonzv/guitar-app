@@ -18,9 +18,9 @@ import {
   useTabEditing, emptyGrid as baseEmptyGrid, nextFret, circleDiameter,
   BASE_CW, BASE_CH, BASE_FS, type Tech, type TabCell,
 } from '../Tabs/tabEditing';
-import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
-import { onNavKey } from '../../services/navigate';
 import { useLang } from '../../contexts/LanguageContext';
+import { useOptionalSong } from '../../song/SongContext';
+import { keyName } from '../../utils/harmonicAnalysis';
 
 // User-facing failure copy. These used to be Hebrew-only, and two of them told
 // a guitarist to go and check an API key they have no access to — a developer's
@@ -162,7 +162,17 @@ function loadSavedPrefs(): SavedPrefs {
 
 export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   const { lang } = useLang();
-  const [melody, setMelody] = useState<MelodyState>(loadSavedMelody);
+  // The melody is the song's: it opens on the song's melody (if another tool
+  // wrote one) and every edit here is written back for the other tools.
+  const song = useOptionalSong();
+  const songMelody = song?.song.melody ?? null;
+  const fromElsewhere = !!songMelody && song?.song.melodyFrom !== 'harmonizer';
+  const [melody, setMelody] = useState<MelodyState>(() => (fromElsewhere ? fromTabContent(songMelody!) : loadSavedMelody()));
+  const [seenMelody, setSeenMelody] = useState(songMelody);
+  if (songMelody !== seenMelody) {
+    setSeenMelody(songMelody);
+    if (fromElsewhere) setMelody(fromTabContent(songMelody!));
+  }
   const [sel, setSel]           = useState<[number, number] | null>(null);
   const [hov, setHov]           = useState<[number, number] | null>(null);
   const [canUndo, setCanUndo]   = useState(false);
@@ -211,10 +221,14 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   const { grid, bars } = melody;
   const barsSet = useMemo(() => new Set(bars), [bars]);
-  // A "see also" jump carries the key that was on screen.
-  useEffect(() => onNavKey(KEY_TOOLS.harmonize.id, k => {
-    setScaleRoot(k.root); setScaleType(k.mode);
-  }), []);
+  // Follows the song's key when it changes (its own choice otherwise stands).
+  const songKey = useOptionalSong()?.key ?? null;
+  const songKeyId = songKey ? `${songKey.tonicPc}:${songKey.mode}` : '';
+  const [seenKey, setSeenKey] = useState(() => (loadSavedPrefs().scaleRoot ? songKeyId : ''));
+  if (songKeyId !== seenKey) {
+    setSeenKey(songKeyId);
+    if (songKey) { setScaleRoot(keyName(songKey, 'en').split(' ')[0]); setScaleType(songKey.mode); }
+  }
 
   const scaleName = scaleRoot ? `${scaleRoot} ${scaleType}` : '';
   const numCols = grid[0]?.length ?? DEFAULT_COLS;
@@ -227,7 +241,13 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   // Autosave — melody on every edit, prefs on change.
   useEffect(() => {
     try { localStorage.setItem(LS_MELODY, JSON.stringify(melody)); } catch { /* quota — ignore */ }
-  }, [melody]);
+    // …and into the song, for Tab Builder and the rest.
+    if (!song || (!gridHasNotes(melody.grid) && !song.song.melody)) return;
+    song.update({
+      melody: { title: '', subtitle: '', grid: melody.grid.map(r => r.map(c => ({ fret: c.fret, tech: c.tech }))), bars: melody.bars },
+      melodyFrom: 'harmonizer',
+    });
+  }, [melody]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     try { localStorage.setItem(LS_PREFS, JSON.stringify({ scaleRoot, scaleType, styles, bpm })); } catch { /* ignore */ }
   }, [scaleRoot, scaleType, styles, bpm]);
@@ -386,6 +406,19 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     ...p,
     grid: p.grid.map(r => [...r, ...Array.from({ length: 4 }, () => ({ fret: '' }))]),
   }));
+  // A melody to try the harmonizer on: the opening of "Ode to Joy" in C, on
+  // the top two strings. Sets the scale too, so Harmonize works straight away.
+  const loadExample = () => {
+    const line: [number, number][] = [   // [row (0 = high e), fret]
+      [0, 0], [0, 0], [0, 1], [0, 3], [0, 3], [0, 1], [0, 0], [1, 3],
+      [1, 1], [1, 1], [1, 3], [0, 0], [0, 0], [1, 3], [1, 3],
+    ];
+    const grid = emptyGrid(Math.max(DEFAULT_COLS, line.length));
+    line.forEach(([row, fret], col) => { grid[row][col] = { ...grid[row][col], fret: String(fret) }; });
+    withHistory(() => ({ grid, bars: [] }));
+    setScaleRoot('C'); setScaleType('major'); setSel(null);
+  };
+
   const clearGrid = () => { withHistory(() => ({ grid: emptyGrid(), bars: [] })); setSel(null); };
 
   // ── Display grid (melody + harmony collapsed onto consecutive columns) ────
@@ -723,7 +756,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         const anchored = colIsAnchored(sel[1]);
         const hasNotes = colHasNotes(sel[1]);
         return (
-          <button
+          <button data-active={!!anchored}
             onClick={toggleAnchor}
             disabled={!hasNotes}
             title="Marks the whole column (time-slot) as a harmonic anchor"
@@ -744,7 +777,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
         {TECH_BTNS.map(t => {
           const isArmed = t.id === '|' ? barsSet.has(sel[1]) : selTech === t.id;
           return (
-            <button
+            <button data-active={!!isArmed}
               key={t.id}
               onClick={() => t.id === '|' ? toggleBar() : applyTech(t.id as Tech)}
               title={`${t.label} [${t.key}]`}
@@ -772,6 +805,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             <button onClick={() => fileRef.current?.click()} disabled={visionLoading} style={secBtn(visionLoading)}>
               {visionLoading ? 'Reading…' : 'Image'}
             </button>
+            <button onClick={loadExample} style={secBtn(false)}>Example</button>
             <button onClick={clearGrid} style={secBtn(false)}>Clear</button>
           </div>
         </div>
@@ -822,7 +856,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           {HARMONY_STYLES.map(s => {
             const active = styles.includes(s.id);
             return (
-              <button key={s.id}
+              <button data-active={!!active} key={s.id}
                 // Chord-Melody is a complete arrangement style whose rules
                 // (bass only at anchors, sustain between them) directly
                 // contradict Melodic's free counter-line — selecting it
@@ -911,7 +945,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                   />
                   BPM
                 </label>
-                <button
+                <button data-active={!!muteHarmony}
                   onClick={() => setMuteHarmony(m => !m)}
                   style={{
                     padding: '6px 12px', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
@@ -921,7 +955,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                 >
                   {muteHarmony ? 'Harmony muted' : 'Harmony on'}
                 </button>
-                <button onClick={handlePlay} className="gc-btn-heavy" style={{
+                <button data-active={!!playing} onClick={handlePlay} className="gc-btn-heavy" style={{
                   padding: '7px 18px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em',
                   background: playing ? T.coral : T.primary, color: '#fff', borderLeft: '3px solid var(--gc-bar-color)',
                 }}>
@@ -947,7 +981,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>VARIATION</span>
                 {results.map((_, i) => (
-                  <button
+                  <button data-active={i === activeIdx}
                     key={i}
                     onClick={() => { setActiveIdx(i); setRevoiceSlot(null); }}
                     style={{
@@ -1046,17 +1080,14 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
             Enter a melody, pick a scale, choose harmony types, then Harmonize.
           </p>
+          {!gridHasNotes(melody.grid) && (
+            <button onClick={loadExample} style={{ ...secBtn(false), marginTop: 16 }}>Try an example melody</button>
+          )}
         </div>
       )}
     </div>
   );
 
-  const seeAlso = (
-    <SeeAlso
-      links={[KEY_TOOLS.extensions, KEY_TOOLS.wheel]}
-      navKey={{ root: scaleRoot || 'C', mode: scaleType === 'minor' ? 'minor' : 'major' }}
-    />
-  );
 
   if (desktop) {
     return (
@@ -1069,7 +1100,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           {leftCol}
           <div style={{ position: 'sticky', top: 24, minWidth: 0 }}>{rightCol}</div>
         </div>
-        {seeAlso}
       </div>
     );
   }
@@ -1077,7 +1107,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
       {leftCol}
       {rightCol}
-      {seeAlso}
     </div>
   );
 }

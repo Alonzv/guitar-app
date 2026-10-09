@@ -18,6 +18,10 @@ import {
   STR_ROWS, BASE_CW, BASE_CH, BASE_FS,
   type Tech, type TabCell,
 } from '../Tabs/tabEditing';
+import { useOptionalSong } from '../../song/SongContext';
+import { TUNINGS } from '../../utils/musicTheory';
+import { useFlash } from '../../motion/useFlash';
+import { RollLabel } from '../RollLabel';
 
 type Lang = 'he' | 'en';
 type ErrKey = 'empty' | 'ai' | 'gen';
@@ -106,6 +110,13 @@ function tabHasContent(tab: TabState) {
 }
 
 export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
+  const song = useOptionalSong();
+  const [sent, flashSent] = useFlash();
+  const songBtn = (disabled: boolean): React.CSSProperties => ({
+    padding: '6px 12px', borderRadius: 0, fontSize: 11, cursor: disabled ? 'default' : 'pointer',
+    background: T.bgInput, color: disabled ? T.textDim : T.text, border: `1px solid ${T.border}`,
+    borderLeft: '3px solid var(--gc-bar-color)', opacity: disabled ? 0.6 : 1,
+  });
   const [tab, setTab] = useState<TabState>(() => {
     // A pending "Open in Builder" handoff wins over the autosaved draft.
     const pending = consumePendingTab();
@@ -192,6 +203,34 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   const { title, subtitle, grid, bars } = tab;
   const numCols = grid[0]?.length ?? 0;
+
+  // ── Play the tab ────────────────────────────────────────────────────────
+  // Column by column — one eighth note each at the song's tempo, in the song's
+  // tuning — with the column that is sounding lit as a playhead.
+  const [playCol, setPlayCol] = useState<number | null>(null);
+  const playTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => playTimers.current.forEach(clearTimeout), []);
+  const stopTab = () => { playTimers.current.forEach(clearTimeout); playTimers.current = []; setPlayCol(null); };
+  const playTab = () => {
+    if (playCol != null) { stopTab(); return; }
+    const g = grid;
+    let last = -1;
+    for (let c = 0; c < numCols; c++) if (g.some(row => row[c]?.fret !== '')) last = c;
+    if (last < 0) return;
+    const stepMs = (60 / (song?.song.bpm ?? 90)) * 1000 / 2;
+    const freqs = (TUNINGS.find(t => t.name === song?.song.tuningName) ?? TUNINGS[0]).openFreqs;
+    unlockAudio().then(() => {
+      for (let c = 0; c <= last; c++) {
+        playTimers.current.push(setTimeout(() => {
+          setPlayCol(c);
+          const positions = g.map((row, r) => ({ string: 5 - r, fret: parseInt(row[c]?.fret ?? '', 10) }))
+            .filter(p => !isNaN(p.fret));
+          if (positions.length) playChord(positions, freqs, song?.song.capo ?? 0);
+        }, c * stepMs));
+      }
+      playTimers.current.push(setTimeout(() => setPlayCol(null), (last + 1) * stepMs + 300));
+    });
+  };
   const barsSet = new Set(bars);
   const cw = (BASE_CW * zoom) / 100;
   const ch = (BASE_CH * zoom) / 100;
@@ -311,6 +350,20 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         ...Array.from({ length: colsPerLine }, () => ({ fret: '' })),
       ]),
     }));
+  };
+
+  // An A minor pentatonic run in 5th position — up the top four strings and back.
+  const loadExample = () => {
+    const run: [number, number][] = [   // [row (0 = high e), fret]
+      [3, 5], [3, 7], [2, 5], [2, 7], [1, 5], [1, 8], [0, 5], [0, 8],
+      [0, 5], [1, 8], [1, 5], [2, 7], [2, 5], [3, 7], [3, 5],
+    ];
+    withHistory(p => {
+      const grid = emptyGrid(p.grid[0]?.length ?? colsPerLine * 3);
+      run.forEach(([row, fret], col) => { grid[row][col] = { ...grid[row][col], fret: String(fret) }; });
+      return { ...p, title: p.title || 'A minor pentatonic run', grid, bars: [] };
+    });
+    setSel(null);
   };
 
   const clearGrid = () => {
@@ -473,6 +526,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                   <span style={divider} />
 
                   {/* Primary cluster */}
+                  <button onClick={playTab} data-active={playCol != null} disabled={!tabHasContent(tab)} style={{ ...ghost, color: playCol != null ? T.white : T.text, background: playCol != null ? T.primary : 'transparent' }}>{playCol != null ? '■ STOP' : '▶ PLAY'}</button>
                   <button onClick={handleAnalyze} style={primary}>ANALYZE</button>
                   <button onClick={handleExport} disabled={busy} style={{ ...ghost, cursor: busy ? 'wait' : 'pointer' }}>{busy ? '…' : 'PDF'}</button>
                   <SaveToLibraryButton size="sm" label="SAVE" style={{ height: 34, borderRadius: 0, fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em' }} getPayload={() => tabHasContent(tab) ? ({ kind: 'tab', name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null} />
@@ -502,7 +556,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
               {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, key }, i, arr) => {
                 const isArmed = id === '|' ? !!(sel && barsSet.has(sel[1])) : selTech === id;
                 return (
-                  <button
+                  <button data-active={!!isArmed}
                     key={id}
                     onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
                     title={!sel ? 'Select a note first' : `${label} [${key}]`}
@@ -518,7 +572,6 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                       fontFamily: 'var(--gc-font)', fontSize: 12,
                       color: isArmed ? T.text : T.textMuted,
                       opacity: sel ? 1 : 0.6,
-                      transition: 'background 0.12s, color 0.12s',
                     }}
                   >
                     <span>{label}</span>
@@ -584,6 +637,14 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                 fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
               }}>
               Analyze
+            </button>
+            <button onClick={playTab} disabled={!tabHasContent(tab)}
+              style={{
+                background: playCol != null ? T.primary : T.bgInput, color: playCol != null ? '#fff' : T.text, border: 'none',
+                borderRadius: 0, padding: '7px 10px', cursor: 'pointer',
+                fontSize: 12, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)', flexShrink: 0,
+              }}>
+              {playCol != null ? '■' : '▶'}
             </button>
             <button onClick={handleExport} disabled={busy}
               style={{
@@ -659,7 +720,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
             {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }, { id: 'x', label: 'Rest', sym: 'x', key: 'X' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, sym, key }, i, arr) => {
               const isArmed = id === '|' ? !!(sel && barsSet.has(sel[1])) : selTech === id;
               return (
-                <button
+                <button data-active={!!isArmed}
                   key={id}
                   onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
                   title={!sel ? 'Select a note first' : `${label} [${key}]`}
@@ -675,7 +736,6 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                     fontFamily: 'var(--gc-font)', fontSize: 12,
                     color: isArmed ? T.text : T.textMuted,
                     opacity: sel ? 1 : 0.6,
-                    transition: 'background 0.12s, color 0.12s',
                   }}
                 >
                   <span>{label}</span>
@@ -690,6 +750,43 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* The song's melody: send this tab to it (Harmonize and the rest pick it
+          up), or pull in a melody another tool wrote. */}
+      {song && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+          <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Song melody</span>
+          <button onClick={() => {
+            song.update({ melody: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars }, melodyFrom: 'tabbuilder' });
+            flashSent();
+          }} disabled={!tabHasContent(tab)} style={songBtn(!tabHasContent(tab))}>
+            <RollLabel>{sent ? '✓ Sent to song' : 'Use this tab'}</RollLabel>
+          </button>
+          {song.song.melody && song.song.melodyFrom !== 'tabbuilder' && (
+            <button onClick={() => {
+              const m = song.song.melody!;
+              const cols = Math.max(colsPerLine * 3, Math.ceil((m.grid[0]?.length ?? 0) / colsPerLine) * colsPerLine);
+              withHistory(p => {
+                const grid = emptyGrid(cols);
+                m.grid.forEach((row, r) => row.forEach((cell, c) => { if (grid[r]?.[c]) grid[r][c] = { fret: cell.fret ?? '', tech: cell.tech as Tech | undefined }; }));
+                return { ...p, grid, bars: m.bars ?? [] };
+              });
+              setSel(null);
+            }} style={songBtn(false)}>Load the song's melody</button>
+          )}
+        </div>
+      )}
+
+      {/* An empty tab offers a riff to start from. */}
+      {!tabHasContent(tab) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12, fontSize: 12, color: T.textMuted }}>
+          <span>Tap a string to place a note</span>
+          <button onClick={loadExample} style={{
+            padding: '6px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
+            background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)',
+          }}>Load an example riff</button>
         </div>
       )}
 
@@ -726,7 +823,8 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                         <TabNoteCell
                           cell={cell}
                           cw={cw} ch={ch} fs={fs} circleD={circleD}
-                          isSel={isSel} isHov={isHov} editable
+                          isSel={isSel} isHov={isHov || c === playCol} editable
+                          markColor={c === playCol ? 'var(--gc-success-soft)' : undefined}
                           onClick={() => selectCell(si, c)}
                           onMouseEnter={() => setHov([si, c])}
                         />

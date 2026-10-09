@@ -2,6 +2,9 @@ import React from 'react';
 import type { FretPosition } from '../../types/music';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
 import { T } from '../../theme';
+import { useSounding } from '../../motion/useSounding';
+import { shapeKey } from '../../utils/audioPlayback';
+import { Dot } from './Dot';
 
 const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'e'] as const;
 
@@ -23,6 +26,8 @@ export const MiniFretboard: React.FC<Props> = ({
   voicing, dotColor = T.primary, dotColors, tuning,
   dotLabels, hideFretLabel, showStringLabels, showFretNumbers,
 }) => {
+  const sounding = useSounding();
+  const shape = shapeKey(voicing);
   const hasOpen = voicing.some(p => p.fret === 0);
   const nonZeroFrets = voicing.map(p => p.fret).filter(f => f > 0);
   const minFret = nonZeroFrets.length > 0 ? Math.min(...nonZeroFrets) : 0;
@@ -130,16 +135,17 @@ export const MiniFretboard: React.FC<Props> = ({
         );
       })}
 
-      {/* Dots */}
+      {/* Dots — keyed by string so stepping to another voicing slides them;
+          each lights up while this shape is the one being played. */}
       {voicing.map((p, i) => {
-        const cx = fretX(p.fret);
-        const cy = strY(p.string);
         const label = dotLabels?.[i] ?? fretToNote(p.string, p.fret, tuning);
+        const nth = voicing.slice(0, i).filter(o => o.string === p.string).length;
         return (
-          <g key={i}>
-            <circle cx={cx} cy={cy} r={7} fill={dotColors?.[i] ?? dotColor} stroke="#fff" strokeWidth={1.25} opacity={0.92} />
-            <text x={cx} y={cy + 3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{label}</text>
-          </g>
+          <Dot key={`${p.string}-${nth}`} x={fretX(p.fret)} y={strY(p.string)} r={7}
+            glow={sounding.pos(p.string, p.fret, shape)}>
+            <circle r={7} fill={dotColors?.[i] ?? dotColor} stroke="#fff" strokeWidth={1.25} opacity={0.92} />
+            <text y={3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{label}</text>
+          </Dot>
         );
       })}
     </svg>

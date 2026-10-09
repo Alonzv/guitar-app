@@ -15,6 +15,14 @@ import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import type { ReharmData } from '../../services/types';
 import { T, card, alpha } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
+import { ExampleChips } from '../ExampleChips';
+import { useOptionalSong } from '../../song/SongContext';
+import { formatChordName } from '../../utils/chordIdentifier';
+import { findChordVoicings } from '../../utils/chordVoicings';
+import { useFlash } from '../../motion/useFlash';
+import { RollLabel } from '../RollLabel';
+import { namesToProgression } from '../../utils/progressionBridge';
+import { TUNINGS } from '../../utils/musicTheory';
 
 // Reharmonisation is the one tool that can fail for reasons outside the app,
 // so it is the one tool with error copy. Written for a guitarist: the old text
@@ -43,6 +51,8 @@ interface Props {
   /** Library handoff: a saved reharm to restore without an API call. */
   restored?: { result: ReharmData; genre?: string | null; tension?: number | null } | null;
   onRestoredConsumed?: () => void;
+  /** Fills an empty progression with an example to try. */
+  onLoadExample?: (chords: string[]) => void;
 }
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -230,10 +240,17 @@ export function ReharmonizeTab({
   desktop,
   restored,
   onRestoredConsumed,
+  onLoadExample,
 }: Props) {
   const { lang } = useLang();
+  const song = useOptionalSong();
+  const [used, flashUsed] = useFlash();
+  const [kept, flashKept] = useFlash();
   const [genre, setGenre] = useState('jazz');
   const [tension, setTension] = useState(3);
+  const liveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const busy = useRef(false);   // a request in flight (the live timer's closure can't see `loading`)
+  useEffect(() => () => { if (liveTimer.current) clearTimeout(liveTimer.current); }, []);
   const [showNashville, setShowNashville] = useState(false);
   const [result, setResult] = useState<ReharmonizeResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -264,10 +281,13 @@ export function ReharmonizeTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restored]);
 
-  const handleReharmonize = () => {
-    if (chords.length === 0 || loading) return;
+  // `live`: a re-run from the tension slider — the current result stays on
+  // screen until the new one arrives instead of the panel going blank.
+  const handleReharmonize = (t: number = tension, live = false) => {
+    if (chords.length === 0 || busy.current) return;
+    busy.current = true;
     setLoading(true);
-    setResult(null);
+    if (!live) setResult(null);
     setError(null);
     setReharmPaths([]);
     setSelectedPathIdx(0);
@@ -277,8 +297,8 @@ export function ReharmonizeTab({
 
     const genreLabel = GENRES.find(g => g.id === genre)?.label ?? genre;
 
-    reharmonize(chords, genreLabel, tension).then(r => {
-      setLoading(false);
+    reharmonize(chords, genreLabel, t).then(r => {
+      setLoading(false); busy.current = false;
       if (r) {
         setResult(r);
         const paths = findVoicingPaths(r.chords, {
@@ -293,7 +313,7 @@ export function ReharmonizeTab({
         setError(ERR[lang].refused);
       }
     }).catch(() => {
-      setLoading(false);
+      setLoading(false); busy.current = false;
       setError(ERR[lang].network);
     });
   };
@@ -328,15 +348,41 @@ export function ReharmonizeTab({
 
   const isPlaying = currentPath?.id === playingId;
 
+  // ── Before / after ───────────────────────────────────────────────────────
+  // One loop over both progressions; the side can be flipped while it runs
+  // and the very next chord comes from the other one.
+  const [ab, setAb] = useState<{ side: 'before' | 'after'; step: number } | null>(null);
+  const abSide = useRef<'before' | 'after'>('after');
+  const abTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abStop = () => { if (abTimer.current) clearTimeout(abTimer.current); abTimer.current = null; setAb(null); };
+  useEffect(() => () => { if (abTimer.current) clearTimeout(abTimer.current); }, []);
+  const abPlay = (side: 'before' | 'after') => {
+    abSide.current = side;
+    if (abTimer.current) { setAb(a => (a ? { ...a, side } : a)); return; }
+    if (!result) return;
+    const barMs = song ? (60 / song.song.bpm) * 4 * 1000 : 1600;
+    const step = (i: number) => {
+      const list = abSide.current === 'before' ? chords : result.chords;
+      const k = i % Math.max(1, list.length);
+      const shape = findChordVoicings(list[k], 1, tuning.notes)[0];
+      if (shape) playChord(shape, tuning.openFreqs);
+      setAb({ side: abSide.current, step: k });
+      abTimer.current = setTimeout(() => step(k + 1), barMs);
+    };
+    unlockAudio().then(() => step(0));
+  };
+
   const leftCol = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* Empty state */}
       {chords.length === 0 && (
-        <div style={{ ...card(), textAlign: 'center', padding: '40px 16px' }}>
+        <div style={{ ...card(), textAlign: 'center', padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
-            Build a progression in Chords or VL Studio first
+            {lang === 'he' ? 'בנו את הפרוגרסיה שתרצו לשנות' : 'Build the progression you want to reharmonize'}
+            {desktop ? (lang === 'he' ? ' — בעמודה משמאל' : ' — on the left') : (lang === 'he' ? ' — למעלה' : ' — above')}
           </p>
+          {onLoadExample && <ExampleChips onPick={onLoadExample} />}
         </div>
       )}
 
@@ -346,14 +392,14 @@ export function ReharmonizeTab({
           <div style={{ ...card({ padding: '12px 14px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <p style={LABEL_STYLE}>Progression{chords.length > 0 ? ` (${chords.length}/8)` : ''}</p>
-              <button
+              <button data-active={!!showNashville}
                 onClick={() => setShowNashville(v => !v)}
                 style={{
                   padding: '3px 10px', borderRadius: 0, border: 'none',
                   cursor: 'pointer', fontSize: 11, fontWeight: 600,
                   background: showNashville ? T.secondary : T.bgInput,
                   color: showNashville ? '#fff' : T.textMuted,
-                  transition: 'background 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
+                  borderLeft: '3px solid var(--gc-bar-color)',
                 }}
               >
                 Nashville
@@ -388,7 +434,7 @@ export function ReharmonizeTab({
               <p style={LABEL_STYLE}>Genre</p>
               <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
                 {GENRES.map(g => (
-                  <button
+                  <button data-active={genre === g.id}
                     key={g.id}
                     onClick={() => setGenre(g.id)}
                     style={{
@@ -398,7 +444,6 @@ export function ReharmonizeTab({
                       fontWeight: genre === g.id ? 600 : 400,
                       background: genre === g.id ? T.secondary : T.bgInput,
                       color: genre === g.id ? '#fff' : T.textMuted,
-                      transition: 'background 0.15s',
                       whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                     }}
                   >
@@ -417,7 +462,7 @@ export function ReharmonizeTab({
                   background: T.secondaryBg, color: T.secondary,
                   fontSize: 11, fontWeight: 400,
                 }}>
-                  {tension} — {tensionLabel(tension)}
+                  {tension} — {tensionLabel(tension)}{result && loading ? ' · …' : ''}
                 </span>
               </div>
               <input
@@ -426,7 +471,16 @@ export function ReharmonizeTab({
                 max={5}
                 step={1}
                 value={tension}
-                onChange={e => setTension(Number(e.target.value))}
+                onChange={e => {
+                  const v = Number(e.target.value);
+                  setTension(v);
+                  // With a result on screen the slider is live: settle on a level
+                  // and the reharm is redone at it.
+                  if (result) {
+                    if (liveTimer.current) clearTimeout(liveTimer.current);
+                    liveTimer.current = setTimeout(() => handleReharmonize(v, true), 700);
+                  }
+                }}
                 style={{ width: '100%', accentColor: T.primary, cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -442,12 +496,11 @@ export function ReharmonizeTab({
                 <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
                 <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
                   {(['full', 'triads'] as VoicingMode[]).map(m => (
-                    <button key={m} onClick={() => setMode(m)} style={{
+                    <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
                       flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
                       fontSize: 12, fontWeight: 400,
                       background: mode === m ? T.secondary : T.bgInput,
                       color: mode === m ? '#fff' : T.textMuted,
-                      transition: 'background 0.15s',
                     }}>
                       {m === 'full' ? 'Full' : 'Triads'}
                     </button>
@@ -463,12 +516,11 @@ export function ReharmonizeTab({
                     { id: 'bass',   label: 'Low'  },
                     { id: 'treble', label: 'High' },
                   ] as { id: StringGroup; label: string }[]).map(sg => (
-                    <button key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
+                    <button data-active={stringGroup === sg.id} key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
                       flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
                       fontSize: 12, fontWeight: 400,
                       background: stringGroup === sg.id ? T.secondary : T.bgInput,
                       color: stringGroup === sg.id ? '#fff' : T.textMuted,
-                      transition: 'background 0.15s',
                     }}>
                       {sg.label}
                     </button>
@@ -480,7 +532,7 @@ export function ReharmonizeTab({
 
           {/* Re-Harmonize button */}
           <button
-            onClick={handleReharmonize}
+            onClick={() => handleReharmonize()}
             disabled={chords.length === 0 || loading}
             style={{
               width: '100%',
@@ -489,7 +541,6 @@ export function ReharmonizeTab({
               fontWeight: 400, fontSize: 15,
               background: (chords.length === 0 || loading) ? T.border : T.secondary,
               color: (chords.length === 0 || loading) ? T.textDim : '#fff',
-              transition: 'background 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               borderLeft: '4px solid var(--gc-bar-color)',
             }}
@@ -538,7 +589,7 @@ export function ReharmonizeTab({
               <div className="gc-result-card" style={{ gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                   <p style={LABEL_STYLE}>Re-Harmonized</p>
-                  <button
+                  <button data-active={!!isPlaying}
                     onClick={handlePlay}
                     className="gc-btn-heavy"
                     style={{
@@ -547,30 +598,64 @@ export function ReharmonizeTab({
                       background: isPlaying ? T.coral : T.secondary,
                       color: '#fff',
                       border: 'none',
-                      transition: 'background 0.15s', borderLeft: `3px solid ${T.secondary}`,
+                      borderLeft: `3px solid ${T.secondary}`,
                     }}
                   >
                     {isPlaying ? 'STOP' : 'PLAY'}
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {result.chords.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                      <span style={{
-                        padding: '5px 12px', borderRadius: 0,
-                        background: T.secondaryBg,
-                        border: `1px solid ${alpha(T.secondary, 27)}`,
-                        fontSize: 13, fontWeight: 400, color: T.text,
-                      }}>
-                        {c}
-                      </span>
-                      {showNashville && (
-                        <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted }}>
-                          {toNashville(c, keyRoot)}
+                  {result.chords.map((c, i) => {
+                    // A chord the reharm actually changed is marked; one it kept is plain.
+                    const changed = formatChordName(c) !== formatChordName(chords[i] ?? '');
+                    const now = ab != null && ab.side === 'after' && ab.step === i;
+                    return (
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <span className="gc-notation" style={{
+                          padding: '5px 12px', borderRadius: 0,
+                          background: now ? T.primary : changed ? T.secondaryBg : 'transparent',
+                          border: `1px solid ${changed ? T.text : alpha(T.secondary, 27)}`,
+                          fontSize: 13, fontWeight: changed ? 700 : 400, color: now ? T.white : T.text,
+                          transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out), color var(--gc-dur-fast) var(--gc-ease-out)',
+                        }}>
+                          {c}
                         </span>
-                      )}
-                    </div>
-                  ))}
+                        {showNashville && (
+                          <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted }}>
+                            {toNashville(c, keyRoot)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Before / after — one loop, two progressions: flip sides while it
+                    plays and the next chord comes from the other one, so the
+                    difference is heard at the same spot in the bar. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
+                  <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                    {lang === 'he' ? 'לפני / אחרי' : 'Before / after'}
+                  </span>
+                  <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
+                    {(['before', 'after'] as const).map(side => {
+                      const on = ab?.side === side;
+                      return (
+                        <button key={side} onClick={() => abPlay(side)} data-active={on} style={{
+                          padding: '6px 14px', fontSize: 11, cursor: 'pointer', borderRadius: 0,
+                          background: on ? T.primary : 'transparent', color: on ? T.white : T.text,
+                        }}>{side === 'before' ? (lang === 'he' ? '▶ המקור' : '▶ Original') : (lang === 'he' ? '▶ הרה-הרמוניזציה' : '▶ Reharm')}</button>
+                      );
+                    })}
+                  </div>
+                  {ab && <button onClick={abStop} style={{ padding: '6px 10px', fontSize: 11, cursor: 'pointer', background: 'transparent', border: `1px solid ${T.border}`, color: T.text }}>■</button>}
+                  {ab && (
+                    <span dir="ltr" className="gc-notation" style={{ fontSize: 12, color: T.textMuted }}>
+                      {(ab.side === 'before' ? chords : result.chords).map((c, i) => (
+                        <span key={i} style={i === ab.step ? { color: T.text, fontWeight: 700 } : undefined}>{i ? ' – ' : ''}{c}</span>
+                      ))}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -610,7 +695,7 @@ export function ReharmonizeTab({
                       {reharmPaths.map((path, pi) => {
                         const active = pi === selectedPathIdx;
                         return (
-                          <button
+                          <button data-active={!!active}
                             key={path.id}
                             onClick={() => setSelectedPathIdx(pi)}
                             style={{
@@ -621,7 +706,7 @@ export function ReharmonizeTab({
                               background: active ? T.secondary : T.bgDeep,
                               color: active ? '#fff' : T.textMuted,
                               fontSize: 12, fontWeight: active ? 500 : 400,
-                              cursor: 'pointer', transition: 'all 0.15s',
+                              cursor: 'pointer', 
                               whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
                             }}
                           >
@@ -695,6 +780,25 @@ export function ReharmonizeTab({
                 </div>
               )}
 
+              {/* Back to the song: replace the section's chords with the reharm,
+                  or keep it beside them as a variant to switch to later. */}
+              {song && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { song.setChordNames(result.chords); flashUsed(); }} style={{
+                    flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 12.5,
+                    background: T.primary, color: T.white, borderLeft: '4px solid var(--gc-bar-color)',
+                  }}><RollLabel>{used ? (lang === 'he' ? '✓ בשיר' : '✓ In the song') : (lang === 'he' ? 'השתמש בשיר' : 'Use in song')}</RollLabel></button>
+                  <button onClick={() => {
+                    const t = TUNINGS.find(x => x.name === song.song.tuningName) ?? TUNINGS[0];
+                    song.saveVariant(`Reharm · ${GENRES.find(g => g.id === genre)?.label ?? genre}`, namesToProgression(result.chords, t.notes));
+                    flashKept();
+                  }} style={{
+                    flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 12.5,
+                    background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
+                  }}><RollLabel>{kept ? (lang === 'he' ? '✓ נשמר כגרסה' : '✓ Kept as variant') : (lang === 'he' ? 'שמור כגרסה' : 'Keep as variant')}</RollLabel></button>
+                </div>
+              )}
+
               {/* Actions: save + MIDI */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <SaveToLibraryButton
@@ -717,7 +821,7 @@ export function ReharmonizeTab({
                     border: `1.5px solid ${T.secondary}`,
                     cursor: 'pointer', fontWeight: 400, fontSize: 14,
                     background: 'transparent', color: T.secondary,
-                    transition: 'background 0.15s', borderLeft: '4px solid var(--gc-bar-color)',
+                    borderLeft: '4px solid var(--gc-bar-color)',
                   }}
                 >
                   Export MIDI

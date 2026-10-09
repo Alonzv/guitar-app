@@ -145,7 +145,7 @@ export function IntervalPlayground() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${T.border}` }}>
                 {(['melodic', 'harmonic'] as const).map(m => (
-                  <button key={m} onClick={() => setMode(m)} style={{
+                  <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
                     padding: '5px 10px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
                     background: mode === m ? T.secondary : T.bgInput,
                     color: mode === m ? '#fff' : T.textMuted,

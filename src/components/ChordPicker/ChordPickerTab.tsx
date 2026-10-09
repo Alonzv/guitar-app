@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { ChordInProgression, FretPosition, Tuning } from '../../types/music';
 import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
 import { VoicingViewer } from './VoicingViewer';
@@ -8,6 +8,11 @@ import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
 import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
+import { RollLabel } from '../RollLabel';
+import { useFlash } from '../../motion/useFlash';
+import { previewNote, previewVoicing } from '../../utils/previewSound';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 interface Props {
   onAddToProgression: (item: ChordInProgression) => void;
@@ -21,6 +26,8 @@ interface Props {
   onUndo: () => void;
   onRedo: () => void;
   tuning: Tuning;
+  /** The tuning is the app's (shared with By Ear); this changes it. */
+  onTuningChange?: (t: Tuning) => void;
   capo: number;
   desktop?: boolean;
 }
@@ -92,19 +99,34 @@ const SELECT_STYLE: React.CSSProperties = {
   borderLeft: '3px solid var(--gc-bar-color)',
 };
 
+const PICK_KEY = 'scaleup_byname_pick';
+function readPick(): { root: string | null; triad: string | null; ext: string } {
+  try {
+    const v = JSON.parse(localStorage.getItem(PICK_KEY) ?? 'null');
+    if (v && typeof v.root === 'string' && typeof v.triad === 'string') return { root: v.root, triad: v.triad, ext: v.ext ?? '' };
+  } catch { /* private mode / bad JSON */ }
+  return { root: 'C', triad: 'M', ext: '' };
+}
+
 export function ChordPickerTab({
   onAddToProgression, progression,
   onRemoveFromProgression, onClearProgression, onReorderProgression, onTransposeProgression,
   canUndo, canRedo, onUndo, onRedo,
-  tuning: tuningProp, capo, desktop,
+  tuning: tuningProp, onTuningChange, capo, desktop,
 }: Props) {
-  const [selectedRoot,      setSelectedRoot]      = useState<string | null>(null);
-  const [selectedTriad,     setSelectedTriad]     = useState<string | null>(null);
-  const [selectedExtension, setSelectedExtension] = useState<string>('');
+  // Opens on the last chord picked (C major the first time), so the tool shows
+  // its voicings straight away instead of waiting for two choices.
+  const [selectedRoot,      setSelectedRoot]      = useState<string | null>(() => readPick().root);
+  const [selectedTriad,     setSelectedTriad]     = useState<string | null>(() => readPick().triad);
+  const [selectedExtension, setSelectedExtension] = useState<string>(() => readPick().ext);
+  useEffect(() => {
+    try { localStorage.setItem(PICK_KEY, JSON.stringify({ root: selectedRoot, triad: selectedTriad, ext: selectedExtension })); } catch { /* private mode */ }
+  }, [selectedRoot, selectedTriad, selectedExtension]);
   // Index of the variation shown enlarged in the VoicingViewer popover, or null.
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
-  const [tuningName, setTuningName] = useState<string>(tuningProp?.name ?? TUNINGS[0].name);
-  const tuningObj = TUNINGS.find(t => t.name === tuningName) ?? TUNINGS[0];
+  // One tuning for the whole app — this selector and By Ear's change the same one.
+  const tuningObj = tuningProp ?? TUNINGS[0];
+  const tuningName = tuningObj.name;
   const tuning = tuningObj.notes;
 
   const suffix = selectedTriad
@@ -120,21 +142,51 @@ export function ChordPickerTab({
     return findChordVoicings(chordName, 6, tuning);
   }, [chordName, tuning]);
 
-  const handleTuningChange = (name: string) => { setTuningName(name); setViewerIndex(null); };
-  const handleRootSelect = (root: string) => { setSelectedRoot(root); setViewerIndex(null); };
+  const handleTuningChange = (name: string) => {
+    const t = TUNINGS.find(x => x.name === name);
+    if (t) onTuningChange?.(t);
+    setViewerIndex(null);
+  };
+  // Each choice is heard as it is made: the root alone until there is a chord,
+  // then the chord's first shape.
+  const hear = (root: string | null, triad: string | null, ext: string) => {
+    if (!root) return;
+    const sfx = triad ? (SUFFIX_MAP[triad]?.[ext] ?? SUFFIX_MAP[triad]?.[''] ?? null) : null;
+    if (sfx === null) { previewNote(root); return; }
+    const shape = findChordVoicings(`${root}${sfx}`, 1, tuning)[0];
+    if (shape) previewVoicing(shape, tuningObj.openFreqs);
+  };
+  const roll = () => {
+    const root = pickOne(ROOTS);
+    const triad = pickOne(TRIADS).key;
+    const exts = VALID_EXTENSIONS[triad] ?? [''];
+    const ext = Math.random() < 0.5 ? '' : pickOne(exts);
+    setSelectedRoot(root); setSelectedTriad(triad); setSelectedExtension(ext); setViewerIndex(null);
+    hear(root, triad, ext);
+  };
+  const handleRootSelect = (root: string) => {
+    setSelectedRoot(root); setViewerIndex(null);
+    hear(root, selectedTriad, selectedExtension);
+  };
   const handleTriadSelect = (key: string) => {
     setSelectedTriad(key);
     setSelectedExtension(''); // reset extension when triad changes
     setViewerIndex(null);
+    hear(selectedRoot, key, '');
   };
-  const handleExtensionSelect = (key: string) => { setSelectedExtension(key); setViewerIndex(null); };
+  const handleExtensionSelect = (key: string) => {
+    setSelectedExtension(key); setViewerIndex(null);
+    hear(selectedRoot, selectedTriad, key);
+  };
 
   // Add a specific voicing (from the enlarged viewer) straight to the progression.
+  const [added, flashAdded] = useFlash();
   const addVoicing = (voicing: FretPosition[]) => {
     const found = identifyChord(voicing, tuning);
     const chord = found.length > 0 ? found[0] : { name: chordName ?? 'Unknown', notes: [], aliases: [] };
     onAddToProgression({ id: `chord-${Date.now()}`, chord, fretPositions: [...voicing] });
     setViewerIndex(null);
+    flashAdded();
   };
 
   const displayName = chordName ? formatChordName(chordName) : null;
@@ -158,12 +210,15 @@ export function ChordPickerTab({
 
       {/* ── Root note ── */}
       <div style={card()}>
-        <p style={LABEL_STYLE}>Root Note</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p style={LABEL_STYLE}>Root Note</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: desktop ? 7 : 6 }}>
           {ROOTS.map(root => {
             const active = selectedRoot === root;
             return (
-              <button
+              <button data-active={!!active}
                 key={root}
                 className="gc-notation"
                 onClick={() => handleRootSelect(root)}
@@ -173,7 +228,6 @@ export function ChordPickerTab({
                   fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? '#fff' : T.textMuted,
-                  transition: 'filter 0.15s, background 0.15s',
                   borderLeft: `3px solid ${active ? T.primary : 'var(--gc-bar-color)'}`,
                 }}
               >
@@ -191,7 +245,7 @@ export function ChordPickerTab({
           {TRIADS.map(t => {
             const active = selectedTriad === t.key;
             return (
-              <button
+              <button data-active={!!active}
                 key={t.key}
                 className="gc-pill gc-notation"
                 onClick={() => handleTriadSelect(t.key)}
@@ -201,7 +255,6 @@ export function ChordPickerTab({
                   fontWeight: active ? 500 : 400,
                   background: active ? T.primary : T.bgInput,
                   color: active ? '#fff' : T.textMuted,
-                  transition: 'filter 0.15s, background 0.15s',
                   borderLeft: `3px solid ${active ? T.primary : 'var(--gc-bar-color)'}`,
                 }}
               >
@@ -220,7 +273,7 @@ export function ChordPickerTab({
             {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => {
               const active = selectedExtension === e.key;
               return (
-                <button
+                <button data-active={!!active}
                   key={e.key}
                   onClick={() => handleExtensionSelect(e.key)}
                   style={{
@@ -229,7 +282,6 @@ export function ChordPickerTab({
                     fontWeight: active ? 700 : 400,
                     background: active ? T.secondary : T.bgInput,
                     color: active ? '#fff' : T.textMuted,
-                    transition: 'background 0.15s',
                     border: `1px solid ${active ? T.secondary : T.border}`,
                     borderLeft: `3px solid ${active ? T.secondary : 'var(--gc-bar-color)'}`,
                     minHeight: 36,
@@ -282,7 +334,7 @@ export function ChordPickerTab({
           specific variation still lives in the enlarged viewer — tap one below. */}
       {chordName && voicings.length > 0 && (
         <button onClick={() => addVoicing(voicings[0])} style={{ ...btn.primary(), width: '100%' }}>
-          + Add to Progression
+          <RollLabel>{added ? '✓ Added' : '+ Add to Progression'}</RollLabel>
         </button>
       )}
     </div>
@@ -297,7 +349,7 @@ export function ChordPickerTab({
             voicings={voicings}
             chordName={chordName ?? undefined}
             tuning={tuning}
-            onSelect={(_, i) => setViewerIndex(i)}
+            onSelect={(v, i) => { setViewerIndex(i); previewVoicing(v, tuningObj.openFreqs); }}
             gridColumns={desktop ? 3 : undefined}
           />
         </>

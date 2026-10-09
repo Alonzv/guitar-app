@@ -5,6 +5,8 @@ import { IntervalNeck, strY, noteX } from './IntervalNeck';
 import { playInterval } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 import { toDisplayChord } from '../../utils/chordName';
+import { previewChordName } from '../../utils/previewSound';
+import { useOptionalSong } from '../../song/SongContext';
 
 // ── In a Chord — which intervals occur inside a chord ─────────────────────────
 // The question is "which intervals are in this chord", so the answer is a list
@@ -79,11 +81,37 @@ const SELECT: React.CSSProperties = {
   borderLeft: '3px solid var(--gc-bar-color)',
 };
 
+// "Ebmaj7" → { root: 'D#', triad: 'M', ext: 'maj7' } in this tool's own terms,
+// or null when the chord is something its pickers can't show.
+function splitChordName(name: string): { root: string; triad: string; ext: string } | null {
+  const m = name.match(/^([A-G][b#]?)(.*)$/);
+  if (!m) return null;
+  const pc = Note.chroma(m[1]);
+  if (pc == null) return null;
+  const root = ROOTS.find(r => Note.chroma(r) === pc) ?? m[1];
+  const sfx = m[2] === 'M' ? '' : m[2];
+  for (const t of Object.keys(SUFFIX)) {
+    for (const [ext, full] of Object.entries(SUFFIX[t])) {
+      if (full === sfx || (t === 'M' && ext === '' && sfx === '')) return { root, triad: t, ext };
+    }
+  }
+  return null;
+}
+
 export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   const [root, setRoot] = useState('C');
   const [triad, setTriad] = useState('m');
   const [ext, setExt] = useState('');
   const [open, setOpen] = useState<number | null>(null);   // expanded row, by semitones
+
+  // Opens on the chord tapped in the song dock and follows it.
+  const picked = useOptionalSong()?.selectedChord?.chord.name ?? '';
+  const [seenPick, setSeenPick] = useState('');
+  if (picked !== seenPick) {
+    setSeenPick(picked);
+    const parts = picked ? splitChordName(picked) : null;
+    if (parts) { setRoot(parts.root); setTriad(parts.triad); setExt(parts.ext); setOpen(null); }
+  }
   const [shape, setShape] = useState(0);                   // highlighted placement
   const [wide, setWide] = useState(false);
   const [mode, setMode] = useState<Mode>('harmonic');
@@ -155,6 +183,11 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
     const n = pairs.length;
     return n ? (((idx + d) % n) + n) % n : i;
   });
+  // A new chord is heard as soon as it is picked.
+  const hearChord = (r: string, t: string, x: string) => {
+    const ok = (VALID_EXT[t] ?? ['']).includes(x) ? x : '';
+    previewChordName(r + (SUFFIX[t]?.[ok] ?? ''));
+  };
   const playCurrent = () => { if (current) playInterval(current.loMidi, current.hiMidi, mode); };
   const playRow = (r: Row) => {
     // Sound the row straight from the picker: the chord tones themselves.
@@ -168,13 +201,13 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
     <div style={{ ...card({ padding: desktop ? '16px 18px' : '14px' }), display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: desktop ? 20 : 12 }}>
       <p style={{ ...LBL, flexShrink: 0 }}>Chord</p>
       <div dir="ltr" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <select value={root} onChange={e => setRoot(e.target.value)} style={SELECT}>
+        <select value={root} onChange={e => { setRoot(e.target.value); hearChord(e.target.value, triad, effExt); }} style={SELECT}>
           {ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select value={triad} onChange={e => setTriad(e.target.value)} style={SELECT}>
+        <select value={triad} onChange={e => { setTriad(e.target.value); hearChord(root, e.target.value, ''); }} style={SELECT}>
           {TRIADS.map(q => <option key={q.key} value={q.key}>{q.display}</option>)}
         </select>
-        <select value={effExt} onChange={e => setExt(e.target.value)} style={{ ...SELECT, fontWeight: 400, color: T.textDim }}>
+        <select value={effExt} onChange={e => { setExt(e.target.value); hearChord(root, triad, e.target.value); }} style={{ ...SELECT, fontWeight: 400, color: T.textDim }}>
           {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => <option key={e.key} value={e.key}>{e.display}</option>)}
         </select>
       </div>
@@ -227,7 +260,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
 
         <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
           {(['harmonic', 'melodic'] as Mode[]).map((m, i) => (
-            <button key={m} onClick={() => setMode(m)} style={{
+            <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
               padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
               fontWeight: mode === m ? 600 : 400, border: 'none',
               borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
@@ -237,7 +270,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
           ))}
         </div>
 
-        <button onClick={() => setWide(w => { setShape(0); return !w; })} className="gc-notation" style={{
+        <button data-active={!!wide} onClick={() => setWide(w => { setShape(0); return !w; })} className="gc-notation" style={{
           padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
           fontWeight: wide ? 600 : 400,
           border: wide ? 'none' : `1px solid ${T.border}`,

@@ -1,12 +1,13 @@
-import { useState } from 'react';
 import { IntervalExplore } from './IntervalExplore';
 import { IntervalPlayground } from './IntervalPlayground';
 import { IntervalInChord } from './IntervalInChord';
 import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
-import { HelpButton } from '../HelpButton';
+import { Segment } from '../SwipePager';
+import { playMidi } from '../../utils/audioPlayback';
 
-type Sub = 'explore' | 'measure' | 'inchord' | 'practice';
+export type IntervalsSub = 'explore' | 'measure' | 'inchord' | 'practice';
+type Sub = IntervalsSub;
 
 const SUBS: { id: Sub; label: string }[] = [
   { id: 'explore',  label: 'Explore'   },
@@ -31,6 +32,22 @@ const INTERVAL_REF = [
   { abbrev: 'P8',  semitones: 12, name: 'Octave',        quality: 'Perfect',    feel: 'Same, doubled' },
 ];
 
+// Songs whose opening notes make the interval — the first two notes are it.
+const HINTS: { abbrev: string; hint: string; motif: number[] }[] = [
+  { abbrev: 'P5', hint: 'Star Wars theme',                motif: [60, 67, 65, 64, 62, 72, 67] },
+  { abbrev: 'P4', hint: 'Here Comes the Bride',           motif: [60, 65, 65, 65] },
+  { abbrev: 'M3', hint: 'When the Saints Go Marching In', motif: [60, 64, 65, 67] },
+  { abbrev: 'm3', hint: 'Smoke on the Water riff',        motif: [55, 58, 60, 55, 58, 61, 60] },
+  { abbrev: 'M6', hint: 'My Bonnie Lies Over the Ocean',  motif: [60, 69, 67, 65, 67, 65, 62] },
+  { abbrev: 'TT', hint: 'The Simpsons theme',             motif: [60, 64, 66, 69] },
+];
+
+let motifTimers: ReturnType<typeof setTimeout>[] = [];
+function playMotif(midis: number[]) {
+  motifTimers.forEach(clearTimeout);
+  motifTimers = midis.map((m, i) => setTimeout(() => playMidi(m, i === 0 ? 0.5 : 0.4), i * 330));
+}
+
 const QUALITY_COLOR: Record<string, string> = {
   Perfect:    T.primary,
   Consonant:  T.secondary,
@@ -43,46 +60,16 @@ const SECTION: React.CSSProperties = {
   textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
 };
 
-const SUB_KEY = 'scaleup_seg_intervals';
-const readSub = (): Sub => {
-  try {
-    const v = localStorage.getItem(SUB_KEY);
-    // 'identify' promised a quiz and delivered a ruler; it is now 'measure'.
-    if (v === 'identify') return 'measure';
-    if (v && SUBS.some(s => s.id === v)) return v as Sub;
-  } catch { /* private mode */ }
-  return 'explore';
-};
+// The sub-tab lives in App with every other panel's, so navigation (the
+// command palette, the tools map) can open any of them directly.
+export function IntervalsTab({ desktop, sub, onSubChange }: {
+  desktop?: boolean; sub: string; onSubChange: (s: string) => void;
+}) {
+  const pick = (s: Sub) => onSubChange(s);
 
-export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
-  const [sub, setSub] = useState<Sub>(readSub);
-  const pick = (s: Sub) => {
-    setSub(s);
-    try { localStorage.setItem(SUB_KEY, s); } catch { /* private mode */ }
-  };
-
+  // Same bar as every other panel (it used to be the one hand-built exception).
   const tabBar = (
-    // This tab builds its own bar instead of using <Segment>, which is why it
-    // was the only tab with no help button — mirror Segment's trailing "?".
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
-      <div style={{ display: 'flex', gap: 0, flex: 1, minWidth: 0 }}>
-      {SUBS.map(({ id, label }) => (
-        <button key={id} onClick={() => pick(id)} className="gc-sub-tab" style={{
-          flex: 1, padding: '11px 3px', borderRadius: 0,
-          cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap',
-          background: sub === id ? T.secondary : T.bgInput,
-          color: sub === id ? '#fff' : T.textMuted,
-          borderLeft: '3px solid var(--gc-bar-color)',
-          transition: 'background 0.1s',
-        }}>
-          <span style={{ fontWeight: 400 }}>{label}</span>
-        </button>
-      ))}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-        <HelpButton topic={`intervals:${sub}`} />
-      </div>
-    </div>
+    <Segment items={SUBS} active={sub} onChange={id => pick(id as Sub)} helpPrefix="intervals" />
   );
 
   const tool =
@@ -92,7 +79,7 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
     <EarTrainingTab desktop={desktop} />;
 
   const mainContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div>
       {tabBar}
       {sub === 'practice'
         ? <div style={{ maxWidth: desktop ? 680 : undefined, margin: '0 auto', width: '100%' }}>{tool}</div>
@@ -133,18 +120,16 @@ export function IntervalsTab({ desktop }: { desktop?: boolean } = {}) {
       <div style={card({ padding: '12px 14px' })}>
         <p style={SECTION}>Ear training hints</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {[
-            { abbrev: 'P5', hint: 'Star Wars theme' },
-            { abbrev: 'P4', hint: 'Here Comes the Bride' },
-            { abbrev: 'M3', hint: 'When the Saints Go Marching In' },
-            { abbrev: 'm3', hint: 'Smoke on the Water riff' },
-            { abbrev: 'M6', hint: 'My Bonnie Lies Over the Ocean' },
-            { abbrev: 'TT', hint: 'The Simpsons theme' },
-          ].map(({ abbrev, hint }) => (
-            <div key={abbrev} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+          {/* Tap a song to hear how its opening makes the interval. */}
+          {HINTS.map(({ abbrev, hint, motif }) => (
+            <button key={abbrev} onClick={() => playMotif(motif)} className="gc-notation" title="Hear it" style={{
+              display: 'flex', gap: 8, alignItems: 'baseline', padding: '3px 0', background: 'transparent',
+              border: 'none', cursor: 'pointer', textAlign: 'left', letterSpacing: 'normal',
+            }}>
               <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', color: T.primary, fontWeight: 600, flexShrink: 0, minWidth: 28 }}>{abbrev}</span>
-              <span style={{ fontSize: 11, color: T.textMuted }}>{hint}</span>
-            </div>
+              <span style={{ fontSize: 11, color: T.textMuted, flex: 1 }}>{hint}</span>
+              <span style={{ fontSize: 9, color: T.textDim }}>▶</span>
+            </button>
           ))}
         </div>
       </div>

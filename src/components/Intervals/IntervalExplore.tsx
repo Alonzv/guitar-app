@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { IntervalNeck, strY, noteX, DOT_R, FB_H, FB_TOP, STR_SP } from './IntervalNeck';
-import { playScale, getSharedContext, getOutputNode, unlockAudio } from '../../utils/audioPlayback';
+import { playScale, playInterval } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
+import { previewMidi, previewInterval } from '../../utils/previewSound';
+import { DiceButton } from '../DiceButton';
+import { pickOne } from '../../utils/random';
 
 interface IntervalInfo {
   semitones: number;
@@ -65,7 +68,8 @@ const MONO_LBL: React.CSSProperties = {
 
 export function IntervalExplore() {
   const [root,     setRoot]     = useState('E');
-  const [interval, setInterval] = useState<number | null>(null);
+  // Opens on a major third so the neck shows something from the first look.
+  const [interval, setInterval] = useState<number | null>(4);
   const [area,     setArea]     = useState<Area>('full');
   const [mode,     setMode]     = useState<'melodic' | 'harmonic'>('melodic');
 
@@ -74,26 +78,25 @@ export function IntervalExplore() {
   const rootMidi  = 60 + CHROMATIC.indexOf(root);
   const intervalMidi = interval !== null ? rootMidi + interval : rootMidi;
 
+  const roll = () => {
+    const r = pickOne(ALL_NOTES);
+    const iv = pickOne(INTERVALS).semitones;
+    setRoot(r); setInterval(iv); hear(r, iv);
+  };
+
+  // Every pick is heard: the root alone, or the root and its interval.
+  const hear = (r: string, semis: number | null) => {
+    const m = 60 + CHROMATIC.indexOf(r);
+    if (semis === null) previewMidi(m);
+    else previewInterval(m, m + semis, mode);
+  };
+
   const handlePlay = () => {
     if (interval === null) return;
     if (mode === 'melodic') {
       playScale([rootMidi, intervalMidi]);
     } else {
-      const ctx = getSharedContext();
-      unlockAudio().then(() => {
-        const t = ctx.currentTime + 0.05;
-        [rootMidi, intervalMidi].forEach(midi => {
-          const freq = 440 * Math.pow(2, (midi - 69) / 12);
-          const osc  = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.2, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
-          osc.connect(gain); gain.connect(getOutputNode());
-          osc.start(t); osc.stop(t + 1.8);
-        });
-      });
+      playInterval(rootMidi, intervalMidi, 'harmonic');
     }
   };
 
@@ -127,13 +130,16 @@ export function IntervalExplore() {
 
       {/* Root picker */}
       <div>
-        <p style={MONO_LBL}>Root Note</p>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <p style={MONO_LBL}>Root Note</p>
+          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
-              <button key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!sel} key={n} onClick={() => { setRoot(n); hear(n, interval); }} style={{
                 padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
                 border: `1px solid ${sel ? T.primary : T.border}`,
@@ -153,10 +159,10 @@ export function IntervalExplore() {
           {INTERVALS.map(iv => {
             const sel = iv.semitones === interval;
             return (
-              <button
+              <button data-active={!!sel}
                 key={iv.semitones}
                 className="gc-notation"
-                onClick={() => setInterval(sel ? null : iv.semitones)}
+                onClick={() => { setInterval(sel ? null : iv.semitones); if (!sel) hear(root, iv.semitones); }}
                 style={{
                   padding: '8px 4px', borderRadius: 0, cursor: 'pointer',
                   border: `1px solid ${sel ? T.primary : T.border}`,
@@ -197,7 +203,7 @@ export function IntervalExplore() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${T.border}` }}>
                 {(['melodic', 'harmonic'] as const).map(m => (
-                  <button key={m} onClick={() => setMode(m)} style={{
+                  <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
                     padding: '5px 10px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
                     background: mode === m ? T.secondary : T.bgInput,
                     color: mode === m ? '#fff' : T.textMuted,
@@ -217,7 +223,7 @@ export function IntervalExplore() {
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 6 }}>
               <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
               {AREAS.map(a => (
-                <button key={a.id} onClick={() => setArea(a.id)} style={{
+                <button data-active={area === a.id} key={a.id} onClick={() => setArea(a.id)} style={{
                   padding: '2px 8px', borderRadius: 0, cursor: 'pointer',
                   fontSize: 9, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
                   background: area === a.id ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.1)',

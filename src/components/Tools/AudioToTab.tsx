@@ -8,6 +8,9 @@ import {
 import { unlockAudio } from '../../utils/audioPlayback';
 import { exportNotesMidi } from '../../utils/midiExport';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
+import { useOptionalSong } from '../../song/SongContext';
+import { useFlash } from '../../motion/useFlash';
+import { RollLabel } from '../RollLabel';
 
 type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'error';
 
@@ -194,6 +197,39 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
 
 // ── Waveform ──────────────────────────────────────────────────────────────────
 
+// ── Processing scan ──────────────────────────────────────────────────────────
+// While a recording is transcribed: a playhead sweeps the waveform as far as
+// the work has got, and wherever the sound jumps (an attack — a likely note)
+// a dot drops onto a six-line tab strip under it. The dots are the recording's
+// own onsets, not the final notes; the tab itself appears when it is done.
+function ProcessingScan({ data, progress }: { data: Float32Array; progress: number }) {
+  const W = 500, WAVE_H = 56, TAB_TOP = WAVE_H + 10, LINE_GAP = 7, N = 80;
+  const step = data.length / N;
+  const amp = Array.from({ length: N }, (_, i) => Math.abs(data[Math.floor(i * step)]));
+  const peak = Math.max(...amp, 0.0001);
+  const scanned = Math.round((progress / 100) * N);
+  const barW = W / N;
+  // Onsets: a bin noticeably louder than the one before it.
+  const onsets = amp.map((v, i) => ({ i, v })).filter(({ i, v }) => i > 0 && v / peak > 0.25 && v > amp[i - 1] * 1.25);
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${TAB_TOP + LINE_GAP * 5 + 6}`} style={{ display: 'block' }} aria-label="Transcribing">
+      {amp.map((v, i) => {
+        const h = Math.max(2, (v / peak) * WAVE_H * 0.9);
+        return <rect key={i} x={i * barW + 1} y={(WAVE_H - h) / 2} width={barW - 2} height={h}
+          fill={i < scanned ? 'var(--gc-text)' : 'var(--gc-border)'} style={{ transition: 'fill var(--gc-dur-base) var(--gc-ease-out)' }} />;
+      })}
+      {[0, 1, 2, 3, 4, 5].map(r => (
+        <line key={r} x1={0} x2={W} y1={TAB_TOP + r * LINE_GAP} y2={TAB_TOP + r * LINE_GAP} stroke="var(--gc-fretboard-str)" strokeWidth={1} />
+      ))}
+      {onsets.filter(o => o.i < scanned).map(({ i, v }) => (
+        <circle key={i} className="gc-fall" cx={i * barW + barW / 2} cy={TAB_TOP + (Math.round((1 - v / peak) * 5)) * LINE_GAP} r={3} fill="var(--gc-success)" />
+      ))}
+      <line x1={0} x2={0} y1={0} y2={TAB_TOP + LINE_GAP * 5 + 4} stroke="var(--gc-success)" strokeWidth={2}
+        style={{ transform: `translateX(${scanned * barW}px)`, transition: 'transform var(--gc-dur-slow) var(--gc-ease-out)' }} />
+    </svg>
+  );
+}
+
 function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }) {
   if (data.length === 0) return null;
 
@@ -284,6 +320,8 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const [phaseLabel, setPhaseLabel]   = useState('');
   const [error, setError]             = useState('');
   const [tabData, setTabData]         = useState<TabData | null>(null);
+  const song = useOptionalSong();
+  const [sent, flashSent] = useFlash();
   const [waveform, setWaveform]       = useState<Float32Array | null>(null);
   const [notes, setNotes]             = useState<DetectedNote[]>([]);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
@@ -673,7 +711,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       <div style={card({ padding: '22px 18px' })}>
         {waveform && waveform.length > 0 && (
           <div style={{ marginBottom: 16, borderRadius: 0, overflow: 'hidden', padding: '4px 0' }}>
-            <Waveform data={waveform} height={64} />
+            <ProcessingScan data={waveform} progress={progress} />
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -781,6 +819,22 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
           Export to MIDI
         </button>
       </div>
+
+      {/* Into the song, as its melody — Tab Builder and Harmonize pick it up. */}
+      {song && tabData && (
+        <button onClick={() => {
+          const cols = Math.max(1, tabData.totalColumns);
+          const grid = Array.from({ length: 6 }, () => Array.from({ length: cols }, () => ({ fret: '' })));
+          tabData.events.forEach(ev => { const row = 5 - ev.string; if (grid[row]?.[ev.column]) grid[row][ev.column] = { fret: String(ev.fret) }; });
+          song.update({ melody: { title: tabData.title || 'Transcription', subtitle: '', grid, bars: [] }, melodyFrom: 'audiotab' });
+          flashSent();
+        }} style={{
+          width: '100%', padding: '13px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14,
+          background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
+        }}>
+          <RollLabel>{sent ? '✓ The song’s melody now' : 'Use as the song’s melody'}</RollLabel>
+        </button>
+      )}
 
       {/* Save to personal library */}
       <SaveToLibraryButton

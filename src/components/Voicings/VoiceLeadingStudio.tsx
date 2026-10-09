@@ -8,6 +8,7 @@ import type { VoicedProgression } from '../../utils/voiceLeading';
 import { T, card, alpha } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { toDisplayChord } from '../../utils/chordName';
+import { ExampleChips } from '../ExampleChips';
 
 // ── Voice Leading Studio ─────────────────────────────────────────────────────
 // Build a progression, press Calculate, and see it arranged into four smooth
@@ -87,12 +88,12 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
 
   const t = lang === 'he'
     ? { title: 'סטודיו הולכת קולות', calc: 'חשב', play: '▶ נגן', clear: 'נקה', voice: 'קול',
-        build: 'בנו מהלך אקורדים ולחצו על "חשב"', addChord: 'הוסף', follow: (v: string) => `עוקב אחרי קול ${v}`,
+        build: 'הוסיפו אקורדים עם + למעלה', addChord: 'הוסף', follow: (v: string) => `עוקב אחרי קול ${v}`,
         key: 'סולם', auto: 'אוטומטי', outKey: 'מחוץ לסולם', leap: 'קפיצה', hold: 'צליל משותף מוחזק',
         par5: 'קוינטות מקבילות', par8: 'אוקטבות מקבילות', omit: 'הושמט (אין מספיק קולות)',
         mark: 'הדגש דרגה', degOf: (d: string) => `מדגיש את דרגה ${d} בכל האקורדים` }
     : { title: 'Voice Leading Studio', calc: 'Calculate', play: '▶ Play', clear: 'Clear', voice: 'Voice',
-        build: 'Build a progression, then press Calculate', addChord: 'Add', follow: (v: string) => `Following voice ${v}`,
+        build: 'Add chords with + above', addChord: 'Add', follow: (v: string) => `Following voice ${v}`,
         key: 'Key', auto: 'Auto', outKey: 'out of key', leap: 'leap', hold: 'common tone held',
         par5: 'parallel 5ths', par8: 'parallel octaves', omit: 'omitted (not enough voices)',
         mark: 'Highlight degree', degOf: (d: string) => `Highlighting the ${d} in every chord` };
@@ -147,15 +148,19 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
     return out;
   }, [result]);
 
+  // The column being played — lit in the grid and marked on the voice lines.
+  const [playCol, setPlayCol] = useState<number | null>(null);
   const play = () => {
     if (!result) return;
     unlockAudio().then(() => {
       timers.current.forEach(clearTimeout); timers.current = [];
       result.chords.forEach((_, ci) => {
         timers.current.push(setTimeout(() => {
+          setPlayCol(ci);
           result.voices.forEach(v => playMidi(v[ci].midi, 1.1));
         }, ci * 1250));
       });
+      timers.current.push(setTimeout(() => setPlayCol(null), result.chords.length * 1250));
     });
   };
 
@@ -234,7 +239,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
           {presentDegs.map(d => {
             const active = selDeg === d;
             return (
-              <button key={d} onClick={() => pickDeg(d)} style={{
+              <button data-active={!!active} key={d} onClick={() => pickDeg(d)} style={{
                 padding: '5px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 border: active ? 'none' : `1px solid ${T.border}`, borderLeft: `3px solid ${active ? THREAD : 'var(--gc-bar-color)'}`,
                 background: active ? THREAD : T.bgInput, color: active ? '#fff' : T.textMuted,
@@ -246,8 +251,9 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
 
       {/* Result — four-voice grid */}
       {!result ? (
-        <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
+        <div style={{ ...card({ padding: 28 }), textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 18 }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted }}>{t.build}</p>
+          {!chords.length && <ExampleChips onPick={ex => setChords(ex)} />}
         </div>
       ) : (
         <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
@@ -258,7 +264,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
               {result.chords.map((name, ci) => {
                 const an = analysis?.chords[ci];
                 return (
-                  <div key={ci} style={{ width: CW, flexShrink: 0, padding: '6px 4px', textAlign: 'center', borderInlineStart: ci ? `1px solid ${T.border}` : 'none', background: T.bgCard }}>
+                  <div key={ci} style={{ width: CW, flexShrink: 0, padding: '6px 4px', textAlign: 'center', borderInlineStart: ci ? `1px solid ${T.border}` : 'none', background: ci === playCol ? alpha(THREAD, 22) : T.bgCard, transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out)' }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{toDisplayChord(name)}</div>
                     {an && (
                       <div style={{ fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700, color: an.diatonic ? T.textMuted : T.error }}>
@@ -288,7 +294,8 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
                         width: CW, flexShrink: 0, padding: '7px 4px', textAlign: 'center',
                         borderInlineStart: ci ? `1px solid ${T.border}` : 'none',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-                        background: hot ? alpha(THREAD, rowOn ? 14 : 20) : 'transparent',
+                        background: hot ? alpha(THREAD, rowOn ? 14 : 20) : ci === playCol ? alpha(THREAD, 10) : 'transparent',
+                        transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out)',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
                           <span dir="ltr" style={{ fontSize: 16, fontWeight: 700, color: hot ? THREAD : (cell.leap ? T.error : T.text) }}>{cell.note}</span>
@@ -303,6 +310,11 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
                 </div>
               );
             })}
+
+            {/* Voice lines — each voice as a line through its pitches, so the
+                motion is visible at a glance: flat = a held common tone, a
+                short slope = a step, dashed = a leap. Tap a line to follow it. */}
+            <VoiceLines result={result} cw={CW} lw={LW} selVoice={selVoice} playCol={playCol} onPick={pickVoice} color={THREAD} />
           </div>
         </div>
       )}
@@ -326,7 +338,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
           {flagged.map((c, i) => (
             <p key={`k${i}`} dir="ltr" style={{ margin: i ? '6px 0 0' : 0, fontSize: 12, color: T.text }}>
               <span style={{ color: T.error, fontWeight: 700 }}>⚠ </span>
-              <span style={{ fontWeight: 700 }}>{c.name}</span>
+              <span style={{ fontWeight: 700 }}>{toDisplayChord(c.name)}</span>
               <span style={{ fontFamily: 'var(--gc-mono)', color: T.textMuted }}> · {c.roman}</span>
               <span style={{ color: T.textDim }}> — {t.outKey}</span>
             </p>
@@ -356,6 +368,52 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
           {selVoice != null ? t.follow(String(selVoice + 1)) : t.degOf(degLabelShort(selDeg!, lang))}
         </p>
       )}
+    </div>
+  );
+}
+
+
+function VoiceLines({ result, cw, lw, selVoice, playCol, onPick, color }: {
+  result: VoicedProgression; cw: number; lw: number; selVoice: number | null; playCol: number | null;
+  onPick: (vi: number) => void; color: string;
+}) {
+  const H = 120, PAD = 12;
+  const all = result.voices.flat().map(c => c.midi);
+  const lo = Math.min(...all), hi = Math.max(...all);
+  const y = (m: number) => PAD + (H - 2 * PAD) * (1 - (m - lo) / Math.max(1, hi - lo));
+  const x = (ci: number) => ci * cw + cw / 2;
+  const width = result.chords.length * cw;
+  return (
+    <div style={{ display: 'flex', borderTop: `2px solid ${T.border}` }}>
+      <div style={{ width: lw, flexShrink: 0, background: T.bgCard, borderInlineEnd: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: T.textDim }}>↕</div>
+      <svg width={width} height={H} style={{ display: 'block' }} aria-label="Voice lines">
+        {playCol != null && (
+          <rect x={playCol * cw} y={0} width={cw} height={H} fill={color} opacity={0.08} />
+        )}
+        {result.voices.map((voice, vi) => {
+          const on = selVoice === vi;
+          return (
+            <g key={vi} onClick={() => onPick(vi)} style={{ cursor: 'pointer' }}>
+              {voice.slice(1).map((cell, k) => {
+                const ci = k + 1;
+                return (
+                  <line key={ci} x1={x(ci - 1)} y1={y(voice[ci - 1].midi)} x2={x(ci)} y2={y(cell.midi)}
+                    stroke={on ? color : T.textMuted} strokeWidth={on ? 3 : 1.6} opacity={selVoice == null || on ? 1 : 0.35}
+                    strokeDasharray={cell.leap ? '5 4' : undefined} />
+                );
+              })}
+              {voice.map((cell, ci) => (
+                <g key={ci} style={{ transform: `translate(${x(ci)}px, ${y(cell.midi)}px)` }}>
+                  <circle className={ci === playCol ? 'gc-dot-ring' : undefined} r={ci === playCol ? 6 : 0} fill="none" stroke={color} strokeWidth={2} />
+                  <circle r={on ? 5 : 3.5} fill={on || ci === playCol ? color : T.text} opacity={selVoice == null || on ? 1 : 0.35} />
+                </g>
+              ))}
+              {/* a wide invisible stroke so the thin line is easy to tap */}
+              <polyline points={voice.map((c, ci) => `${x(ci)},${y(c.midi)}`).join(' ')} fill="none" stroke="transparent" strokeWidth={14} />
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }

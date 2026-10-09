@@ -4,9 +4,14 @@ import {
 } from '../ScaleTrainer/engine';
 import { SCALE_DATA } from '../ScaleTrainer/data';
 import type { ScaleId } from '../ScaleTrainer/data';
-import { playScale, playError } from '../../utils/audioPlayback';
+import { playScale } from '../../utils/audioPlayback';
+import { answeredRight, answeredWrong } from '../../practice/feedback';
+import { StreakBoard } from '../Practice/StreakBoard';
+import { PlayToAnswer } from '../Practice/PlayToAnswer';
+import { useMicNotes } from '../../practice/useMicNotes';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
+import { useOptionalSong } from '../../song/SongContext';
 
 // ── Scales → Practice ────────────────────────────────────────────────────────
 // Unified Practice Mode for scales: Theory (a Scale Speller) + Ear Training
@@ -18,15 +23,15 @@ const BASIC: ScaleId[] = ['major', 'natural_minor'];
 const ADVANCED: ScaleId[] = ['major', 'natural_minor', 'major_pentatonic', 'minor_pentatonic'];
 
 type Mode = 'theory' | 'ear';
-type Diff = 'basic' | 'advanced';
+type Diff = 'basic' | 'advanced' | 'song';
 const rnd = (n: number) => Math.floor(Math.random() * n);
 
 interface Challenge { scale: ScaleId; root: string; notes: string[]; midis: number[] }
 
-function makeChallenge(pool: ScaleId[]): Challenge {
+function makeChallenge(pool: ScaleId[], fixedRoot?: string): Challenge {
   for (let i = 0; i < 60; i++) {
     const scale = pool[rnd(pool.length)];
-    const roots = validRoots(scale);
+    const roots = fixedRoot && validRoots(scale).includes(fixedRoot) ? [fixedRoot] : validRoots(scale);
     if (!roots.length) continue;
     const root = roots[rnd(roots.length)];
     const notes = spellScale(root, scale);
@@ -34,6 +39,12 @@ function makeChallenge(pool: ScaleId[]): Challenge {
     return { scale, root, notes, midis: scaleMidiRun(scale, 48 + pcOf(root)) };
   }
   return { scale: 'major', root: 'C', notes: spellScale('C', 'major')!, midis: scaleMidiRun('major', 48) };
+}
+
+const songPool = (mode: 'major' | 'minor'): ScaleId[] =>
+  mode === 'minor' ? ['natural_minor', 'minor_pentatonic'] : ['major', 'major_pentatonic'];
+function challengeFor(d: Diff, songRoot: string | undefined, songMode: 'major' | 'minor'): Challenge {
+  return d === 'song' && songRoot ? makeChallenge(songPool(songMode), songRoot) : makeChallenge(d === 'advanced' ? ADVANCED : BASIC);
 }
 
 const STORE = 'scaleup_scale_practice_v2';
@@ -51,7 +62,13 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const [diff, setDiff] = useState<Diff>('basic');
   const scaleName = (s: ScaleId) => SCALE_DATA[s][lang].name;
 
+  // "My song": drill the scales of the song's key.
+  const songKey = useOptionalSong()?.key ?? null;
+  const songMode = songKey?.mode ?? 'major';
+  const songRoot = songKey ? NOTE_BANK.find(n => pcOf(n) === songKey.tonicPc && validRoots(songPool(songMode)[0]).includes(n)) : undefined;
+
   const [streak, setStreak] = useState(0);
+  const answerArea = useRef<HTMLDivElement>(null);   // shakes on a wrong answer
   const [best, setBest] = useState<number>(loadBest);
   const bumpStreak = () => setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
 
@@ -66,9 +83,9 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   useEffect(() => () => { if (errTimer.current) clearTimeout(errTimer.current); }, []);
 
   const startSpell = useCallback((d: Diff = diff) => {
-    setCh(makeChallenge(d === 'advanced' ? ADVANCED : BASIC));
+    setCh(challengeFor(d, songRoot, songMode));
     setFilled(1); setPhase('spell'); setWrongs(0); setErrBtn(null); setHint(null);
-  }, [diff]);
+  }, [diff, songRoot, songMode]);
 
   const pick = useCallback((name: string) => {
     if (!ch || phase !== 'spell') return;
@@ -79,15 +96,23 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     if (name === expected || (rightPitch && !repeats)) {
       setErrBtn(null); setHint(null);
       const next = filled + 1; setFilled(next);
-      if (next === ch.notes.length) { if (wrongs === 0) bumpStreak(); setPhase('done'); }
+      if (next === ch.notes.length) { if (wrongs === 0) bumpStreak(); answeredRight(); setPhase('done'); }
     } else {
-      playError(); navigator.vibrate?.(30); setErrBtn(name);
+      answeredWrong(answerArea.current); setErrBtn(name);
       const w = wrongs + 1; setWrongs(w);
       if (w >= 2) { setStreak(0); setHint('reset'); } else setHint('retry');
       if (errTimer.current) clearTimeout(errTimer.current);
       errTimer.current = setTimeout(() => setErrBtn(null), 500);
     }
   }, [ch, phase, filled, wrongs]);
+
+  // Answer by playing: the played note's pitch picks the bank note with it.
+  const mic = useMicNotes(midi => {
+    if (!ch || phase !== 'spell') return;
+    const pc = ((midi % 12) + 12) % 12;
+    const expected = ch.notes[filled];
+    pick(pcOf(expected) === pc ? expected : (NOTE_BANK.find(n => pcOf(n) === pc) ?? expected));
+  });
 
   // ── Ear training: play a scale, pick the whole scale from 4 options ─────────
   const [earCh, setEarCh] = useState<Challenge | null>(null);
@@ -99,7 +124,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const playRun = (c: Challenge) => playScale(c.midis);
   const startEar = useCallback((d: Diff = diff) => {
     const p = d === 'advanced' ? ADVANCED : BASIC;
-    const correct = makeChallenge(p);
+    const correct = challengeFor(d, songRoot, songMode);
     const seen = new Set([optKey(correct)]);
     const opts = [correct];
     for (let g = 0; opts.length < 4 && g < 300; g++) {
@@ -109,13 +134,13 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     for (let i = opts.length - 1; i > 0; i--) { const j = rnd(i + 1); [opts[i], opts[j]] = [opts[j], opts[i]]; }
     setEarCh(correct); setEarOpts(opts); setWrongPicks(new Set()); setRevealed(false);
     setTimeout(() => playRun(correct), 160);
-  }, [diff]);
+  }, [diff, songRoot, songMode]);
   const guess = (opt: Challenge) => {
     if (!earCh || revealed) return;
     if (opt.root === earCh.root && opt.scale === earCh.scale) {
-      setRevealed(true); if (wrongPicks.size === 0) bumpStreak();
+      setRevealed(true); answeredRight(); if (wrongPicks.size === 0) bumpStreak();
     } else {
-      playError(); const nw = new Set(wrongPicks); nw.add(optKey(opt)); setWrongPicks(nw);
+      answeredWrong(answerArea.current); const nw = new Set(wrongPicks); nw.add(optKey(opt)); setWrongPicks(nw);
       if (nw.size >= 2) { setStreak(0); setRevealed(true); }
     }
   };
@@ -141,7 +166,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   });
 
   return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
+    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', width: '100%', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{rtl ? 'תרגול סולמות' : 'Scale Practice'}</h2>
       </div>
@@ -152,22 +177,12 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
         ))}
       </div>
       <div style={{ display: 'flex', border: `1px solid ${T.border}`, marginBottom: 16 }}>
-        {(['basic', 'advanced'] as Diff[]).map((d, i) => (
-          <button key={d} onClick={() => onDiff(d)} style={{ ...seg(diff === d), borderLeft: i > 0 ? `1px solid ${T.border}` : 'none' }}>{d === 'basic' ? t.basic : t.advanced}</button>
+        {((songRoot ? ['basic', 'advanced', 'song'] : ['basic', 'advanced']) as Diff[]).map((d, i) => (
+          <button key={d} onClick={() => onDiff(d)} style={{ ...seg(diff === d), borderLeft: i > 0 ? `1px solid ${T.border}` : 'none' }}>{d === 'basic' ? t.basic : d === 'advanced' ? t.advanced : (lang === 'he' ? 'השיר שלי' : 'My song')}</button>
         ))}
       </div>
 
-      {/* Streak cards */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.streak}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{streak}</p>
-        </div>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.best}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{best}</p>
-        </div>
-      </div>
+      <StreakBoard streak={streak} best={best} lang={lang} />
 
       {mode === 'ear' ? (
         !earCh ? (
@@ -181,7 +196,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               <button onClick={() => playRun(earCh)} style={{ padding: '12px 30px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.play}</button>
             </div>
             <p style={LBL}>{t.which}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+            <div ref={answerArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
               {earOpts.map(opt => {
                 const isAnswer = revealed && opt.root === earCh.root && opt.scale === earCh.scale;
                 const isWrong = wrongPicks.has(optKey(opt));
@@ -217,7 +232,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               const isCurrent = phase === 'spell' && i === filled;
               return (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700,
+                  <div className={isFilled && i > 0 ? 'gc-pop' : undefined} style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700,
                     background: isFilled ? (i === 0 ? T.primary : T.success) : T.bgInput, color: isFilled ? '#fff' : T.textDim,
                     border: isCurrent ? `2px solid ${T.secondary}` : `1px solid ${T.border}` }}>{isFilled ? n : ''}</div>
                   <span style={{ fontSize: 10, color: isCurrent ? T.text : T.textDim, fontFamily: 'var(--gc-mono)', fontWeight: isCurrent ? 700 : 400 }}>{i + 1}</span>
@@ -227,8 +242,9 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
           </div>
           {phase === 'spell' ? (
             <>
+              <PlayToAnswer lang={lang} mic={mic} />
               <p style={LBL}>{t.noteBank}</p>
-              <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
+              <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
                 {NOTE_BANK.map(n => {
                   const isErr = errBtn === n;
                   return (

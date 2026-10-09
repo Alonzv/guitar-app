@@ -152,7 +152,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
           {(['signin', 'signup'] as Mode[]).map(m => {
             const active = mode === m;
             return (
-              <button key={m} onClick={() => { setMode(m); setError(''); setNotice(''); }}
+              <button data-active={!!active} key={m} onClick={() => { setMode(m); setError(''); setNotice(''); }}
                 style={{
                   flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
                   background: active ? T.primary : T.bgInput,

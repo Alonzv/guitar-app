@@ -65,12 +65,12 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
         {SUBS.map(s => {
           const active = sub === s.id;
           return (
-            <button key={s.id} onClick={() => setSub(s.id)} className="gc-sub-tab" style={{
+            <button data-active={!!active} key={s.id} onClick={() => setSub(s.id)} className="gc-sub-tab" style={{
               flex: '1 0 auto', minWidth: 108, padding: '9px 10px', borderRadius: 0,
               cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap',
               background: active ? T.secondary : T.bgInput,
               color: active ? '#fff' : T.textMuted,
-              borderLeft: '3px solid var(--gc-bar-color)', transition: 'background 0.1s',
+              borderLeft: '3px solid var(--gc-bar-color)', 
             }}>
               <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 400 }}>{s.label}</span></span>
             </button>
