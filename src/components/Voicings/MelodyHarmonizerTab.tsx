@@ -18,9 +18,9 @@ import {
   useTabEditing, emptyGrid as baseEmptyGrid, nextFret, circleDiameter,
   BASE_CW, BASE_CH, BASE_FS, type Tech, type TabCell,
 } from '../Tabs/tabEditing';
-import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
-import { onNavKey } from '../../services/navigate';
 import { useLang } from '../../contexts/LanguageContext';
+import { useOptionalSong } from '../../song/SongContext';
+import { keyName } from '../../utils/harmonicAnalysis';
 
 // User-facing failure copy. These used to be Hebrew-only, and two of them told
 // a guitarist to go and check an API key they have no access to — a developer's
@@ -211,10 +211,14 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   const { grid, bars } = melody;
   const barsSet = useMemo(() => new Set(bars), [bars]);
-  // A "see also" jump carries the key that was on screen.
-  useEffect(() => onNavKey(KEY_TOOLS.harmonize.id, k => {
-    setScaleRoot(k.root); setScaleType(k.mode);
-  }), []);
+  // Follows the song's key when it changes (its own choice otherwise stands).
+  const songKey = useOptionalSong()?.key ?? null;
+  const songKeyId = songKey ? `${songKey.tonicPc}:${songKey.mode}` : '';
+  const [seenKey, setSeenKey] = useState(() => (loadSavedPrefs().scaleRoot ? songKeyId : ''));
+  if (songKeyId !== seenKey) {
+    setSeenKey(songKeyId);
+    if (songKey) { setScaleRoot(keyName(songKey, 'en').split(' ')[0]); setScaleType(songKey.mode); }
+  }
 
   const scaleName = scaleRoot ? `${scaleRoot} ${scaleType}` : '';
   const numCols = grid[0]?.length ?? DEFAULT_COLS;
@@ -1068,12 +1072,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     </div>
   );
 
-  const seeAlso = (
-    <SeeAlso
-      links={[KEY_TOOLS.extensions, KEY_TOOLS.wheel]}
-      navKey={{ root: scaleRoot || 'C', mode: scaleType === 'minor' ? 'minor' : 'major' }}
-    />
-  );
 
   if (desktop) {
     return (
@@ -1086,7 +1084,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           {leftCol}
           <div style={{ position: 'sticky', top: 24, minWidth: 0 }}>{rightCol}</div>
         </div>
-        {seeAlso}
       </div>
     );
   }
@@ -1094,7 +1091,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
       {leftCol}
       {rightCol}
-      {seeAlso}
     </div>
   );
 }

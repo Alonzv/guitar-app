@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
-import { TUNINGS, CHROMATIC } from './utils/musicTheory';
+import { CHROMATIC } from './utils/musicTheory';
 
 // ── Panel components ───────────────────────────────────────────────────────
 // Statically imported (single bundle). Tab-level code-splitting was tried for
@@ -13,10 +13,10 @@ import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
 import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
 import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab';
-import { SessionBar } from './components/SessionBar';
-import { namesToProgression } from './utils/progressionBridge';
+import { SongDock } from './components/Song/SongDock';
 import { subscribeNavigate } from './services/navigate';
 import { flyToDock } from './motion';
+import { useSongState, SongProvider } from './song/SongContext';
 import { formatChordName } from './utils/chordIdentifier';
 import { DiatonicExtensions } from './components/Chords/DiatonicExtensions';
 
@@ -144,62 +144,30 @@ export default function App() {
   // ── My Workspace (dedicated full-screen personal area) ────────────────────
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
-  // ── Progression + undo/redo ───────────────────────────────────────────────
-  const [progression, setProgression] = useState<ChordInProgression[]>(() => {
-    try { return JSON.parse(localStorage.getItem('scaleup_progression') || '[]'); }
-    catch { return []; }
-  });
-  const [undoStack, setUndoStack] = useState<ChordInProgression[][]>([]);
-  const [redoStack, setRedoStack] = useState<ChordInProgression[][]>([]);
-
-  const progressionRef = useRef(progression);
-  progressionRef.current = progression;
-  const undoRef = useRef(undoStack); undoRef.current = undoStack;
-  const redoRef = useRef(redoStack); redoRef.current = redoStack;
-
-  // The ref moves with every push (not just on render), so several edits in
-  // one handler — a whole template progression added chord by chord — each
-  // build on the one before instead of all starting from the same snapshot.
-  const pushHistory = useCallback((next: ChordInProgression[]) => {
-    const prev = progressionRef.current;
-    progressionRef.current = next;
-    setUndoStack(s => [...s.slice(-49), prev]);
-    setRedoStack([]);
-    setProgression(next);
-  }, []);
-
-  const handleUndo = useCallback(() => {
-    const stack = undoRef.current;
-    if (!stack.length) return;
-    setRedoStack(prev => [progressionRef.current, ...prev]);
-    setProgression(stack[stack.length - 1]);
-    setUndoStack(prev => prev.slice(0, -1));
-  }, []);
-
-  const handleRedo = useCallback(() => {
-    const stack = redoRef.current;
-    if (!stack.length) return;
-    setUndoStack(prev => [...prev, progressionRef.current]);
-    setProgression(stack[0]);
-    setRedoStack(prev => prev.slice(1));
-  }, []);
+  // ── The song ──────────────────────────────────────────────────────────────
+  // Every tool works on one song (song/SongContext): its chords, key, tempo,
+  // tuning, capo and melody, with one undo history across all of it. The
+  // names below keep the shapes the panels were written against.
+  const songApi = useSongState();
+  const progression = songApi.progression;
+  const pushHistory = songApi.setProgression;
+  const handleUndo = songApi.undo;
+  const handleRedo = songApi.redo;
+  const tuning = songApi.tuning;
+  const capo = songApi.song.capo;
+  const setTuning = (t: Tuning) => songApi.update({ tuningName: t.name });
+  const setCapo = (c: number) => songApi.update({ capo: c });
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.target.tagName));
+      if (typing) return;
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
-      if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key === 'z') || e.key === 'y')) { e.preventDefault(); handleRedo(); }
+      if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key === 'y')) { e.preventDefault(); handleRedo(); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [handleUndo, handleRedo]);
-
-  useEffect(() => {
-    try { localStorage.setItem('scaleup_progression', JSON.stringify(progression)); } catch {}
-  }, [progression]);
-
-  // ── Tuning & Capo ─────────────────────────────────────────────────────────
-  const [tuning, setTuning] = useState<Tuning>(TUNINGS[0]);
-  const [capo, setCapo]     = useState(0);
 
   // ── Shared progression banner ─────────────────────────────────────────────
   const [sharedProgression] = useState<ChordInProgression[] | null>(decodeSharedProgression);
@@ -216,7 +184,7 @@ export default function App() {
   // Every "add" path lands here, so the chord's flight from the button that was
   // pressed into the session bar happens once for the whole app.
   const handleAddToProgression = (item: ChordInProgression) => {
-    pushHistory([...progressionRef.current, item]);
+    pushHistory([...songApi.section.progression, item]);
     flyToDock(formatChordName(item.chord.name));
   };
 
@@ -230,11 +198,10 @@ export default function App() {
     pushHistory(next);
   };
 
+  // Transposing renames the chords and finds shapes for the new names — the
+  // old shapes belonged to the old chords.
   const handleTransposeProgression = (semitones: number) => {
-    pushHistory(progression.map(item => ({
-      ...item,
-      chord: { ...item.chord, name: transposeChordName(item.chord.name, semitones) },
-    })));
+    songApi.setChordNames(progression.map(item => transposeChordName(item.chord.name, semitones)));
   };
 
   // ── SwipePager state ──────────────────────────────────────────────────────
@@ -327,13 +294,9 @@ export default function App() {
     else if (tab === 4) handleToolsSegChange(sub);
   }), []);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Session sync ───────────────────────────────────────────────────────────
-  // A voicing tool edited the chord list. Convert back to progression entries
-  // (reusing existing ones so shapes/ids survive) and push through the same
-  // history as any other edit, so undo/redo works across the whole app.
-  const handleChordNamesChange = useCallback((names: string[]) => {
-    pushHistory(namesToProgression(names, tuning.notes, progressionRef.current));
-  }, [pushHistory, tuning]);
+  // A voicing tool edited the chord list by name; the song keeps the shapes of
+  // chords it already had and finds shapes for new ones.
+  const handleChordNamesChange = songApi.setChordNames;
 
   // ── Workspace handlers ─────────────────────────────────────────────────────
   const handleOpenProgression = (chords: ChordInProgression[]) => {
@@ -390,7 +353,7 @@ export default function App() {
   // ══════════════════════════════════════════════════════════════════════════
   if (isDesktopBrowser) {
     return (
-      <>
+      <SongProvider value={songApi}>
         {finders}
         {workspaceOpen && (
           <WorkspaceOverlay
@@ -410,7 +373,7 @@ export default function App() {
           onLogoClick={handleLogoClick}
           onSearch={() => setPaletteOpen(true)}
         >
-          <SessionBar progression={progression} tuning={tuning} capo={capo} />
+          <SongDock />
 
           {/* ── Panel 0: CHORDS ──────────────────────────────────────── */}
           {pagerTab === 0 && (
@@ -428,7 +391,7 @@ export default function App() {
                     onTransposeProgression={handleTransposeProgression}
                     tuning={tuning} onTuningChange={setTuning}
                     capo={capo} onCapoChange={setCapo}
-                    canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
+                    canUndo={songApi.canUndo} canRedo={songApi.canRedo}
                     onUndo={handleUndo} onRedo={handleRedo}
                   />
                 )}
@@ -441,7 +404,7 @@ export default function App() {
                     onClearProgression={() => pushHistory([])}
                     onReorderProgression={handleReorderProgression}
                     onTransposeProgression={handleTransposeProgression}
-                    canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
+                    canUndo={songApi.canUndo} canRedo={songApi.canRedo}
                     onUndo={handleUndo} onRedo={handleRedo}
                     tuning={tuning} onTuningChange={setTuning} capo={capo}
                   />
@@ -511,7 +474,7 @@ export default function App() {
           )}
 
         </DesktopShell>
-      </>
+      </SongProvider>
     );
   }
 
@@ -519,7 +482,7 @@ export default function App() {
   // Mobile layout — SwipePager
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <>
+    <SongProvider value={songApi}>
       {finders}
       {workspaceOpen && (
         <WorkspaceOverlay
@@ -537,7 +500,7 @@ export default function App() {
         onToggleDark={() => setDarkMode(d => !d)}
         userMenu={<UserMenu compact onOpenWorkspace={() => setWorkspaceOpen(true)} />}
         sharedBanner={sharedBanner}
-        sessionBar={<SessionBar progression={progression} tuning={tuning} capo={capo} />}
+        sessionBar={<SongDock compact />}
         onLogoClick={handleLogoClick}
         onSearch={() => setPaletteOpen(true)}
       >
@@ -558,7 +521,7 @@ export default function App() {
                 onTransposeProgression={handleTransposeProgression}
                 tuning={tuning} onTuningChange={setTuning}
                 capo={capo} onCapoChange={setCapo}
-                canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
+                canUndo={songApi.canUndo} canRedo={songApi.canRedo}
                 onUndo={handleUndo} onRedo={handleRedo}
               />
             )}
@@ -570,7 +533,7 @@ export default function App() {
                 onClearProgression={() => pushHistory([])}
                 onReorderProgression={handleReorderProgression}
                 onTransposeProgression={handleTransposeProgression}
-                canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
+                canUndo={songApi.canUndo} canRedo={songApi.canRedo}
                 onUndo={handleUndo} onRedo={handleRedo}
                 tuning={tuning} onTuningChange={setTuning} capo={capo}
               />
@@ -626,6 +589,6 @@ export default function App() {
         </div>
 
       </SwipePager>
-    </>
+    </SongProvider>
   );
 }

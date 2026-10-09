@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Scale } from '@tonaljs/tonal';
+import { Scale, Note } from '@tonaljs/tonal';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
-import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
-import { onNavKey } from '../../services/navigate';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { previewVoicing, previewChordName } from '../../utils/previewSound';
+import { useOptionalSong } from '../../song/SongContext';
+import { keyName } from '../../utils/harmonicAnalysis';
 
 // ── Diatonic Extensions ──────────────────────────────────────────────────────
 // Pick a key and see its seven degrees side by side. Each degree says plainly
@@ -148,12 +148,20 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
     style: { cursor: 'pointer' } as React.CSSProperties,
   });
 
-  // A "see also" jump from the Wheel or the Harmonizer opens on their key.
-  useEffect(() => onNavKey(KEY_TOOLS.extensions.id, k => {
-    const list = k.mode === 'major' ? KEYS_MAJOR : KEYS_MINOR;
-    setMode(k.mode);
-    setKey(list.includes(k.root) ? k.root : (k.mode === 'major' ? 'C' : 'A'));
-  }), []);
+  // Opens on the song's key, and follows it when the song's key changes.
+  const songKey = useOptionalSong()?.key ?? null;
+  const songKeyId = songKey ? `${songKey.tonicPc}:${songKey.mode}` : '';
+  const [seenKey, setSeenKey] = useState('');
+  if (songKeyId !== seenKey) {
+    setSeenKey(songKeyId);
+    if (songKey) {
+      const root = keyName(songKey, 'en').split(' ')[0];
+      const list = songKey.mode === 'major' ? KEYS_MAJOR : KEYS_MINOR;
+      const pc = Note.chroma(root);
+      setMode(songKey.mode);
+      setKey(list.find(k => Note.chroma(k) === pc) ?? (songKey.mode === 'major' ? 'C' : 'A'));
+    }
+  }
 
   const switchMode = (m: 'major' | 'minor') => {
     setMode(m);
@@ -300,10 +308,6 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
         </div>
       )}
 
-      <SeeAlso
-        links={[KEY_TOOLS.wheel, KEY_TOOLS.harmonize]}
-        navKey={{ root: key, mode }}
-      />
 
       {peek && <ShapePopover name={peek.name} x={peek.x} y={peek.y} shapes={shapes} title={t.shapes} empty={t.noShapes} />}
     </div>

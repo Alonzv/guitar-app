@@ -4,11 +4,11 @@ import { T } from '../../theme';
 import { playChord } from '../../utils/audioPlayback';
 import type { ChordInProgression } from '../../types/music';
 import { findChordVoicings } from '../../utils/chordVoicings';
-import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
-import { onNavKey } from '../../services/navigate';
 import { previewVoicing } from '../../utils/previewSound';
 import { DiceButton } from '../DiceButton';
 import { pickOne } from '../../utils/random';
+import { useOptionalSong } from '../../song/SongContext';
+import { keyName } from '../../utils/harmonicAnalysis';
 
 // ── Music data ─────────────────────────────────────────────────────────────────
 const ALL_ROOTS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -66,6 +66,10 @@ const PROG_TEMPLATES = [
   { label: 'ii – V – I',      indices: [1, 4, 0]    },
   { label: 'I – IV – V – I',  indices: [0, 3, 4, 0] },
 ];
+
+// The wheel turns the new key to the top; its labels turn back by the same
+// amount on the same curve, so they stay upright all the way round.
+const WHEEL_TURN = 'transform 0.7s cubic-bezier(0.37, 0, 0.63, 1)';
 
 // ── Geometry ───────────────────────────────────────────────────────────────────
 const SIZE   = 380;
@@ -128,13 +132,15 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
   const [root, setRoot] = useState<string>('C');
   const [mode, setMode] = useState<Mode>('major');
 
-  // A "see also" jump carries the key that was on screen, keeping its spelling:
-  // arriving in Eb minor must not be respelled to D# minor just so one of the
-  // sharp-spelled key buttons lights up. The wheel reads flat roots correctly.
-  useEffect(() => onNavKey(KEY_TOOLS.wheel.id, k => {
-    setRoot(k.root);
-    setMode(k.mode as Mode);
-  }), []);
+  // Opens on the song's key and follows it when it changes; spelled as the
+  // song spells it (Eb minor stays Eb, the wheel reads flat roots fine).
+  const songKey = useOptionalSong()?.key ?? null;
+  const songKeyId = songKey ? `${songKey.tonicPc}:${songKey.mode}` : '';
+  const [seenKey, setSeenKey] = useState('');
+  if (songKeyId !== seenKey) {
+    setSeenKey(songKeyId);
+    if (songKey) { setRoot(keyName(songKey, 'en').split(' ')[0]); setMode(songKey.mode); }
+  }
 
   // CoF position index (0-11)
   const cofRoot  = COF_ORDER.includes(root) ? root : (SHARP_TO_COF[root] ?? root);
@@ -226,7 +232,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
         transform: `rotate(${rotationDeg}deg)`,
         transformOrigin: `${CX}px ${CY}px`,
         transformBox: 'view-box',
-        transition: 'transform 0.7s cubic-bezier(0.37, 0, 0.63, 1)',
+        transition: WHEEL_TURN,
         willChange: 'transform',
       } as React.CSSProperties}>
         {Array.from({ length: TOTAL }, (_, i) => {
@@ -268,10 +274,11 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
               />
 
               {/* Outer text group — counter-rotated to stay upright */}
-              <g
-                transform={`rotate(${textRot} ${mp_o.x} ${mp_o.y})`}
-                style={{ pointerEvents: 'none' }}
-              >
+              <g style={{
+                pointerEvents: 'none',
+                transform: `rotate(${textRot}deg)`, transformOrigin: `${mp_o.x}px ${mp_o.y}px`, transformBox: 'view-box',
+                transition: WHEEL_TURN,
+              } as React.CSSProperties}>
                 <text
                   x={mp_o.x} y={outerInfo ? mp_o.y - 5 : mp_o.y}
                   textAnchor="middle" dominantBaseline="middle"
@@ -293,10 +300,11 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
               </g>
 
               {/* Inner text group — counter-rotated to stay upright */}
-              <g
-                transform={`rotate(${textRot} ${mp_i.x} ${mp_i.y})`}
-                style={{ pointerEvents: 'none' }}
-              >
+              <g style={{
+                pointerEvents: 'none',
+                transform: `rotate(${textRot}deg)`, transformOrigin: `${mp_i.x}px ${mp_i.y}px`, transformBox: 'view-box',
+                transition: WHEEL_TURN,
+              } as React.CSSProperties}>
                 <text
                   x={mp_i.x} y={innerInfo ? mp_i.y - 5 : mp_i.y}
                   textAnchor="middle" dominantBaseline="middle"
@@ -606,10 +614,6 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
         </>
       )}
 
-      <SeeAlso
-        links={[KEY_TOOLS.extensions, KEY_TOOLS.harmonize]}
-        navKey={{ root, mode: mode === 'major' ? 'major' : 'minor' }}
-      />
     </div>
   );
 };
