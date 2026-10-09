@@ -5,6 +5,8 @@ import { useLang } from '../../contexts/LanguageContext';
 import { playInterval, playMidi } from '../../utils/audioPlayback';
 import { answeredRight, answeredWrong } from '../../practice/feedback';
 import { StreakBoard } from '../Practice/StreakBoard';
+import { PlayToAnswer } from '../Practice/PlayToAnswer';
+import { useMicNotes } from '../../practice/useMicNotes';
 import { INTERVAL_ORDER, UI } from './data';
 import type { IntervalId, Lang } from './data';
 import {
@@ -234,6 +236,13 @@ const PracticeMode: React.FC<PracticeProps> = ({
     }
   }, [exercise, answered, wrongPicks, streak, recordResult, onNewBest, nextExercise]);
 
+  // Answer by playing the second note: its pitch class is the answer. Other
+  // notes are ignored here — a stray string is not a wrong answer.
+  const mic = useMicNotes(midi => {
+    if (!exercise || answered) return;
+    if (((midi - exercise.targetMidi) % 12 + 12) % 12 === 0) guess(exercise.interval);
+  });
+
   // ── Weak spots (top-3 most-missed with enough data) ────────────────────────
   const weak = useMemo(() => {
     return INTERVAL_ORDER
@@ -335,6 +344,8 @@ const PracticeMode: React.FC<PracticeProps> = ({
             <LegendDot color={T.primary} label={t.rootLabel} />
             {revealed && <LegendDot color={T.success} label={t.answerLabel} />}
           </div>
+
+          <div style={{ marginTop: 12 }}><PlayToAnswer lang={lang} mic={mic} /></div>
 
           {/* Answer by naming the interval — no neck tapping (no fret counting) */}
           <p style={{ ...LABEL, marginTop: 14 }}>{lang === 'he' ? 'זהו את האינטרוול' : 'Name the interval'}</p>

@@ -7,6 +7,8 @@ import type { ScaleId } from '../ScaleTrainer/data';
 import { playScale } from '../../utils/audioPlayback';
 import { answeredRight, answeredWrong } from '../../practice/feedback';
 import { StreakBoard } from '../Practice/StreakBoard';
+import { PlayToAnswer } from '../Practice/PlayToAnswer';
+import { useMicNotes } from '../../practice/useMicNotes';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { useOptionalSong } from '../../song/SongContext';
@@ -103,6 +105,14 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
       errTimer.current = setTimeout(() => setErrBtn(null), 500);
     }
   }, [ch, phase, filled, wrongs]);
+
+  // Answer by playing: the played note's pitch picks the bank note with it.
+  const mic = useMicNotes(midi => {
+    if (!ch || phase !== 'spell') return;
+    const pc = ((midi % 12) + 12) % 12;
+    const expected = ch.notes[filled];
+    pick(pcOf(expected) === pc ? expected : (NOTE_BANK.find(n => pcOf(n) === pc) ?? expected));
+  });
 
   // ── Ear training: play a scale, pick the whole scale from 4 options ─────────
   const [earCh, setEarCh] = useState<Challenge | null>(null);
@@ -232,6 +242,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
           </div>
           {phase === 'spell' ? (
             <>
+              <PlayToAnswer lang={lang} mic={mic} />
               <p style={LBL}>{t.noteBank}</p>
               <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
                 {NOTE_BANK.map(n => {

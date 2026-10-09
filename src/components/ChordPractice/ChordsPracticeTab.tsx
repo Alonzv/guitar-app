@@ -4,6 +4,8 @@ import { NOTE_BANK, pcOf } from '../ScaleTrainer/engine';
 import { playMidi } from '../../utils/audioPlayback';
 import { answeredRight, answeredWrong } from '../../practice/feedback';
 import { StreakBoard } from '../Practice/StreakBoard';
+import { PlayToAnswer } from '../Practice/PlayToAnswer';
+import { useMicNotes } from '../../practice/useMicNotes';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { useOptionalSong } from '../../song/SongContext';
@@ -147,6 +149,14 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   }, [challenge, phase, filled, wrongs]);
 
   const playChord = () => { if (challenge) challenge.midis.forEach(m => playMidi(m, 1.1)); };
+
+  // Answer by playing: the played note's pitch picks the bank note with it.
+  const mic = useMicNotes(midi => {
+    if (!challenge || phase !== 'spell') return;
+    const pc = ((midi % 12) + 12) % 12;
+    const expected = challenge.notes[filled];
+    handlePick(pcOf(expected) === pc ? expected : (NOTE_BANK.find(n => pcOf(n) === pc) ?? expected));
+  });
 
   // ── Ear training — play a chord, pick the whole chord from 4 options ────────
   const [earCh, setEarCh] = useState<Challenge | null>(null);
@@ -306,6 +316,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
 
               {phase === 'spell' ? (
                 <>
+                  <PlayToAnswer lang={lang} mic={mic} />
                   <p style={LBL}>{t.noteBank}</p>
                   <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
                     {NOTE_BANK.map(n => {
