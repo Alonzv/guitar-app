@@ -55,6 +55,9 @@ function beep(ctx: AudioContext, time: number, accent: boolean): void {
   osc.stop(time + 0.08);
 }
 
+const TRAIN_STEP = 4;    // BPM added…
+const TRAIN_EVERY = 4;   // …every this many bars
+
 const SECTION: React.CSSProperties = {
   fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
   textTransform: 'uppercase', color: '#9C958C', margin: '0 0 14px',
@@ -71,6 +74,7 @@ export const Metronome: React.FC = () => {
   const [subdivision, setSubdivision]   = useState(SUBDIVISIONS[0]);
   const [timeSig, setTimeSigState]      = useState(TIME_SIGS.find(t => t.label === songMeter) ?? TIME_SIGS[0]);
   const setBpm = (v: number) => { setBpmState(v); song?.update({ bpm: v }); };
+  useEffect(() => { setBpmRef.current = setBpm; });
   const setTimeSig = (ts: typeof TIME_SIGS[number]) => { setTimeSigState(ts); song?.update({ meter: ts.label as Meter }); };
   const [seen, setSeen] = useState({ bpm: songBpm, meter: songMeter });
   if (seen.bpm !== songBpm || seen.meter !== songMeter) {
@@ -90,6 +94,13 @@ export const Metronome: React.FC = () => {
   const totalBeatsRef    = useRef(timeSig.beats * subdivision.clicksPerBeat);
   const clicksPerBeatRef = useRef(subdivision.clicksPerBeat);
   const tapTimesRef      = useRef<number[]>([]);
+  // A pulse per click (drives the beat flash) and the speed trainer.
+  const [pulse, setPulse] = useState(0);
+  const [trainer, setTrainer] = useState<{ target: number } | null>(null);
+  const trainerRef = useRef(trainer);
+  useEffect(() => { trainerRef.current = trainer; }, [trainer]);
+  const barRef = useRef(0);
+  const setBpmRef = useRef<(v: number) => void>(() => {});
 
   bpmRef.current          = bpm;
   totalBeatsRef.current   = timeSig.beats * subdivision.clicksPerBeat;
@@ -113,7 +124,20 @@ export const Metronome: React.FC = () => {
     const now = ctx.currentTime;
     const q = noteQueueRef.current;
     while (q.length > 0 && q[0].time <= now + 0.01) {
-      setBeat(q.shift()!.beatNum);
+      const b = q.shift()!.beatNum;
+      setBeat(b);
+      setPulse(p => p + 1);
+      // Speed trainer: every TRAIN_EVERY bars, nudge the tempo up until the target.
+      if (b === 0) {
+        barRef.current += 1;
+        const tr = trainerRef.current;
+        if (tr && barRef.current > 1 && (barRef.current - 1) % TRAIN_EVERY === 0 && bpmRef.current < tr.target) {
+          const next = Math.min(tr.target, bpmRef.current + TRAIN_STEP);
+          bpmRef.current = next;
+          setBpmRef.current(next);
+          setBpmInput(String(next));
+        }
+      }
     }
     visualRafRef.current = requestAnimationFrame(visualTick);
   }, []);
@@ -130,6 +154,7 @@ export const Metronome: React.FC = () => {
       // so schedule() is a no-op until we arm it in the then().
       nextBeatTimeRef.current = Infinity;
       beatNumRef.current = 0;
+      barRef.current = 0;
       setPlaying(true);
       unlockAudio().then(() => {
         const ctx = getSharedContext();
@@ -219,6 +244,17 @@ export const Metronome: React.FC = () => {
           fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
           textTransform: 'uppercase', color: '#9C958C', marginBottom: 20,
         }}>BPM</div>
+        {/* A flash per click — full on the downbeat, half on the others —
+            draining over one beat, so the tempo is seen as well as heard. */}
+        <div style={{ height: 4, margin: '-12px auto 16px', width: 200, background: T.bgInput, overflow: 'hidden' }}>
+          {playing && pulse > 0 && (
+            <div key={pulse} className="gc-beat-drain" style={{
+              height: '100%', background: beat === 0 ? T.text : T.textMuted,
+              width: beat === 0 ? '100%' : '55%', margin: '0 auto',
+              animationDuration: `${60 / (bpm * subdivision.clicksPerBeat)}s`,
+            }} />
+          )}
+        </div>
 
         {/* Control row: − · beat dots · + */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
@@ -296,6 +332,28 @@ export const Metronome: React.FC = () => {
         >
           Tap Tempo
         </button>
+
+        {/* Speed trainer — +4 BPM every 4 bars until the target */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setTrainer(t => (t ? null : { target: Math.min(240, bpm + 40) }))} data-active={!!trainer} style={{
+            flex: 1, padding: '10px 0', cursor: 'pointer', fontSize: 13,
+            border: `1px solid ${trainer ? T.primary : T.border}`, background: trainer ? T.primary : T.bgInput,
+            color: trainer ? T.white : T.textMuted, borderLeft: '3px solid var(--gc-bar-color)',
+          }}>
+            {trainer ? `Speed trainer → ${trainer.target}` : 'Speed trainer'}
+          </button>
+          {trainer && (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => setTrainer(t => t && { target: Math.max(bpm, t.target - 10) })} aria-label="Lower target" style={{ width: 34, height: 38, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, cursor: 'pointer' }}>−</button>
+              <button onClick={() => setTrainer(t => t && { target: Math.min(240, t.target + 10) })} aria-label="Raise target" style={{ width: 34, height: 38, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, cursor: 'pointer' }}>+</button>
+            </div>
+          )}
+        </div>
+        {trainer && (
+          <p style={{ margin: '-4px 0 0', fontSize: 11, color: T.textMuted, textAlign: 'center' }}>
+            +{TRAIN_STEP} BPM every {TRAIN_EVERY} bars until {trainer.target}
+          </p>
+        )}
 
         <div>
           <p style={{ ...SECTION, marginBottom: 8 }}>Subdivision</p>

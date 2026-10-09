@@ -252,6 +252,10 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 @keyframes gc-record { 0%, 100% { background: var(--gc-bg-card); } 30% { background: var(--gc-success-soft); } }
 .gc-pop { animation: gc-dot-in var(--gc-dur-base) var(--gc-ease-snap); }
 
+/* Metronome: a click's flash drains over one beat (duration set inline). */
+.gc-beat-drain { animation: gc-beat-drain linear forwards; transform-origin: center; }
+@keyframes gc-beat-drain { from { transform: scaleX(1); opacity: 1; } to { transform: scaleX(0); opacity: 0.4; } }
+
 /* The die turns over when rolled. */
 .gc-die { animation: gc-die-roll var(--gc-dur-slow) var(--gc-ease-snap); }
 @keyframes gc-die-roll { from { transform: rotate(-180deg) scale(0.6); } to { transform: none; } }
