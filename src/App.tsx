@@ -151,8 +151,13 @@ export default function App() {
   const undoRef = useRef(undoStack); undoRef.current = undoStack;
   const redoRef = useRef(redoStack); redoRef.current = redoStack;
 
+  // The ref moves with every push (not just on render), so several edits in
+  // one handler — a whole template progression added chord by chord — each
+  // build on the one before instead of all starting from the same snapshot.
   const pushHistory = useCallback((next: ChordInProgression[]) => {
-    setUndoStack(prev => [...prev.slice(-49), progressionRef.current]);
+    const prev = progressionRef.current;
+    progressionRef.current = next;
+    setUndoStack(s => [...s.slice(-49), prev]);
     setRedoStack([]);
     setProgression(next);
   }, []);

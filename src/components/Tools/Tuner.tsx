@@ -4,6 +4,7 @@ import type { Tuning } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
 import { IconMic } from '../Icons';
 import { getSharedContext, unlockAudio, setMicSession, clearMicSession } from '../../utils/audioPlayback';
+import { previewFret } from '../../utils/previewSound';
 
 const noteName = (s: string) => s.replace(/\d/g, '');
 
@@ -323,18 +324,18 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
           {STRING_LABELS.map((label, i) => {
             const active = activeStringIdx === i;
             return (
-              <div key={label} style={{
+              // Tapping a string plays its reference pitch to tune against by ear.
+              <button key={label} className="gc-notation" onClick={() => previewFret({ string: i, fret: 0 }, tuning.openFreqs)} title={`Hear ${label}`} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                height: 40,
+                height: 40, cursor: 'pointer',
                 background: active ? (absCents <= 5 ? T.secondary : T.primary) : T.bgInput,
                 border: `1.5px solid ${active ? (absCents <= 5 ? T.secondary : T.primary) : T.border}`,
                 color: active ? '#fff' : T.textMuted,
                 fontFamily: 'var(--gc-mono)', fontSize: 13, fontWeight: active ? 700 : 400,
-                transition: 'all 0.15s',
                 userSelect: 'none',
               }}>
                 {label}
-              </div>
+              </button>
             );
           })}
         </div>

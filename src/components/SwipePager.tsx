@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T } from '../theme';
 import { LangToggle } from './LangToggle';
+import { SoundToggle } from './SoundToggle';
 import { BrandMark } from './BrandMark';
 import { HelpButton } from './HelpButton';
 import { useSlider } from '../motion/useSlider';
@@ -196,6 +197,7 @@ export function SwipePager({
         </span>
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <SoundToggle compact />
           <LangToggle compact />
           <button
             onClick={onToggleDark}

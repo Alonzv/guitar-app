@@ -3,6 +3,7 @@ import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheor
 import { IntervalNeck, strY, noteX, DOT_R, FB_H, FB_TOP, STR_SP } from './IntervalNeck';
 import { playScale, getSharedContext, getOutputNode, unlockAudio } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
+import { previewMidi, previewInterval } from '../../utils/previewSound';
 
 interface IntervalInfo {
   semitones: number;
@@ -74,6 +75,13 @@ export function IntervalExplore() {
   const rootMidi  = 60 + CHROMATIC.indexOf(root);
   const intervalMidi = interval !== null ? rootMidi + interval : rootMidi;
 
+  // Every pick is heard: the root alone, or the root and its interval.
+  const hear = (r: string, semis: number | null) => {
+    const m = 60 + CHROMATIC.indexOf(r);
+    if (semis === null) previewMidi(m);
+    else previewInterval(m, m + semis, mode);
+  };
+
   const handlePlay = () => {
     if (interval === null) return;
     if (mode === 'melodic') {
@@ -133,7 +141,7 @@ export function IntervalExplore() {
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
-              <button data-active={!!sel} key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!sel} key={n} onClick={() => { setRoot(n); hear(n, interval); }} style={{
                 padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
                 border: `1px solid ${sel ? T.primary : T.border}`,
@@ -156,7 +164,7 @@ export function IntervalExplore() {
               <button data-active={!!sel}
                 key={iv.semitones}
                 className="gc-notation"
-                onClick={() => setInterval(sel ? null : iv.semitones)}
+                onClick={() => { setInterval(sel ? null : iv.semitones); if (!sel) hear(root, iv.semitones); }}
                 style={{
                   padding: '8px 4px', borderRadius: 0, cursor: 'pointer',
                   border: `1px solid ${sel ? T.primary : T.border}`,

@@ -3,9 +3,10 @@ import { Scale, Note as TonalNote } from '@tonaljs/tonal';
 import type { Note } from '../../types/music';
 import { DisplayFretboard, type DisplayDot } from '../Fretboard/DisplayFretboard';
 import { getScalePositions } from '../../utils/scaleUtils';
-import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
+import { fretToNote, STRING_COUNT, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
 import { playScale } from '../../utils/audioPlayback';
 import { T, card } from '../../theme';
+import { previewNote, previewMidi, previewRun } from '../../utils/previewSound';
 
 const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -92,6 +93,12 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     [displayPos, root, pos]
   );
 
+  const scaleMidis = (r: Note, type: string) => {
+    const sc = Scale.get(`${r} ${type}`);
+    return [...sc.notes.map(n => TonalNote.midi(`${n}4`) ?? 60), TonalNote.midi(`${r}5`) ?? 72]
+      .map((m, i, arr) => (i > 0 && m < arr[i - 1] ? m + 12 : m));
+  };
+
   const generateTab = () => {
     const stringNames = ['e', 'B', 'G', 'D', 'A', 'E'];
     const lines: string[][] = Array.from({ length: STRING_COUNT }, () => []);
@@ -120,7 +127,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
             const sharp    = n.includes('#');
             const selected = n === root;
             return (
-              <button data-active={!!selected} key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!selected} key={n} onClick={() => { setRoot(n); previewNote(n); }} style={{
                 padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 11 : 13, fontWeight: selected ? 500 : 400,
                 border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
@@ -167,7 +174,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                   {g.scales.map(s => {
                     const sel = scaleType === s.id;
                     return (
-                      <button data-active={!!sel} key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); }} style={{
+                      <button data-active={!!sel} key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); previewRun(scaleMidis(root, s.id)); }} style={{
                         padding: '6px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
                         fontWeight: sel ? 500 : 400,
                         border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
@@ -219,7 +226,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                 const interval = scale.intervals[i] ?? '';
                 const deg = INTERVAL_DEGREE[interval] ?? { num: String(i + 1), name: '' };
                 return (
-                  <div key={i} style={{
+                  <button key={i} onClick={() => previewMidi(TonalNote.midi(`${note}4`) ?? 60)} className="gc-notation" style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                     padding: '8px 10px', borderRadius: 0, gap: 3, flex: 1, minWidth: 48,
                     background: isR ? T.primaryBg : T.bgInput,
@@ -229,7 +236,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                     <span style={{ fontSize: 11, fontWeight: 400, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
                     <span style={{ fontSize: 18, fontWeight: isR ? 800 : 600, color: isR ? T.primary : T.text, lineHeight: 1.1 }}>{note}</span>
                     <span style={{ fontSize: 9, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap' }}>{deg.name}</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -242,7 +249,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                 flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
                 fontSize: 13, fontWeight: viewMode === v ? 500 : 400,
                 background: viewMode === v ? T.primary : T.bgCard,
-                color: viewMode === v ? T.text : T.textMuted,
+                color: viewMode === v ? T.white : T.textMuted,
                 borderLeft: '3px solid var(--gc-bar-color)',
               }}>
                 {v === 'fretboard' ? 'Fretboard' : 'Tab'}
@@ -263,7 +270,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
               Full Neck
             </button>
             {POSITION_WINDOWS.map((_, i) => (
-              <button key={i} onClick={() => setPos(pos === i ? null : i)}
+              <button key={i} data-active={pos === i} onClick={() => setPos(pos === i ? null : i)}
                 title={`Frets ${POSITION_WINDOWS[i][0]}–${POSITION_WINDOWS[i][1]}`}
                 style={{
                   width: 'var(--gc-pos-btn)', height: 'var(--gc-pos-btn)',
@@ -284,7 +291,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
           {viewMode === 'fretboard' ? (
             <div style={card()}>
               {dots.length > 0
-                ? <DisplayFretboard dots={dots} compact />
+                ? <DisplayFretboard dots={dots} compact onDotClick={d => previewMidi(STANDARD_OPEN_MIDI[d.string] + d.fret)} />
                 : <p style={{ textAlign: 'center', color: T.textDim, fontSize: 13, margin: 0 }}>No notes in this position</p>
               }
             </div>

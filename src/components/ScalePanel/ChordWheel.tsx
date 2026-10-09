@@ -6,6 +6,7 @@ import type { ChordInProgression } from '../../types/music';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
 import { onNavKey } from '../../services/navigate';
+import { previewVoicing } from '../../utils/previewSound';
 
 // ── Music data ─────────────────────────────────────────────────────────────────
 const ALL_ROOTS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -168,6 +169,12 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
     if (fp.length) playChord(fp, OPEN_FREQS, 0);
   };
 
+  // Choosing a key sounds its tonic chord.
+  const hearKey = (r: string, m: Mode) => {
+    const fp = getVoicing(m === 'minor' ? `${r}m` : r);
+    if (fp.length) previewVoicing(fp, OPEN_FREQS);
+  };
+
   const startAngle = (i: number) => -Math.PI / 2 - SLICE / 2 + i * SLICE;
 
   const wheelSvg = (
@@ -206,7 +213,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                 stroke={mode === 'major' && i === cofIdx ? '#fff' : 'none'}
                 strokeWidth={mode === 'major' && i === cofIdx ? 1.5 : 0}
                 style={{ cursor: 'pointer' }}
-                onClick={() => { setMode('major'); setRoot(selectRoot); }}
+                onClick={() => { setMode('major'); setRoot(selectRoot); hearKey(selectRoot, 'major'); }}
               />
               {/* Inner arc — tap to set minor key */}
               <path
@@ -214,7 +221,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                 stroke={mode === 'minor' && i === cofIdx ? '#fff' : 'none'}
                 strokeWidth={mode === 'minor' && i === cofIdx ? 1.5 : 0}
                 style={{ cursor: 'pointer' }}
-                onClick={() => { setMode('minor'); setRoot(minorSelectRoot); }}
+                onClick={() => { setMode('minor'); setRoot(minorSelectRoot); hearKey(minorSelectRoot, 'minor'); }}
               />
 
               {/* Outer text group — counter-rotated to stay upright */}
@@ -438,7 +445,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
             const sharp = n.includes('#');
             const sel   = n === root;
             return (
-              <button data-active={!!sel} key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!sel} key={n} onClick={() => { setRoot(n); hearKey(n, mode); }} style={{
                 padding: desktop ? '9px 2px' : '6px 2px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? (desktop ? 10 : 9) : (desktop ? 12 : 11), fontWeight: sel ? 700 : 400,
                 border: `1px solid ${sel ? T.primary : T.border}`,
@@ -465,7 +472,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
               key={m.id}
               type="button"
               aria-pressed={active}
-              onClick={() => setMode(m.id)}
+              onClick={() => { setMode(m.id); hearKey(root, m.id); }}
               className="gc-notation"
               style={{
                 padding: '4px 10px', fontSize: 10, borderRadius: 0,

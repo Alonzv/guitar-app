@@ -9,7 +9,12 @@ export interface DisplayDot extends FretPosition {
   opacity?: number;
 }
 
-interface Props { dots: DisplayDot[]; compact?: boolean }
+interface Props {
+  dots: DisplayDot[];
+  compact?: boolean;
+  /** Makes each dot tappable — e.g. to hear the note. */
+  onDotClick?: (dot: DisplayDot) => void;
+}
 
 const SVG_W = 660;
 const SVG_H = 168;
@@ -26,7 +31,7 @@ const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 // String thickness: high-e thin → low-E thick
 const strW = (s: number) => 2.0 + s * 0.40;
 
-export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
+export const DisplayFretboard: React.FC<Props> = ({ dots, compact, onDotClick }) => (
   <div className={compact ? 'gc-fretboard-compact' : 'gc-fretboard-wrap'}>
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', maxHeight: 190, display: 'block' }}>
 
@@ -85,7 +90,8 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact }) => (
         const cy = strY(dot.string);
         const label = dot.label ?? fretToNote(dot.string, dot.fret);
         return (
-          <g key={i}>
+          <g key={i} onClick={onDotClick ? () => onDotClick(dot) : undefined}
+            style={onDotClick ? { cursor: 'pointer' } : undefined}>
             <circle cx={cx} cy={cy} r={DOT_R} fill={dot.color} stroke="#fff" strokeWidth={1.9} opacity={dot.opacity ?? 0.92} />
             <text x={cx} y={cy + 4} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">{label}</text>
           </g>

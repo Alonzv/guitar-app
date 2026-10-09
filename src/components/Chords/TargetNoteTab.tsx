@@ -8,6 +8,7 @@ import { isPlayable } from '../../utils/chordVoicings';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T, card } from '../../theme';
+import { previewFret, previewVoicing } from '../../utils/previewSound';
 
 const SEMITONE_DEGREE: Record<number, string> = {
   0: 'root', 1: '♭2nd', 2: '2nd', 3: '♭3rd', 4: '3rd', 5: '4th',
@@ -517,7 +518,10 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
         <InputFretboard
           selected={targetPos}
           tuning={tuning.notes}
-          onSelect={pos => setTargetPos(pos.string === -1 ? null : pos)}
+          onSelect={pos => {
+            setTargetPos(pos.string === -1 ? null : pos);
+            if (pos.string !== -1) previewFret(pos, tuning.openFreqs, capo);
+          }}
         />
         <div style={{
           marginTop: 8, fontSize: 12, minHeight: 22,
@@ -637,7 +641,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop }) => {
                 return (
                   <button
                     key={idx}
-                    onClick={() => setExpandedIdx(idx)}
+                    onClick={() => { setExpandedIdx(idx); previewVoicing(item.voicing, tuning.openFreqs, capo); }}
                     style={{
                       cursor: 'pointer', border: 'none',
                       textAlign: 'left', display: 'block', width: '100%',

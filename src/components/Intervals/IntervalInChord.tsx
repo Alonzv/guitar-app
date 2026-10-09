@@ -5,6 +5,7 @@ import { IntervalNeck, strY, noteX } from './IntervalNeck';
 import { playInterval } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 import { toDisplayChord } from '../../utils/chordName';
+import { previewChordName } from '../../utils/previewSound';
 
 // ── In a Chord — which intervals occur inside a chord ─────────────────────────
 // The question is "which intervals are in this chord", so the answer is a list
@@ -155,6 +156,11 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
     const n = pairs.length;
     return n ? (((idx + d) % n) + n) % n : i;
   });
+  // A new chord is heard as soon as it is picked.
+  const hearChord = (r: string, t: string, x: string) => {
+    const ok = (VALID_EXT[t] ?? ['']).includes(x) ? x : '';
+    previewChordName(r + (SUFFIX[t]?.[ok] ?? ''));
+  };
   const playCurrent = () => { if (current) playInterval(current.loMidi, current.hiMidi, mode); };
   const playRow = (r: Row) => {
     // Sound the row straight from the picker: the chord tones themselves.
@@ -168,13 +174,13 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
     <div style={{ ...card({ padding: desktop ? '16px 18px' : '14px' }), display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: desktop ? 20 : 12 }}>
       <p style={{ ...LBL, flexShrink: 0 }}>Chord</p>
       <div dir="ltr" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <select value={root} onChange={e => setRoot(e.target.value)} style={SELECT}>
+        <select value={root} onChange={e => { setRoot(e.target.value); hearChord(e.target.value, triad, effExt); }} style={SELECT}>
           {ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select value={triad} onChange={e => setTriad(e.target.value)} style={SELECT}>
+        <select value={triad} onChange={e => { setTriad(e.target.value); hearChord(root, e.target.value, ''); }} style={SELECT}>
           {TRIADS.map(q => <option key={q.key} value={q.key}>{q.display}</option>)}
         </select>
-        <select value={effExt} onChange={e => setExt(e.target.value)} style={{ ...SELECT, fontWeight: 400, color: T.textDim }}>
+        <select value={effExt} onChange={e => { setExt(e.target.value); hearChord(root, triad, e.target.value); }} style={{ ...SELECT, fontWeight: 400, color: T.textDim }}>
           {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => <option key={e.key} value={e.key}>{e.display}</option>)}
         </select>
       </div>

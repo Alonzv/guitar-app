@@ -3,6 +3,7 @@ import { T } from '../../theme';
 import { BrandMark } from '../BrandMark';
 import { PANEL_TITLES } from '../../constants/panels';
 import { LangToggle } from '../LangToggle';
+import { SoundToggle } from '../SoundToggle';
 import { useSlider } from '../../motion/useSlider';
 
 
@@ -100,6 +101,7 @@ export function DesktopShell({
 
         {/* Right: ghost icon buttons + user menu */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <SoundToggle />
           <LangToggle />
           <button
             onClick={onToggleDark}

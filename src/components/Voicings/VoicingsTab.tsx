@@ -8,6 +8,7 @@ import { T, card, alpha } from '../../theme';
 import { ReharmonizeTab } from './ReharmonizeTab';
 import { MelodyHarmonizerTab } from './MelodyHarmonizerTab';
 import { consumePendingVoicings, subscribeVoicingsHandoff, type VoicingsHandoff } from '../../services/handoff';
+import { previewNote, previewChordName } from '../../utils/previewSound';
 
 // ── VOICINGS container ───────────────────────────────────────────────────────
 // Hosts the two remaining Voicings tools: Harmonize (self-contained) and
@@ -180,6 +181,12 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
 
   // Derived chord name
   const suffix    = SUFFIX_MAP[triad]?.[ext] ?? '';
+  // The chord being built is heard at every step; a lone root as a note.
+  const hear = (r: string | null, t: string | null, x: string) => {
+    if (!r) return;
+    if (!t) { previewNote(r); return; }
+    previewChordName(r + (SUFFIX_MAP[t]?.[x] ?? SUFFIX_MAP[t]?.[''] ?? ''));
+  };
   const chordName = root + (suffix === 'M' ? '' : suffix);
   const validExts = VALID_EXTENSIONS[triad] ?? [''];
   const activeExt = validExts.includes(ext) ? ext : '';
@@ -263,7 +270,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
           <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Root Note</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
             {ROOTS.map(r => (
-              <button data-active={root === r} key={r} onClick={() => setRoot(r)} style={{
+              <button data-active={root === r} key={r} onClick={() => { setRoot(r); hear(r, triad, ext); }} style={{
                 padding: '7px 0', borderRadius: 0,
                 background: root === r ? T.primary : T.bgDeep,
                 color: root === r ? '#fff' : T.textMuted,
@@ -279,7 +286,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
           <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Quality</p>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {TRIADS.map(t => (
-              <button data-active={triad === t.key} key={t.key} onClick={() => { setTriad(t.key); setExt(''); }} style={{
+              <button data-active={triad === t.key} key={t.key} onClick={() => { setTriad(t.key); setExt(''); hear(root, t.key, ''); }} style={{
                 padding: '7px 12px', borderRadius: 0,
                 background: triad === t.key ? T.secondary : T.bgDeep,
                 color: triad === t.key ? '#fff' : T.textMuted,
@@ -295,7 +302,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
           <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Extension</p>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {EXTENSIONS.filter(e => validExts.includes(e.key)).map(e => (
-              <button data-active={activeExt === e.key} key={e.key} onClick={() => setExt(e.key)} style={{
+              <button data-active={activeExt === e.key} key={e.key} onClick={() => { setExt(e.key); hear(root, triad, e.key); }} style={{
                 padding: '6px 11px', borderRadius: 0,
                 background: activeExt === e.key ? T.secondary : T.bgDeep,
                 color: activeExt === e.key ? '#fff' : T.textMuted,

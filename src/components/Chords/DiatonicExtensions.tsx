@@ -6,6 +6,7 @@ import { SeeAlso, KEY_TOOLS } from '../SeeAlso';
 import { onNavKey } from '../../services/navigate';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
+import { previewVoicing, previewChordName } from '../../utils/previewSound';
 
 // ── Diatonic Extensions ──────────────────────────────────────────────────────
 // Pick a key and see its seven degrees side by side. Each degree says plainly
@@ -138,6 +139,9 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
     onMouseLeave: () => setPeek(null),
     // Touch has no hover — tapping toggles the same popover.
     onClick: (e: React.MouseEvent<HTMLElement>) => {
+      // A tap always sounds the chord, whether it opens or closes the popover.
+      const shape = findChordVoicings(name, 1)[0];
+      if (shape) previewVoicing(shape); else previewChordName(name);
       if (peek?.name === name) { setPeek(null); return; }
       peekAt(name, e.currentTarget);
     },
@@ -186,8 +190,8 @@ export function DiatonicExtensions({ desktop }: { desktop?: boolean } = {}) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ ...LBL, marginBottom: 6 }}>{t.mode}</p>
         <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          <button onClick={() => switchMode('major')} style={modeBtn(mode === 'major')}>{t.major}</button>
-          <button onClick={() => switchMode('minor')} style={modeBtn(mode === 'minor')}>{t.minor}</button>
+          <button data-active={mode === 'major'} onClick={() => switchMode('major')} style={modeBtn(mode === 'major')}>{t.major}</button>
+          <button data-active={mode === 'minor'} onClick={() => switchMode('minor')} style={modeBtn(mode === 'minor')}>{t.minor}</button>
         </div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>

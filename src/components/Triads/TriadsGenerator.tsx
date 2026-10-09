@@ -6,6 +6,7 @@ import { playScale } from '../../utils/audioPlayback';
 import { T, card, alpha } from '../../theme';
 import { TwoPane } from '../desktop/TwoPane';
 import type { Note, ChordInProgression } from '../../types/music';
+import { previewVoicing, previewRun, pcToMidi } from '../../utils/previewSound';
 
 const OPEN_MIDI = STANDARD_OPEN_MIDI;
 
@@ -269,6 +270,13 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
     return () => document.removeEventListener('keydown', onKey);
   }, [safeIdx, allVisibleCards.length]);
 
+  // A new root or quality is heard at once, as a close triad from the root up.
+  const hearTriad = (r: string | null, type: TriadType | null) => {
+    if (!r || !type) return;
+    const base = pcToMidi(r, 3);
+    if (base != null) previewRun(TRIADS[type].intervals.map(i => base + i));
+  };
+
   const handlePlay = () => {
     const midi = [...notes, notes[0]].map(n => TonalNote.midi(`${n}4`) ?? 60);
     playScale(midi);
@@ -336,7 +344,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
           {ALL_NOTES.map(n => {
             const sharp = n.includes('#'), sel = n === root;
             return (
-              <button data-active={!!sel} key={n} onClick={() => setRoot(n)} style={{
+              <button data-active={!!sel} key={n} onClick={() => { setRoot(n); hearTriad(n, triadType); }} style={{
                 padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
                 fontSize: sharp ? 11 : 13, fontWeight: sel ? 500 : 400,
                 border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
@@ -374,7 +382,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
               {(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => {
                 const sel = triadType === type;
                 return (
-                  <button data-active={!!sel} key={type} onClick={() => { setTriadType(type); setTriadMenuOpen(false); }} style={{
+                  <button data-active={!!sel} key={type} onClick={() => { setTriadType(type); setTriadMenuOpen(false); hearTriad(root, type); }} style={{
                     padding: '9px 10px', borderRadius: 0, cursor: 'pointer', textAlign: 'left',
                     border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                     background: sel ? T.secondaryBg : T.bgInput,
@@ -526,7 +534,8 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {sortedCards.map(c => (
             <div key={`${c.setIdx}_${c.inv}`}
-              onClick={() => setExpandedIdx(c.globalIdx)}
+              onClick={() => { setExpandedIdx(c.globalIdx); previewVoicing(c.fretPositions); }}
+                    className="gc-pressable"
               style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -566,7 +575,8 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
                 {cards.map(c => (
                   <div key={`${c.setIdx}_${c.inv}`}
-                    onClick={() => setExpandedIdx(c.globalIdx)}
+                    onClick={() => { setExpandedIdx(c.globalIdx); previewVoicing(c.fretPositions); }}
+                    className="gc-pressable"
                     style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>

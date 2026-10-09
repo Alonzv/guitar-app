@@ -10,6 +10,7 @@ import { T, card, btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
 import { RollLabel } from '../RollLabel';
 import { useFlash } from '../../motion/useFlash';
+import { previewNote, previewVoicing } from '../../utils/previewSound';
 
 interface Props {
   onAddToProgression: (item: ChordInProgression) => void;
@@ -123,13 +124,29 @@ export function ChordPickerTab({
   }, [chordName, tuning]);
 
   const handleTuningChange = (name: string) => { setTuningName(name); setViewerIndex(null); };
-  const handleRootSelect = (root: string) => { setSelectedRoot(root); setViewerIndex(null); };
+  // Each choice is heard as it is made: the root alone until there is a chord,
+  // then the chord's first shape.
+  const hear = (root: string | null, triad: string | null, ext: string) => {
+    if (!root) return;
+    const sfx = triad ? (SUFFIX_MAP[triad]?.[ext] ?? SUFFIX_MAP[triad]?.[''] ?? null) : null;
+    if (sfx === null) { previewNote(root); return; }
+    const shape = findChordVoicings(`${root}${sfx}`, 1, tuning)[0];
+    if (shape) previewVoicing(shape, tuningObj.openFreqs);
+  };
+  const handleRootSelect = (root: string) => {
+    setSelectedRoot(root); setViewerIndex(null);
+    hear(root, selectedTriad, selectedExtension);
+  };
   const handleTriadSelect = (key: string) => {
     setSelectedTriad(key);
     setSelectedExtension(''); // reset extension when triad changes
     setViewerIndex(null);
+    hear(selectedRoot, key, '');
   };
-  const handleExtensionSelect = (key: string) => { setSelectedExtension(key); setViewerIndex(null); };
+  const handleExtensionSelect = (key: string) => {
+    setSelectedExtension(key); setViewerIndex(null);
+    hear(selectedRoot, selectedTriad, key);
+  };
 
   // Add a specific voicing (from the enlarged viewer) straight to the progression.
   const [added, flashAdded] = useFlash();
@@ -298,7 +315,7 @@ export function ChordPickerTab({
             voicings={voicings}
             chordName={chordName ?? undefined}
             tuning={tuning}
-            onSelect={(_, i) => setViewerIndex(i)}
+            onSelect={(v, i) => { setViewerIndex(i); previewVoicing(v, tuningObj.openFreqs); }}
             gridColumns={desktop ? 3 : undefined}
           />
         </>
