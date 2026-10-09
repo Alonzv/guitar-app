@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { T } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { useSong } from '../../song/SongContext';
-import { beatsPerBar, type Meter } from '../../song/song';
+import { beatsPerBar, SECTION_NAMES, type Meter } from '../../song/song';
 import { ALL_KEYS, keyName } from '../../utils/harmonicAnalysis';
 import { formatChordName } from '../../utils/chordIdentifier';
 import { playChord, unlockAudio, shapeKey } from '../../utils/audioPlayback';
@@ -91,7 +91,7 @@ export function SongDock({ compact, onOpenMap }: { compact?: boolean; onOpenMap?
           }}
         />
 
-        {onOpenMap && !compact && (
+        {onOpenMap && (
           <button onClick={onOpenMap} style={{ ...ghost, border: 'none', color: T.textDim, padding: '0 4px' }} title={he ? 'מפת השיר' : 'Song map'}>
             {he ? 'מפה' : 'Map'} ↗
           </button>
@@ -124,7 +124,32 @@ export function SongDock({ compact, onOpenMap }: { compact?: boolean; onOpenMap?
 
       {/* Row 2 — the section's chords */}
       <div dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
-        <span style={{ ...lbl, flexShrink: 0, marginRight: 4 }}>{song.section.name}</span>
+        {/* Sections — one tab each; + starts the next one (Verse → Chorus…) */}
+        <div style={{ display: 'flex', flexShrink: 0, marginRight: 4, border: `1px solid ${T.border}` }}>
+          {song.song.sections.map((sec, i) => {
+            const on = sec.id === song.section.id;
+            return (
+              <button key={sec.id} onClick={() => song.selectSection(sec.id)} data-active={on} className="gc-no-bar"
+                style={{
+                  height: 26, padding: '0 8px', fontSize: 9.5, letterSpacing: '0.1em', cursor: 'pointer', fontFamily: 'var(--gc-mono)',
+                  background: on ? T.text : 'transparent', color: on ? T.bgDeep : T.textMuted,
+                  borderLeft: i ? `1px solid ${T.border}` : 'none',
+                }}>{sec.name}</button>
+            );
+          })}
+          <button onClick={() => {
+            const used = new Set(song.song.sections.map(s => s.name));
+            song.addSection(SECTION_NAMES.find(n => n !== 'Intro' && !used.has(n)) ?? `Section ${song.song.sections.length + 1}`);
+          }} aria-label={he ? 'קטע חדש' : 'New section'} title={he ? 'קטע חדש' : 'New section'}
+            style={{ height: 26, width: 26, fontSize: 13, cursor: 'pointer', background: 'transparent', color: T.textMuted, borderLeft: `1px solid ${T.border}` }}>+</button>
+        </div>
+        {!!song.section.variants?.length && (
+          <select value="" onChange={e => e.target.value && song.useVariant(e.target.value)} aria-label="Variants"
+            style={{ ...sel, height: 26, flexShrink: 0, fontWeight: 400 }}>
+            <option value="">{he ? 'גרסאות' : 'Variants'} ({song.section.variants.length})</option>
+            {song.section.variants.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </select>
+        )}
         {progression.length === 0 ? (
           <span style={{ fontSize: 11.5, color: T.textMuted }}>
             {he ? 'עדיין אין אקורדים — הוסיפו מכל כלי' : 'No chords yet — add them from any tool'}

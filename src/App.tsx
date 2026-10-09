@@ -14,6 +14,9 @@ import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
 import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab';
 import { SongDock } from './components/Song/SongDock';
+import { SongMap } from './components/Song/SongMap';
+import { useSongSync } from './song/useSongSync';
+import { useAuth } from './contexts/AuthContext';
 import { subscribeNavigate } from './services/navigate';
 import { flyToDock } from './motion';
 import { useSongState, SongProvider } from './song/SongContext';
@@ -157,6 +160,9 @@ export default function App() {
   const capo = songApi.song.capo;
   const setTuning = (t: Tuning) => songApi.update({ tuningName: t.name });
   const setCapo = (c: number) => songApi.update({ capo: c });
+  const { user } = useAuth();
+  const songSync = useSongSync(songApi.song, user?.id ?? null);
+  const [songMapOpen, setSongMapOpen] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -323,6 +329,8 @@ export default function App() {
   const he = lang === 'he';
   const paletteActions: PaletteAction[] = [
     { id: 'map',   label: he ? 'כל הכלים (מפה)' : 'All tools (map)', hint: he ? 'לוגו' : 'logo', run: () => setMapOpen(true) },
+    { id: 'song',  label: he ? 'מפת השיר · השירים שלי' : 'Song map · my songs', run: () => setSongMapOpen(true) },
+    { id: 'new',   label: he ? 'שיר חדש' : 'New song', run: () => songApi.newSong() },
     { id: 'dark',  label: darkMode ? (he ? 'מצב בהיר' : 'Light mode') : (he ? 'מצב כהה' : 'Dark mode'), run: () => setDarkMode(d => !d) },
     { id: 'sound', label: soundEnabled() ? (he ? 'השתקת צלילי לחיצה' : 'Mute tap sounds') : (he ? 'הפעלת צלילי לחיצה' : 'Turn tap sounds on'), run: () => setSoundEnabled(!soundEnabled()) },
     { id: 'lang',  label: he ? 'English' : 'עברית', run: () => setLang(he ? 'en' : 'he') },
@@ -335,6 +343,8 @@ export default function App() {
         onSearch={() => { closeMap(); setPaletteOpen(true); }} desktop={isDesktopBrowser} />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)}
         currentId={currentToolId} actions={paletteActions} />
+      <SongMap open={songMapOpen} onClose={() => setSongMapOpen(false)} desktop={isDesktopBrowser}
+        userId={user?.id ?? null} sync={songSync} />
     </>
   );
 
@@ -373,7 +383,7 @@ export default function App() {
           onLogoClick={handleLogoClick}
           onSearch={() => setPaletteOpen(true)}
         >
-          <SongDock />
+          <SongDock onOpenMap={() => setSongMapOpen(true)} />
 
           {/* ── Panel 0: CHORDS ──────────────────────────────────────── */}
           {pagerTab === 0 && (
@@ -500,7 +510,7 @@ export default function App() {
         onToggleDark={() => setDarkMode(d => !d)}
         userMenu={<UserMenu compact onOpenWorkspace={() => setWorkspaceOpen(true)} />}
         sharedBanner={sharedBanner}
-        sessionBar={<SongDock compact />}
+        sessionBar={<SongDock compact onOpenMap={() => setSongMapOpen(true)} />}
         onLogoClick={handleLogoClick}
         onSearch={() => setPaletteOpen(true)}
       >

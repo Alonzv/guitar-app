@@ -15,7 +15,7 @@ are done the app runs fine, but Sign-In shows a "not configured" notice.
    - Safe to re-run any time — everything is `if not exists` / `or replace`.
    - This creates: `profiles` (+ auto-create trigger on signup),
      `audio_tabs`, `saved_tabs`, `saved_progressions`,
-     `saved_harmonizations`, all RLS policies, and the public `audio`
+     `saved_harmonizations`, `songs`, all RLS policies, and the public `audio`
      storage bucket with per-user folder policies.
 
 ## 3. Configure auth providers
@@ -54,6 +54,7 @@ and STUDIO → Library light up automatically once both vars are present.
 | `saved_harmonizations` | Melody Harmonizer → Save to Library | Harmonized |
 | `saved_progressions` | Chord Builder → Save | Progressions |
 | `audio_tabs` (+ `audio` bucket) | Audio→Tab → Save | Audio Archive |
+| `songs` | Every edit to the song, while signed in | Song map → My songs |
 
 Deleting an account (account menu → Delete Account) wipes all of the above,
 including uploaded audio files.
