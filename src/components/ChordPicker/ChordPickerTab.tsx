@@ -26,6 +26,8 @@ interface Props {
   onUndo: () => void;
   onRedo: () => void;
   tuning: Tuning;
+  /** The tuning is the app's (shared with By Ear); this changes it. */
+  onTuningChange?: (t: Tuning) => void;
   capo: number;
   desktop?: boolean;
 }
@@ -110,7 +112,7 @@ export function ChordPickerTab({
   onAddToProgression, progression,
   onRemoveFromProgression, onClearProgression, onReorderProgression, onTransposeProgression,
   canUndo, canRedo, onUndo, onRedo,
-  tuning: tuningProp, capo, desktop,
+  tuning: tuningProp, onTuningChange, capo, desktop,
 }: Props) {
   // Opens on the last chord picked (C major the first time), so the tool shows
   // its voicings straight away instead of waiting for two choices.
@@ -122,8 +124,9 @@ export function ChordPickerTab({
   }, [selectedRoot, selectedTriad, selectedExtension]);
   // Index of the variation shown enlarged in the VoicingViewer popover, or null.
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
-  const [tuningName, setTuningName] = useState<string>(tuningProp?.name ?? TUNINGS[0].name);
-  const tuningObj = TUNINGS.find(t => t.name === tuningName) ?? TUNINGS[0];
+  // One tuning for the whole app — this selector and By Ear's change the same one.
+  const tuningObj = tuningProp ?? TUNINGS[0];
+  const tuningName = tuningObj.name;
   const tuning = tuningObj.notes;
 
   const suffix = selectedTriad
@@ -139,7 +142,11 @@ export function ChordPickerTab({
     return findChordVoicings(chordName, 6, tuning);
   }, [chordName, tuning]);
 
-  const handleTuningChange = (name: string) => { setTuningName(name); setViewerIndex(null); };
+  const handleTuningChange = (name: string) => {
+    const t = TUNINGS.find(x => x.name === name);
+    if (t) onTuningChange?.(t);
+    setViewerIndex(null);
+  };
   // Each choice is heard as it is made: the root alone until there is a chord,
   // then the chord's first shape.
   const hear = (root: string | null, triad: string | null, ext: string) => {

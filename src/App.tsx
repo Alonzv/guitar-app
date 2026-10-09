@@ -443,7 +443,7 @@ export default function App() {
                     onTransposeProgression={handleTransposeProgression}
                     canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
                     onUndo={handleUndo} onRedo={handleRedo}
-                    tuning={tuning} capo={capo}
+                    tuning={tuning} onTuningChange={setTuning} capo={capo}
                   />
                 )}
                 {chordsSegment === 'target' && <TargetNoteTab desktop tuning={tuning} capo={capo} />}
@@ -572,7 +572,7 @@ export default function App() {
                 onTransposeProgression={handleTransposeProgression}
                 canUndo={undoStack.length > 0} canRedo={redoStack.length > 0}
                 onUndo={handleUndo} onRedo={handleRedo}
-                tuning={tuning} capo={capo}
+                tuning={tuning} onTuningChange={setTuning} capo={capo}
               />
             )}
             {chordsSegment === 'target' && <TargetNoteTab tuning={tuning} capo={capo} />}

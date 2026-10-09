@@ -337,46 +337,6 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
         <ChordSpelling chordName={chordName} />
       </div>
 
-      {/* ── Mode + String group — single card, two segmented controls ── */}
-      <div style={{ ...card({ padding: '10px 14px' }), display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 130 }}>
-          <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
-          <div style={{ display: 'flex', gap: 0, flex: 1 }}>
-            {(['full', 'triads'] as VoicingMode[]).map(m => (
-              <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
-                flex: 1, padding: '7px 4px', borderRadius: 0,
-                cursor: 'pointer', fontSize: 12, fontWeight: 400,
-                background: mode === m ? T.secondary : T.bgInput,
-                color: mode === m ? '#fff' : T.textMuted,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>
-                {m === 'full' ? 'Full' : 'Triads'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 }}>
-          <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Strings</span>
-          <div style={{ display: 'flex', gap: 0, flex: 1 }}>
-            {([
-              { id: 'all',    label: 'All'  },
-              { id: 'bass',   label: 'Low'  },
-              { id: 'treble', label: 'High' },
-            ] as { id: StringGroup; label: string }[]).map(sg => (
-              <button data-active={stringGroup === sg.id} key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
-                flex: 1, padding: '7px 4px', borderRadius: 0,
-                cursor: 'pointer', fontSize: 12, fontWeight: 400,
-                background: stringGroup === sg.id ? T.secondary : T.bgInput,
-                color: stringGroup === sg.id ? '#fff' : T.textMuted,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>
-                {sg.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 
@@ -394,6 +354,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
             <ReharmonizeTab
               progressionEditor={progressionEditor}
               chords={chords}
+              onLoadExample={setChords}
               mode={mode}
               setMode={setMode}
               stringGroup={stringGroup}
@@ -410,6 +371,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
             <ReharmonizeTab
               progressionEditor={progressionEditor}
               chords={chords}
+              onLoadExample={setChords}
               mode={mode}
               setMode={setMode}
               stringGroup={stringGroup}

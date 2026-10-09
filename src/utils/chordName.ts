@@ -13,8 +13,11 @@ export const MINOR_MAJ7 = 'mMaj7';
 
 /** Render a chord name in house style. Safe to call on any chord name. */
 export function toDisplayChord(name: string): string {
-  // mMaj7 / mM7 → m(maj7); leave everything else alone.
-  return name.replace(/m(?:M|Maj)7/g, 'm(maj7)');
+  // House style: a bare major triad is just its root (CM → C, FM/A → F/A),
+  // and mMaj7 / mM7 → m(maj7). Everything else is left alone.
+  return name
+    .replace(/^([A-G][b#]?)M(\/.*)?$/, '$1$2')
+    .replace(/m(?:M|Maj)7/g, 'm(maj7)');
 }
 
 /** Turn a display-form chord name back into something tonal can parse. */

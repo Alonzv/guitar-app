@@ -94,8 +94,13 @@ export function detectKey(names: string[]): KeyGuess {
     return {
       root: tonic ? Note.chroma(tonic) : null,
       pcs: info.notes.map(x => Note.chroma(x)).filter((x): x is number => x != null),
+      minor: info.intervals.includes('3m'),
+      dom7: info.intervals.includes('3M') && info.intervals.includes('7m'),
     };
   });
+  // A run of dominant 7ths is the blues, which no diatonic key contains —
+  // there the first chord names the key (A7–D7–E7 is A, not D).
+  const blues = parsed.length > 1 && parsed[0].dom7 && parsed.filter(c => c.dom7).length * 2 >= parsed.length;
   let best: KeyGuess = { tonicPc: 0, mode: 'major' };
   let bestScore = -Infinity;
   for (let tonic = 0; tonic < 12; tonic++) {
@@ -105,7 +110,12 @@ export function detectKey(names: string[]): KeyGuess {
       parsed.forEach((c, i) => {
         if (c.pcs.length && c.pcs.every(pc => pcs.has(pc))) score += 2;
         if (c.root != null && pcs.has(c.root)) score += 0.5;
-        if (c.root === tonic) score += (i === 0 || i === parsed.length - 1) ? 0.6 : 0.2;
+        if (c.root === tonic) {
+          // Songs usually start on the tonic — more than they end on it — and a
+          // minor first chord points at the minor key (Am–F is A minor, not F).
+          if (i === 0) score += 0.8 + (c.minor === (mode === 'minor') ? 0.3 : 0) + (blues && mode === 'major' ? 4 : 0);
+          else score += i === parsed.length - 1 ? 0.4 : 0.2;
+        }
       });
       if (score > bestScore) { bestScore = score; best = { tonicPc: tonic, mode }; }
     }

@@ -328,7 +328,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
           {flagged.map((c, i) => (
             <p key={`k${i}`} dir="ltr" style={{ margin: i ? '6px 0 0' : 0, fontSize: 12, color: T.text }}>
               <span style={{ color: T.error, fontWeight: 700 }}>⚠ </span>
-              <span style={{ fontWeight: 700 }}>{c.name}</span>
+              <span style={{ fontWeight: 700 }}>{toDisplayChord(c.name)}</span>
               <span style={{ fontFamily: 'var(--gc-mono)', color: T.textMuted }}> · {c.roman}</span>
               <span style={{ color: T.textDim }}> — {t.outKey}</span>
             </p>
