@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chord as TonalChord, Note } from '@tonaljs/tonal';
 import { NOTE_BANK, pcOf } from '../ScaleTrainer/engine';
-import { playMidi, playError } from '../../utils/audioPlayback';
+import { playMidi } from '../../utils/audioPlayback';
+import { answeredRight, answeredWrong } from '../../practice/feedback';
+import { StreakBoard } from '../Practice/StreakBoard';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 
@@ -81,6 +83,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const [streak, setStreak] = useState(0);
   const [best, setBest] = useState<number>(loadBest);
   const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const answerArea = useRef<HTMLDivElement>(null);   // shakes on a wrong answer
   useEffect(() => () => { if (errTimer.current) clearTimeout(errTimer.current); }, []);
 
   const start = useCallback((d: Diff = diff) => {
@@ -105,11 +108,11 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
         if (wrongs === 0) {   // streak grows only on a clean, first-try chord
           setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
         }
+        answeredRight();
         setPhase('done');
       }
     } else {
-      playError();
-      navigator.vibrate?.(30);
+      answeredWrong(answerArea.current);
       setErrBtn(name);
       const w = wrongs + 1;
       setWrongs(w);
@@ -155,10 +158,11 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     if (!earCh || revealed) return;
     if (opt.root === earCh.root && opt.quality === earCh.quality) {
       setRevealed(true);
+      answeredRight();
       if (wrongPicks.size === 0)   // first-try correct only
         setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
     } else {
-      playError();
+      answeredWrong(answerArea.current);
       const nw = new Set(wrongPicks); nw.add(optKey(opt)); setWrongPicks(nw);
       if (nw.size >= 2) { setStreak(0); setRevealed(true); }   // second wrong → reset + reveal
     }
@@ -189,7 +193,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   });
 
   return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
+    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', width: '100%', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{rtl ? 'תרגול אקורדים' : 'Chord Practice'}</h2>
       </div>
@@ -212,17 +216,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
         ))}
       </div>
 
-      {/* Streak cards — both modes */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.streak}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{streak}</p>
-        </div>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.best}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{best}</p>
-        </div>
-      </div>
+      <StreakBoard streak={streak} best={best} lang={lang} />
 
       {mode === 'ear' ? (
         !earCh ? (
@@ -237,7 +231,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               <button onClick={() => playArpeggio(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.arp}</button>
             </div>
             <p style={LBL}>{t.which}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <div ref={answerArea} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               {earOpts.map(opt => {
                 const isAnswer = revealed && opt.root === earCh.root && opt.quality === earCh.quality;
                 const isWrong = wrongPicks.has(optKey(opt));
@@ -277,7 +271,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
                   const isCurrent = phase === 'spell' && i === filled;
                   return (
                     <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                      <div style={{
+                      <div className={isFilled && i > 0 ? 'gc-pop' : undefined} style={{
                         width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 16, fontWeight: 700,
                         background: isFilled ? (i === 0 ? T.primary : T.success) : T.bgInput,
@@ -293,7 +287,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               {phase === 'spell' ? (
                 <>
                   <p style={LBL}>{t.noteBank}</p>
-                  <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
+                  <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
                     {NOTE_BANK.map(n => {
                       const isErr = errBtn === n;
                       return (

@@ -4,7 +4,9 @@ import {
 } from '../ScaleTrainer/engine';
 import { SCALE_DATA } from '../ScaleTrainer/data';
 import type { ScaleId } from '../ScaleTrainer/data';
-import { playScale, playError } from '../../utils/audioPlayback';
+import { playScale } from '../../utils/audioPlayback';
+import { answeredRight, answeredWrong } from '../../practice/feedback';
+import { StreakBoard } from '../Practice/StreakBoard';
 import { T, card } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 
@@ -52,6 +54,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const scaleName = (s: ScaleId) => SCALE_DATA[s][lang].name;
 
   const [streak, setStreak] = useState(0);
+  const answerArea = useRef<HTMLDivElement>(null);   // shakes on a wrong answer
   const [best, setBest] = useState<number>(loadBest);
   const bumpStreak = () => setStreak(s => { const v = s + 1; setBest(b => { const nb = Math.max(b, v); if (nb !== b) saveBest(nb); return nb; }); return v; });
 
@@ -79,9 +82,9 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
     if (name === expected || (rightPitch && !repeats)) {
       setErrBtn(null); setHint(null);
       const next = filled + 1; setFilled(next);
-      if (next === ch.notes.length) { if (wrongs === 0) bumpStreak(); setPhase('done'); }
+      if (next === ch.notes.length) { if (wrongs === 0) bumpStreak(); answeredRight(); setPhase('done'); }
     } else {
-      playError(); navigator.vibrate?.(30); setErrBtn(name);
+      answeredWrong(answerArea.current); setErrBtn(name);
       const w = wrongs + 1; setWrongs(w);
       if (w >= 2) { setStreak(0); setHint('reset'); } else setHint('retry');
       if (errTimer.current) clearTimeout(errTimer.current);
@@ -113,9 +116,9 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   const guess = (opt: Challenge) => {
     if (!earCh || revealed) return;
     if (opt.root === earCh.root && opt.scale === earCh.scale) {
-      setRevealed(true); if (wrongPicks.size === 0) bumpStreak();
+      setRevealed(true); answeredRight(); if (wrongPicks.size === 0) bumpStreak();
     } else {
-      playError(); const nw = new Set(wrongPicks); nw.add(optKey(opt)); setWrongPicks(nw);
+      answeredWrong(answerArea.current); const nw = new Set(wrongPicks); nw.add(optKey(opt)); setWrongPicks(nw);
       if (nw.size >= 2) { setStreak(0); setRevealed(true); }
     }
   };
@@ -141,7 +144,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
   });
 
   return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
+    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', width: '100%', maxWidth: desktop ? 680 : undefined, margin: desktop ? '0 auto' : undefined }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{rtl ? 'תרגול סולמות' : 'Scale Practice'}</h2>
       </div>
@@ -157,17 +160,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
         ))}
       </div>
 
-      {/* Streak cards */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.streak}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{streak}</p>
-        </div>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LBL, margin: '0 0 4px' }}>{t.best}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{best}</p>
-        </div>
-      </div>
+      <StreakBoard streak={streak} best={best} lang={lang} />
 
       {mode === 'ear' ? (
         !earCh ? (
@@ -181,7 +174,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               <button onClick={() => playRun(earCh)} style={{ padding: '12px 30px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.play}</button>
             </div>
             <p style={LBL}>{t.which}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+            <div ref={answerArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
               {earOpts.map(opt => {
                 const isAnswer = revealed && opt.root === earCh.root && opt.scale === earCh.scale;
                 const isWrong = wrongPicks.has(optKey(opt));
@@ -217,7 +210,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               const isCurrent = phase === 'spell' && i === filled;
               return (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700,
+                  <div className={isFilled && i > 0 ? 'gc-pop' : undefined} style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700,
                     background: isFilled ? (i === 0 ? T.primary : T.success) : T.bgInput, color: isFilled ? '#fff' : T.textDim,
                     border: isCurrent ? `2px solid ${T.secondary}` : `1px solid ${T.border}` }}>{isFilled ? n : ''}</div>
                   <span style={{ fontSize: 10, color: isCurrent ? T.text : T.textDim, fontFamily: 'var(--gc-mono)', fontWeight: isCurrent ? 700 : 400 }}>{i + 1}</span>
@@ -228,7 +221,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
           {phase === 'spell' ? (
             <>
               <p style={LBL}>{t.noteBank}</p>
-              <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
+              <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 5 }}>
                 {NOTE_BANK.map(n => {
                   const isErr = errBtn === n;
                   return (

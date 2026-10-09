@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { T, card } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LanguageContext';
-import { playInterval, playMidi, playError } from '../../utils/audioPlayback';
+import { playInterval, playMidi } from '../../utils/audioPlayback';
+import { answeredRight, answeredWrong } from '../../practice/feedback';
+import { StreakBoard } from '../Practice/StreakBoard';
 import { INTERVAL_ORDER, UI } from './data';
 import type { IntervalId, Lang } from './data';
 import {
@@ -179,6 +181,7 @@ const PracticeMode: React.FC<PracticeProps> = ({
   const [wrongPicks, setWrongPicks] = useState<Set<IntervalId>>(new Set());
   const [answered, setAnswered] = useState<null | 'correct' | 'reset'>(null);
   const [streak, setStreak] = useState(0);
+  const answerArea = useRef<HTMLDivElement>(null);   // shakes on a wrong answer
   const advanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealed = answered !== null;   // show the hidden 2nd note once answered
   const pool = difficulty === 'advanced' ? INTERVAL_ORDER : BASIC_IVS;
@@ -217,10 +220,10 @@ const PracticeMode: React.FC<PracticeProps> = ({
       recordResult(exercise.interval, clean);
       if (clean) { const next = streak + 1; setStreak(next); onNewBest(next); }
       setAnswered('correct');
-      playMidi(exercise.targetMidi + 12, 0.5); // confirmation chirp
+      answeredRight();
       advanceRef.current = setTimeout(() => nextExercise(), 1500);
     } else {
-      playError();
+      answeredWrong(answerArea.current);
       const nw = new Set(wrongPicks); nw.add(id); setWrongPicks(nw);
       if (nw.size >= 2) {
         recordResult(exercise.interval, false);
@@ -287,17 +290,7 @@ const PracticeMode: React.FC<PracticeProps> = ({
         </div>
       </div>
 
-      {/* Score row */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LABEL, margin: '0 0 4px' }}>{t.streak}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{streak}</p>
-        </div>
-        <div style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
-          <p style={{ ...LABEL, margin: '0 0 4px' }}>{t.bestStreak}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.text }}>{data.bestStreak}</p>
-        </div>
-      </div>
+      <StreakBoard streak={streak} best={data.bestStreak} lang={lang} flush />
 
       {/* Exercise area */}
       {!exercise ? (
@@ -345,7 +338,7 @@ const PracticeMode: React.FC<PracticeProps> = ({
 
           {/* Answer by naming the interval — no neck tapping (no fret counting) */}
           <p style={{ ...LABEL, marginTop: 14 }}>{lang === 'he' ? 'זהו את האינטרוול' : 'Name the interval'}</p>
-          <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: 6 }}>
+          <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: 6 }}>
             {pool.map(id => {
               const isAnswer = revealed && id === exercise.interval;
               const isWrong = wrongPicks.has(id);

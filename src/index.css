@@ -240,6 +240,18 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .gc-tile-now { animation: gc-tile-now var(--gc-dur-slow) var(--gc-ease-out); box-shadow: inset 6px 0 0 0 var(--gc-success); }
 @keyframes gc-tile-now { 0% { transform: translateY(0); } 35% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
 
+/* Practice: a milestone stamp slams down slightly askew (the brand stamp's
+   tilt), a new record flashes the Best card. */
+.gc-stamp { animation: gc-stamp var(--gc-dur-slow) var(--gc-ease-snap) both; transform: translateX(-50%) rotate(-4deg); }
+@keyframes gc-stamp {
+  0%   { opacity: 0; transform: translateX(-50%) rotate(-4deg) scale(1.8); }
+  60%  { opacity: 1; transform: translateX(-50%) rotate(-4deg) scale(0.94); }
+  100% { opacity: 1; transform: translateX(-50%) rotate(-4deg) scale(1); }
+}
+.gc-record { animation: gc-record var(--gc-dur-slow) var(--gc-ease-out); }
+@keyframes gc-record { 0%, 100% { background: var(--gc-bg-card); } 30% { background: var(--gc-success-soft); } }
+.gc-pop { animation: gc-dot-in var(--gc-dur-base) var(--gc-ease-snap); }
+
 /* The die turns over when rolled. */
 .gc-die { animation: gc-die-roll var(--gc-dur-slow) var(--gc-ease-snap); }
 @keyframes gc-die-roll { from { transform: rotate(-180deg) scale(0.6); } to { transform: none; } }
@@ -248,7 +260,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   :is(button, [role="button"], .gc-pressable).gc-pressed { transform: none !important; }
   .gc-fill-in::after, .gc-fill-out::after { display: none; }
   .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land, .gc-die,
-  .gc-fade-in, .gc-drop-in, .gc-list-in, .gc-tile-now { animation: none !important; }
+  .gc-fade-in, .gc-drop-in, .gc-list-in, .gc-tile-now, .gc-stamp, .gc-record, .gc-pop { animation: none !important; }
   .gc-slide, .gc-dot-pos { transition: none !important; }
   .gc-dot-face, .gc-dot-glow, .gc-dot-ring { animation: none !important; }
 }
