@@ -17,6 +17,8 @@ import { T, card, alpha } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { ExampleChips } from '../ExampleChips';
 import { useOptionalSong } from '../../song/SongContext';
+import { formatChordName } from '../../utils/chordIdentifier';
+import { findChordVoicings } from '../../utils/chordVoicings';
 import { useFlash } from '../../motion/useFlash';
 import { RollLabel } from '../RollLabel';
 import { namesToProgression } from '../../utils/progressionBridge';
@@ -340,6 +342,30 @@ export function ReharmonizeTab({
 
   const isPlaying = currentPath?.id === playingId;
 
+  // ── Before / after ───────────────────────────────────────────────────────
+  // One loop over both progressions; the side can be flipped while it runs
+  // and the very next chord comes from the other one.
+  const [ab, setAb] = useState<{ side: 'before' | 'after'; step: number } | null>(null);
+  const abSide = useRef<'before' | 'after'>('after');
+  const abTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abStop = () => { if (abTimer.current) clearTimeout(abTimer.current); abTimer.current = null; setAb(null); };
+  useEffect(() => () => { if (abTimer.current) clearTimeout(abTimer.current); }, []);
+  const abPlay = (side: 'before' | 'after') => {
+    abSide.current = side;
+    if (abTimer.current) { setAb(a => (a ? { ...a, side } : a)); return; }
+    if (!result) return;
+    const barMs = song ? (60 / song.song.bpm) * 4 * 1000 : 1600;
+    const step = (i: number) => {
+      const list = abSide.current === 'before' ? chords : result.chords;
+      const k = i % Math.max(1, list.length);
+      const shape = findChordVoicings(list[k], 1, tuning.notes)[0];
+      if (shape) playChord(shape, tuning.openFreqs);
+      setAb({ side: abSide.current, step: k });
+      abTimer.current = setTimeout(() => step(k + 1), barMs);
+    };
+    unlockAudio().then(() => step(0));
+  };
+
   const leftCol = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -564,23 +590,57 @@ export function ReharmonizeTab({
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {result.chords.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                      <span style={{
-                        padding: '5px 12px', borderRadius: 0,
-                        background: T.secondaryBg,
-                        border: `1px solid ${alpha(T.secondary, 27)}`,
-                        fontSize: 13, fontWeight: 400, color: T.text,
-                      }}>
-                        {c}
-                      </span>
-                      {showNashville && (
-                        <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted }}>
-                          {toNashville(c, keyRoot)}
+                  {result.chords.map((c, i) => {
+                    // A chord the reharm actually changed is marked; one it kept is plain.
+                    const changed = formatChordName(c) !== formatChordName(chords[i] ?? '');
+                    const now = ab != null && ab.side === 'after' && ab.step === i;
+                    return (
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <span className="gc-notation" style={{
+                          padding: '5px 12px', borderRadius: 0,
+                          background: now ? T.primary : changed ? T.secondaryBg : 'transparent',
+                          border: `1px solid ${changed ? T.text : alpha(T.secondary, 27)}`,
+                          fontSize: 13, fontWeight: changed ? 700 : 400, color: now ? T.white : T.text,
+                          transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out), color var(--gc-dur-fast) var(--gc-ease-out)',
+                        }}>
+                          {c}
                         </span>
-                      )}
-                    </div>
-                  ))}
+                        {showNashville && (
+                          <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted }}>
+                            {toNashville(c, keyRoot)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Before / after — one loop, two progressions: flip sides while it
+                    plays and the next chord comes from the other one, so the
+                    difference is heard at the same spot in the bar. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
+                  <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                    {lang === 'he' ? 'לפני / אחרי' : 'Before / after'}
+                  </span>
+                  <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
+                    {(['before', 'after'] as const).map(side => {
+                      const on = ab?.side === side;
+                      return (
+                        <button key={side} onClick={() => abPlay(side)} data-active={on} style={{
+                          padding: '6px 14px', fontSize: 11, cursor: 'pointer', borderRadius: 0,
+                          background: on ? T.primary : 'transparent', color: on ? T.white : T.text,
+                        }}>{side === 'before' ? (lang === 'he' ? '▶ המקור' : '▶ Original') : (lang === 'he' ? '▶ הרה-הרמוניזציה' : '▶ Reharm')}</button>
+                      );
+                    })}
+                  </div>
+                  {ab && <button onClick={abStop} style={{ padding: '6px 10px', fontSize: 11, cursor: 'pointer', background: 'transparent', border: `1px solid ${T.border}`, color: T.text }}>■</button>}
+                  {ab && (
+                    <span dir="ltr" className="gc-notation" style={{ fontSize: 12, color: T.textMuted }}>
+                      {(ab.side === 'before' ? chords : result.chords).map((c, i) => (
+                        <span key={i} style={i === ab.step ? { color: T.text, fontWeight: 700 } : undefined}>{i ? ' – ' : ''}{c}</span>
+                      ))}
+                    </span>
+                  )}
                 </div>
               </div>
 
