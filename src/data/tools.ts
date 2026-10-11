@@ -18,7 +18,7 @@ export const PANEL_NAMES: { en: string; he: string }[] = [
   { en: 'Chords',    he: 'אקורדים' },
   { en: 'Scales',    he: 'סולמות' },
   { en: 'Intervals', he: 'אינטרוולים' },
-  { en: 'Voicings',  he: 'ווקאינגים' },
+  { en: 'Voicings',  he: 'הרמוניה' },
   { en: 'Tools',     he: 'כלים' },
 ];
 
