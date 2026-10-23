@@ -38,8 +38,10 @@ export function PosterTitle({ head, tail, max = 200, min = 40, as: Tag = 'h2', s
   }, [head, tail, max, min]);
   return (
     <Tag style={{ margin: 0, minWidth: 0, ...style }}>
-      <div ref={box} style={{ overflow: 'hidden', whiteSpace: 'nowrap', paddingBottom: '0.04em' }}>
-        <span ref={text} className="su-poster" style={{ display: 'inline-block', fontSize: size, textTransform: keepCase ? 'none' : undefined }}>
+      {/* Clip sideways only: at line-height 0.8 the descender of a j or g
+          hangs below the line box and must not be cut. */}
+      <div ref={box} style={{ overflowX: 'clip', whiteSpace: 'nowrap' }}>
+        <span ref={text} className="su-poster" style={{ display: 'inline-block', fontSize: size, paddingBottom: '0.18em', textTransform: keepCase ? 'none' : undefined }}>
           {head}{tail != null && <span className={size >= 60 ? 'su-outline' : undefined}>{tail}</span>}
         </span>
       </div>
@@ -133,6 +135,42 @@ export function KeyGrid<V extends string | number>({ items, value, onChange, col
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// ── Key picker ───────────────────────────────────────────────────────────────
+/** "KEY  C ▾": a pill that opens every note at once as a 6×2 key grid —
+ *  pick any key in one tap instead of stepping through them. */
+export function KeyPicker<V extends string>({ value, options, onChange, label, align = 'start' }: {
+  value: V; options: readonly V[]; onChange: (v: V) => void; label: string; align?: 'start' | 'end';
+}) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', onDoc);
+    window.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('pointerdown', onDoc); window.removeEventListener('keydown', onKey); };
+  }, [open]);
+  return (
+    <div ref={wrap} style={{ position: 'relative', flex: 'none' }}>
+      <Pill active={open} onClick={() => setOpen(o => !o)} label={`${label}: ${value}`} style={{ gap: 10, paddingInline: '18px 16px' }}>
+        <span style={{ opacity: 0.7 }}>{label}</span>
+        <span className="su-semi" style={{ fontSize: 20, textTransform: 'none', letterSpacing: 0 }}>{value}</span>
+        <span aria-hidden>{open ? '▴' : '▾'}</span>
+      </Pill>
+      {open && (
+        <div className="gc-drop-in" role="dialog" aria-label={label} style={{
+          position: 'absolute', top: 52, zIndex: 60, [align === 'end' ? 'insetInlineEnd' : 'insetInlineStart']: 0,
+          width: 'min(312px, calc(100vw - 40px))', padding: 10, background: T.bgDeep, border: `var(--su-rule) solid ${T.border}`,
+        }}>
+          <KeyGrid items={options.map(o => ({ id: o, label: o }))} value={value} cols={6}
+            onChange={v => { onChange(v); setOpen(false); }} label={label} />
+        </div>
+      )}
     </div>
   );
 }

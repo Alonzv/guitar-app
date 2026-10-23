@@ -3,8 +3,8 @@ import type { ChordInProgression, FretPosition, Tuning } from '../../types/music
 import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
 import { VoicingViewer } from './VoicingViewer';
 import { ChordStructure } from '../ChordBuilder/ChordStructure';
-import { ChordPoster, ChordDiagram, PillSelect } from '../ChordBuilder/ChordParts';
-import { Rule, PillRow, KeyGrid, Cta } from '../Transit/parts';
+import { ChordPoster, ChordDiagram, PillSelect, StrumButton } from '../ChordBuilder/ChordParts';
+import { Rule, PillRow, KeyGrid } from '../Transit/parts';
 import { useLang } from '../../contexts/LanguageContext';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { ProgressionPanel } from '../ChordBuilder/ProgressionPanel';
@@ -234,9 +234,9 @@ export function ChordPickerTab({
       </Rule>
 
       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-        <Cta round={92} onClick={strum} disabled={!current} label={he ? 'פריטה' : 'Strum'}>
+        <StrumButton onStrum={strum} disabled={!current} label={he ? 'פריטה' : 'Strum'}>
           {he ? 'פריטה' : 'STRUM'}
-        </Cta>
+        </StrumButton>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {/* Adds the shape drawn large, matching the action in By Ear. A
               specific variation can also be added from the enlarged viewer. */}

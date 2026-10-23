@@ -29,6 +29,15 @@ interface Props {
 
 const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
+// A pressed key flashes cobalt for 160ms; the colour transition fades it back.
+function flash(el: HTMLElement) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const prev = el.style.backgroundColor, prevInk = el.style.color;
+  el.style.backgroundColor = 'var(--gc-primary)';
+  el.style.color = 'var(--su-on-primary)';
+  window.setTimeout(() => { el.style.backgroundColor = prev; el.style.color = prevInk; }, 160);
+}
+
 export function TabKeypad({ where, prefix, tech, barOn, onDigit, onPrefix, onTech, onBackspace, onString, onBar, onDone, he }: Props) {
   const fg = T.white, bg = T.secondary;
   const off = where == null;
@@ -62,7 +71,7 @@ export function TabKeypad({ where, prefix, tech, barOn, onDigit, onPrefix, onTec
 
   const k = (id: string, content: ReactNode, onClick: () => void, on = false, label?: string) => (
     <button key={id} type="button" aria-label={label} aria-pressed={on || undefined} disabled={off}
-      className="gc-no-bar gc-notation" onClick={onClick} style={keyCss(on)}>{content}</button>
+      className="gc-no-bar gc-notation" onClick={e => { flash(e.currentTarget); onClick(); }} style={keyCss(on)}>{content}</button>
   );
 
   return (
@@ -90,7 +99,7 @@ export function TabKeypad({ where, prefix, tech, barOn, onDigit, onPrefix, onTec
             className="gc-no-bar gc-notation" style={keyCss(prefix === d)}
             onPointerDown={() => down(d)} onPointerUp={up} onPointerLeave={up} onPointerCancel={up}
             onContextMenu={e => e.preventDefault()}
-            onClick={() => tap(d)}>{d}</button>
+            onClick={e => { flash(e.currentTarget); tap(d); }}>{d}</button>
         ))}
         {k('h', 'h', () => onTech('h'), tech === 'h', he ? 'האמר-און' : 'Hammer-on')}
         {k('p', 'p', () => onTech('p'), tech === 'p', he ? 'פול-אוף' : 'Pull-off')}

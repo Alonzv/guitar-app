@@ -13,9 +13,9 @@ import { Chord, Note } from '@tonaljs/tonal';
 import { fretToNote } from '../../utils/musicTheory';
 import { useLang } from '../../contexts/LanguageContext';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
-import { Rule, Pill, Cta } from '../Transit/parts';
+import { Rule, Pill } from '../Transit/parts';
 import { pillStyle } from '../Transit/styles';
-import { PillSelect } from './ChordParts';
+import { PillSelect, StrumButton } from './ChordParts';
 import { degreeLabels } from './chordFormula';
 import { TUNINGS } from '../../utils/musicTheory';
 import { RollLabel } from '../RollLabel';
@@ -96,8 +96,10 @@ export function ChordBuilderTab({
 
   const neck = (
     <Rule label={he ? 'הקישו על שריג כדי להניח תו · שוב כדי להסיר' : 'Tap a fret to place a note · again to remove'}>
-      <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} tuning={tuning.notes} capo={capo}
-        labelFor={labelFor} isRoot={isRoot} />
+      <div data-strum-board>
+        <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} tuning={tuning.notes} capo={capo}
+          labelFor={labelFor} isRoot={isRoot} />
+      </div>
     </Rule>
   );
 
@@ -136,9 +138,9 @@ export function ChordBuilderTab({
       </Rule>
 
       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-        <Cta round={92} onClick={strum} disabled={activeDots.length === 0} label={he ? 'פריטה' : 'Strum'}>
+        <StrumButton onStrum={strum} disabled={activeDots.length === 0} label={he ? 'פריטה' : 'Strum'}>
           {he ? 'פריטה' : 'STRUM'}
-        </Cta>
+        </StrumButton>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button onClick={handleAdd} disabled={chords.length === 0} className="gc-no-bar"
             style={{ ...btn.primary(chords.length === 0), width: '100%', whiteSpace: 'nowrap' }}>

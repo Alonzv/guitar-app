@@ -6,6 +6,7 @@ import { savedProgressions, savedTabs, savedHarmonizations, savedReharms, audioT
 import type { TabContent, HarmonizationMelody, HarmonizationResult, ReharmData } from '../../services/types';
 import type { ChordInProgression } from '../../types/music';
 import { RollLabel } from '../RollLabel';
+import { pop, useOnChange } from '../../utils/motion';
 
 // A description of what to persist — returned lazily so we always capture the
 // latest editor state at click time.
@@ -93,11 +94,14 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
   };
 
   const saved  = status === 'saved';
+  // Save → Saved: the button pops.
+  const btnRef = useRef<HTMLButtonElement>(null);
+  useOnChange(saved, (_, now) => { if (now) pop(btnRef.current); });
 
   // An outline pill; once saved it fills ink with a tick for a moment.
   return (
     <>
-      <button onClick={onClick} disabled={status === 'saving'} aria-live="polite" className="gc-no-bar" style={{
+      <button ref={btnRef} onClick={onClick} disabled={status === 'saving'} aria-live="polite" className="gc-no-bar" style={{
         ...pillStyle(saved, size === 'sm' ? 'sm' : 'md'),
         cursor: status === 'saving' ? 'wait' : 'pointer',
         ...style,

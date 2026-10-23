@@ -141,7 +141,8 @@ export function Neck({
         const name = `${noteName(d)} · ${lang === 'he' ? `מיתר ${6 - d.string} שריג ${d.fret}` : `string ${6 - d.string} fret ${d.fret}`}`;
         return (
           <g key={d.id ?? `${d.string}-${d.fret}`} role="button" tabIndex={kind === 'faded' ? -1 : 0} aria-label={name}
-            className="su-neck-dot" style={{ cursor: 'pointer', opacity: kind === 'faded' ? 0.12 : 1, transition: 'opacity var(--gc-dur-base) var(--gc-ease-out)' }}
+            data-f={d.fret} className="su-neck-dot"
+            style={{ cursor: 'pointer', opacity: kind === 'faded' ? 0.18 : 1, scale: kind === 'faded' ? '0.8' : '1' }}
             onClick={() => press(d)}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); press(d); } }}>
             <Dot x={p.x} y={p.y} r={R} glow={sounding.midi(midiOf(d))} ringColor={T.primary}>

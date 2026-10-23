@@ -5,12 +5,13 @@ import { analyzeProgression, keyName, ALL_KEYS } from '../../utils/harmonicAnaly
 import type { KeyGuess } from '../../utils/harmonicAnalysis';
 import { voiceLead } from '../../utils/voiceLeading';
 import type { VoicedProgression } from '../../utils/voiceLeading';
-import { T, alpha } from '../../theme';
+import { T } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { toDisplayChord } from '../../utils/chordName';
 import { ExampleChips } from '../ExampleChips';
 import { Rule, Pill, PillRow, KeyGrid, Cta } from '../Transit/parts';
 import { Route } from './Route';
+import { VoiceChart } from './VoiceChart';
 import { SelectPill } from './SelectPill';
 
 // ── Voice Leading Studio ─────────────────────────────────────────────────────
@@ -39,14 +40,13 @@ const SUFFIX: Record<string, Record<string, string>> = {
 const validExts = (t: string) => EXTS.filter(e => SUFFIX[t]?.[e.k] !== undefined);
 const buildName = (root: string, t: string, e: string) => root + (SUFFIX[t]?.[e] ?? '');
 
-const motionGlyph = (m: number, first: boolean) => first ? '' : m === 0 ? '=' : m > 0 ? '▲' : '▼';
 const degNum = (label: string) => parseInt(label.replace(/[^0-9]/g, ''), 10) || 0;
 const DEG_ORDER = [1, 3, 5, 7, 9, 11, 13, 2, 4, 6];   // display order for the degree chips
 const degLabelShort = (n: number, lang: 'en' | 'he') => n === 1 ? (lang === 'he' ? 'שורש' : 'Root') : String(n);
 
 const globalNames = (gp?: ChordInProgression[]) => (gp ?? []).map(c => c.chord.name).filter(Boolean).slice(0, 12);
 
-export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange }: {
+export function VoiceLeadingStudio({ globalProgression, onChordsChange }: {
   desktop?: boolean; globalProgression?: ChordInProgression[]; tuning?: Tuning;
   /** Report an edit so it flows back into the shared session progression. */
   onChordsChange?: (names: string[]) => void;
@@ -176,9 +176,6 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
 
   const he = lang === 'he';
   const WARN = '⚠︎';   // text presentation, never the emoji
-  const CW = desktop ? 92 : 78;    // chord-column width
-  const LW = 30;                   // left voice-label width
-  const cellLine = `1px solid ${T.hairline}`;
 
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -248,69 +245,17 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
           {!chords.length && <ExampleChips onPick={ex => setChords(ex)} />}
         </Rule>
       ) : (
-        <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
-          <div dir="ltr" style={{ display: 'inline-flex', flexDirection: 'column', borderTop: `var(--su-rule) solid ${T.border}`, borderBottom: `var(--su-rule) solid ${T.border}` }}>
-            {/* Header: chord name + Roman numeral */}
-            <div style={{ display: 'flex', borderBottom: `var(--su-rule) solid ${T.border}` }}>
-              <div style={{ width: LW, flexShrink: 0 }} />
-              {result.chords.map((name, ci) => {
-                const an = analysis?.chords[ci];
-                const now = ci === playCol;
-                return (
-                  <div key={ci} style={{ width: CW, flexShrink: 0, padding: '8px 4px', textAlign: 'center', borderInlineStart: ci ? cellLine : 'none' }}>
-                    <div className="su-semi gc-notation" style={{ fontSize: 19, color: now ? T.primary : T.text, transition: 'color var(--gc-dur-fast) var(--gc-ease-out)' }}>{toDisplayChord(name)}</div>
-                    {an && (
-                      <div style={{ marginTop: 3, fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700, color: an.diatonic ? T.textMuted : T.text }}>
-                        {an.roman}{!an.diatonic && ` ${WARN}`}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <VoiceChart result={result} chords={result.chords.map((_, ci) => ({ roman: analysis?.chords[ci]?.roman, diatonic: analysis?.chords[ci]?.diatonic }))}
+            playCol={playCol} selVoice={selVoice} selDeg={selDeg} degOf={degNum} onPickVoice={pickVoice} warn={WARN} voiceLabel={t.voice} />
+          {/* Follow one voice — top line is voice 1 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span className="su-label">{he ? 'מעקב אחרי קול' : 'Follow a voice'}</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {result.voices.map((_, vi) => (
+                <Pill key={vi} size="sm" active={selVoice === vi} onClick={() => pickVoice(vi)} label={`${t.voice} ${vi + 1}`}>{vi + 1}</Pill>
+              ))}
             </div>
-            {/* Voice rows (top = soprano) */}
-            {result.voices.map((voice, vi) => {
-              const rowOn = selVoice === vi;
-              return (
-                <div
-                  key={vi}
-                  role="button" tabIndex={0} aria-pressed={rowOn}
-                  aria-label={`${t.voice} ${vi + 1}`}
-                  onClick={() => pickVoice(vi)}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickVoice(vi); } }}
-                  style={{ display: 'flex', cursor: 'pointer', borderTop: vi ? cellLine : 'none', background: rowOn ? alpha(T.text, 7) : 'transparent', minHeight: 44 }}
-                >
-                  <div style={{ width: LW, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700, color: rowOn ? T.text : T.textMuted }}>
-                    {vi + 1}
-                  </div>
-                  {voice.map((cell, ci) => {
-                    const hot = rowOn || (selDeg != null && degNum(cell.deg) === selDeg);
-                    return (
-                      <div key={ci} style={{
-                        width: CW, flexShrink: 0, padding: '7px 4px', textAlign: 'center',
-                        borderInlineStart: ci ? cellLine : 'none',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-                        background: hot && !rowOn ? alpha(T.text, 9) : ci === playCol ? alpha(T.primary, 8) : 'transparent',
-                        transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out)',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
-                          <span dir="ltr" className="su-semi" style={{ fontSize: 18, color: T.text, fontWeight: hot ? 900 : 700 }}>{cell.note}</span>
-                          <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, fontWeight: hot ? 700 : 400, color: hot ? T.text : T.textMuted }}>{cell.deg}</span>
-                        </div>
-                        <div style={{ fontSize: 10, lineHeight: 1, color: cell.leap ? T.text : T.textMuted, height: 12, fontWeight: cell.leap ? 700 : 400 }}>
-                          {cell.leap ? WARN : motionGlyph(cell.motion, ci === 0)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-
-            {/* Voice lines — each voice as a line through its pitches, so the
-                motion is visible at a glance: flat = a held common tone, a
-                short slope = a step, dashed = a leap. Tap a line to follow it. */}
-            <VoiceLines result={result} cw={CW} lw={LW} selVoice={selVoice} playCol={playCol} onPick={pickVoice} />
           </div>
         </div>
       )}
@@ -365,54 +310,6 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
           {selVoice != null ? t.follow(String(selVoice + 1)) : t.degOf(degLabelShort(selDeg!, lang))}
         </p>
       )}
-    </div>
-  );
-}
-
-
-// The followed voice is drawn in heavy ink, the rest in grey; the chord
-// sounding now is the one cobalt column.
-function VoiceLines({ result, cw, lw, selVoice, playCol, onPick }: {
-  result: VoicedProgression; cw: number; lw: number; selVoice: number | null; playCol: number | null;
-  onPick: (vi: number) => void;
-}) {
-  const H = 120, PAD = 12;
-  const all = result.voices.flat().map(c => c.midi);
-  const lo = Math.min(...all), hi = Math.max(...all);
-  const y = (m: number) => PAD + (H - 2 * PAD) * (1 - (m - lo) / Math.max(1, hi - lo));
-  const x = (ci: number) => ci * cw + cw / 2;
-  const width = result.chords.length * cw;
-  return (
-    <div style={{ display: 'flex', borderTop: `var(--su-rule) solid ${T.border}` }}>
-      <div style={{ width: lw, flexShrink: 0 }} />
-      <svg width={width} height={H} style={{ display: 'block' }} aria-label="Voice lines">
-        {playCol != null && (
-          <rect x={playCol * cw} y={0} width={cw} height={H} fill={T.primary} opacity={0.08} />
-        )}
-        {result.voices.map((voice, vi) => {
-          const on = selVoice === vi;
-          return (
-            <g key={vi} onClick={() => onPick(vi)} style={{ cursor: 'pointer' }}>
-              {voice.slice(1).map((cell, k) => {
-                const ci = k + 1;
-                return (
-                  <line key={ci} x1={x(ci - 1)} y1={y(voice[ci - 1].midi)} x2={x(ci)} y2={y(cell.midi)}
-                    stroke={on ? T.text : T.textMuted} strokeWidth={on ? 3.5 : 1.6} opacity={selVoice == null || on ? 1 : 0.35}
-                    strokeDasharray={cell.leap ? '5 4' : undefined} />
-                );
-              })}
-              {voice.map((cell, ci) => (
-                <g key={ci} style={{ transform: `translate(${x(ci)}px, ${y(cell.midi)}px)` }}>
-                  <circle className={ci === playCol ? 'gc-dot-ring' : undefined} r={ci === playCol ? 6 : 0} fill="none" stroke={T.primary} strokeWidth={2} />
-                  <circle r={on ? 5 : 3.5} fill={ci === playCol ? T.primary : T.text} opacity={selVoice == null || on ? 1 : 0.35} />
-                </g>
-              ))}
-              {/* a wide invisible stroke so the thin line is easy to tap */}
-              <polyline points={voice.map((c, ci) => `${x(ci)},${y(c.midi)}`).join(' ')} fill="none" stroke="transparent" strokeWidth={14} />
-            </g>
-          );
-        })}
-      </svg>
     </div>
   );
 }

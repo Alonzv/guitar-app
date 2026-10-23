@@ -15,7 +15,8 @@ import { pickOne } from '../../utils/random';
 import { useLang } from '../../contexts/LanguageContext';
 import { STOPS } from '../../data/tools';
 import { requestNavigate } from '../../services/navigate';
-import { PosterTitle, Rule, Pill, PillRow, Cta, KeyGrid, Stepper } from '../Transit/parts';
+import { blurIn, dotsIn, useOnChange } from '../../utils/motion';
+import { PosterTitle, Rule, Pill, PillRow, Cta, KeyGrid, KeyPicker } from '../Transit/parts';
 import { pillStyle, keyStyle } from '../Transit/styles';
 import { StopActions } from '../Transit/StopActions';
 
@@ -224,11 +225,13 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   };
 
   // ── Presentation ─────────────────────────────────────────────────────────
+  // A new key or scale: the title rises and unblurs; the dots spring in
+  // along the neck, nut first.
+  const titleRef = useRef<HTMLDivElement>(null);
+  const neckRef = useRef<HTMLDivElement>(null);
+  useOnChange(`${root}-${scaleType}`, () => { blurIn(titleRef.current, 0); dotsIn(neckRef.current); });
+
   const scaleLabel = scaleType ? (SCALE_GROUPS.flatMap(g => g.scales).find(sc => sc.id === scaleType)?.label ?? scaleType) : '—';
-  const stepRoot = (d: number) => {
-    const r = ALL_NOTES[(ALL_NOTES.indexOf(root) + d + 12) % 12];
-    setRoot(r); previewNote(r);
-  };
   const playWholeScale = () => {
     const midiNotes = [
       ...scale.notes.map(n => TonalNote.midi(`${n}4`) ?? 60),
@@ -379,15 +382,15 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {jamPill}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
-          <PosterTitle head={`${root} `} tail={scaleLabel} max={200} min={56} style={{ flex: 1 }} />
+          <div ref={titleRef} style={{ flex: 1, minWidth: 0 }}><PosterTitle head={`${root} `} tail={scaleLabel} max={200} min={56} /></div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flex: 'none', paddingBottom: 6 }}>
-            <Stepper value={root} onPrev={() => stepRoot(-1)} onNext={() => stepRoot(1)} label={he ? 'טוניקה' : 'Key'} />
+            <KeyPicker value={root} options={ALL_NOTES as readonly Note[]} onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Key'} align={desktop ? 'end' : 'start'} />
             <Cta onClick={playWholeScale}>{he ? 'נגן סולם' : 'Play scale'} ▶</Cta>
           </div>
         </div>
         <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו דרגה לבידוד' : 'notes · tap a degree to isolate it'}`}>{legend}</Rule>
         {jamRow}
-        <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 16 }}>
+        <div ref={neckRef} style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 16 }}>
           {viewMode === 'tab' ? tabView : neckDots.length ? <Neck dots={neckDots} from={0} to={15} label={neckLabel} /> : empty}
         </div>
         {positionRow}
@@ -416,7 +419,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {jamPill}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <Stepper value={root} onPrev={() => stepRoot(-1)} onNext={() => stepRoot(1)} label={he ? 'טוניקה' : 'Key'} />
+        <KeyPicker value={root} options={ALL_NOTES as readonly Note[]} onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Key'} align={desktop ? 'end' : 'start'} />
         <Pill size="sm" active={scaleMenuOpen} onClick={() => setScaleMenuOpen(o => !o)}>{scaleLabel} {scaleMenuOpen ? '▴' : '▾'}</Pill>
       </div>
       {scaleMenuOpen && (
@@ -432,13 +435,16 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
       )}
       {viewMode === 'tab' ? tabView : (
         <div dir="ltr" style={{ display: 'flex', gap: 8, alignItems: 'stretch', borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 12 }}>
-          <h2 className="su-poster" style={{
-            margin: 0, writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: spineSize,
-            whiteSpace: 'nowrap', textAlign: 'end', flex: 'none',
-          }}>
-            {root} <span style={spineSize >= 60 ? { color: 'transparent', WebkitTextStroke: `3px ${T.text}` } : undefined}>{scaleLabel}</span>
-          </h2>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'center' }}>
+          {/* the wrapper animates; the h2 keeps its rotation */}
+          <div ref={titleRef} style={{ flex: 'none', display: 'flex' }}>
+            <h2 className="su-poster" style={{
+              margin: 0, writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: spineSize,
+              whiteSpace: 'nowrap', textAlign: 'end', flex: 'none',
+            }}>
+              {root} <span style={spineSize >= 60 ? { color: 'transparent', WebkitTextStroke: `3px ${T.text}` } : undefined}>{scaleLabel}</span>
+            </h2>
+          </div>
+          <div ref={neckRef} style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: '100%', maxWidth: 210 }}>
               {neckDots.length ? <Neck dots={neckDots} from={0} to={12} vertical label={neckLabel} /> : empty}
             </div>

@@ -3,20 +3,12 @@
 // from main.tsx. The look lives in index.css (search "Motion"); this file only
 // decides *when* a surface is pressed, selected or newly enabled.
 //
-//   • Press      — gc-pressed is added on pointer-down and held for at least
-//                  PRESS_MIN_MS, so even a quick tap shows the full sink.
-//                  :active alone lasts only as long as the finger, which on a
-//                  tap is too short to see.
-//   • Selection  — a surface marked data-active="true|false" gets gc-fill-in /
-//                  gc-fill-out when that attribute flips, and the overlay is
-//                  painted in the colour it had a moment ago.
+//   • Press      — drawn by motion.css (scale on :active); this file only
+//                  remembers the last pressed surface for flyToDock.
 //   • Enabled    — a button whose `disabled` attribute is removed pulses once.
 
 const PRESSABLE = 'button, [role="button"], .gc-pressable';
-const PRESS_MIN_MS = 200;     // --gc-dur-fast
-const FILL_MS = 280;          // --gc-dur-base
 const PULSE_MS = 400;         // --gc-dur-slow
-const SWIPE_CANCEL_PX = 10;   // a press that turns into a swipe lets go
 
 let lastPressed: HTMLElement | null = null;
 
@@ -49,81 +41,38 @@ export const shake = (el: Element | null | undefined) => {
 };
 
 function installPress() {
-  let current: { el: HTMLElement; t: number; x: number; y: number } | null = null;
-
-  const release = () => {
-    if (!current) return;
-    const { el, t } = current;
-    current = null;
-    const wait = Math.max(0, PRESS_MIN_MS - (performance.now() - t));
-    window.setTimeout(() => el.classList.remove('gc-pressed'), wait);
-  };
-
-  const press = (el: HTMLElement, x: number, y: number) => {
-    release();
-    current = { el, t: performance.now(), x, y };
-    lastPressed = el;
-    el.classList.add('gc-pressed');
-  };
-
+  // The look of a press is CSS (motion.css: scale on :active). This only
+  // remembers the surface pressed last — flyToDock's origin — and gives
+  // touch a tiny haptic tick.
   document.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
     const el = pressable(e.target);
     if (!el) return;
-    press(el, e.clientX, e.clientY);
+    lastPressed = el;
+    // Wide surfaces (rows, full-width buttons) barely move: motion.css gives
+    // [data-press="soft"] a 98.5% press instead of 94%.
+    if (!el.dataset.press && el.getBoundingClientRect().width > 240) el.dataset.press = 'soft';
     if (e.pointerType === 'touch') navigator.vibrate?.(8);
   }, { capture: true, passive: true });
-
-  document.addEventListener('pointermove', e => {
-    if (!current) return;
-    if (Math.hypot(e.clientX - current.x, e.clientY - current.y) > SWIPE_CANCEL_PX) release();
-  }, { capture: true, passive: true });
-
-  for (const type of ['pointerup', 'pointercancel', 'dragstart'] as const) {
-    document.addEventListener(type, release, { capture: true, passive: true });
-  }
-  window.addEventListener('blur', release);
-
-  // Keyboard presses look the same as pointer presses.
   document.addEventListener('keydown', e => {
     if (e.repeat || (e.key !== 'Enter' && e.key !== ' ')) return;
     const el = pressable(e.target);
-    if (el) press(el, 0, 0);
-  }, true);
-  document.addEventListener('keyup', e => {
-    if (e.key === 'Enter' || e.key === ' ') release();
+    if (el) lastPressed = el;
   }, true);
 }
 
 function installStateObserver() {
-  const fillTimers = new WeakMap<Element, number>();
-
-  const onActiveChange = (el: HTMLElement, oldValue: string | null) => {
-    const now = el.getAttribute('data-active');
-    if (oldValue === null || now === null || oldValue === now || reducedMotion()) return;
-    // The background transition has only just started, so the computed colour
-    // is still the old one — exactly what the withdrawing overlay should show.
-    const from = getComputedStyle(el).backgroundColor;
-    el.style.setProperty('--gc-fill-from', from);
-    el.classList.remove('gc-fill-in', 'gc-fill-out');
-    void el.offsetWidth;
-    el.classList.add(now === 'true' ? 'gc-fill-in' : 'gc-fill-out');
-    window.clearTimeout(fillTimers.get(el));
-    fillTimers.set(el, window.setTimeout(() => el.classList.remove('gc-fill-in', 'gc-fill-out'), FILL_MS));
-  };
-
   new MutationObserver(records => {
     for (const r of records) {
       const el = r.target as HTMLElement;
-      if (r.attributeName === 'data-active') onActiveChange(el, r.oldValue);
-      else if (r.attributeName === 'disabled' && r.oldValue !== null && !el.hasAttribute('disabled')
+      if (r.attributeName === 'disabled' && r.oldValue !== null && !el.hasAttribute('disabled')
         && el.matches(PRESSABLE) && !reducedMotion()) {
         replayClass(el, 'gc-enable-pulse', PULSE_MS);
       }
     }
   }).observe(document.body, {
     subtree: true, attributes: true, attributeOldValue: true,
-    attributeFilter: ['data-active', 'disabled'],
+    attributeFilter: ['disabled'],
   });
 }
 

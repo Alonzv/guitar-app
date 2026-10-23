@@ -56,6 +56,7 @@ export function NetworkMap({ stops = STOPS, current, onGo, dense }: Props) {
                 key={stop.id}
                 onClick={() => onGo(stop.id)}
                 aria-current={here ? 'page' : undefined}
+                data-press="soft"
                 className="gc-no-bar gc-notation su-key"
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: dense ? 10 : 12,

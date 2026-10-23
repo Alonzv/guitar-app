@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { riseIn, breathe, useOnChange } from '../../utils/motion';
 import { T } from '../../theme';
 import type { Tuning } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
@@ -204,6 +205,15 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
   const letterColor = !display ? T.textMuted : absCents < 2 ? T.primary : T.text;
   // Idle, the letter shows the string to play next, dimmed.
   const letter = display ? display.note : STRING_LABELS[nextString >= 0 ? nextString : 0];
+  // A new string: the letter rises from below. Landing in tune (inside ±2
+  // cents) on the same string: it breathes once.
+  const letterRef = useRef<HTMLDivElement>(null);
+  const inTune = !!display && absCents < 2;
+  useOnChange(`${letter}|${inTune}`, (prev, next) => {
+    const [pl, pt] = prev.split('|'), [nl, nt] = next.split('|');
+    if (pl !== nl) riseIn(letterRef.current);
+    else if (pt === 'false' && nt === 'true') breathe(letterRef.current);
+  });
   const readout = !display ? '—' : absCents <= 5 ? (he ? 'מכוון' : 'IN TUNE') : cents > 0 ? `+${cents}¢` : `${cents}¢`;
 
   const startStop = (style: React.CSSProperties) => listening
@@ -222,9 +232,9 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       </div>
 
       {/* The giant letter — readable from across the room */}
-      <div aria-live="polite" style={{ textAlign: 'center', color: letterColor, transition: 'color var(--gc-dur-base) var(--gc-ease-out)' }}>
+      <div ref={letterRef} aria-live="polite" style={{ textAlign: 'center', color: letterColor, transition: 'color .25s var(--ease)' }}>
         <PosterTitle head={letter} max={desktop ? 400 : 300} min={120} as="div"
-          style={{ display: 'flex', justifyContent: 'center', color: letterColor }} />
+          style={{ display: 'flex', justifyContent: 'center' }} />
       </div>
 
       <Meta items={[
@@ -247,7 +257,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
           </text>
         ))}
         {display && (
-          <g style={{ transform: `translateX(${cx(cents)}px)`, transition: 'transform 150ms ease-out' }}>
+          <g style={{ transform: `translateX(${cx(cents)}px)`, transition: 'transform .3s cubic-bezier(.25,.1,.25,1)' }}>
             <rect x={-2.5} y={0} width={5} height={36} fill={T.primary} />
           </g>
         )}
