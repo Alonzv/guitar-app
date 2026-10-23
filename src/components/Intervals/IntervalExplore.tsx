@@ -215,15 +215,15 @@ export function IntervalExplore() {
 
       {/* Interval keys */}
       <Rule label="Interval">
-        <KeyGrid cols={7} label="Interval" value={interval}
+        <div dir="ltr"><KeyGrid cols={7} label="Interval" value={interval}
           items={INTERVALS.map(iv => ({ id: iv.semitones, label: iv.abbrev, title: iv.name }))}
-          onChange={semis => { const sel = semis === interval; setInterval(sel ? null : semis); if (!sel) hear(root, semis); }} />
+          onChange={semis => { const sel = semis === interval; setInterval(sel ? null : semis); if (!sel) hear(root, semis); }} /></div>
       </Rule>
 
       {/* Root keys */}
       <Rule label="Root note" right={<DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />}>
-        <KeyGrid label="Root note" value={root} items={ALL_NOTES.map(n => ({ id: n, label: n }))}
-          onChange={n => { setRoot(n); hear(n, interval); }} />
+        <div dir="ltr"><KeyGrid label="Root note" value={root} items={ALL_NOTES.map(n => ({ id: n, label: n }))}
+          onChange={n => { setRoot(n); hear(n, interval); }} /></div>
       </Rule>
     </div>
   );

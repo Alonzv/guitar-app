@@ -250,20 +250,20 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     const asNote = (n: string) => (ALL_NOTES.find(a => samePitch(a, n)) ?? null) as Note | null;
     if (rel) {
       const r = asNote(rel.tonic);
-      cells.push({ label: 'Relative', value: `${rel.tonic} ${rel.name}`, go: r ? () => { setRoot(r); setScaleType(rel.type); setIsolate(null); } : undefined });
+      cells.push({ label: he ? 'יחסי' : 'Relative', value: `${rel.tonic} ${rel.name}`, go: r ? () => { setRoot(r); setScaleType(rel.type); setIsolate(null); } : undefined });
     }
     if (['dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'].includes(scaleType)) {
       const parent = Mode.relativeTonic('major', scaleType, root);
       const r = asNote(parent);
-      if (parent) cells.push({ label: 'Parent mode', value: `${parent} major · mode ${Mode.get(scaleType).modeNum + 1}`,
+      if (parent) cells.push({ label: he ? 'סולם האם' : 'Parent mode', value: `${parent} major · mode ${Mode.get(scaleType).modeNum + 1}`,
         go: r ? () => { setRoot(r); setScaleType('major'); setIsolate(null); } : undefined });
     }
     const mode = Mode.get(scaleType === 'major' ? 'ionian' : scaleType === 'minor' ? 'aeolian' : scaleType);
     if (!mode.empty) {
-      cells.push({ label: 'Fits over', value: [root + mode.triad, root + mode.seventh].map(formatChordName).join(' · ') });
+      cells.push({ label: he ? 'מתאים מעל' : 'Fits over', value: [root + mode.triad, root + mode.seventh].map(formatChordName).join(' · ') });
     }
     return cells;
-  }, [scale, scaleType, root]);
+  }, [scale, scaleType, root, he]);
   const nextStop = useMemo(() => {
     const here = STOPS.findIndex(st => st.id === 'scales');
     return STOPS.slice(here + 1).find(st => st.line === STOPS[here].line) ?? null;
@@ -271,7 +271,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
 
   // Degree legend — tap a degree to isolate it on the neck; tap again to clear.
   const legend = !scale.empty && (
-    <div role="group" aria-label={he ? 'דרגות הסולם' : 'Scale degrees'}
+    <div role="group" aria-label={he ? 'דרגות הסולם' : 'Scale degrees'} dir="ltr"
       style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(scale.notes.length, 5)}, minmax(0, 1fr))`, gap: 4 }}>
       {scale.notes.map((note, i) => {
         const deg = degreeOf(i);
@@ -292,8 +292,10 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
 
   const rootGrid = (
     <Rule label={he ? 'טוניקה' : 'Root'} right={<DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />}>
-      <KeyGrid items={ALL_NOTES.map(n => ({ id: n, label: n }))} value={root}
-        onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Root'} />
+      <div dir="ltr">
+        <KeyGrid items={ALL_NOTES.map(n => ({ id: n, label: n }))} value={root}
+          onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Root'} />
+      </div>
     </Rule>
   );
 
@@ -320,7 +322,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   const positionRow = (
     <Rule label={he ? 'פוזיציה · תצוגה' : 'Position · view'}>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div role="group" aria-label={he ? 'פוזיציה' : 'Position'} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div role="group" aria-label={he ? 'פוזיציה' : 'Position'} dir="ltr" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <Pill size="sm" active={pos === null} onClick={() => setPos(null)}>{he ? 'כל הצוואר' : 'Full neck'}</Pill>
           {POSITION_WINDOWS.map((w, i) => (
             <Pill key={i} size="sm" active={pos === i} onClick={() => setPos(pos === i ? null : i)}
@@ -395,7 +397,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
               <RelatedCell key={c.label} first={i === 0} label={c.label} value={c.value} onClick={c.go} />
             ))}
             {nextStop && (
-              <RelatedCell first={related.length === 0} label={he ? 'התחנה הבאה' : 'Next stop'} value={`${nextStop.name[lang]} →`}
+              <RelatedCell first={related.length === 0} label={he ? 'התחנה הבאה' : 'Next stop'} value={`${nextStop.name[lang]} ${he ? '←' : '→'}`}
                 onClick={() => requestNavigate({ stop: nextStop.id })} />
             )}
           </div>
@@ -456,7 +458,7 @@ function RelatedCell({ label, value, onClick, first }: { label: string; value: s
   const inner = (
     <>
       <span className="su-label" style={{ display: 'block' }}>{label}</span>
-      <span className="su-semi" style={{ display: 'block', marginTop: 8, fontSize: 22, textTransform: 'uppercase', lineHeight: 1 }}>{value}</span>
+      <span className="su-semi gc-notation" dir="auto" style={{ display: 'block', marginTop: 8, fontSize: 24, lineHeight: 1 }}>{value}</span>
     </>
   );
   const style: React.CSSProperties = {

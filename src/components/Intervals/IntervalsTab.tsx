@@ -61,7 +61,7 @@ export function IntervalsTab({ desktop, sub }: { desktop?: boolean; sub: string 
   const mainContent = (
     <div>
       {sub === 'practice'
-        ? <div style={{ maxWidth: desktop ? 680 : undefined, margin: '0 auto', width: '100%' }}>{tool}</div>
+        ? <div style={{ maxWidth: desktop ? 680 : undefined, width: '100%' }}>{tool}</div>
         : tool}
     </div>
   );

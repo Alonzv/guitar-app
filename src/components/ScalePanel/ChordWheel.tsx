@@ -393,7 +393,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
       borderBottom: `1px solid ${T.hairline}`,
     }}>
       <FuncMark f={c.func} />
-      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.textMuted, width: 30, letterSpacing: '0.06em' }}>
+      <span dir="ltr" style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.textMuted, width: 30, letterSpacing: '0.06em' }}>
         {c.roman}
       </span>
       <span className="su-semi gc-notation" style={{ fontSize: 24, color: T.text, flex: 1, minWidth: 0 }}>
@@ -429,7 +429,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
               <Pill active={isPlaying} onClick={() => playTour(pt.label, chords)}
                 label={`${playLbl} ${chords.join(' ')}`} style={{ padding: 0 }}>{isPlaying ? '■' : '▶'}</Pill>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.textMuted, letterSpacing: '0.08em' }}>
+                <span dir="ltr" style={{ display: 'block', fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.textMuted, letterSpacing: '0.08em' }}>
                   {pt.label}
                 </span>
                 <span className="su-semi gc-notation" dir="ltr" style={{ display: 'block', fontSize: 19, marginTop: 2 }}>
@@ -457,7 +457,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
   const wheelPanel = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <div style={{ width: '100%', maxWidth: desktop ? SIZE + 20 : 340 }}>
+        <div dir="ltr" style={{ width: '100%', maxWidth: desktop ? SIZE + 20 : 340 }}>
           {wheelSvg}
         </div>
       </div>
@@ -473,8 +473,10 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
           <PillRow label="Key quality"
             items={[{ id: 'major' as Mode, label: he ? 'מז׳ור' : 'Major' }, { id: 'minor' as Mode, label: he ? 'מינור' : 'Minor' }]}
             value={mode} onChange={m => { setMode(m); hearKey(root, m); }} />
-          <KeyGrid items={ALL_ROOTS.map(n => ({ id: n, label: n }))} value={root}
-            onChange={n => { setRoot(n); hearKey(n, mode); }} label={he ? 'טוניקה' : 'Key'} />
+          <div dir="ltr">
+            <KeyGrid items={ALL_ROOTS.map(n => ({ id: n, label: n }))} value={root}
+              onChange={n => { setRoot(n); hearKey(n, mode); }} label={he ? 'טוניקה' : 'Key'} />
+          </div>
         </div>
       </Rule>
     </div>
