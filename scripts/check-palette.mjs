@@ -36,6 +36,9 @@ const PALETTE = new Set([
   // neutral warm-grey ramp (labels / categorical shades)
   '9c958c', '8a8378', '5c5650', '3a3a3a', '3a352f', '2e2a26', 'e4e0d8',
   'eae7e2', '222',
+  // Transit — paper, ink, cobalt, night
+  'eceae3', 'f6f4ee', 'e0ddd5', '141414', 'd3cfc5', '77736b', '110cf0', '0b08c4',
+  '4f7bff', '6b91ff', '2a2826',
   // short forms of black/white
   'fff', '000',
 ]);

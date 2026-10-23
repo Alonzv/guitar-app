@@ -50,6 +50,8 @@ createRoot(document.getElementById('root')!).render(
     <AuthProvider>
       <LanguageProvider>
         <App />
+        {/* Paper grain over everything (light only; --su-grain is 0 at night). */}
+        <div className="su-grain" aria-hidden />
       </LanguageProvider>
     </AuthProvider>
   </StrictMode>,

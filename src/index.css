@@ -29,6 +29,30 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Archivo — display (variable: width 62–125%, weight 100–900). Heebo is
+   the Hebrew fallback for the display stack. Both self-hosted (the CSP
+   only allows fonts from this origin).
+───────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Archivo';
+  src: url('/font/Archivo-latin-ext.woff2') format('woff2');
+  font-weight: 100 900; font-stretch: 62% 125%; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('/font/Archivo-latin.woff2') format('woff2');
+  font-weight: 100 900; font-stretch: 62% 125%; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Heebo';
+  src: url('/font/Heebo-hebrew.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+/* ─────────────────────────────────────────────────────────────
    Miriam Libre — Hebrew typeface. Per-glyph fallback means it
    activates only for Hebrew codepoints; Latin stays on Azeret Mono.
 ───────────────────────────────────────────────────────────── */
@@ -288,106 +312,126 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
    so CSS media queries can override values that React controls.
 ───────────────────────────────────────────────────────────── */
 /* ─────────────────────────────────────────────────────────────
-   Design-token colour variables — overridden in .dark for dark mode
+   Design tokens — "Transit". Concrete paper and ink, one colour (cobalt).
+   Structure comes from 2px ink rules, not boxes; buttons are pills, keys
+   and tiles are square. body.dark swaps to "night". theme.ts (T.*) points
+   at these, so components recolour from here.
 ───────────────────────────────────────────────────────────── */
 :root {
-  /* Typeface — Azeret Mono for Latin, Miriam Libre for Hebrew glyphs */
-  --gc-font: 'Azeret Mono', 'Miriam Libre', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Type */
+  --gc-font:         'Azeret Mono', 'Miriam Libre', ui-monospace, monospace;   /* body, data, labels */
+  --gc-mono:         'Azeret Mono', 'Miriam Libre', ui-monospace, monospace;
+  --su-display:      'Archivo', 'Heebo', sans-serif;                          /* posters, names, numbers */
+  --su-display-cond: 62%;   /* font-stretch for headlines */
+  --su-display-semi: 75%;   /* font-stretch for list items / keys */
 
-  /* (halftone removed) */
+  /* Light — concrete paper */
+  --gc-bg-deep:      #ECEAE3;   /* page */
+  --gc-bg-card:      #F6F4EE;   /* inputs, raised fields */
+  --gc-bg-input:     #E0DDD5;   /* chips, inactive keys */
+  --gc-border:       #141414;   /* structural rules are INK, 2px */
+  --su-hairline:     #D3CFC5;   /* secondary separators, playhead column */
+  --gc-text:         #141414;
+  --gc-text-muted:   #77736B;   /* labels, meta (AA on paper) */
+  --gc-text-dim:     #77736B;
+  --gc-secondary:    #141414;   /* filled/active = ink */
+  --gc-white:        #ECEAE3;   /* text on ink */
+  --gc-coral:        #77736B;   /* the grey "line" colour (L2) */
 
-  /* Inset right bar — active bg fills flush to the stripe */
-  --gc-offset: none;
-  --gc-offset-sm: none;
-  --gc-bar-color: #000;
+  /* The one colour */
+  --gc-primary:      #110CF0;
+  --gc-primary-hov:  #0B08C4;
+  --gc-primary-bg:   rgba(17,12,240,0.08);
+  --gc-primary-soft: rgba(17,12,240,0.10);
+  --gc-primary-glow: rgba(17,12,240,0.30);
+  --gc-brand-accent: #110CF0;
+  --su-on-primary:   #FFFFFF;   /* text on cobalt */
 
-  /* Fretboard — white board, hairline strings (ScaleUp reset) */
-  --gc-fretboard-bg:  #FFFFFF;
-  --gc-fretboard-nut: #1A1818;
-  --gc-fretboard-str: #C9C2B8;
-  --gc-fretboard-fret: #C9C2B8;
-  --gc-fretboard-pos: rgba(0,0,0,0.06);
+  /* Derived — ink tints, feedback (cobalt = right / in tune, ink = wrong) */
+  --gc-secondary-bg:    rgba(20,20,20,0.06);
+  --gc-secondary-faint: rgba(20,20,20,0.08);
+  --gc-coral-faint:     rgba(20,20,20,0.06);
+  --gc-coral-faint2:    rgba(20,20,20,0.10);
+  --gc-white-soft:      rgba(236,234,227,0.80);
+  --gc-peek:            #77736B;
+  --gc-success:         #110CF0;
+  --gc-success-soft:    rgba(17,12,240,0.12);
+  --gc-error:           #141414;
+  --gc-error-soft:      rgba(20,20,20,0.10);
+  --gc-offset:          none;
+  --gc-offset-sm:       none;
+  --gc-bar-color:       transparent;   /* the old left accent bars are gone */
 
-  /* Light mode — white & ink */
-  --gc-bg-deep:          #FFFFFF;
-  --gc-bg-card:          #FFFFFF;
-  --gc-bg-input:         #F0F0F0;
-  --gc-border:           #D0D0D0;
-  /* Wordmark-only accent — NOT used for buttons, see --gc-primary below */
-  --gc-brand-accent:     #110CF0;
-  --gc-primary:          #1A1818;
-  --gc-primary-hov:      #322F2F;
-  --gc-primary-bg:       rgba(26,24,24,0.09);
-  --gc-secondary:        #1A1818;
-  --gc-secondary-bg:     rgba(26,24,24,0.06);
-  --gc-coral:            #1A1818;
-  --gc-text:             #1A1818;
-  --gc-text-muted:       #000000;
-  --gc-text-dim:         #000000;
-  --gc-white:            #FFFFFF;
-  /* Alpha variants */
-  --gc-primary-soft:     rgba(26,24,24,0.10);
-  --gc-primary-glow:     rgba(26,24,24,0.32);
-  --gc-white-soft:       rgba(255,255,255,0.80);
-  --gc-secondary-faint:  rgba(26,24,24,0.08);
-  --gc-coral-faint:      rgba(26,24,24,0.06);
-  --gc-coral-faint2:     rgba(26,24,24,0.10);
-  --gc-peek:             #C9C2B8;
-  /* Semantic feedback — success is the palette's cobalt accent; error/wrong is
-     a neutral ink (the palette has no gold/amber), signalled by the ✕ mark and
-     a struck, darkened state rather than a warm hue. */
-  --gc-success:          #2B54D4;
-  --gc-success-soft:     rgba(43,84,212,0.14);
-  --gc-error:            #1A1818;
-  --gc-error-soft:       rgba(26,24,24,0.10);
+  /* Fretboard */
+  --gc-fretboard-bg:   transparent;
+  --gc-fretboard-nut:  #141414;
+  --gc-fretboard-str:  #141414;
+  --gc-fretboard-fret: #141414;
+  --gc-fretboard-pos:  rgba(20,20,20,0.06);
+
+  /* Shape */
+  --su-rule:     2px;     /* structural lines */
+  --su-pill:     999px;   /* buttons/chips are pills */
+  --su-key:      0;       /* keys, tiles, cards: square */
+  --su-hit:      44px;    /* minimum tap target */
+  --su-grain:    0.22;    /* paper texture opacity (0 to disable) */
 }
 
 body.dark {
-  /* Dark mode — midnight stage: black + cobalt wordmark + gold */
-  --gc-bg-deep:          #111110;
-  --gc-bg-card:          #1A1918;
-  --gc-bg-input:         #242220;
-  --gc-border:           #383530;
-  /* Wordmark-only accent — NOT used for buttons, see --gc-primary below.
-     Lifted cobalt (#4F7BFF vs #110CF0) so the "Up" stays legible on black. */
-  --gc-brand-accent:     #4F7BFF;
-  --gc-primary:          #6B655C;
-  --gc-primary-hov:      #7D766B;
-  --gc-primary-bg:       rgba(107,101,92,0.18);
-  --gc-secondary:        #6B655C;
-  --gc-secondary-bg:     rgba(255,255,255,0.06);
-  --gc-coral:            #9A938A;
-  --gc-text:             #F0EAD8;
-  --gc-text-muted:       #FFFFFF;
-  --gc-text-dim:         rgba(255,255,255,0.7);
-  --gc-white:            #F5EED8;
-  /* Alpha variants */
-  --gc-primary-soft:     rgba(107,101,92,0.18);
-  --gc-primary-glow:     rgba(107,101,92,0.40);
-  --gc-white-soft:       rgba(245,238,216,0.73);
-  --gc-secondary-faint:  rgba(255,255,255,0.08);
-  --gc-coral-faint:      rgba(255,255,255,0.06);
-  --gc-coral-faint2:     rgba(255,255,255,0.10);
-  --gc-peek:             #4A453E;
-  /* Semantic feedback — success lifted for legibility on black; error/wrong is
-     a neutral warm-grey (no gold/amber in the palette), read via the ✕ mark. */
-  --gc-success:          #5E86FF;
-  --gc-success-soft:     rgba(94,134,255,0.20);
-  --gc-error:            #6B655C;
-  --gc-error-soft:       rgba(107,101,92,0.22);
-  /* Inset right bar — dark mode */
-  --gc-offset: none;
-  --gc-offset-sm: none;
-  --gc-bar-color: rgba(255,255,255,0.20);
+  --gc-bg-deep:      #111110;
+  --gc-bg-card:      #1A1918;
+  --gc-bg-input:     #242220;
+  --gc-border:       #383530;
+  --su-hairline:     #2A2826;
+  --gc-text:         #F0EAD8;
+  --gc-text-muted:   #9A938A;
+  --gc-text-dim:     #9A938A;
+  --gc-secondary:    #F0EAD8;   /* filled/active = sand */
+  --gc-white:        #111110;   /* text on sand */
+  --gc-coral:        #9A938A;
+  --gc-primary:      #4F7BFF;   /* lifted cobalt for contrast on black */
+  --gc-primary-hov:  #6B91FF;
+  --gc-primary-bg:   rgba(79,123,255,0.14);
+  --gc-primary-soft: rgba(79,123,255,0.16);
+  --gc-primary-glow: rgba(79,123,255,0.40);
+  --gc-brand-accent: #4F7BFF;
+  --su-on-primary:   #FFFFFF;
+  --gc-secondary-bg:    rgba(240,234,216,0.06);
+  --gc-secondary-faint: rgba(240,234,216,0.08);
+  --gc-coral-faint:     rgba(240,234,216,0.06);
+  --gc-coral-faint2:    rgba(240,234,216,0.10);
+  --gc-white-soft:      rgba(17,17,16,0.80);
+  --gc-peek:            #6B655C;
+  --gc-success:         #4F7BFF;
+  --gc-success-soft:    rgba(79,123,255,0.18);
+  --gc-error:           #F0EAD8;
+  --gc-error-soft:      rgba(240,234,216,0.12);
+  --gc-fretboard-nut:  #F0EAD8;
+  --gc-fretboard-str:  #6B655C;
+  --gc-fretboard-fret: #383530;
+  --gc-fretboard-pos:  rgba(240,234,216,0.08);
+  --su-grain:    0;     /* no grain at night */
+}
 
-  /* Fretboard — dark mode, hairline strings (ScaleUp reset) */
-  --gc-fretboard-bg:  #15140F;
-  --gc-fretboard-nut: rgba(240,234,224,0.80);
-  --gc-fretboard-str: rgba(240,234,224,0.42);
-  --gc-fretboard-fret: rgba(240,234,224,0.42);
-  --gc-fretboard-pos: rgba(240,234,224,0.12);
+/* Paper grain — mounted once (<div class="su-grain" />) */
+.su-grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  opacity: var(--su-grain); mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
 
-  /* (halftone removed) */
+/* Display type helpers */
+.su-poster  { font-family: var(--su-display); font-stretch: var(--su-display-cond); font-weight: 900; line-height: 0.8; letter-spacing: -0.02em; text-transform: uppercase; }
+.su-semi    { font-family: var(--su-display); font-stretch: var(--su-display-semi); font-weight: 800; }
+.su-outline { color: transparent; -webkit-text-stroke: 3px currentColor; }
+.su-label   { font-family: var(--gc-font); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gc-text-muted); }
+
+/* Shape vocabulary: pills for buttons/chips, square keys/tiles. */
+.su-pill { border-radius: var(--su-pill) !important; }
+.su-key  { border-radius: 0 !important; }
+
+button:focus-visible, input:focus-visible, select:focus-visible, [role="button"]:focus-visible {
+  outline: 3px solid var(--gc-primary); outline-offset: 2px;
 }
 
 :root {
