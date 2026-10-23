@@ -87,15 +87,14 @@ function SubPills({ stop, sub, onSub }: { stop: Stop; sub?: string; onSub: (s: s
   );
 }
 
-/** The map in miniature: a line with three stations, the last one filled
- *  (you are here) — the same marks the network map draws. */
-function MapGlyph() {
+/** Back: a plain chevron, drawn as a vector (not a ‹ character) so it sits
+ *  dead-centre and keeps the line weight of the other marks. It points the
+ *  way back — left, or right when the page reads right-to-left. */
+function BackChevron({ rtl }: { rtl: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.2">
-      <path d="M4 17 V11 H11 V5 H18" strokeLinejoin="miter" />
-      <circle cx="4" cy="17" r="2.6" fill="var(--gc-bg-deep)" />
-      <circle cx="11" cy="11" r="2.6" fill="var(--gc-bg-deep)" />
-      <circle cx="18" cy="5" r="2.6" fill="currentColor" />
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.4"
+      strokeLinecap="square" strokeLinejoin="miter" style={rtl ? { transform: 'scaleX(-1)' } : undefined}>
+      <path d="M12.5 4 L6.5 10 L12.5 16" />
     </svg>
   );
 }
@@ -202,7 +201,7 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
               width: 44, height: 44, flex: 'none', borderRadius: '50%', border: `1.5px solid ${T.text}`, background: 'transparent',
               color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
             }}>
-            <MapGlyph />
+            <BackChevron rtl={rtl} />
           </button>
           <button onClick={onHome} tabIndex={-1} aria-hidden className="gc-no-bar"
             style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, minWidth: 0, background: 'transparent', border: 'none', cursor: 'pointer', color: T.text, fontSize: 11, letterSpacing: '0.1em', padding: 0 }}>
