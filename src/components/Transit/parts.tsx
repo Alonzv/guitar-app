@@ -13,8 +13,10 @@ import { pillStyle, ctaStyle, keyStyle } from './styles';
 // ── Poster title ─────────────────────────────────────────────────────────────
 /** A big Archivo name sized to its width (never cut). `tail` is drawn
  *  outlined when the title is 60px or larger (C<outline>maj7</outline>). */
-export function PosterTitle({ head, tail, max = 200, min = 40, as: Tag = 'h2', style }: {
+export function PosterTitle({ head, tail, max = 200, min = 40, as: Tag = 'h2', style, keepCase }: {
   head: ReactNode; tail?: ReactNode; max?: number; min?: number; as?: 'h1' | 'h2' | 'div'; style?: CSSProperties;
+  /** Keep the text's case — chord and key names (Cm is not CM). */
+  keepCase?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLSpanElement>(null);
@@ -37,7 +39,7 @@ export function PosterTitle({ head, tail, max = 200, min = 40, as: Tag = 'h2', s
   return (
     <Tag style={{ margin: 0, minWidth: 0, ...style }}>
       <div ref={box} style={{ overflow: 'hidden', whiteSpace: 'nowrap', paddingBottom: '0.04em' }}>
-        <span ref={text} className="su-poster" style={{ display: 'inline-block', fontSize: size }}>
+        <span ref={text} className="su-poster" style={{ display: 'inline-block', fontSize: size, textTransform: keepCase ? 'none' : undefined }}>
           {head}{tail != null && <span className={size >= 60 ? 'su-outline' : undefined}>{tail}</span>}
         </span>
       </div>
@@ -133,15 +135,17 @@ export function KeyGrid<V extends string | number>({ items, value, onChange, col
 }
 
 // ── ‹ value › stepper ────────────────────────────────────────────────────────
-export function Stepper({ value, onPrev, onNext, label, size = 'md' }: {
+export function Stepper({ value, onPrev, onNext, label, size = 'md', keepCase }: {
   value: ReactNode; onPrev: () => void; onNext: () => void; label?: string; size?: 'sm' | 'md';
+  /** Keep the value's case (a key like "Am"). */
+  keepCase?: boolean;
 }) {
   const { lang } = useLang();
   const he = lang === 'he';
   return (
     <div role="group" aria-label={label} dir="ltr" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <Pill size={size} onClick={onPrev} label={he ? 'הקודם' : 'Previous'} style={{ padding: 0 }}>‹</Pill>
-      <span className="su-semi" style={{ minWidth: 48, textAlign: 'center', fontSize: size === 'sm' ? 18 : 22, textTransform: 'uppercase' }}>{value}</span>
+      <span className="su-semi" style={{ minWidth: 48, textAlign: 'center', fontSize: size === 'sm' ? 18 : 22, textTransform: keepCase ? 'none' : 'uppercase' }}>{value}</span>
       <Pill size={size} onClick={onNext} label={he ? 'הבא' : 'Next'} style={{ padding: 0 }}>›</Pill>
     </div>
   );

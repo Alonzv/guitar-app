@@ -525,7 +525,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
           {targetPos ? (
             <>
               <span className="su-poster" style={{ fontSize: 64, textTransform: 'none' }}>{targetNoteName}</span>
-              <span className="su-label" style={{ color: T.text, paddingBottom: 4 }}>{posLabel}</span>
+              <span className="su-label" style={{ color: T.text, paddingBottom: 4, textTransform: 'none' }}>{posLabel}</span>
             </>
           ) : (
             <span className="su-label">{he ? 'הקישו על הצוואר כדי לבחור תו' : 'Tap the fretboard to select a target note'}</span>
