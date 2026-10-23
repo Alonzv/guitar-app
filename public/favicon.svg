@@ -1,7 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="114.4" fill="#FFFFFF"></rect>
-  <rect x="122.88" y="298.60" width="44.60" height="90.52" rx="2.68" fill="#1A1818"></rect>
-  <rect x="196.76" y="242.69" width="44.60" height="146.43" rx="2.68" fill="#1A1818"></rect>
-  <rect x="270.64" y="186.78" width="44.60" height="202.34" rx="2.68" fill="#1A1818"></rect>
-  <rect x="344.52" y="122.88" width="44.60" height="266.24" rx="2.68" fill="#110CF0"></rect>
+  <style>
+    .bg { fill: #ECEAE3; } .ink { fill: #141414; } .up { fill: #110CF0; }
+    @media (prefers-color-scheme: dark) { .bg { fill: #111110; } .ink { fill: #F0EAD8; } .up { fill: #4F7BFF; } }
+  </style>
+  <rect class="bg" width="512" height="512"></rect>
+  <rect class="ink" x="122.88" y="298.60" width="44.60" height="90.52"></rect>
+  <rect class="ink" x="196.76" y="242.69" width="44.60" height="146.43"></rect>
+  <rect class="ink" x="270.64" y="186.78" width="44.60" height="202.34"></rect>
+  <rect class="up" x="344.52" y="122.88" width="44.60" height="266.24"></rect>
 </svg>
