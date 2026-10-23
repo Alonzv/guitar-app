@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../Auth/AuthModal';
 import { SignInPrompt } from './shared';
+import { PillRow } from '../Transit/parts';
+import { useLang } from '../../contexts/LanguageContext';
+import { savedProgressions, savedTabs, savedHarmonizations, savedReharms, audioTabs } from '../../services/workspace';
 import { AudioArchive } from './AudioArchive';
 import { MyTabs } from './MyTabs';
 import { SavedProgressions } from './SavedProgressions';
@@ -15,12 +18,12 @@ type Sub = 'progressions' | 'harmonizations' | 'reharms' | 'tabs' | 'audio';
 
 // One category per creation tool, ordered to mirror the app's own flow:
 // CHORDS → VOICINGS (Harmonize / Reharm) → TOOLS (Tabs / Audio).
-const SUBS: { id: Sub; label: string }[] = [
-  { id: 'progressions',   label: 'Progressions'  },
-  { id: 'harmonizations', label: 'Harmonized'    },
-  { id: 'reharms',        label: 'Reharms'       },
-  { id: 'tabs',           label: 'My Tabs'       },
-  { id: 'audio',          label: 'Audio→Tab'     },
+const SUBS: { id: Sub; label: { en: string; he: string } }[] = [
+  { id: 'progressions',   label: { en: 'Progressions', he: 'מהלכים' }    },
+  { id: 'harmonizations', label: { en: 'Harmonized',   he: 'הרמוניות' }   },
+  { id: 'reharms',        label: { en: 'Reharms',      he: 'רה-הרמוניה' } },
+  { id: 'tabs',           label: { en: 'Tabs',         he: 'טאבים' }      },
+  { id: 'audio',          label: { en: 'Audio',        he: 'אודיו' }      },
 ];
 
 interface Props {
@@ -31,16 +34,34 @@ interface Props {
 
 export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProgressionInBuilder, desktop }) => {
   const { user, loading, configured } = useAuth();
+  const { lang } = useLang();
+  const he = lang === 'he';
   const [sub, setSub]           = useState<Sub>('progressions');
   const [authOpen, setAuthOpen] = useState(false);
+  const [query, setQuery]       = useState('');
+  const [counts, setCounts]     = useState<Partial<Record<Sub, number>>>({});
+
+  // Every category's count up front, for the filter pills; the open section
+  // keeps its own count current as items are added or deleted.
+  useEffect(() => {
+    if (!user) return;
+    const uid = user.id;
+    const n = (k: Sub, p: Promise<unknown[]>) => p.then(xs => setCounts(c => ({ ...c, [k]: xs.length }))).catch(() => {});
+    n('progressions', savedProgressions.list(uid));
+    n('harmonizations', savedHarmonizations.list(uid));
+    n('reharms', savedReharms.list(uid));
+    n('tabs', savedTabs.list(uid));
+    n('audio', audioTabs.list(uid));
+  }, [user]);
+  const onCount = useCallback((n: number) => setCounts(c => c[sub] === n ? c : { ...c, [sub]: n }), [sub]);
 
   if (loading) {
-    return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 30 }}>Loading…</p>;
+    return <p className="su-label" style={{ textAlign: 'center', padding: 30 }}>{he ? 'טוען…' : 'Loading…'}</p>;
   }
 
   if (!configured) {
     return (
-      <div style={{ color: T.textMuted, fontSize: 13, lineHeight: 1.6, padding: '24px 4px' }}>
+      <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, color: T.textMuted, fontSize: 13, lineHeight: 1.6, padding: '18px 0' }}>
         Accounts aren&apos;t configured in this build. Add your Supabase keys to
         <code style={{ margin: '0 4px', color: T.text }}>.env</code> to enable the
         personal library.
@@ -57,36 +78,46 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
     );
   }
 
+  const common = { desktop, query, onCount };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Category bar — one tab per creation tool. Scrolls horizontally on
-          narrow screens instead of squeezing the labels into one row. */}
-      <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: 2 }}>
-        {SUBS.map(s => {
-          const active = sub === s.id;
-          return (
-            <button data-active={!!active} key={s.id} onClick={() => setSub(s.id)} className="gc-sub-tab" style={{
-              flex: '1 0 auto', minWidth: 108, padding: '9px 10px', borderRadius: 0,
-              cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap',
-              background: active ? T.secondary : T.bgInput,
-              color: active ? '#fff' : T.textMuted,
-              borderLeft: '3px solid var(--gc-bar-color)', 
-            }}>
-              <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 400 }}>{s.label}</span></span>
-            </button>
-          );
-        })}
+      {/* Search pill */}
+      <div style={{
+        height: 50, border: `var(--su-rule) solid ${T.text}`, borderRadius: 'var(--su-pill)', background: T.bgCard,
+        display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px 0 18px', maxWidth: desktop ? 520 : undefined,
+      }}>
+        <span aria-hidden style={{ fontSize: 15, fontWeight: 700 }}>⌕</span>
+        <input value={query} onChange={e => setQuery(e.target.value)} dir="auto"
+          onKeyDown={e => { if (e.key === 'Escape') setQuery(''); }}
+          aria-label={he ? 'חיפוש בספרייה' : 'Search the library'}
+          placeholder={he ? 'חיפוש בספרייה…' : 'Search your library…'}
+          style={{ flex: 1, minWidth: 0, height: 40, border: 'none', outline: 'none', background: 'transparent', color: T.text, fontFamily: 'var(--gc-font)', fontSize: 13 }} />
+        {query && (
+          <button onClick={() => setQuery('')} aria-label={he ? 'ניקוי החיפוש' : 'Clear search'} className="gc-no-bar"
+            style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: T.text, color: T.bgDeep, fontSize: 14, cursor: 'pointer', flex: 'none' }}>×</button>
+        )}
       </div>
 
+      {/* Filter pills with counts — one per kind of saved work. */}
+      <PillRow<Sub>
+        label={he ? 'סוג' : 'Kind'}
+        value={sub}
+        onChange={setSub}
+        items={SUBS.map(s => ({
+          id: s.id,
+          label: <>{s.label[lang]}{counts[s.id] != null && <span style={{ opacity: 0.7, marginInlineStart: 6, fontFamily: 'var(--gc-mono)' }}>{counts[s.id]}</span>}</>,
+        }))}
+      />
+
       {/* key={sub} remounts the section so the fade plays on every switch */}
-      <div key={sub} className="gc-fadein">
-        {sub === 'progressions'   && <SavedProgressions desktop={desktop} onOpenInBuilder={onOpenProgressionInBuilder} />}
-        {sub === 'harmonizations' && <Harmonizations desktop={desktop} />}
-        {sub === 'reharms'        && <ReharmsSection desktop={desktop} />}
-        {sub === 'tabs'           && <MyTabs desktop={desktop} onOpenInBuilder={onOpenTabInBuilder} />}
-        {sub === 'audio'          && <AudioArchive desktop={desktop} />}
+      <div key={sub} className="gc-fadein" style={{ minWidth: 0 }}>
+        {sub === 'progressions'   && <SavedProgressions {...common} onOpenInBuilder={onOpenProgressionInBuilder} />}
+        {sub === 'harmonizations' && <Harmonizations {...common} />}
+        {sub === 'reharms'        && <ReharmsSection {...common} />}
+        {sub === 'tabs'           && <MyTabs {...common} onOpenInBuilder={onOpenTabInBuilder} />}
+        {sub === 'audio'          && <AudioArchive {...common} />}
       </div>
-      <style>{`.gc-fadein { animation: gcFadeIn .18s ease; } @keyframes gcFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }`}</style>
+      <style>{`.gc-fadein { animation: gcFadeIn .2s var(--gc-ease-out); } @keyframes gcFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } } @media (prefers-reduced-motion: reduce) { .gc-fadein { animation: none; } }`}</style>
     </div>
   );
 };

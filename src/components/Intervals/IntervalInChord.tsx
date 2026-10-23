@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Chord as TonalChord, Note } from '@tonaljs/tonal';
 import { STANDARD_OPEN_MIDI, CHROMATIC } from '../../utils/musicTheory';
-import { IntervalNeck, strY, noteX } from './IntervalNeck';
+import { IntervalNeck, strY, noteX, FB_H, FB_TOP, STR_SP } from './IntervalNeck';
 import { playInterval } from '../../utils/audioPlayback';
-import { T, card, alpha } from '../../theme';
+import { T } from '../../theme';
+import { Rule, Pill, PillRow, Cta, PosterTitle } from '../Transit/parts';
 import { toDisplayChord } from '../../utils/chordName';
 import { previewChordName } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
@@ -69,17 +70,13 @@ interface Pos { string: number; fret: number }
 interface Pair { lo: Pos; hi: Pos; loMidi: number; hiMidi: number }
 interface Row { semis: number; name: string; pairs: string[] }
 
-const LBL: React.CSSProperties = {
-  margin: 0, fontSize: 10, color: '#9C958C',
-  fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase',
-};
+// A raised field: card paper with a 2px ink frame.
 const SELECT: React.CSSProperties = {
   appearance: 'none', WebkitAppearance: 'none',
-  background: T.bgInput, border: `1px solid ${T.border}`, borderRadius: 0,
+  background: T.bgCard, border: `2px solid ${T.text}`, borderRadius: 0,
   color: T.text, fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
-  padding: '9px 24px 9px 12px', cursor: 'pointer', outline: 'none',
-  borderLeft: '3px solid var(--gc-bar-color)',
-};
+  minHeight: 44, padding: '0 28px 0 12px', cursor: 'pointer',
+  };
 
 // "Ebmaj7" → { root: 'D#', triad: 'M', ext: 'maj7' } in this tool's own terms,
 // or null when the chord is something its pickers can't show.
@@ -198,93 +195,89 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   };
 
   const chordCard = (
-    <div style={{ ...card({ padding: desktop ? '16px 18px' : '14px' }), display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: desktop ? 20 : 12 }}>
-      <p style={{ ...LBL, flexShrink: 0 }}>Chord</p>
-      <div dir="ltr" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <select value={root} onChange={e => { setRoot(e.target.value); hearChord(e.target.value, triad, effExt); }} style={SELECT}>
-          {ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
-        <select value={triad} onChange={e => { setTriad(e.target.value); hearChord(root, e.target.value, ''); }} style={SELECT}>
-          {TRIADS.map(q => <option key={q.key} value={q.key}>{q.display}</option>)}
-        </select>
-        <select value={effExt} onChange={e => { setExt(e.target.value); hearChord(root, triad, e.target.value); }} style={{ ...SELECT, fontWeight: 400, color: T.textDim }}>
-          {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => <option key={e.key} value={e.key}>{e.display}</option>)}
-        </select>
+    <Rule label="Chord" right={<span className="su-label">{rows.length} intervals</span>}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: desktop ? 24 : 12 }}>
+        <PosterTitle head={toDisplayChord(chordName)} keepCase max={desktop ? 120 : 88} min={40} style={{ flex: '1 1 160px' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: '0 1 auto' }}>
+          <div dir="ltr" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <select aria-label="Root" value={root} onChange={e => { setRoot(e.target.value); hearChord(e.target.value, triad, effExt); }} style={SELECT}>
+              {ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <select aria-label="Triad" value={triad} onChange={e => { setTriad(e.target.value); hearChord(root, e.target.value, ''); }} style={SELECT}>
+              {TRIADS.map(q => <option key={q.key} value={q.key}>{q.display}</option>)}
+            </select>
+            <select aria-label="Extension" value={effExt} onChange={e => { setExt(e.target.value); hearChord(root, triad, e.target.value); }} style={{ ...SELECT, fontWeight: 400 }}>
+              {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => <option key={e.key} value={e.key}>{e.display}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span className="su-label">Notes</span>
+            <span dir="ltr" style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>
+              {chord.notes.join(' · ')}
+            </span>
+          </div>
+        </div>
       </div>
-      <div style={{ marginInlineStart: 'auto', display: 'flex', alignItems: 'baseline', gap: 10 }}>
-        <span style={LBL}>Notes</span>
-        <span dir="ltr" style={{ fontSize: 16, fontWeight: 700, color: T.text, letterSpacing: '0.06em' }}>
-          {chord.notes.join(' · ')}
-        </span>
-      </div>
-    </div>
+    </Rule>
   );
 
+  const bracket = current && current.lo.fret !== current.hi.fret
+    ? { xL: noteX(Math.min(current.lo.fret, current.hi.fret)), xR: noteX(Math.max(current.lo.fret, current.hi.fret)), frets: Math.abs(current.lo.fret - current.hi.fret) }
+    : null;
   const neck = current && openRow && (
-    <div style={{ padding: desktop ? '0 18px 18px' : '0 12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ background: 'var(--gc-fretboard-bg)', border: `1px solid ${T.border}`, padding: '10px 10px 4px' }}>
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <IntervalNeck showOpenNotes>
-            {/* Every other placement, dim — the spread across the neck at a glance */}
-            {pairs.map((p, i) => i === idx ? null : (
-              <g key={`d${i}`}>
-                <circle cx={noteX(p.lo.fret)} cy={strY(p.lo.string)} r={5} fill={alpha(T.primary, 22)} />
-                <circle cx={noteX(p.hi.fret)} cy={strY(p.hi.string)} r={5} fill={alpha(T.primary, 22)} />
-              </g>
-            ))}
+    <div style={{ padding: '4px 0 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <IntervalNeck showOpenNotes height={FB_H + 40}>
+          {/* Every other placement, dim — the spread across the neck at a glance */}
+          {pairs.map((p, i) => i === idx ? null : (
+            <g key={`d${i}`} opacity={0.35}>
+              <circle cx={noteX(p.lo.fret)} cy={strY(p.lo.string)} r={5} fill={T.textMuted} />
+              <circle cx={noteX(p.hi.fret)} cy={strY(p.hi.string)} r={5} fill={T.textMuted} />
+            </g>
+          ))}
 
-            {/* The one in focus — the only line on the neck */}
-            <line x1={noteX(current.lo.fret)} y1={strY(current.lo.string)}
-              x2={noteX(current.hi.fret)} y2={strY(current.hi.string)}
-              stroke="var(--gc-success)" strokeWidth={2} />
-            <circle cx={noteX(current.lo.fret)} cy={strY(current.lo.string)} r={11} fill={T.primary} />
-            <text x={noteX(current.lo.fret)} y={strY(current.lo.string) + 3.5} textAnchor="middle" fontSize={10} fontWeight="700" fill={T.white}>
-              {spell(current.loMidi)}
-            </text>
-            <circle cx={noteX(current.hi.fret)} cy={strY(current.hi.string)} r={11} fill="var(--gc-success)" />
-            <text x={noteX(current.hi.fret)} y={strY(current.hi.string) + 3.5} textAnchor="middle" fontSize={10} fontWeight="700" fill="#fff">
-              {spell(current.hiMidi)}
-            </text>
-          </IntervalNeck>
-        </div>
+          {/* The one in focus — the only line on the neck */}
+          <line x1={noteX(current.lo.fret)} y1={strY(current.lo.string)}
+            x2={noteX(current.hi.fret)} y2={strY(current.hi.string)}
+            stroke={T.text} strokeWidth={2} />
+          <circle cx={noteX(current.lo.fret)} cy={strY(current.lo.string)} r={11} fill={T.primary} />
+          <text x={noteX(current.lo.fret)} y={strY(current.lo.string) + 3.5} textAnchor="middle" fontSize={10} fontWeight="700" fill={T.onPrimary} fontFamily="var(--gc-mono)">
+            {spell(current.loMidi)}
+          </text>
+          <circle cx={noteX(current.hi.fret)} cy={strY(current.hi.string)} r={11} fill={T.secondary} />
+          <text x={noteX(current.hi.fret)} y={strY(current.hi.string) + 3.5} textAnchor="middle" fontSize={10} fontWeight="700" fill={T.white} fontFamily="var(--gc-mono)">
+            {spell(current.hiMidi)}
+          </text>
+
+          {/* The distance: a 2px ink bracket under the neck, labelled in mono */}
+          {bracket && (() => {
+            const bY = FB_TOP + 5 * STR_SP + 18;
+            return (
+              <g>
+                <path d={`M${bracket.xL} ${bY} V${bY + 7} H${bracket.xR} V${bY}`} fill="none" stroke={T.text} strokeWidth={2} />
+                <text x={(bracket.xL + bracket.xR) / 2} y={bY + 19} textAnchor="middle" fontSize={8.5} fill={T.text}
+                  fontFamily="var(--gc-mono)" letterSpacing="0.14em">
+                  {`${openName.toUpperCase()} · ${bracket.frets} FRET${bracket.frets !== 1 ? 'S' : ''}`}
+                </text>
+              </g>
+            );
+          })()}
+        </IntervalNeck>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'stretch', border: `1px solid ${T.border}` }}>
-          <button onClick={() => step(-1)} style={stepBtn}>‹</button>
-          <span style={{ padding: '7px 12px', fontSize: 10, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.1em', alignSelf: 'center' }}>
-            SHAPE {idx + 1} / {pairs.length}
-          </span>
-          <button onClick={() => step(1)} style={{ ...stepBtn, borderLeft: `1px solid ${T.border}`, borderRight: 'none' }}>›</button>
+        <div role="group" aria-label="Shape" dir="ltr" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Pill size="sm" onClick={() => step(-1)} label="Previous shape" style={{ padding: 0 }}>‹</Pill>
+          <span className="su-label" style={{ color: T.text, minWidth: 74, textAlign: 'center' }}>Shape {idx + 1} / {pairs.length}</span>
+          <Pill size="sm" onClick={() => step(1)} label="Next shape" style={{ padding: 0 }}>›</Pill>
         </div>
-
-        <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          {(['harmonic', 'melodic'] as Mode[]).map((m, i) => (
-            <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
-              padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
-              fontWeight: mode === m ? 600 : 400, border: 'none',
-              borderLeft: i > 0 ? `1px solid ${T.border}` : 'none',
-              background: mode === m ? T.secondary : 'transparent',
-              color: mode === m ? '#fff' : T.textDim,
-            }}>{m === 'harmonic' ? 'Together' : 'One by one'}</button>
-          ))}
-        </div>
-
-        <button data-active={!!wide} onClick={() => setWide(w => { setShape(0); return !w; })} className="gc-notation" style={{
-          padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
-          fontWeight: wide ? 600 : 400,
-          border: wide ? 'none' : `1px solid ${T.border}`,
-          background: wide ? T.secondary : 'transparent',
-          color: wide ? '#fff' : T.textDim,
-        }}>Octave wider — {widenName(openRow.name)}</button>
-
-        <button onClick={playCurrent} style={{
-          padding: '7px 16px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700,
-          border: 'none', borderLeft: '3px solid var(--gc-bar-color)',
-          background: T.primary, color: T.white,
-        }}>▶ Play</button>
-
-        <span dir="ltr" style={{ marginInlineStart: 'auto', fontSize: 11, color: '#9C958C' }}>
+        <PillRow label="Play mode" items={[{ id: 'harmonic' as Mode, label: 'Together' }, { id: 'melodic' as Mode, label: 'One by one' }]}
+          value={mode} onChange={setMode} />
+        <Pill size="sm" active={wide} onClick={() => setWide(w => { setShape(0); return !w; })} style={{ textTransform: 'none', letterSpacing: '0.02em' }}>
+          Octave wider — {widenName(openRow.name)}
+        </Pill>
+        <Cta onClick={playCurrent}>▶ Play</Cta>
+        <span dir="ltr" className="su-label" style={{ marginInlineStart: 'auto' }}>
           {pcName(OPEN[current.lo.string])} string fret {current.lo.fret} · {pcName(OPEN[current.hi.string])} string fret {current.hi.fret}
         </span>
       </div>
@@ -292,83 +285,55 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: desktop ? 900 : undefined, margin: desktop ? '0 auto' : undefined }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: desktop ? 960 : undefined }}>
       {chordCard}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <p style={LBL}>Intervals in this chord</p>
-          <span style={LBL}>{rows.length} found</span>
-        </div>
-
-        <div style={card({ padding: 0 })}>
-          {rows.length === 0 ? (
-            <p style={{ margin: 0, padding: 20, fontSize: 13, color: T.textMuted, textAlign: 'center' }}>
-              {toDisplayChord(chordName)} has no two tones to compare.
-            </p>
-          ) : rows.map((r, i) => {
-            const isOpen = open === r.semis;
-            return (
-              <div key={r.semis} style={{
-                borderBottom: i < rows.length - 1 ? `1px solid ${T.border}` : 'none',
-                borderLeft: isOpen ? '3px solid var(--gc-success)' : '3px solid transparent',
-                background: isOpen ? alpha('var(--gc-success)', 7) : 'transparent',
-              }}>
-                <div
-                  onClick={() => pickRow(r.semis)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: desktop ? 16 : 10,
-                    padding: desktop ? '0 18px' : '0 12px', minHeight: 58, cursor: 'pointer',
-                    flexWrap: desktop ? 'nowrap' : 'wrap',
-                  }}
-                >
-                  <span style={{
-                    fontSize: 14, fontWeight: 600, flexShrink: 0,
-                    width: desktop ? 118 : undefined,
-                    color: isOpen ? 'var(--gc-success)' : T.text,
-                  }}>{isOpen ? openName : r.name}</span>
-
-                  <span dir="ltr" style={{
-                    flexGrow: 1, minWidth: 0, fontSize: 12, fontFamily: 'var(--gc-mono)',
-                    color: isOpen ? 'var(--gc-success)' : '#9C958C',
-                  }}>{r.pairs.join(', ')}</span>
-
-                  <span style={{ fontSize: 11, color: '#9C958C', fontFamily: 'var(--gc-mono)', flexShrink: 0 }}>
-                    {r.semis} semitone{r.semis === 1 ? '' : 's'}
-                  </span>
-
-                  <button
-                    onClick={e => { e.stopPropagation(); playRow(r); }}
-                    title="Hear it"
-                    style={{
-                      flexShrink: 0, width: 26, height: 26, padding: 0, borderRadius: 0,
-                      border: 'none', background: 'transparent', cursor: 'pointer',
-                      fontSize: 11, color: isOpen ? 'var(--gc-success)' : T.textDim,
-                    }}
-                  >▶</button>
-                </div>
-
-                {isOpen && (pairs.length ? neck : (
-                  <p style={{ margin: 0, padding: '0 18px 16px', fontSize: 12, color: '#9C958C' }}>
-                    No hand-playable shape for this one on the first 12 frets.
-                  </p>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-
-        {open == null && rows.length > 0 && (
-          <p style={{ margin: 0, fontSize: 11, color: '#9C958C', lineHeight: 1.5 }}>
-            Tap a row to see it on the neck.
+      <Rule label="Intervals in this chord" right={open == null && rows.length > 0 ? <span className="su-label">Tap a row to see it on the neck</span> : undefined}>
+        {rows.length === 0 ? (
+          <p style={{ margin: 0, padding: 20, fontSize: 13, color: T.textMuted, textAlign: 'center' }}>
+            {toDisplayChord(chordName)} has no two tones to compare.
           </p>
-        )}
-      </div>
+        ) : rows.map(r => {
+          const isOpen = open === r.semis;
+          return (
+            <div key={r.semis} style={{ borderBottom: `1px solid ${T.hairline}` }}>
+              <div
+                role="button" tabIndex={0} aria-expanded={isOpen}
+                onClick={() => pickRow(r.semis)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickRow(r.semis); } }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: desktop ? 16 : 10,
+                  minHeight: 58, cursor: 'pointer', flexWrap: desktop ? 'nowrap' : 'wrap', padding: '6px 0',
+                }}
+              >
+                <span className="su-semi" style={{
+                  fontSize: isOpen ? 24 : 19, flexShrink: 0, textTransform: 'uppercase', lineHeight: 1,
+                  width: desktop ? 170 : undefined,
+                }}>{isOpen ? openName : r.name}</span>
+
+                <span dir="ltr" style={{
+                  flexGrow: 1, minWidth: 0, fontSize: 12, fontFamily: 'var(--gc-mono)',
+                  color: isOpen ? T.text : T.textMuted, fontWeight: isOpen ? 700 : 400,
+                }}>{r.pairs.join(', ')}</span>
+
+                <span style={{ fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)', flexShrink: 0 }}>
+                  {r.semis} semitone{r.semis === 1 ? '' : 's'}
+                </span>
+
+                <span onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
+                  <Pill active={isOpen} onClick={() => playRow(r)} label={`Hear ${r.name}`} title="Hear it" style={{ padding: 0 }}>▶</Pill>
+                </span>
+              </div>
+
+              {isOpen && (pairs.length ? neck : (
+                <p className="su-label" style={{ margin: 0, padding: '0 0 16px' }}>
+                  No hand-playable shape for this one on the first 12 frets.
+                </p>
+              ))}
+            </div>
+          );
+        })}
+      </Rule>
     </div>
   );
 }
-
-const stepBtn: React.CSSProperties = {
-  padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 13,
-  border: 'none', background: 'transparent', color: 'var(--gc-text-dim)',
-};

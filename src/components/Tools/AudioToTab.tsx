@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { Rule, Pill, Cta, PosterTitle } from '../Transit/parts';
+import { StopActions } from '../Transit/StopActions';
 import {
   transcribeAudioBuffer, transcribeWithMT3Server, refineNotesWithAI, notesToTab, buildWaveform,
   exportTabToPDF, midiToFreq, OPEN_MIDI, STRING_NAMES,
@@ -33,11 +35,13 @@ const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' 
 
 // ── Tab visual constants ──────────────────────────────────────────────────────
 
-const TAB_BG   = T.secondary;
-const TAB_LINE = 'rgba(255,255,255,0.45)';
-const TAB_BAR  = 'rgba(255,255,255,0.9)';
-const TAB_LBL  = 'rgba(255,255,255,0.75)';
-const TAB_SEL  = 'var(--gc-success)';
+// Drawn like the Tab Writer: mono numbers on ink hairlines, the selected
+// note the one cobalt cell.
+const TAB_BG   = T.bgDeep;
+const TAB_LINE = T.text;
+const TAB_BAR  = T.text;
+const TAB_LBL  = T.textMuted;
+const TAB_SEL  = T.primary;
 
 const COL_W        = 16;
 const STR_GAP      = 16;
@@ -48,20 +52,7 @@ const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;
 // ── Clear button ──────────────────────────────────────────────────────────────
 
 function ClearBtn({ onClear }: { onClear: () => void }) {
-  return (
-    <button
-      onClick={onClear}
-      title="Reset — back to start"
-      style={{
-        padding: '7px 14px', borderRadius: 0, cursor: 'pointer', fontWeight: 400,
-        fontSize: 12, border: `1px solid ${T.border}`,
-        background: T.bgInput, color: T.textMuted, flexShrink: 0,
-        borderLeft: '3px solid var(--gc-bar-color)',
-      }}
-    >
-      Clear
-    </button>
-  );
+  return <Pill size="sm" onClick={onClear} title="Reset — back to start">Clear</Pill>;
 }
 
 // ── Tab SVG row ───────────────────────────────────────────────────────────────
@@ -78,16 +69,15 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   const svgH  = TOP + 5 * STR_GAP + 6;
   const els: React.ReactNode[] = [];
 
-  els.push(<rect key="bg" x={0} y={0} width={VB_W} height={svgH} fill={TAB_BG} />);
 
   for (let di = 0; di < 6; di++) {
     const sy = TOP + di * STR_GAP;
     els.push(
       <line key={`l${di}`} x1={LEFT_PAD - 2} y1={sy} x2={LEFT_PAD + lineW} y2={sy}
-        stroke={TAB_LINE} strokeWidth={2} />,
+        stroke={TAB_LINE} strokeWidth={0.75} />,
       <text key={`n${di}`} x={LEFT_PAD - 6} y={sy + 3.5}
         fontSize={9} fill={TAB_LBL} textAnchor="end"
-        fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
+        fontFamily="var(--gc-mono)" fontWeight="700">
         {STRING_NAMES[di]}
       </text>,
     );
@@ -101,7 +91,7 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     const bx = LEFT_PAD + c * COL_W;
     els.push(
       <line key={`b${c}`} x1={bx} y1={TOP} x2={bx} y2={TOP + 5 * STR_GAP}
-        stroke={TAB_BAR} strokeWidth={1} opacity={0.5} />,
+        stroke={T.hairline} strokeWidth={1} />,
     );
   }
 
@@ -118,11 +108,11 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
       els.push(
         <g key={`${c}-${si}`} onClick={e => onTap(c, si, e)} style={{ cursor: 'pointer' }}>
           <rect x={cx - (wide ? 7 : 5)} y={sy - 6} width={wide ? 14 : 10} height={12}
-            fill={sel ? TAB_SEL : TAB_BG} rx={0} />
-          <text x={cx} y={sy + 4.5} fontSize={8.5}
-            fill='#fff'
+            fill={sel ? TAB_SEL : TAB_BG} />
+          <text x={cx} y={sy + 3.2} fontSize={8.5}
+            fill={sel ? T.onPrimary : T.text}
             textAnchor="middle"
-            fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
+            fontFamily="var(--gc-mono)" fontWeight="700">
             {lbl}
           </text>
         </g>,
@@ -150,12 +140,14 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
   const { events, totalColumns } = tabData;
 
   // Clear selection when parent signals (e.g. after keyboard edit commits)
-  useEffect(() => { setSelectedCol(null); }, [clearToken]);
+  const [seenToken, setSeenToken] = useState(clearToken);
+  if (seenToken !== clearToken) { setSeenToken(clearToken); setSelectedCol(null); }
 
   if (totalColumns === 0) {
     return (
-      <div style={{ background: TAB_BG, borderRadius: 0, padding: '20px', textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: 13, color: TAB_LBL }}>No notes detected in audio</p>
+      <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, padding: '18px 0' }}>
+        <p className="su-poster" style={{ margin: 0, fontSize: 34 }}>No notes heard</p>
+        <p style={{ margin: '10px 0 0', fontSize: 12.5, color: TAB_LBL }}>No notes detected in the audio — try a louder, cleaner take.</p>
       </div>
     );
   }
@@ -178,10 +170,7 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
   };
 
   return (
-    <div style={{
-      background: TAB_BG, borderRadius: 0, padding: '10px 8px',
-      display: 'flex', flexDirection: 'column', gap: 6,
-    }}>
+    <div dir="ltr" style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
       {Array.from({ length: numRows }, (_, r) => {
         const colStart = r * COLS_PER_ROW;
         const colEnd   = Math.min(colStart + COLS_PER_ROW, totalColumns);
@@ -216,15 +205,15 @@ function ProcessingScan({ data, progress }: { data: Float32Array; progress: numb
       {amp.map((v, i) => {
         const h = Math.max(2, (v / peak) * WAVE_H * 0.9);
         return <rect key={i} x={i * barW + 1} y={(WAVE_H - h) / 2} width={barW - 2} height={h}
-          fill={i < scanned ? 'var(--gc-text)' : 'var(--gc-border)'} style={{ transition: 'fill var(--gc-dur-base) var(--gc-ease-out)' }} />;
+          fill={i < scanned ? T.text : T.hairline} style={{ transition: 'fill var(--gc-dur-base) var(--gc-ease-out)' }} />;
       })}
       {[0, 1, 2, 3, 4, 5].map(r => (
         <line key={r} x1={0} x2={W} y1={TAB_TOP + r * LINE_GAP} y2={TAB_TOP + r * LINE_GAP} stroke="var(--gc-fretboard-str)" strokeWidth={1} />
       ))}
       {onsets.filter(o => o.i < scanned).map(({ i, v }) => (
-        <circle key={i} className="gc-fall" cx={i * barW + barW / 2} cy={TAB_TOP + (Math.round((1 - v / peak) * 5)) * LINE_GAP} r={3} fill="var(--gc-success)" />
+        <circle key={i} className="gc-fall" cx={i * barW + barW / 2} cy={TAB_TOP + (Math.round((1 - v / peak) * 5)) * LINE_GAP} r={3} fill={T.text} />
       ))}
-      <line x1={0} x2={0} y1={0} y2={TAB_TOP + LINE_GAP * 5 + 4} stroke="var(--gc-success)" strokeWidth={2}
+      <line x1={0} x2={0} y1={0} y2={TAB_TOP + LINE_GAP * 5 + 4} stroke={T.primary} strokeWidth={2}
         style={{ transform: `translateX(${scanned * barW}px)`, transition: 'transform var(--gc-dur-slow) var(--gc-ease-out)' }} />
     </svg>
   );
@@ -246,19 +235,13 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
     <>
       <style>{`
         @keyframes wv-flow {
-          0%,100% { transform: scaleY(0.7); opacity: 0.75; }
-          50%      { transform: scaleY(1);   opacity: 1;    }
+          0%,100% { transform: scaleY(0.7); }
+          50%      { transform: scaleY(1);   }
         }
+        @media (prefers-reduced-motion: reduce) { .su-wv rect { animation: none !important; } }
       `}</style>
       <svg width="100%" viewBox={`0 0 ${W} ${height}`}
-        preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
-        <defs>
-          <linearGradient id="wv-green" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stopColor="#5C5650" />
-            <stop offset="50%"  stopColor="#5C5650" />
-            <stop offset="100%" stopColor="var(--gc-bg-input)" />
-          </linearGradient>
-        </defs>
+        preserveAspectRatio="xMidYMid meet" className="su-wv" style={{ display: 'block' }}>
         {sampled.map((v, i) => {
           const h     = Math.max(2, v * mid * 0.94);
           const cx    = i * barW + barW / 2;
@@ -267,7 +250,7 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
             <rect key={i}
               x={i * barW + gap / 2} y={mid - h}
               width={Math.max(1.5, bw)} height={h * 2}
-              fill="url(#wv-green)" rx={Math.min(3, bw / 2)}
+              fill={T.text}
               style={{
                 transformOrigin: `${cx}px ${mid}px`,
                 animation: `wv-flow 2.4s ease-in-out ${delay} infinite`,
@@ -285,11 +268,11 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
 function RecordingBars() {
   return (
     <>
-      <style>{`@keyframes at-eq{from{transform:scaleY(.1)}to{transform:scaleY(1)}}`}</style>
-      <svg width={120} height={40} viewBox="0 0 120 40" style={{ display: 'block', margin: '0 auto' }}>
+      <style>{`@keyframes at-eq{from{transform:scaleY(.1)}to{transform:scaleY(1)}} @media (prefers-reduced-motion: reduce){.su-eq rect{animation:none!important}}`}</style>
+      <svg width={180} height={48} viewBox="0 0 120 40" className="su-eq" aria-hidden style={{ display: 'block' }}>
         {Array.from({ length: 10 }, (_, i) => (
           <rect key={i} x={i * 12 + 2} y={2} width={9} height={36}
-            fill={T.primary} rx={4.5} opacity={0.85}
+            fill={T.text}
             style={{
               transformOrigin: `${i * 12 + 6.5}px 20px`,
               animation: `at-eq .7s ease-in-out ${(i * 0.08).toFixed(2)}s infinite alternate`,
@@ -307,10 +290,6 @@ const RESPONSIVE_CSS = `
   .at-player-row { display: flex; gap: 10px; }
 `;
 
-const LABEL: React.CSSProperties = {
-  margin: '0 0 10px', fontSize: 10, fontWeight: 400,
-  color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.14em',
-};
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -605,151 +584,129 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  // Desktop helper: wraps in 440px|1fr grid; on mobile returns left as-is
+  // Desktop: capture/progress on the left, output on the right. A phone
+  // stacks the two (the output used to be dropped there).
   const dt = (left: React.ReactNode, right?: React.ReactNode) => {
-    if (!desktop || !right) return <>{left}</>;
+    if (!right) return <>{left}</>;
+    if (!desktop) return <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>{left}{right}</div>;
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '440px 1fr', gap: 36, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '420px minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
         <div>{left}</div>
-        <div style={{ position: 'sticky', top: 24 }}>{right}</div>
+        <div style={{ position: 'sticky', top: 0 }}>{right}</div>
       </div>
     );
   };
 
-  // Ghost output pane shown before transcription exists
-  const ghostOut = (
-    <div style={{ ...card({ padding: '16px 16px 20px' }) }}>
-      <p style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' as const, margin: '0 0 12px' }}>Transcription output</p>
-      <div style={{ background: TAB_BG, padding: '20px 16px', opacity: 0.35, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {[90, 70, 85, 60].map((w, i) => (
-          <div key={i} style={{ height: 12, background: TAB_LINE, width: `${w}%` }} />
-        ))}
-      </div>
-      <p style={{ margin: '12px 0 0', fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.02em' }}>
-        ← Record or upload audio to transcribe
-      </p>
-    </div>
+  // The big round capture button: an ink ring around the cobalt record dot
+  // (or, while recording, a cobalt disc with a paper stop square).
+  const captureBtn = (recording: boolean) => (
+    <button onClick={recording ? stopRecording : startRecording} className="gc-no-bar"
+      aria-label={recording ? 'Stop recording' : 'Record'}
+      style={{
+        width: 92, height: 92, borderRadius: '50%', flexShrink: 0, cursor: 'pointer', padding: 0,
+        border: `var(--su-rule) solid ${recording ? T.primary : T.text}`, background: recording ? T.primary : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+      {recording
+        ? <span style={{ width: 26, height: 26, background: T.onPrimary }} />
+        : <span style={{ width: 44, height: 44, borderRadius: '50%', background: T.primary }} />}
+    </button>
   );
 
+  // Ghost output pane shown before transcription exists
+  const ghostOut = (
+    <Rule label="Transcription output">
+      <div aria-hidden style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '12px 0', opacity: 0.35 }}>
+        {[0, 1, 2, 3, 4, 5].map(i => <div key={i} style={{ height: 1, background: T.text }} />)}
+      </div>
+      <p className="su-label" style={{ margin: '10px 0 0' }}>{desktop ? '← ' : ''}Record or upload audio to transcribe</p>
+    </Rule>
+  );
+
+  // The empty output pane sits beside the capture panel on a desktop only.
+  const ghost = desktop ? ghostOut : undefined;
+
   if (stage === 'idle') return dt(
-    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <style>{RESPONSIVE_CSS}</style>
 
-      {/* Primary: large centered record button */}
-      <div style={{ ...card({ padding: '36px 20px' }), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
-        <button
-          onClick={startRecording}
-          style={{
-            width: 88, height: 88, borderRadius: '50%',
-            background: T.primary, border: '4px solid var(--gc-success-soft)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, outline: 'none',
-          }}
-        >
-          <svg viewBox="0 0 24 24" width={32} height={32} fill="none" stroke="#fff" strokeWidth={2}>
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M5 11c0 3.9 3.1 7 7 7s7-3.1 7-7" strokeLinecap="round" />
-            <line x1="12" y1="18" x2="12" y2="22" />
-            <line x1="9" y1="22" x2="15" y2="22" />
-          </svg>
-        </button>
-        <div>
-          <p style={{ margin: 0, fontSize: 15, fontWeight: 400, color: T.text }}>Tap to Record</p>
-          <p style={{ margin: 0, fontSize: 12, color: T.textMuted, marginTop: 4 }}>Play a single line into the microphone</p>
+      {/* Capture */}
+      <Rule label="Capture">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '10px 0 4px' }}>
+          {captureBtn(false)}
+          <div style={{ minWidth: 0 }}>
+            <p className="su-poster" style={{ margin: 0, fontSize: 44 }}>Record</p>
+            <p style={{ margin: '10px 0 0', fontSize: 12.5, color: T.textMuted, lineHeight: 1.5 }}>Play a single line into the microphone</p>
+          </div>
         </div>
-      </div>
+      </Rule>
 
-      {/* Secondary: drag / upload */}
+      {/* Drop zone */}
       <div
+        role="button" tabIndex={0}
+        aria-label="Upload an audio file"
         onDragOver={e => e.preventDefault()}
         onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
         style={{
-          ...card({ padding: '16px 20px' }),
-          display: 'flex', alignItems: 'center', gap: 12,
-          cursor: 'pointer', borderStyle: 'dashed', borderColor: T.border,
+          border: `var(--su-rule) dashed ${T.text}`, padding: '22px 18px', cursor: 'pointer',
+          display: 'flex', flexDirection: 'column', gap: 8, minHeight: 44,
         }}
       >
-        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke={T.textMuted} strokeWidth={2}>
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
-        <div>
-          <p style={{ margin: 0, fontSize: 13, color: T.text }}>Upload audio file</p>
-          <p style={{ margin: 0, fontSize: 11, color: T.textMuted, marginTop: 2 }}>MP3 · WAV · OGG · M4A · up to 5 min</p>
-        </div>
+        <span className="su-semi" style={{ fontSize: 22, textTransform: 'uppercase' }}>Drop an audio file — or tap to choose</span>
+        <span className="su-label">MP3 · WAV · OGG · M4A · up to 5 min</span>
         <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
       </div>
     </div>
-  );
+  , ghost);
 
   if (stage === 'recording') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ ...card({ padding: '36px 20px' }), textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        <RecordingBars />
-        <p style={{ margin: 0, fontSize: 34, fontWeight: 700, color: T.primary, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-          {String(Math.floor(recSecs / 60)).padStart(1, '0')}:{String(recSecs % 60).padStart(2, '0')}
-        </p>
-        <p style={{ margin: 0, fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Recording</p>
-        <button onClick={stopRecording} style={{
-          width: 88, height: 88, borderRadius: '50%',
-          background: T.primary, border: '4px solid var(--gc-success-soft)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, outline: 'none',
-        }}>
-          <div style={{ width: 28, height: 28, background: '#fff', borderRadius: 2 }} />
-        </button>
-        <p style={{ margin: 0, fontSize: 11, color: T.textDim }}>Tap to stop</p>
-      </div>
+      <Rule label="Recording">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '8px 0 4px' }}>
+          <p className="su-poster" aria-live="polite" style={{ margin: 0, fontSize: 96, fontVariantNumeric: 'tabular-nums' }}>
+            {String(Math.floor(recSecs / 60))}:{String(recSecs % 60).padStart(2, '0')}
+          </p>
+          <RecordingBars />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {captureBtn(true)}
+            <span className="su-label">Tap to stop</span>
+          </div>
+        </div>
+      </Rule>
     </div>
   );
 
   if (stage === 'processing') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={card({ padding: '22px 18px' })}>
+      <Rule label="Transcribing" right={<ClearBtn onClear={reset} />}>
         {waveform && waveform.length > 0 && (
-          <div style={{ marginBottom: 16, borderRadius: 0, overflow: 'hidden', padding: '4px 0' }}>
+          <div style={{ margin: '6px 0 16px' }}>
             <ProcessingScan data={waveform} progress={progress} />
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: T.text }}>
-            {phaseLabel || 'Processing…'}
-          </p>
-          <span style={{ fontSize: 12, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{progress}%</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.text }}>{phaseLabel || 'Processing…'}</p>
+          <span className="su-poster" style={{ fontSize: 34, fontVariantNumeric: 'tabular-nums' }}>{progress}%</span>
         </div>
-        <div style={{ background: T.bgInput, borderRadius: 0, height: 8, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', borderRadius: 0, background: T.primary,
-            width: `${progress}%`, transition: 'width 0.3s',
-          }} />
+        <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} style={{ background: T.hairline, height: 6 }}>
+          <div style={{ height: '100%', background: T.text, width: `${progress}%`, transition: 'width 0.3s' }} />
         </div>
-        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
-          <ClearBtn onClear={reset} />
-        </div>
-      </div>
+      </Rule>
     </div>
-  , ghostOut);
+  , ghost);
 
   if (stage === 'error') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ ...card({ padding: '18px 16px' }), borderLeft: `3px solid ${T.coral}` }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={{ fontSize: 18, lineHeight: 1.4 }}>⚠️</span>
-          <p style={{ margin: 0, fontSize: 13, color: T.text, direction: 'rtl', textAlign: 'right', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{error}</p>
-        </div>
-      </div>
-      <button onClick={reset} style={{
-        padding: '12px 0', borderRadius: 0, cursor: 'pointer',
-        background: T.primary, color: '#fff', fontWeight: 400, fontSize: 14,
-        borderLeft: '4px solid var(--gc-bar-color)',
-      }}>
-        Try Again
-      </button>
+      <Rule label="Error">
+        <p className="su-poster" style={{ margin: '4px 0 12px', fontSize: 40 }}>Couldn’t transcribe</p>
+        <p dir="auto" style={{ margin: 0, fontSize: 13, color: T.text, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{error}</p>
+      </Rule>
+      <Cta onClick={reset} style={{ alignSelf: 'flex-start' }}>Try again</Cta>
     </div>
-  , ghostOut);
+  , ghost);
 
   if (!tabData) return null;
 
@@ -758,15 +715,25 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const resultLeft = (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <style>{RESPONSIVE_CSS}</style>
+      <StopActions>
+        <SaveToLibraryButton
+          size="sm" label="Save"
+          getPayload={() => !tabData ? null : ({
+            kind: 'audio',
+            name: (fileName.replace(/\.[^.]+$/, '') || tabData.title || 'Transcription'),
+            tab_content: tabDataToAscii(tabData),
+            audioBlob: lastBlobRef.current,
+            audioExt: (lastBlobRef.current as File | null)?.name?.split('.').pop() || 'webm',
+            duration_seconds: tabData.duration,
+          })}
+        />
+      </StopActions>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 400, color: T.text,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
-            {fileName}
-          </p>
-          <p style={{ margin: 0, fontSize: 11, color: T.textMuted }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <PosterTitle head={fileName.replace(/\.[^.]+$/, '') || 'Transcription'} max={desktop ? 72 : 56} min={28} />
+          <p className="su-label" style={{ margin: '10px 0 0' }}>
             {notes.length} notes detected · {tabData.duration.toFixed(1)}s
           </p>
         </div>
@@ -775,7 +742,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
       {/* Waveform */}
       {waveform && waveform.length > 0 && (
-        <div style={{ borderRadius: 0, overflow: 'hidden', padding: '4px 0' }}>
+        <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, padding: '12px 0 0' }}>
           <Waveform data={waveform} height={72} />
         </div>
       )}
@@ -784,96 +751,42 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   const resultRight = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Export buttons */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button
-          onClick={() => exportTabToPDF(tabData)}
-          style={{
-            flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.secondary, color: '#fff', fontWeight: 400, fontSize: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            borderLeft: '4px solid var(--gc-bar-color)',
-          }}
-        >
-          <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          Export to PDF
-        </button>
-        <button
-          onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}
-          style={{
-            flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.primary, color: '#fff', fontWeight: 400, fontSize: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            borderLeft: '4px solid var(--gc-bar-color)',
-          }}
-        >
-          <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
-            <path d="M9 18V5l12-2v13" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="6" cy="18" r="3" />
-            <circle cx="18" cy="16" r="3" />
-          </svg>
-          Export to MIDI
-        </button>
+      {/* Export and hand-off */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <Pill onClick={() => exportTabToPDF(tabData)}>Export PDF</Pill>
+        <Pill onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}>Export MIDI</Pill>
+        {/* Into the song, as its melody — Tab Writer and Harmonize pick it up. */}
+        {song && tabData && (
+          <Pill onClick={() => {
+            const cols = Math.max(1, tabData.totalColumns);
+            const grid = Array.from({ length: 6 }, () => Array.from({ length: cols }, () => ({ fret: '' })));
+            tabData.events.forEach(ev => { const row = 5 - ev.string; if (grid[row]?.[ev.column]) grid[row][ev.column] = { fret: String(ev.fret) }; });
+            song.update({ melody: { title: tabData.title || 'Transcription', subtitle: '', grid, bars: [] }, melodyFrom: 'audiotab' });
+            flashSent();
+          }}>
+            <RollLabel>{sent ? '✓ The song’s melody now' : 'Use as the song’s melody'}</RollLabel>
+          </Pill>
+        )}
       </div>
-
-      {/* Into the song, as its melody — Tab Builder and Harmonize pick it up. */}
-      {song && tabData && (
-        <button onClick={() => {
-          const cols = Math.max(1, tabData.totalColumns);
-          const grid = Array.from({ length: 6 }, () => Array.from({ length: cols }, () => ({ fret: '' })));
-          tabData.events.forEach(ev => { const row = 5 - ev.string; if (grid[row]?.[ev.column]) grid[row][ev.column] = { fret: String(ev.fret) }; });
-          song.update({ melody: { title: tabData.title || 'Transcription', subtitle: '', grid, bars: [] }, melodyFrom: 'audiotab' });
-          flashSent();
-        }} style={{
-          width: '100%', padding: '13px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14,
-          background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
-        }}>
-          <RollLabel>{sent ? '✓ The song’s melody now' : 'Use as the song’s melody'}</RollLabel>
-        </button>
-      )}
-
-      {/* Save to personal library */}
-      <SaveToLibraryButton
-        style={{ width: '100%', justifyContent: 'center', padding: '13px 0', fontSize: 14 }}
-        getPayload={() => !tabData ? null : ({
-          kind: 'audio',
-          name: (fileName.replace(/\.[^.]+$/, '') || tabData.title || 'Transcription'),
-          tab_content: tabDataToAscii(tabData),
-          audioBlob: lastBlobRef.current,
-          audioExt: (lastBlobRef.current as File | null)?.name?.split('.').pop() || 'webm',
-          duration_seconds: tabData.duration,
-        })}
-      />
 
       {/* Tab — click a note to select, then type to edit */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
-          <p style={{ ...LABEL, margin: 0 }}>Tab</p>
-          {!selNote && (
-            <span style={{ fontSize: 11, color: T.textMuted }}>Tap a note to edit</span>
-          )}
-        </div>
+      <Rule label="Tab" right={!selNote ? <span className="su-label">Tap a note to edit</span> : undefined}>
         <TabDisplay tabData={tabData} onSelectNote={handleNoteSelect} clearToken={editClearToken} />
-      </div>
+      </Rule>
 
       {/* Keyboard edit hint — shown when a note is selected */}
       {selNote && (
-        <div style={{
+        <div aria-live="polite" style={{
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-          padding: '9px 13px', background: T.bgInput, borderRadius: 0,
-          borderLeft: `3px solid ${T.primary}`,
+          padding: '10px 0', borderTop: `1px solid ${T.hairline}`,
         }}>
-          <span style={{ fontSize: 13, fontWeight: 400, color: T.text }}>
-            ✎ String {strName(selNote.string)}{' '}
-            <span style={{ color: T.primary, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'var(--gc-mono)' }}>
+            String {strName(selNote.string)}{' '}
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
               {fretInput ? `→ ${fretInput}` : `· Fret ${selNote.fret}`}
             </span>
           </span>
-          <span style={{ fontSize: 11, color: T.textMuted, marginLeft: 'auto' }}>
+          <span className="su-label" style={{ marginInlineStart: 'auto' }}>
             Type new fret · ⌫ Delete · Esc Cancel
           </span>
         </div>

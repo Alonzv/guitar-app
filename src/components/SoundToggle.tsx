@@ -4,22 +4,22 @@ import { soundEnabled, setSoundEnabled, subscribeSound } from '../utils/previewS
 
 // ── Sound toggle ─────────────────────────────────────────────────────────────
 // The header speaker: turns the sounds that answer every tap on or off (see
-// utils/previewSound). Same 34×34 ghost spec as the language and theme buttons.
+// utils/previewSound). Same outlined pill as the language and theme buttons.
 
 export function SoundToggle({ compact }: { compact?: boolean } = {}) {
   const [on, setOn] = useState(soundEnabled);
   useEffect(() => subscribeSound(setOn), []);
-  const size = compact ? 30 : 34;
+  const size = compact ? 40 : 44;
   return (
     <button
       onClick={() => setSoundEnabled(!on)}
       title={on ? 'Mute tap sounds' : 'Unmute tap sounds'}
       aria-label={on ? 'Mute tap sounds' : 'Unmute tap sounds'}
       aria-pressed={on}
-      className="gc-icon-btn"
+      className="gc-icon-btn gc-no-bar"
       style={{
-        width: size, height: size, borderRadius: 0,
-        border: `1px solid ${T.border}`, background: 'transparent', color: T.textDim,
+        width: size, height: size, borderRadius: '50%', flex: 'none',
+        border: `1.5px solid ${T.text}`, background: 'transparent', color: T.text,
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >

@@ -3,10 +3,14 @@ import type { ChordInProgression, FretPosition, Tuning } from '../../types/music
 import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
 import { VoicingViewer } from './VoicingViewer';
 import { ChordStructure } from '../ChordBuilder/ChordStructure';
+import { ChordPoster, ChordDiagram, PillSelect } from '../ChordBuilder/ChordParts';
+import { Rule, PillRow, KeyGrid, Cta } from '../Transit/parts';
+import { useLang } from '../../contexts/LanguageContext';
+import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { ProgressionPanel } from '../ChordBuilder/ProgressionPanel';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
-import { T, card, btn } from '../../theme';
+import { btn } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
 import { RollLabel } from '../RollLabel';
 import { useFlash } from '../../motion/useFlash';
@@ -74,31 +78,6 @@ const SUFFIX_MAP: Record<string, Record<string, string>> = {
   'sus4': { '': 'sus4' },
 };
 
-const LABEL_STYLE = {
-  margin: '0 0 10px',
-  fontSize: 10,
-  fontWeight: 400 as const,
-  color: T.textDim,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.14em',
-};
-
-const SELECT_STYLE: React.CSSProperties = {
-  appearance: 'none',
-  WebkitAppearance: 'none',
-  background: T.bgInput,
-  border: `1px solid ${T.border}`,
-  borderRadius: 0,
-  color: T.text,
-  fontFamily: 'inherit',
-  fontSize: 12,
-  fontWeight: 600,
-  padding: '5px 26px 5px 10px',
-  cursor: 'pointer',
-  outline: 'none',
-  borderLeft: '3px solid var(--gc-bar-color)',
-};
-
 const PICK_KEY = 'scaleup_byname_pick';
 function readPick(): { root: string | null; triad: string | null; ext: string } {
   try {
@@ -124,6 +103,10 @@ export function ChordPickerTab({
   }, [selectedRoot, selectedTriad, selectedExtension]);
   // Index of the variation shown enlarged in the VoicingViewer popover, or null.
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  // The shape drawn large (and strummed / added): the last one viewed.
+  const [shown, setShown] = useState(0);
+  const { lang } = useLang();
+  const he = lang === 'he';
   // One tuning for the whole app — this selector and By Ear's change the same one.
   const tuningObj = tuningProp ?? TUNINGS[0];
   const tuningName = tuningObj.name;
@@ -145,7 +128,7 @@ export function ChordPickerTab({
   const handleTuningChange = (name: string) => {
     const t = TUNINGS.find(x => x.name === name);
     if (t) onTuningChange?.(t);
-    setViewerIndex(null);
+    setViewerIndex(null); setShown(0);
   };
   // Each choice is heard as it is made: the root alone until there is a chord,
   // then the chord's first shape.
@@ -161,21 +144,21 @@ export function ChordPickerTab({
     const triad = pickOne(TRIADS).key;
     const exts = VALID_EXTENSIONS[triad] ?? [''];
     const ext = Math.random() < 0.5 ? '' : pickOne(exts);
-    setSelectedRoot(root); setSelectedTriad(triad); setSelectedExtension(ext); setViewerIndex(null);
+    setSelectedRoot(root); setSelectedTriad(triad); setSelectedExtension(ext); setViewerIndex(null); setShown(0);
     hear(root, triad, ext);
   };
   const handleRootSelect = (root: string) => {
-    setSelectedRoot(root); setViewerIndex(null);
+    setSelectedRoot(root); setViewerIndex(null); setShown(0);
     hear(root, selectedTriad, selectedExtension);
   };
   const handleTriadSelect = (key: string) => {
     setSelectedTriad(key);
     setSelectedExtension(''); // reset extension when triad changes
-    setViewerIndex(null);
+    setViewerIndex(null); setShown(0);
     hear(selectedRoot, key, '');
   };
   const handleExtensionSelect = (key: string) => {
-    setSelectedExtension(key); setViewerIndex(null);
+    setSelectedExtension(key); setViewerIndex(null); setShown(0);
     hear(selectedRoot, selectedTriad, key);
   };
 
@@ -205,166 +188,86 @@ export function ChordPickerTab({
     />
   );
 
-  const builderPane = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+  const current = voicings[shown] ?? voicings[0];
+  // STRUM — the one cobalt action: plays the shape drawn large.
+  const strum = () => { if (current) unlockAudio().then(() => playChord(current, tuningObj.openFreqs)); };
 
-      {/* ── Root note ── */}
-      <div style={card()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <p style={LABEL_STYLE}>Root Note</p>
-          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: desktop ? 7 : 6 }}>
-          {ROOTS.map(root => {
-            const active = selectedRoot === root;
-            return (
-              <button data-active={!!active}
-                key={root}
-                className="gc-notation"
-                onClick={() => handleRootSelect(root)}
-                style={{
-                  padding: desktop ? '13px 4px' : '8px 4px', borderRadius: 0,
-                  cursor: 'pointer', fontSize: 13,
-                  fontWeight: active ? 500 : 400,
-                  background: active ? T.primary : T.bgInput,
-                  color: active ? '#fff' : T.textMuted,
-                  borderLeft: `3px solid ${active ? T.primary : 'var(--gc-bar-color)'}`,
-                }}
-              >
-                {root}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  const poster = (
+    <ChordPoster name={chordName} max={desktop ? 210 : 150} aside={chordName && (
+      <span className="su-label">
+        {voicings.length > 0
+          ? (he ? `${voicings.length} צורות` : `${voicings.length} voicing${voicings.length > 1 ? 's' : ''}`)
+          : (he ? 'לא נמצאו צורות' : 'No voicings found')}
+        {' · '}{tuningObj.label}
+      </span>
+    )} />
+  );
 
-      {/* ── Triad quality ── */}
-      <div style={card()}>
-        <p style={LABEL_STYLE}>Triad</p>
-        <div className="gc-pills">
-          {TRIADS.map(t => {
-            const active = selectedTriad === t.key;
-            return (
-              <button data-active={!!active}
-                key={t.key}
-                className="gc-pill gc-notation"
-                onClick={() => handleTriadSelect(t.key)}
-                style={{
-                  padding: '6px 16px', borderRadius: 0,
-                  cursor: 'pointer', fontSize: 13,
-                  fontWeight: active ? 500 : 400,
-                  background: active ? T.primary : T.bgInput,
-                  color: active ? '#fff' : T.textMuted,
-                  borderLeft: `3px solid ${active ? T.primary : 'var(--gc-bar-color)'}`,
-                }}
-              >
-                {t.display}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  const formula = chordName ? <ChordStructure chordName={chordName} /> : null;
 
-      {/* ── Extension — only for Major/Minor/dim/aug ── */}
-      {selectedTriad && validExt.length > 1 && (
-        <div style={card()}>
-          <p style={LABEL_STYLE}>Extension</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-            {EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => {
-              const active = selectedExtension === e.key;
-              return (
-                <button data-active={!!active}
-                  key={e.key}
-                  onClick={() => handleExtensionSelect(e.key)}
-                  style={{
-                    padding: '8px 4px', borderRadius: 0,
-                    cursor: 'pointer', fontSize: 12,
-                    fontWeight: active ? 700 : 400,
-                    background: active ? T.secondary : T.bgInput,
-                    color: active ? '#fff' : T.textMuted,
-                    border: `1px solid ${active ? T.secondary : T.border}`,
-                    borderLeft: `3px solid ${active ? T.secondary : 'var(--gc-bar-color)'}`,
-                    minHeight: 36,
-                  }}
-                >
-                  {e.display}
-                </button>
-              );
-            })}
+  const diagram = chordName && current ? (
+    <Rule>
+      <ChordDiagram voicing={current} name={chordName} tuning={tuning} side={desktop} />
+    </Rule>
+  ) : null;
+
+  // ── The dock: quality, extension, root, then STRUM / Add / tuning ──
+  const controls = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+      <Rule label={he ? 'איכות' : 'Quality'} right={<DiceButton onRoll={roll} />}>
+        <div dir="ltr"><PillRow label={he ? 'איכות' : 'Quality'} wrap={desktop}
+          items={TRIADS.map(t => ({ id: t.key, label: t.display }))}
+          value={selectedTriad} onChange={handleTriadSelect} /></div>
+        {selectedTriad && validExt.length > 1 && (
+          <div dir="ltr" style={{ marginTop: 8 }}>
+            <PillRow label={he ? 'הרחבה' : 'Extension'} wrap={desktop}
+              items={EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => ({ id: e.key, label: e.display }))}
+              value={selectedExtension} onChange={handleExtensionSelect} />
           </div>
-        </div>
-      )}
+        )}
+      </Rule>
 
-      {/* ── Tuning selector ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, ...(desktop ? { maxWidth: 240 } : {}) }}>
-        <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
-        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-          <select
-            aria-label="Tuning"
-            value={tuningName}
-            onChange={e => handleTuningChange(e.target.value)}
-            style={SELECT_STYLE}
-          >
+      <Rule label={he ? 'שורש' : 'Root'}>
+        <div dir="ltr"><KeyGrid label={he ? 'שורש' : 'Root'} cols={6}
+          items={ROOTS.map(r => ({ id: r, label: r }))}
+          value={selectedRoot} onChange={handleRootSelect} /></div>
+      </Rule>
+
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        <Cta round={92} onClick={strum} disabled={!current} label={he ? 'פריטה' : 'Strum'}>
+          {he ? 'פריטה' : 'STRUM'}
+        </Cta>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Adds the shape drawn large, matching the action in By Ear. A
+              specific variation can also be added from the enlarged viewer. */}
+          <button onClick={() => current && addVoicing(current)} disabled={!current} className="gc-no-bar"
+            style={{ ...btn.primary(!current), width: '100%', whiteSpace: 'nowrap' }}>
+            <RollLabel>{added ? (he ? '✓ נוסף' : '✓ Added') : (he ? '+ למהלך' : '+ Add to progression')}</RollLabel>
+          </button>
+          <PillSelect label={he ? 'כיוון' : 'Tuning'} value={tuningName} onChange={handleTuningChange}>
             {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
-          </select>
-          <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
+          </PillSelect>
         </div>
       </div>
-
-      {/* ── Result name (chord summary) ── */}
-      {chordName && (
-        <div style={{ padding: '10px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ color: T.text, fontWeight: 700, fontSize: desktop ? 56 : 44, letterSpacing: '-0.02em', lineHeight: 1 }}>{displayName}</span>
-            <span style={{ fontSize: 13, color: T.textMuted }}>
-              {voicings.length > 0
-                ? `${voicings.length} voicing${voicings.length > 1 ? 's' : ''}`
-                : 'No voicings found'}
-            </span>
-          </div>
-          {chordName && (
-            <div style={{ marginTop: 8 }}>
-              <ChordStructure chordName={chordName} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Adds the chord's primary shape, matching the action in By Ear. Adding a
-          specific variation still lives in the enlarged viewer — tap one below. */}
-      {chordName && voicings.length > 0 && (
-        <button onClick={() => addVoicing(voicings[0])} style={{ ...btn.primary(), width: '100%' }}>
-          <RollLabel>{added ? '✓ Added' : '+ Add to Progression'}</RollLabel>
-        </button>
-      )}
     </div>
   );
 
-  const voicingsPane = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {chordName && voicings.length > 0 ? (
-        <>
-          {/* VoicingVariations carries its own heading — no second copy here. */}
-          <VoicingVariations
-            voicings={voicings}
-            chordName={chordName ?? undefined}
-            tuning={tuning}
-            onSelect={(v, i) => { setViewerIndex(i); previewVoicing(v, tuningObj.openFreqs); }}
-            gridColumns={desktop ? 3 : undefined}
-          />
-        </>
-      ) : desktop ? (
-        <div style={{ ...card({ padding: '40px 24px' }), textAlign: 'center', opacity: 0.6 }}>
-          <p style={{ margin: '0 0 8px', fontSize: 13, color: T.text, fontWeight: 500 }}>
-            Select a chord
-          </p>
-          <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
-            Pick a root, quality, and extension on the left to see voicing variations here.
-          </p>
-        </div>
-      ) : null}
-    </div>
-  );
+  const voicingsPane = chordName && voicings.length > 0 ? (
+    <VoicingVariations
+      voicings={voicings}
+      chordName={chordName ?? undefined}
+      tuning={tuning}
+      selectedIndex={shown}
+      onSelect={(v, i) => { setViewerIndex(i); setShown(i); previewVoicing(v, tuningObj.openFreqs); }}
+      gridColumns={desktop ? 4 : undefined}
+    />
+  ) : !chordName ? (
+    <Rule>
+      <p className="su-label" style={{ margin: 0 }}>
+        {he ? 'בחרו שורש, איכות והרחבה כדי לראות צורות' : 'Pick a root, quality and extension to see voicings'}
+      </p>
+    </Rule>
+  ) : null;
 
   const viewer = viewerIndex != null && chordName && voicings[viewerIndex] ? (
     <VoicingViewer
@@ -372,7 +275,7 @@ export function ChordPickerTab({
       index={viewerIndex}
       chordName={displayName ?? chordName}
       tuning={tuningObj}
-      onNav={setViewerIndex}
+      onNav={i => { setViewerIndex(i); setShown(i); }}
       onAdd={addVoicing}
       onClose={() => setViewerIndex(null)}
     />
@@ -380,22 +283,28 @@ export function ChordPickerTab({
 
   if (desktop) {
     return (
-      <div style={{ marginTop: 18 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '430px 1fr', gap: 36, alignItems: 'start' }}>
-          {builderPane}
-          {voicingsPane}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {poster}
+        <div style={{ display: 'grid', gridTemplateColumns: '340px minmax(0, 1fr)', gap: 40, alignItems: 'start' }}>
+          <div style={{ position: 'sticky', top: 0 }}>{controls}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0 }}>
+            {formula}
+            {diagram}
+            {voicingsPane}
+          </div>
         </div>
-        <div style={{ marginTop: 36, borderTop: `1px solid ${T.border}`, paddingTop: 24 }}>
-          {progressionPanel}
-        </div>
+        {progressionPanel}
         {viewer}
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {builderPane}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {poster}
+      {formula}
+      {diagram}
+      {controls}
       {voicingsPane}
       {progressionPanel}
       {viewer}

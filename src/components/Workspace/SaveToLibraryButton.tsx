@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { T } from '../../theme';
+import { pillStyle } from '../Transit/styles';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../Auth/AuthModal';
 import { savedProgressions, savedTabs, savedHarmonizations, savedReharms, audioTabs, uploadAudioClip } from '../../services/workspace';
@@ -93,19 +93,13 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
   };
 
   const saved  = status === 'saved';
-  const pad    = size === 'sm' ? '6px 12px' : '9px 16px';
-  const fs     = size === 'sm' ? 11 : 12.5;
 
+  // An outline pill; once saved it fills ink with a tick for a moment.
   return (
     <>
-      <button onClick={onClick} disabled={status === 'saving'} style={{
-        padding: pad, borderRadius: 0, cursor: status === 'saving' ? 'wait' : 'pointer',
-        border: 'none', fontFamily: 'inherit', fontSize: fs, fontWeight: 400,
-        textTransform: 'uppercase', letterSpacing: '-0.02em',
-        background: saved ? T.secondaryBg : T.primary,
-        color: saved ? T.secondary : T.white,
-        borderLeft: '3px solid var(--gc-bar-color)',
-        display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+      <button onClick={onClick} disabled={status === 'saving'} aria-live="polite" className="gc-no-bar" style={{
+        ...pillStyle(saved, size === 'sm' ? 'sm' : 'md'),
+        cursor: status === 'saving' ? 'wait' : 'pointer',
         ...style,
       }}>
         <RollLabel>{saved ? '✓ Saved' : status === 'saving' ? 'Saving…' : label}</RollLabel>

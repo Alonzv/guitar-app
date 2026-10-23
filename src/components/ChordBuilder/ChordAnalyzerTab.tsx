@@ -4,7 +4,7 @@ import { detectKey } from '../../utils/progressionHelper';
 import type { ChordInProgression } from '../../types/music';
 import { IconSearch } from '../Icons';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
-import { T, card, alpha } from '../../theme';
+import { T, card } from '../../theme';
 
 interface Props {
   progression: ChordInProgression[];
@@ -14,9 +14,9 @@ interface Props {
 type HarmonicFn = 'T' | 'SD' | 'D' | '?';
 
 const FN_COLORS: Record<HarmonicFn, string> = {
-  T:  T.primary,
-  SD: '#5C5650',
-  D:  'var(--gc-success)',
+  T:  T.secondary,
+  SD: T.coral,
+  D:  T.primary,
   '?': T.textDim,
 };
 
@@ -133,7 +133,7 @@ export function ChordAnalyzerTab({ progression, desktop }: Props) {
           Detected Key
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 12 }}>
-          <span style={{ fontSize: 32, fontWeight: 900, color: T.primary, lineHeight: 1 }}>{keyRoot}</span>
+          <span className="su-poster" style={{ fontSize: 48, color: T.text }}>{keyRoot}</span>
           <span style={{ fontSize: 16, fontWeight: 400, color: T.textMuted }}>{modeLabel}</span>
         </div>
         <div style={{ fontSize: 10, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 6 }}>
@@ -143,9 +143,8 @@ export function ChordAnalyzerTab({ progression, desktop }: Props) {
           {scale.map((note, i) => (
             <span key={i} style={{
               padding: '2px 6px', borderRadius: 0, fontSize: 10, fontWeight: 600,
-              background: i === 0 ? T.primaryBg : T.bgInput,
-              color: i === 0 ? T.primary : T.textMuted,
-              border: i === 0 ? `1px solid ${alpha(T.primary, 27)}` : `1px solid ${T.border}`,
+              background: i === 0 ? T.secondary : T.bgInput,
+              color: i === 0 ? T.white : T.text,
             }}>{note}</span>
           ))}
         </div>

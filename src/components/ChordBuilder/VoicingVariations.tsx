@@ -1,10 +1,13 @@
 import React, { useMemo } from 'react';
 import type { FretPosition } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
-import { buildChromaColorMap } from './ChordStructure';
+import { buildChromaColorMap } from './chordColors';
+import { degreeLabels, shapeMeta } from './chordFormula';
 import { fretToNote } from '../../utils/musicTheory';
 import { Note } from '@tonaljs/tonal';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
+import { Rule } from '../Transit/parts';
 
 interface Props {
   voicings: FretPosition[][];
@@ -15,78 +18,68 @@ interface Props {
   gridColumns?: number;
 }
 
+// Square tiles, one shape each: the root dot cobalt, every dot its degree,
+// the shape spelled underneath. The chosen tile is framed in ink.
 export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selectedIndex, chordName, tuning, gridColumns }) => {
+  const { lang } = useLang();
+  const he = lang === 'he';
   const chromaColors = useMemo(
     () => chordName ? buildChromaColorMap(chordName) : null,
     [chordName]
   );
+  const grid: React.CSSProperties = gridColumns ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` } : {};
 
   if (voicings.length === 0) return (
-    <div style={card({ marginTop: 0 })}>
-      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-        Voicing Variations
-      </p>
-      <div className="gc-voicing-grid" style={gridColumns ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)`, opacity: 0.45 } : { opacity: 0.45 }}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} style={{
-            borderRadius: 0,
-            border: `1px solid ${T.border}`,
-            borderLeft: '4px solid var(--gc-bar-color)',
-            background: T.bgCard,
-            padding: '6px 4px 2px',
-          }}>
+    <Rule label={he ? 'וריאציות' : 'Voicing variations'}>
+      <div className="gc-voicing-grid" style={{ ...grid, opacity: 0.45 }}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} style={{ background: T.bgInput, padding: '10px 6px 4px' }}>
             <MiniFretboard voicing={[]} />
           </div>
         ))}
       </div>
-      <p style={{ margin: '14px 0 0', fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.02em' }}>
-        ← Pick a root and quality to generate voicings
+      <p className="su-label" style={{ margin: '12px 0 0' }}>
+        {he ? 'בחרו שורש ואיכות כדי לראות צורות' : 'Pick a root and quality to see shapes'}
       </p>
-    </div>
+    </Rule>
   );
 
   return (
-    <div style={card({ marginTop: 0 })}>
-      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-        Voicing Variations · tap to enlarge
-      </p>
-      <div className="gc-voicing-grid" style={gridColumns ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)` } : undefined}>
+    <Rule label={he ? `וריאציות · ${voicings.length} · הקישו להגדלה` : `Voicings · ${voicings.length} · tap to enlarge`}>
+      <div className="gc-voicing-grid" style={grid}>
         {voicings.map((voicing, i) => {
           const isSelected = i === selectedIndex;
-
           const dotColors = chromaColors
             ? voicing.map(p => {
-                const note = fretToNote(p.string, p.fret, tuning);
-                const chroma = Note.chroma(note);
-                return chroma != null ? (chromaColors.get(chroma) ?? T.primary) : T.primary;
+                const chroma = Note.chroma(fretToNote(p.string, p.fret, tuning));
+                return chroma != null ? (chromaColors.get(chroma) ?? T.secondary) : T.secondary;
               })
             : undefined;
-
           return (
-            <div
+            <button
               key={i}
-              className="gc-voicing-tile gc-pressable"
+              type="button"
+              className="gc-voicing-tile gc-no-bar gc-notation"
               onClick={() => onSelect(voicing, i)}
+              aria-pressed={selectedIndex !== undefined ? isSelected : undefined}
+              aria-label={`${he ? 'צורה' : 'Shape'} ${i + 1}: ${shapeMeta(voicing, tuning).shape}`}
               style={{
-                cursor: 'pointer',
-                borderRadius: 0,
-                border: `1px solid ${isSelected ? T.secondary : T.border}`,
-                borderLeft: isSelected ? `4px solid ${T.secondary}` : '4px solid var(--gc-bar-color)',
-                background: isSelected ? T.secondaryBg : T.bgCard,
-                padding: '6px 4px 2px',
-                transition: 'border-color 0.15s, background 0.15s',
+                cursor: 'pointer', borderRadius: 0, textAlign: 'start', letterSpacing: 'normal',
+                border: `2px solid ${isSelected ? T.text : 'transparent'}`,
+                background: T.bgInput, padding: '10px 6px 6px', minWidth: 0,
+                display: 'flex', flexDirection: 'column', gap: 4, color: T.text,
               }}
             >
-              <MiniFretboard
-                voicing={voicing}
-                dotColors={dotColors}
-                dotColor={isSelected ? T.secondary : T.primary}
-                tuning={tuning}
-              />
-            </div>
+              <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning}
+                dotLabels={chordName ? degreeLabels(voicing, chordName, tuning) : undefined} />
+              <span dir="ltr" style={{ display: 'flex', justifyContent: 'space-between', gap: 6, padding: '0 4px', fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.06em', minWidth: 0 }}>
+                <span style={{ color: T.textMuted, flex: 'none' }}>{String(i + 1).padStart(2, '0')}</span>
+                <span style={{ fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shapeMeta(voicing, tuning).shape}</span>
+              </span>
+            </button>
           );
         })}
       </div>
-    </div>
+    </Rule>
   );
 };

@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { T, card } from '../../theme';
+import { T, btn } from '../../theme';
+import { PosterTitle, Rule, Pill, Cta } from '../Transit/parts';
+import { keyStyle } from '../Transit/styles';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LanguageContext';
 import { playInterval, playMidi } from '../../utils/audioPlayback';
@@ -23,48 +25,21 @@ interface Props { desktop?: boolean }
 
 
 // ── Small presentational helpers ────────────────────────────────────────────
-const LABEL: React.CSSProperties = {
-  fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
-  color: T.textDim, margin: '0 0 6px', fontWeight: 600,
-};
-
-function Pill({ active, onClick, children, disabled }: {
-  active: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean;
-}) {
-  return (
-    <button data-active={!!active}
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        flex: 1, minWidth: 0, padding: '8px 10px', borderRadius: 0, cursor: disabled ? 'not-allowed' : 'pointer',
-        fontSize: 12, fontWeight: active ? 600 : 400,
-        border: active ? 'none' : `1px solid ${T.border}`,
-        borderLeft: '3px solid var(--gc-bar-color)',
-        background: active ? T.secondary : T.bgInput,
-        color: active ? '#fff' : (disabled ? T.textDim : T.textMuted),
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 function ToggleRow({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'flex', gap: 6 }}>{children}</div>;
+  return <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{children}</div>;
 }
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ width: 12, height: 12, borderRadius: '50%', background: color, border: '1.5px solid #fff', boxShadow: '0 0 0 1px rgba(0,0,0,0.12)' }} />
+      <span style={{ width: 12, height: 12, borderRadius: '50%', background: color }} />
       {label}
     </span>
   );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-export const EarTrainingTab: React.FC<Props> = () => {
+export const EarTrainingTab: React.FC<Props> = ({ desktop }) => {
   const { user } = useAuth();
 
   const [data, setData] = useState<EarTrainingData>(() => loadLocal());
@@ -137,12 +112,6 @@ export const EarTrainingTab: React.FC<Props> = () => {
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>
       {/* Header: title + Learn/Practice */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>
-          {rtl ? 'אימון שמיעה' : 'Ear Training'}
-        </h2>
-      </div>
-
       <PracticeMode
         lang={lang}
         data={data}
@@ -151,6 +120,7 @@ export const EarTrainingTab: React.FC<Props> = () => {
         playExercise={playExercise}
         onNewBest={(best) => setData(d => (best > d.bestStreak ? { ...d, bestStreak: best } : d))}
         signedIn={!!user}
+        desktop={desktop}
       />
     </div>
   );
@@ -167,13 +137,14 @@ interface PracticeProps {
   playExercise: (ex: Exercise) => void;
   onNewBest: (best: number) => void;
   signedIn: boolean;
+  desktop?: boolean;
 }
 
 // Difficulty pools — Basic keeps to the clearest intervals; Advanced is all 12.
 const BASIC_IVS: IntervalId[] = ['m3', 'M3', 'P4', 'P5', 'M6', 'P8'];
 
 const PracticeMode: React.FC<PracticeProps> = ({
-  lang, data, setPrefs, recordResult, playExercise, onNewBest, signedIn,
+  lang, data, setPrefs, recordResult, playExercise, onNewBest, signedIn, desktop,
 }) => {
   const t = UI[lang];
   const { playback, direction } = data.prefs;
@@ -262,40 +233,38 @@ const PracticeMode: React.FC<PracticeProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Control menu */}
-      <div style={card({ padding: 14 })}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <p style={LABEL}>{t.playbackMode}</p>
-            <ToggleRow>
-              {(['melodic', 'harmonic', 'mixed'] as EarPlayback[]).map(m => (
-                <Pill key={m} active={playback === m} onClick={() => setPrefs({ playback: m })}>
-                  {m === 'melodic' ? t.melodic : m === 'harmonic' ? t.harmonic : t.mixed}
-                </Pill>
-              ))}
-            </ToggleRow>
-          </div>
-          <div style={{ opacity: directionDisabled ? 0.5 : 1 }}>
-            <p style={LABEL}>{t.direction}</p>
-            <ToggleRow>
-              {(['asc', 'desc', 'mixed'] as EarDirection[]).map(d => (
-                <Pill key={d} active={direction === d} disabled={directionDisabled}
-                  onClick={() => setPrefs({ direction: d })}>
-                  {d === 'asc' ? t.ascending : d === 'desc' ? t.descending : t.mixed}
-                </Pill>
-              ))}
-            </ToggleRow>
-          </div>
-          <div>
-            <p style={LABEL}>{lang === 'he' ? 'קושי' : 'Difficulty'}</p>
-            <ToggleRow>
-              {(['basic', 'advanced'] as const).map(d => (
-                <Pill key={d} active={difficulty === d}
-                  onClick={() => { setDifficulty(d); if (exercise) nextExercise(d === 'advanced' ? INTERVAL_ORDER : BASIC_IVS); }}>
-                  {d === 'basic' ? (lang === 'he' ? 'בסיסי' : 'Basic') : (lang === 'he' ? 'מתקדם' : 'Advanced')}
-                </Pill>
-              ))}
-            </ToggleRow>
-          </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <p className="su-label" style={{ margin: '0 0 6px' }}>{t.playbackMode}</p>
+          <ToggleRow>
+            {(['melodic', 'harmonic', 'mixed'] as EarPlayback[]).map(m => (
+              <Pill key={m} size="sm" active={playback === m} onClick={() => setPrefs({ playback: m })}>
+                {m === 'melodic' ? t.melodic : m === 'harmonic' ? t.harmonic : t.mixed}
+              </Pill>
+            ))}
+          </ToggleRow>
+        </div>
+        <div>
+          <p className="su-label" style={{ margin: '0 0 6px' }}>{t.direction}</p>
+          <ToggleRow>
+            {(['asc', 'desc', 'mixed'] as EarDirection[]).map(d => (
+              <Pill key={d} size="sm" active={direction === d} disabled={directionDisabled}
+                onClick={() => setPrefs({ direction: d })}>
+                {d === 'asc' ? t.ascending : d === 'desc' ? t.descending : t.mixed}
+              </Pill>
+            ))}
+          </ToggleRow>
+        </div>
+        <div>
+          <p className="su-label" style={{ margin: '0 0 6px' }}>{lang === 'he' ? 'קושי' : 'Difficulty'}</p>
+          <ToggleRow>
+            {(['basic', 'advanced'] as const).map(d => (
+              <Pill key={d} size="sm" active={difficulty === d}
+                onClick={() => { setDifficulty(d); if (exercise) nextExercise(d === 'advanced' ? INTERVAL_ORDER : BASIC_IVS); }}>
+                {d === 'basic' ? (lang === 'he' ? 'בסיסי' : 'Basic') : (lang === 'he' ? 'מתקדם' : 'Advanced')}
+              </Pill>
+            ))}
+          </ToggleRow>
         </div>
       </div>
 
@@ -303,31 +272,24 @@ const PracticeMode: React.FC<PracticeProps> = ({
 
       {/* Exercise area */}
       {!exercise ? (
-        <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
-          <p style={{ margin: '0 0 16px', fontSize: 14, color: T.textMuted }}>{t.listenPrompt}</p>
-          <button onClick={() => nextExercise()}
-            style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>
-            {t.startPractice}
-          </button>
-          {!signedIn && <p style={{ margin: '16px 0 0', fontSize: 11, color: T.textDim }}>{t.signInHint}</p>}
-        </div>
+        <Rule>
+          <p style={{ margin: '4px 0 16px', fontSize: 14, lineHeight: 1.6, color: T.text }}>{t.listenPrompt}</p>
+          <Cta onClick={() => nextExercise()}>{t.startPractice}</Cta>
+          {!signedIn && <p style={{ margin: '16px 0 0', fontSize: 11, color: T.textMuted }}>{t.signInHint}</p>}
+        </Rule>
       ) : (
-        <div style={card({ padding: 14 })}>
+        <Rule>
+          <PosterTitle head={lang === 'he' ? 'איזה אינטרוול?' : 'Which interval?'} max={desktop ? 96 : 60} min={32} as="div" style={{ marginBottom: 14 }} />
           {/* Replay + Play-root — prominent, above the neck */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-            <button onClick={() => playExercise(exercise)}
-              style={{ padding: '10px 26px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              ↻ {t.replay}
-            </button>
-            <button onClick={() => playMidi(exercise.rootMidi)}
-              style={{ padding: '10px 22px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 500, background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              ● {t.playRoot}
-            </button>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={() => playExercise(exercise)} className="gc-no-bar" style={btn.primary()}>↻ {t.replay}</button>
+            <Pill onClick={() => playMidi(exercise.rootMidi)}>{t.playRoot}</Pill>
+            {/* Name the anchor note so it maps to the marked dot on the neck */}
+            <span style={{ marginInlineStart: 'auto', display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+              <span className="su-label">{t.rootLabel}</span>
+              <span className="su-semi" style={{ fontSize: 24 }}>{noteName(exercise.rootMidi)}</span>
+            </span>
           </div>
-          {/* Name the anchor note so it maps to the black dot on the neck */}
-          <p style={{ textAlign: 'center', margin: '0 0 10px', fontSize: 12, color: T.textDim }}>
-            {t.rootLabel}: <span style={{ fontWeight: 700, color: T.text }}>{noteName(exercise.rootMidi)}</span>
-          </p>
 
           {/* Neck shows ONLY the root; the 2nd note stays hidden until answered */}
           <WindowedFretboard
@@ -340,54 +302,53 @@ const PracticeMode: React.FC<PracticeProps> = ({
             onPick={() => {}}
           />
 
-          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 14, marginTop: 10, fontSize: 11, color: T.textDim }}>
-            <LegendDot color={T.primary} label={t.rootLabel} />
-            {revealed && <LegendDot color={T.success} label={t.answerLabel} />}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 10, fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)' }}>
+            <LegendDot color={revealed ? T.secondary : T.primary} label={t.rootLabel} />
+            {revealed && <LegendDot color={T.primary} label={t.answerLabel} />}
           </div>
 
           <div style={{ marginTop: 12 }}><PlayToAnswer lang={lang} mic={mic} /></div>
 
           {/* Answer by naming the interval — no neck tapping (no fret counting) */}
-          <p style={{ ...LABEL, marginTop: 14 }}>{lang === 'he' ? 'זהו את האינטרוול' : 'Name the interval'}</p>
-          <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: 6 }}>
+          <p className="su-label" style={{ margin: '14px 0 8px' }}>{lang === 'he' ? 'זהו את האינטרוול' : 'Name the interval'}</p>
+          <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: 4 }}>
             {pool.map(id => {
               const isAnswer = revealed && id === exercise.interval;
               const isWrong = wrongPicks.has(id);
               return (
-                <button key={id} onClick={() => guess(id)} disabled={revealed} style={{
-                  padding: '11px 2px', borderRadius: 0, cursor: revealed ? 'default' : 'pointer', fontSize: 14, fontWeight: 600,
-                  border: (isAnswer || isWrong) ? 'none' : `1px solid ${T.border}`,
-                  background: isAnswer ? T.success : isWrong ? T.error : T.bgInput,
-                  color: (isAnswer || isWrong) ? '#fff' : T.textMuted, textTransform: 'none',
+                <button key={id} onClick={() => guess(id)} disabled={revealed} className="gc-no-bar gc-notation" style={{
+                  ...keyStyle(false), minHeight: 52, letterSpacing: 'normal', textTransform: 'none', cursor: revealed ? 'default' : 'pointer',
+                  background: isAnswer ? T.primary : isWrong ? T.secondary : T.bgInput,
+                  color: isAnswer ? T.onPrimary : isWrong ? T.white : T.text,
+                  textDecoration: isWrong ? 'line-through' : undefined,
                 }}>{id}</button>
               );
             })}
           </div>
 
           {/* Status line */}
-          <div style={{ minHeight: 30, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {answered === 'correct' && <span style={{ fontSize: 15, fontWeight: 700, color: T.success }}>✓ {t.correct}</span>}
+          <div role="status" style={{ minHeight: 30, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {answered === 'correct' && <span style={{ fontSize: 15, fontWeight: 700, color: T.text }}>✓ {t.correct}</span>}
             {answered === 'reset' && <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>✕ {t.wrong} — {exercise.interval}</span>}
           </div>
-        </div>
+        </Rule>
       )}
 
       {/* Weak spots analytics */}
       {weak.length > 0 && (
-        <div style={card({ padding: 14 })}>
-          <p style={LABEL}>{t.weakSpots}</p>
+        <Rule label={t.weakSpots}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {weak.map(w => (
               <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 34, fontSize: 13, fontWeight: 700, color: T.text }}>{w.id}</span>
+                <span className="su-semi" style={{ width: 40, fontSize: 18, color: T.text }}>{w.id}</span>
                 <div style={{ flex: 1, height: 8, background: T.bgInput, position: 'relative' }}>
-                  <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${Math.round(w.acc * 100)}%`, background: T.error }} />
+                  <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${Math.round(w.acc * 100)}%`, background: T.secondary }} />
                 </div>
-                <span style={{ width: 42, textAlign: 'end', fontSize: 12, color: T.textDim }}>{Math.round(w.acc * 100)}%</span>
+                <span style={{ width: 42, textAlign: 'end', fontSize: 12, color: T.textMuted, fontFamily: 'var(--gc-mono)' }}>{Math.round(w.acc * 100)}%</span>
               </div>
             ))}
           </div>
-        </div>
+        </Rule>
       )}
     </div>
   );

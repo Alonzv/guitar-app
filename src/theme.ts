@@ -33,6 +33,9 @@ export const T = {
   successSoft:     'var(--gc-success-soft)',
   error:           'var(--gc-error)',
   errorSoft:       'var(--gc-error-soft)',
+  // Transit
+  hairline:        'var(--su-hairline)',
+  onPrimary:       'var(--su-on-primary)',
 } as const;
 
 export type Theme = typeof T;
@@ -42,53 +45,82 @@ export type Theme = typeof T;
 export const alpha = (color: string, pct: number): string =>
   `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 
-// Shared card style — flat Arturia-style, no border-radius
+// A section, not a box: a 2px ink rule on top and room under it. Transit
+// builds structure from rules rather than card outlines or shadows.
 export const card = (extra?: React.CSSProperties): React.CSSProperties => {
   const { padding: explicitPad, ...rest } = extra ?? {};
   return {
-    background: T.bgCard,
+    background: 'transparent',
     borderRadius: 0,
-    padding: explicitPad ?? 'var(--gc-card-pad)',
-    border: `1px solid ${T.border}`,
-    borderLeft: '4px solid var(--gc-bar-color)',
+    padding: explicitPad ?? '14px 0 0',
+    borderTop: `var(--su-rule) solid ${T.border}`,
     ...rest,
   };
 };
 
-// Button variants — sharp corners, flat offset shadow
+// Display type — Archivo condensed for posters and big numbers, semi-condensed
+// for keys and list items. Spread into a style.
+export const display = (size: number, weight = 900): React.CSSProperties => ({
+  fontFamily: 'var(--su-display)', fontStretch: 'var(--su-display-cond)' as React.CSSProperties['fontStretch'],
+  fontWeight: weight, fontSize: size, lineHeight: 0.8, letterSpacing: '-0.02em',
+});
+export const semi = (size: number, weight = 800): React.CSSProperties => ({
+  fontFamily: 'var(--su-display)', fontStretch: 'var(--su-display-semi)' as React.CSSProperties['fontStretch'],
+  fontWeight: weight, fontSize: size, lineHeight: 1,
+});
+// The small mono label above a group: 10px, wide tracking, muted.
+export const label: React.CSSProperties = {
+  margin: 0, fontFamily: 'var(--gc-font)', fontSize: 10, letterSpacing: '0.14em',
+  textTransform: 'uppercase', color: T.textMuted,
+};
+
+// Buttons are pills (1.5px ink outline; selected = filled ink). Keys and tiles
+// are square (see key()). Cobalt is kept for the one primary action (cta).
+// Text on a filled dot or key: white on cobalt, paper on ink (sand at night).
+export const onFill = (fill: string | undefined): string => fill === T.primary ? T.onPrimary : T.white;
+
 export const btn = {
   primary: (disabled?: boolean): React.CSSProperties => ({
-    padding: '12px 0',
-    borderRadius: 0,
+    padding: '12px 18px', minHeight: 44,
+    borderRadius: 'var(--su-pill)',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    fontWeight: 400,
-    fontSize: 15,
-    background: disabled ? T.border : T.primary,
+    fontWeight: 700, fontSize: 13, letterSpacing: '0.1em',
+    background: disabled ? T.bgInput : T.secondary,
     color: disabled ? T.textDim : T.white,
-    borderLeft: disabled ? 'none' : '4px solid var(--gc-bar-color)',
-    transition: 'background 0.1s',
+    border: `1.5px solid ${disabled ? T.bgInput : T.secondary}`,
   }),
   secondary: (): React.CSSProperties => ({
-    padding: '12px 0',
-    borderRadius: 0,
-    border: `1px solid ${T.border}`,
+    padding: '12px 18px', minHeight: 44,
+    borderRadius: 'var(--su-pill)',
+    border: `1.5px solid ${T.text}`,
     cursor: 'pointer',
-    fontWeight: 400,
-    fontSize: 15,
-    background: T.bgInput,
-    color: T.textMuted,
-    borderLeft: '4px solid var(--gc-bar-color)',
+    fontWeight: 700, fontSize: 13, letterSpacing: '0.1em',
+    background: 'transparent',
+    color: T.text,
   }),
   pill: (active: boolean): React.CSSProperties => ({
-    padding: '5px 14px',
-    borderRadius: 0,
-    border: active ? 'none' : `1px solid ${T.border}`,
+    padding: '0 14px', minHeight: 36,
+    borderRadius: 'var(--su-pill)',
+    border: `1.5px solid ${T.text}`,
     cursor: 'pointer',
-    fontSize: 12,
-    fontWeight: active ? 500 : 400,
-    background: active ? T.primary : T.bgInput,
-    color: active ? T.white : T.textMuted,
-    borderLeft: '3px solid var(--gc-bar-color)',
-    transition: 'background 0.1s',
+    fontSize: 12, fontWeight: 700,
+    background: active ? T.secondary : 'transparent',
+    color: active ? T.white : T.text,
+  }),
+  cta: (disabled?: boolean): React.CSSProperties => ({
+    padding: '12px 22px', minHeight: 44,
+    borderRadius: 'var(--su-pill)', border: 'none',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    fontWeight: 700, fontSize: 13, letterSpacing: '0.14em',
+    background: disabled ? T.bgInput : T.primary,
+    color: disabled ? T.textDim : 'var(--su-on-primary)',
   }),
 };
+
+// A square key (roots, notes, degrees): chip grey, or ink when selected.
+export const key = (active: boolean): React.CSSProperties => ({
+  minHeight: 44, borderRadius: 0, border: 'none', cursor: 'pointer',
+  background: active ? T.secondary : T.bgInput,
+  color: active ? T.white : T.text,
+  ...semi(17),
+});

@@ -1,5 +1,9 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { Rule, Pill, Cta } from '../Transit/parts';
+import { pillStyle } from '../Transit/styles';
+import { SelectPill } from './SelectPill';
+import { field, spinner } from './ui';
 import type { Tuning } from '../../types/music';
 import type { TabContent } from '../../services/types';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
@@ -111,24 +115,15 @@ const TECH_BTNS: { id: Tech | '|'; label: string; sym: string; key: string }[] =
   { id: '|', label: 'Bar',         sym: '|',   key: '|' },
 ];
 
-const LABEL_STYLE: React.CSSProperties = {
-  margin: 0, fontSize: 11, fontWeight: 400, color: T.textMuted,
-  textTransform: 'uppercase', letterSpacing: '-0.02em',
-};
-const MONO_LBL: React.CSSProperties = {
-  fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.12em',
-  textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
-};
-
 interface Props {
   tuning: Tuning;
   desktop?: boolean;
 }
 
 const COLOR_ORIG  = T.text;
-// Harmony (AI-added) notes — blue brand accent, clearly distinct from the
-// black melody notes.
-const COLOR_ADDED = T.brandAccent;
+// Harmony (AI-added) notes are grey, so the ink melody — yours — reads
+// first inside the arrangement. Cobalt stays with the Harmonize action.
+const COLOR_ADDED = T.textMuted;
 // Soft highlighter drawn behind the user's ORIGINAL notes in the result
 // view, so the source tab stands out inside the arrangement.
 const MELODY_MARK = 'var(--gc-error-soft)';
@@ -653,26 +648,22 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     }
     return (
       <div
-        // Mobile's SwipePager wraps the whole tab panel in its own pointer
-        // handlers to detect horizontal swipes between VOICINGS/PRACTICE/etc.
-        // Without this, a finger dragging horizontally to scroll THIS grid
-        // can get intermittently captured by that outer swipe detector mid-
-        // gesture — the native scroll stutters/interrupts. Stopping the
-        // pointerdown from bubbling keeps SwipePager from ever seeing a
-        // gesture that started inside the grid, while leaving this element's
-        // own native scrolling completely untouched.
+        // Kept from the swipe-pager days: stopping pointerdown from bubbling
+        // means no outer gesture handler can capture a finger that is
+        // scrolling this grid sideways. The grid's own native scrolling is
+        // untouched.
         onPointerDownCapture={e => e.stopPropagation()}
         onMouseLeave={() => setHov(null)}
         style={{
-          background: 'var(--gc-fretboard-bg)', padding: '8px 4px',
-          border: `1px solid ${T.border}`, overflowX: 'auto',
+          background: 'transparent', padding: '10px 0',
+          borderTop: `1px solid ${T.hairline}`, borderBottom: `1px solid ${T.hairline}`, overflowX: 'auto',
           width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
         }}
       >
         {ROWS.map((lbl, row) => (
           <div key={row} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
-            <span style={{ width: 14, fontSize: FS, fontFamily: 'monospace', color: T.textMuted, textAlign: 'right', paddingRight: 3, flexShrink: 0 }}>{lbl}</span>
-            <span style={{ fontSize: FS, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
+            <span style={{ width: 14, fontSize: FS, fontFamily: 'var(--gc-mono)', color: T.textMuted, textAlign: 'right', paddingRight: 3, flexShrink: 0 }}>{lbl}</span>
+            <span style={{ fontSize: FS, fontFamily: 'var(--gc-mono)', color: T.textMuted, flexShrink: 0 }}>|</span>
             {g[row].map((cell, col) => {
               const isBar = gBarsSet.has(col);
               // Result view: tapping a harmonized (melody+harmony) column
@@ -707,12 +698,12 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
                   {/* Bar line */}
                   {isBar && (
-                    <div style={{ width: 2, height: CH, background: T.border, flexShrink: 0 }} />
+                    <div style={{ width: 2, height: CH, background: T.text, flexShrink: 0 }} />
                   )}
                 </React.Fragment>
               );
             })}
-            <span style={{ fontSize: FS, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
+            <span style={{ fontSize: FS, fontFamily: 'var(--gc-mono)', color: T.textMuted, flexShrink: 0 }}>|</span>
           </div>
         ))}
       </div>
@@ -745,70 +736,56 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
   // ── Selected-cell toolbar — Tab Builder's technique set (+ Bar), plus the
   // harmonizer's Anchor toggle. Fret digits are typed via the native
   // keyboard; Backspace/Delete clears through handleEditKey.
+  const he = lang === 'he';
   const selTech = sel ? grid[sel[0]][sel[1]].tech : undefined;
   const cellToolbar = sel && (
-    <div style={{ ...card({ padding: '10px 12px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p style={LABEL_STYLE}>Cell {ROWS[sel[0]]} · col {sel[1] + 1}</p>
-        <button onClick={() => { setSel(null); fretInputRef.current?.blur(); }} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
-      </div>
-      {(() => {
-        const anchored = colIsAnchored(sel[1]);
-        const hasNotes = colHasNotes(sel[1]);
-        return (
-          <button data-active={!!anchored}
-            onClick={toggleAnchor}
-            disabled={!hasNotes}
-            title="Marks the whole column (time-slot) as a harmonic anchor"
-            style={{
-              width: '100%', padding: '7px 0',
-              border: `1.5px solid ${anchored ? T.secondary : T.border}`,
-              background: anchored ? T.secondaryBg : T.bgInput,
-              color: anchored ? T.secondary : T.textMuted,
-              fontSize: 11, fontWeight: anchored ? 700 : 400, cursor: 'pointer',
-              opacity: hasNotes ? 1 : 0.5,
-            }}
-          >
-            › {anchored ? 'Harmonize Anchor ✓' : 'Harmonize Anchor'}
-          </button>
-        );
-      })()}
-      <div style={{ display: 'flex', gap: 4 }}>
-        {TECH_BTNS.map(t => {
-          const isArmed = t.id === '|' ? barsSet.has(sel[1]) : selTech === t.id;
+    <Rule
+      label={`${he ? 'תא' : 'Cell'} ${ROWS[sel[0]]} · ${he ? 'עמודה' : 'col'} ${sel[1] + 1}`}
+      right={<Pill size="sm" onClick={() => { setSel(null); fretInputRef.current?.blur(); }} label={he ? 'סגירה' : 'Close'} style={{ padding: 0 }}>×</Pill>}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {(() => {
+          const anchored = colIsAnchored(sel[1]);
+          const hasNotes = colHasNotes(sel[1]);
           return (
-            <button data-active={!!isArmed}
-              key={t.id}
-              onClick={() => t.id === '|' ? toggleBar() : applyTech(t.id as Tech)}
-              title={`${t.label} [${t.key}]`}
-              style={{
-                flex: 1, padding: '6px 0', border: `1px solid ${isArmed ? T.coral : T.border}`,
-                background: isArmed ? T.coral : T.bgInput, color: isArmed ? '#fff' : T.textMuted,
-                fontSize: 11, fontFamily: 'monospace', cursor: 'pointer',
-              }}
-            >{t.sym}</button>
+            <Pill active={anchored} onClick={toggleAnchor} disabled={!hasNotes}
+              title="Marks the whole column (time-slot) as a harmonic anchor" style={{ width: '100%' }}>
+              › {anchored ? 'Harmonize Anchor ✓' : 'Harmonize Anchor'}
+            </Pill>
           );
-        })}
+        })()}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {TECH_BTNS.map(t => {
+            const isArmed = t.id === '|' ? barsSet.has(sel[1]) : selTech === t.id;
+            return (
+              <Pill key={t.id} size="sm" active={isArmed}
+                onClick={() => t.id === '|' ? toggleBar() : applyTech(t.id as Tech)}
+                title={`${t.label} [${t.key}]`} label={t.label}
+                style={{ flex: 1, padding: 0, minWidth: 0, fontFamily: 'var(--gc-mono)', textTransform: 'none' }}>{t.sym}</Pill>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </Rule>
   );
 
   // ── Left column: input + controls ──────────────────────────────────────────
   const leftCol = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
       {hiddenFretInput}
       {/* Input stage */}
-      <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <p style={LABEL_STYLE}>Melody Input</p>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => fileRef.current?.click()} disabled={visionLoading} style={secBtn(visionLoading)}>
-              {visionLoading ? 'Reading…' : 'Image'}
-            </button>
-            <button onClick={loadExample} style={secBtn(false)}>Example</button>
-            <button onClick={clearGrid} style={secBtn(false)}>Clear</button>
+      <Rule
+        label={<span style={{ whiteSpace: 'nowrap' }}>{he ? 'מנגינה' : 'Melody input'}</span>}
+        right={
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <Pill size="sm" onClick={() => fileRef.current?.click()} disabled={visionLoading}>
+              {visionLoading ? (he ? 'קורא…' : 'Reading…') : (he ? 'תמונה' : 'Image')}
+            </Pill>
+            <Pill size="sm" onClick={loadExample}>{he ? 'דוגמה' : 'Example'}</Pill>
+            <Pill size="sm" onClick={clearGrid}>{he ? 'ניקוי' : 'Clear'}</Pill>
           </div>
-        </div>
+        }
+      >
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) onImageFile(f); e.target.value = ''; }} />
 
@@ -816,47 +793,46 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
             lives only in the result panel, never here. */}
         {renderGrid(grid, bars, true)}
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={addColumns} style={{ ...secBtn(false), flex: 1 }}>+ Columns</button>
-          <button onClick={undo} disabled={!canUndo} style={{ ...secBtn(!canUndo), flex: 1, opacity: canUndo ? 1 : 0.5 }}>↺ Undo</button>
-          <span style={{ fontSize: 10, color: T.textDim, alignSelf: 'center', flex: 2 }}>
-            Tap a cell, then type frets / techniques
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+          <Pill size="sm" onClick={addColumns}>+ {he ? 'עמודות' : 'Columns'}</Pill>
+          <Pill size="sm" onClick={undo} disabled={!canUndo}>↺ {he ? 'ביטול' : 'Undo'}</Pill>
+          <span className="su-label" style={{ flex: 1, minWidth: 140 }}>
+            {he ? 'הקישו על תא והקלידו שריגים / טכניקות' : 'Tap a cell, then type frets / techniques'}
           </span>
         </div>
-      </div>
+      </Rule>
 
       {cellToolbar}
 
       {/* Scale (mandatory) */}
-      <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <p style={LABEL_STYLE}>Scale / Mode <span style={{ color: T.coral }}>*</span></p>
+      <Rule label={<>{he ? 'סולם / מודוס' : 'Scale / Mode'} <span style={{ color: T.text }}>*</span></>}>
         <div style={{ display: 'flex', gap: 8 }}>
-          <select aria-label="Scale root" value={scaleRoot} onChange={e => setScaleRoot(e.target.value)} style={selectStyle}>
-            <option value="">Root…</option>
+          <SelectPill label="Scale root" value={scaleRoot} onChange={setScaleRoot} style={{ flex: 1 }}>
+            <option value="">{he ? 'שורש…' : 'Root…'}</option>
             {SCALE_ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <select aria-label="Scale type" value={scaleType} onChange={e => setScaleType(e.target.value)} style={selectStyle}>
+          </SelectPill>
+          <SelectPill label="Scale type" value={scaleType} onChange={setScaleType} style={{ flex: 2 }}>
             {SCALE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+          </SelectPill>
         </div>
         {detected && (
-          <button
-            onClick={() => { setScaleRoot(detected.root); setScaleType(detected.type); }}
-            style={{ ...secBtn(false), alignSelf: 'flex-start', fontSize: 11 }}
-          >
-            Detected: {detected.name} ({detected.fitPercent}%) — use
-          </button>
+          <Pill size="sm" onClick={() => { setScaleRoot(detected.root); setScaleType(detected.type); }}
+            style={{ marginTop: 8, textTransform: 'none', letterSpacing: '0.02em' }}>
+            {he ? 'זוהה' : 'Detected'}: {detected.name} ({detected.fitPercent}%) — {he ? 'שימוש' : 'use'}
+          </Pill>
         )}
-      </div>
+      </Rule>
 
       {/* Harmony styles — Melodic/3rds combine; Chord-Melody stands alone */}
-      <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <p style={LABEL_STYLE}>Harmony Type <span style={{ fontSize: 9, color: T.textDim, textTransform: 'none' }}>(Chord-Melody stands alone; others combine)</span></p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+      <Rule label={he ? 'סוג הרמוניה' : 'Harmony type'}>
+        <p className="su-label" style={{ margin: '-4px 0 8px', textTransform: 'none', letterSpacing: '0.04em' }}>
+          {he ? 'Chord-Melody עומד לבד; האחרים משתלבים' : 'Chord-Melody stands alone; others combine'}
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6 }}>
           {HARMONY_STYLES.map(s => {
             const active = styles.includes(s.id);
             return (
-              <button data-active={!!active} key={s.id}
+              <Pill key={s.id} active={active}
                 // Chord-Melody is a complete arrangement style whose rules
                 // (bass only at anchors, sustain between them) directly
                 // contradict Melodic's free counter-line — selecting it
@@ -867,47 +843,28 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                   return [...cur.filter(x => x !== 'chordmelody'), s.id];
                 })}
                 title={s.id === 'chordmelody' ? 'Standalone style — replaces other selections' : undefined}
-                style={{
-                  padding: '9px 8px', border: `1.5px solid ${active ? T.secondary : T.border}`,
-                  background: active ? T.secondaryBg : T.bgInput,
-                  color: active ? T.secondary : T.textMuted,
-                  cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400,
-                  textAlign: 'left', lineHeight: 1.3,
-                }}
+                style={{ width: '100%', padding: '0 10px', textTransform: 'none', letterSpacing: '0.02em' }}
               >
                 {s.label}
-              </button>
+              </Pill>
             );
           })}
         </div>
-      </div>
+      </Rule>
 
-      {/* Harmonize / Regenerate */}
+      {/* Harmonize (the one cobalt action) / Regenerate */}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={handleHarmonize} disabled={!canHarmonize} style={{
-          flex: 2, padding: '13px 0', border: 'none',
-          cursor: canHarmonize ? 'pointer' : 'not-allowed',
-          background: canHarmonize ? T.primary : T.border,
-          color: canHarmonize ? '#fff' : T.textDim, fontSize: 15, fontWeight: 400,
-          borderLeft: '4px solid var(--gc-bar-color)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        }}>
-          {loadingKind === 'harmonize' ? (<><span style={spinnerStyle('#fff')} /> Harmonizing…</>) : 'Harmonize'}
-        </button>
-        <button
+        <Cta onClick={handleHarmonize} disabled={!canHarmonize} style={{ flex: 2, height: 52 }}>
+          {loadingKind === 'harmonize' ? (<><span style={spinner(T.textMuted)} /> {he ? 'מרמן…' : 'Harmonizing…'}</>) : (he ? 'הרמוניה' : 'Harmonize')}
+        </Cta>
+        <Pill
           onClick={handleRegenerate}
           disabled={!result || !!loadingKind}
           title="Same melody and anchors, fresh voicing — edit the › anchor marks to change which notes get chords"
-          style={{
-          flex: 1, padding: '13px 0', border: `1.5px solid ${T.secondary}`,
-          cursor: (!result || !!loadingKind) ? 'not-allowed' : 'pointer',
-          background: 'transparent', color: (!result || !!loadingKind) ? T.textDim : T.secondary,
-          fontSize: 14, opacity: (!result || !!loadingKind) ? 0.5 : 1,
-          borderLeft: '4px solid var(--gc-bar-color)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          {loadingKind === 'regenerate' ? (<><span style={spinnerStyle(T.secondary)} /> Regenerating…</>) : 'Regenerate'}
-        </button>
+          style={{ flex: 1, height: 52 }}
+        >
+          {loadingKind === 'regenerate' ? (<><span style={spinner(T.text)} /> {he ? 'מחדש…' : 'Regenerating…'}</>) : (he ? 'גרסה נוספת' : 'Regenerate')}
+        </Pill>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
@@ -915,22 +872,20 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
 
   // ── Right column: result + player ──────────────────────────────────────────
   const rightCol = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
       {error && (
-        <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `3px solid ${T.coral}`, display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontSize: 16 }}>⚠</span>
-          <p style={{ margin: 0, fontSize: 13, color: T.text }}>{error}</p>
-        </div>
+        <Rule>
+          <p role="alert" style={{ margin: 0, fontSize: 13, color: T.text }}><b>{'⚠︎'}</b> {error}</p>
+        </Rule>
       )}
 
       {result && (
         <>
-          <div className="gc-result-card" style={{ gap: 10, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <p style={LABEL_STYLE}>Harmonized</p>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: T.textMuted, fontFamily: 'var(--gc-mono)' }}>
-                  ♩
+          <Rule label={he ? 'המנגינה בהרמוניה' : 'Harmonized'} style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="su-label">BPM</span>
                   <input
                     type="number" min={40} max={240} value={bpm}
                     onChange={e => {
@@ -938,110 +893,70 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                       if (!Number.isNaN(v)) setBpm(Math.min(240, Math.max(40, v)));
                     }}
                     title="Tempo — one tab column = one eighth note"
-                    style={{
-                      width: 52, padding: '5px 4px', fontSize: 12, textAlign: 'center',
-                      background: T.bgInput, border: `1px solid ${T.border}`, color: T.text,
-                    }}
+                    style={{ ...field, width: 64 }}
                   />
-                  BPM
                 </label>
-                <button data-active={!!muteHarmony}
-                  onClick={() => setMuteHarmony(m => !m)}
-                  style={{
-                    padding: '6px 12px', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-                    background: muteHarmony ? T.bgInput : T.secondary, color: muteHarmony ? T.textMuted : '#fff',
-                    borderLeft: '3px solid var(--gc-bar-color)',
-                  }}
-                >
-                  {muteHarmony ? 'Harmony muted' : 'Harmony on'}
-                </button>
-                <button data-active={!!playing} onClick={handlePlay} className="gc-btn-heavy" style={{
-                  padding: '7px 18px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em',
-                  background: playing ? T.coral : T.primary, color: '#fff', borderLeft: '3px solid var(--gc-bar-color)',
-                }}>
+                <Pill size="sm" active={!muteHarmony} onClick={() => setMuteHarmony(m => !m)}>
+                  {muteHarmony ? (he ? 'הרמוניה מושתקת' : 'Harmony muted') : (he ? 'הרמוניה פועלת' : 'Harmony on')}
+                </Pill>
+                <Pill size="sm" active={playing} onClick={handlePlay} style={{ marginInlineStart: 'auto' }}>
                   {playing ? 'STOP' : 'PLAY'}
-                </button>
+                </Pill>
               </div>
-            </div>
 
-            {/* Legend — melody: highlighted original notes; harmony: blue */}
-            <div style={{ display: 'flex', gap: 16, fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 10, height: 10, background: MELODY_MARK, border: `1px solid ${T.text}`, boxSizing: 'border-box', display: 'inline-block' }} />
-                <span style={{ color: T.textMuted }}>MELODY (YOURS)</span>
+              {/* Legend — melody: highlighted original notes; harmony: grey */}
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 10, height: 10, background: MELODY_MARK, border: `1.5px solid ${T.text}`, boxSizing: 'border-box', display: 'inline-block' }} />
+                  <span className="su-label">{he ? 'המנגינה (שלכם)' : 'Melody (yours)'}</span>
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 10, height: 10, background: COLOR_ADDED, display: 'inline-block' }} />
+                  <span className="su-label">{he ? 'הרמוניה (AI)' : 'Harmony (AI)'}</span>
+                </span>
+              </div>
+
+              {/* Variation selector — each Regenerate adds one */}
+              {results.length > 1 && (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span className="su-label">{he ? 'גרסה' : 'Variation'}</span>
+                  {results.map((_, i) => (
+                    <Pill key={i} size="sm" active={i === activeIdx} onClick={() => { setActiveIdx(i); setRevoiceSlot(null); }}>
+                      V{i + 1}
+                    </Pill>
+                  ))}
+                </div>
+              )}
+
+              {renderGrid(displayGrid, displayBars, false)}
+
+              <span className="su-label">
+                {he ? 'הקישו על אקורד מורמן כדי להחליף רק אותו' : 'Tap a harmonized chord to re-voice just that column.'}
               </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 10, height: 10, background: COLOR_ADDED, display: 'inline-block' }} />
-                <span style={{ color: T.textMuted }}>HARMONY (AI)</span>
-              </span>
+
+              {/* Re-voice action for the tapped column */}
+              {revoiceSlot != null && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <Pill active onClick={handleRevoice} disabled={revoiceBusy} style={{ flex: 1 }}>
+                    {revoiceBusy ? (<><span style={spinner(T.white)} /> {he ? 'מחליף…' : 'Re-voicing…'}</>) : (he ? 'החלפת האקורד שנבחר' : 'Re-voice selected chord')}
+                  </Pill>
+                  <Pill onClick={() => setRevoiceSlot(null)} disabled={revoiceBusy}>
+                    {he ? 'ביטול' : 'Cancel'}
+                  </Pill>
+                </div>
+              )}
             </div>
-
-            {/* Variation selector — each Regenerate adds one */}
-            {results.length > 1 && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>VARIATION</span>
-                {results.map((_, i) => (
-                  <button data-active={i === activeIdx}
-                    key={i}
-                    onClick={() => { setActiveIdx(i); setRevoiceSlot(null); }}
-                    style={{
-                      padding: '4px 10px', fontSize: 11,
-                      fontWeight: i === activeIdx ? 700 : 400,
-                      border: `1px solid ${i === activeIdx ? T.secondary : T.border}`,
-                      background: i === activeIdx ? T.secondaryBg : T.bgInput,
-                      color: i === activeIdx ? T.secondary : T.textMuted,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    V{i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {renderGrid(displayGrid, displayBars, false)}
-
-            <p style={{ margin: 0, fontSize: 10, color: T.textDim }}>
-              Tap a harmonized chord to re-voice just that column.
-            </p>
-
-            {/* Re-voice action for the tapped column */}
-            {revoiceSlot != null && (
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button
-                  onClick={handleRevoice}
-                  disabled={revoiceBusy}
-                  style={{
-                    flex: 1, padding: '9px 0', border: 'none',
-                    background: revoiceBusy ? T.border : T.secondary, color: '#fff',
-                    fontSize: 12, fontWeight: 600, cursor: revoiceBusy ? 'wait' : 'pointer',
-                    borderLeft: '3px solid var(--gc-bar-color)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  }}
-                >
-                  {revoiceBusy ? (<><span style={spinnerStyle('#fff')} /> Re-voicing…</>) : `Re-voice selected chord`}
-                </button>
-                <button
-                  onClick={() => setRevoiceSlot(null)}
-                  disabled={revoiceBusy}
-                  style={{ ...secBtn(revoiceBusy), padding: '9px 14px' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
+          </Rule>
 
           {result.analysis && (
-            <div style={{ ...card({ padding: '14px 16px' }), borderLeft: `3px solid ${T.secondary}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={MONO_LBL}>AI Analysis</span>
-              <p style={{ margin: 0, fontSize: 12, color: T.text, lineHeight: 1.7 }}>{result.analysis}</p>
-            </div>
+            <Rule label={he ? 'ניתוח' : 'AI analysis'}>
+              <p style={{ margin: 0, fontSize: 13, color: T.text, lineHeight: 1.7 }}>{result.analysis}</p>
+            </Rule>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
             <SaveToLibraryButton
-              label="Save to Library"
+              label={he ? 'שמירה לספרייה' : 'Save to Library'}
               getPayload={() => result ? ({
                 kind: 'harmonization',
                 name: scaleName ? `Harmonized — ${scaleName}` : 'Harmonized melody',
@@ -1053,21 +968,17 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                 melody: { grid, bars },
                 result,
               }) : null}
-              style={{ justifyContent: 'center', padding: '12px 0' }}
+              style={{ ...pillStyle(false), width: '100%' }}
             />
-            <button onClick={handleExportPdf} disabled={pdfBusy} style={actionBtn(pdfBusy)}>
-              {pdfBusy ? 'Exporting…' : 'Export PDF'}
-            </button>
-            <button onClick={handleExportMidi} style={actionBtn(false)}>
-              Export MIDI
-            </button>
-            <button
-              onClick={handleOpenInBuilder}
-              title="Continue editing the arrangement in the full Tab Builder"
-              style={actionBtn(false)}
-            >
-              Open in Builder
-            </button>
+            <Pill onClick={handleExportPdf} disabled={pdfBusy} style={{ width: '100%' }}>
+              {pdfBusy ? (he ? 'מייצא…' : 'Exporting…') : (he ? 'ייצוא PDF' : 'Export PDF')}
+            </Pill>
+            <Pill onClick={handleExportMidi} style={{ width: '100%' }}>
+              {he ? 'ייצוא MIDI' : 'Export MIDI'}
+            </Pill>
+            <Pill onClick={handleOpenInBuilder} title="Continue editing the arrangement in the full Tab Builder" style={{ width: '100%' }}>
+              {he ? 'פתיחה בכתיבת טאבים' : 'Open in Builder'}
+            </Pill>
           </div>
         </>
       )}
@@ -1076,14 +987,14 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           result exists. On mobile this would just repeat the form the
           user is already looking at, right below it, so it's skipped. */}
       {desktop && !result && !error && (
-        <div style={{ ...card({ padding: '40px 16px' }), textAlign: 'center' }}>
+        <Rule style={{ textAlign: 'center', padding: '32px 0 8px' }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
-            Enter a melody, pick a scale, choose harmony types, then Harmonize.
+            {he ? 'הזינו מנגינה, בחרו סולם וסוג הרמוניה, ואז הרמוניה.' : 'Enter a melody, pick a scale, choose harmony types, then Harmonize.'}
           </p>
           {!gridHasNotes(melody.grid) && (
-            <button onClick={loadExample} style={{ ...secBtn(false), marginTop: 16 }}>Try an example melody</button>
+            <Pill onClick={loadExample} style={{ marginTop: 16 }}>{he ? 'נסו מנגינה לדוגמה' : 'Try an example melody'}</Pill>
           )}
-        </div>
+        </Rule>
       )}
     </div>
   );
@@ -1104,39 +1015,9 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
     );
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
       {leftCol}
       {rightCol}
     </div>
   );
-}
-
-// ── Small style helpers ────────────────────────────────────────────────────────
-function secBtn(disabled: boolean): React.CSSProperties {
-  return {
-    padding: '5px 12px', border: `1px solid ${T.border}`, background: T.bgInput,
-    color: disabled ? T.textDim : T.textMuted, fontSize: 11, cursor: disabled ? 'wait' : 'pointer',
-    borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
-  };
-}
-// Result-panel action buttons (Export PDF / MIDI / Open in Builder)
-function actionBtn(busy: boolean): React.CSSProperties {
-  return {
-    padding: '12px 0',
-    border: `1.5px solid ${T.secondary}`, background: 'transparent',
-    color: T.secondary, fontSize: 12.5, fontWeight: 400,
-    textTransform: 'uppercase', letterSpacing: '-0.02em',
-    cursor: busy ? 'wait' : 'pointer',
-    borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
-  };
-}
-const selectStyle: React.CSSProperties = {
-  flex: 1, padding: '8px 10px', background: T.bgInput, border: `1px solid ${T.border}`,
-  color: T.text, fontSize: 13, cursor: 'pointer', borderRadius: 0,
-};
-function spinnerStyle(color: string): React.CSSProperties {
-  return {
-    display: 'inline-block', width: 14, height: 14, border: `2px solid ${T.textDim}`,
-    borderTopColor: color, borderRadius: 0, animation: 'spin 0.7s linear infinite',
-  };
 }

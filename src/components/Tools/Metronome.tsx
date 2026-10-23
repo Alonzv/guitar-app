@@ -1,38 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { Pill, PillRow, Cta, Rule } from '../Transit/parts';
+import { NightStage, NightToggle } from './NightStage';
+import { useNight } from './useNight';
 import { unlockAudio, getSharedContext, getOutputNode, releaseNowPlaying } from '../../utils/audioPlayback';
 import { useOptionalSong } from '../../song/SongContext';
 import type { Meter } from '../../song/song';
 
-// ── Inline SVG note icons ──────────────────────────────────────────────────
-const NoteIcons = {
-  quarter: (
-    <svg viewBox="0 0 16 28" width="14" height="26" style={{ display: 'block' }}>
-      <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" fill="currentColor" transform="rotate(-18,7.5,21)"/>
-      <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
-    </svg>
-  ),
-  eighth: (
-    <svg viewBox="0 0 20 28" width="16" height="26" style={{ display: 'block' }}>
-      <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" fill="currentColor" transform="rotate(-18,7.5,21)"/>
-      <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
-      <path d="M13.5,2 C18,5 19,12 15,17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-    </svg>
-  ),
-  sixteenth: (
-    <svg viewBox="0 0 20 28" width="16" height="26" style={{ display: 'block' }}>
-      <ellipse cx="7.5" cy="21" rx="6.5" ry="4.5" fill="currentColor" transform="rotate(-18,7.5,21)"/>
-      <line x1="13.5" y1="18.5" x2="13.5" y2="2" stroke="currentColor" strokeWidth="1.7"/>
-      <path d="M13.5,2 C18,5 19,12 15,17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M13.5,8 C18,11 19,18 15,22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-    </svg>
-  ),
-};
-
 const SUBDIVISIONS = [
-  { label: 'Quarter', clicksPerBeat: 1, icon: NoteIcons.quarter   },
-  { label: 'Eighth',  clicksPerBeat: 2, icon: NoteIcons.eighth    },
-  { label: '16th',    clicksPerBeat: 4, icon: NoteIcons.sixteenth },
+  { label: 'Quarter', he: 'רבעים',  clicksPerBeat: 1 },
+  { label: 'Eighth',  he: 'שמיניות', clicksPerBeat: 2 },
+  { label: '16th',    he: 'שש-עשריות', clicksPerBeat: 4 },
 ];
 
 const TIME_SIGS = [
@@ -58,12 +38,12 @@ function beep(ctx: AudioContext, time: number, accent: boolean): void {
 const TRAIN_STEP = 4;    // BPM added…
 const TRAIN_EVERY = 4;   // …every this many bars
 
-const SECTION: React.CSSProperties = {
-  fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
-  textTransform: 'uppercase', color: '#9C958C', margin: '0 0 14px',
-};
-
 export const Metronome: React.FC = () => {
+  const { lang } = useLang();
+  const he = lang === 'he';
+  const desktop = useIsDesktop();
+  const [night, toggleNight] = useNight('scaleup_metronome_night');
+  const [reduceMotion] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   // Tempo and metre are the song's: they open on it, and a change here (±,
   // typing, tap tempo, 4/4…) is the song's new tempo for every tool.
   const song = useOptionalSong();
@@ -209,177 +189,113 @@ export const Metronome: React.FC = () => {
     setBpmInput(String(next));
   };
 
-  // A beat dot i lights up when the current tick is the i-th main beat
+  // A beat square i lights up when the current tick is the i-th main beat
   const beatDotActive = (i: number) =>
     playing && beat === i * subdivision.clicksPerBeat;
 
-  const dotSize = timeSig.beats <= 4 ? 32 : 26;
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <NightStage on={night} wide>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <span className="su-label">{he ? 'מטרונום' : 'Metronome'} · {timeSig.label}</span>
+        <NightToggle on={night} onToggle={toggleNight} />
+      </div>
 
-      {/* Section label */}
-      <p style={SECTION}>Metronome</p>
-
-      {/* BPM + control row — open, no card */}
-      <div style={{ textAlign: 'center', padding: '8px 0' }}>
-
-        {/* Giant BPM */}
+      {/* Two columns when there is room: the beat on the left, the settings on the right */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: desktop ? 40 : 18, alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: desktop ? 22 : 18 }}>
+      {/* Giant tempo — type a number, or step it */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
         <input
           type="number" min={40} max={240}
           value={bpmInput}
           onChange={e => setBpmInput(e.target.value)}
           onBlur={e => applyBpm(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && applyBpm(bpmInput)}
+          aria-label={he ? 'טמפו (BPM)' : 'Tempo (BPM)'}
+          className="su-poster"
           style={{
-            display: 'block', margin: '0 auto 4px',
-            width: 200, textAlign: 'center',
-            fontSize: 84, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 0.9,
-            color: T.text, background: 'transparent', outline: 'none',
-            fontFamily: 'inherit', padding: 0, boxSizing: 'border-box',
+            display: 'block', width: '100%', textAlign: 'center', border: 'none',
+            fontSize: desktop ? 300 : 'min(46vw, 210px)', height: '0.86em', lineHeight: 0.8,
+            color: T.text, background: 'transparent', outline: 'none', padding: 0, boxSizing: 'border-box',
             MozAppearance: 'textfield',
           } as React.CSSProperties}
         />
-        <div style={{
-          fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
-          textTransform: 'uppercase', color: '#9C958C', marginBottom: 20,
-        }}>BPM</div>
-        {/* A flash per click — full on the downbeat, half on the others —
-            draining over one beat, so the tempo is seen as well as heard. */}
-        <div style={{ height: 4, margin: '-12px auto 16px', width: 200, background: T.bgInput, overflow: 'hidden' }}>
+        <div dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Pill onClick={() => adjustBpm(-1)} label={he ? 'איטי יותר' : 'Slower'} style={{ padding: 0, fontSize: 20 }}>‹</Pill>
+          <span className="su-label" style={{ minWidth: 40, textAlign: 'center' }}>BPM</span>
+          <Pill onClick={() => adjustBpm(1)} label={he ? 'מהיר יותר' : 'Faster'} style={{ padding: 0, fontSize: 20 }}>›</Pill>
+        </div>
+      </div>
+
+      {/* Beat squares — beat 1 is the cobalt one */}
+      <div dir="ltr" aria-hidden style={{ display: 'grid', gridTemplateColumns: `repeat(${timeSig.beats}, minmax(0, 1fr))`, gap: 6 }}>
+        {Array.from({ length: timeSig.beats }).map((_, i) => {
+          const on = beatDotActive(i);
+          return (
+            <div key={i} style={{
+              height: desktop ? 72 : 56,
+              background: on ? (i === 0 ? T.primary : T.secondary) : T.bgInput,
+              outline: i === 0 && !on ? `2px solid ${T.text}` : undefined, outlineOffset: -2,
+              transition: reduceMotion ? undefined : 'background 50ms, transform 50ms',
+              transform: on && !reduceMotion ? 'scale(1.06)' : 'none',
+            }} />
+          );
+        })}
+      </div>
+      {/* A flash per click — full on the downbeat, half on the others —
+          draining over one beat, so subdivisions are seen as well as heard. */}
+      {!reduceMotion && (
+        <div style={{ height: 4, background: T.bgInput, overflow: 'hidden', marginTop: -10 }}>
           {playing && pulse > 0 && (
             <div key={pulse} className="gc-beat-drain" style={{
-              height: '100%', background: beat === 0 ? T.text : T.textMuted,
+              height: '100%', background: T.text,
               width: beat === 0 ? '100%' : '55%', margin: '0 auto',
               animationDuration: `${60 / (bpm * subdivision.clicksPerBeat)}s`,
             }} />
           )}
         </div>
+      )}
 
-        {/* Control row: − · beat dots · + */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <button onClick={() => adjustBpm(-1)} style={{
-            width: 44, height: 44, flexShrink: 0,
-            border: `1px solid ${T.border}`, background: 'transparent',
-            color: T.text, fontSize: 22, fontWeight: 400, cursor: 'pointer',
-          }}>−</button>
-
-          {/* Beat dots */}
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
-            {Array.from({ length: timeSig.beats }).map((_, i) => (
-              <div key={i} style={{
-                width: dotSize, height: dotSize, flexShrink: 0,
-                background: beatDotActive(i)
-                  ? (i === 0 ? T.primary : T.secondary)
-                  : T.bgInput,
-                border: `2px solid ${i === 0 ? T.primary : T.border}`,
-                transition: 'background 0.05s, transform 0.05s',
-                transform: beatDotActive(i) ? 'scale(1.2)' : 'scale(1)',
-              }} />
-            ))}
-          </div>
-
-          <button onClick={() => adjustBpm(1)} style={{
-            width: 44, height: 44, flexShrink: 0,
-            border: `1px solid ${T.border}`, background: 'transparent',
-            color: T.text, fontSize: 22, fontWeight: 400, cursor: 'pointer',
-          }}>+</button>
-        </div>
+      {playing
+        ? <Pill onClick={handleStartStop} style={{ width: '100%', height: 56 }}>{he ? 'עצירה' : 'Stop'}</Pill>
+        : <Cta onClick={handleStartStop} style={{ width: '100%', height: 56 }}>{he ? 'התחלה' : 'Start'}</Cta>}
       </div>
 
-      {/* START / STOP */}
-      <button data-active={!!playing}
-        onClick={handleStartStop}
-        style={{
-          width: '100%', padding: '18px 0',
-          background: playing ? T.coral : T.primary,
-          color: '#fff', fontWeight: 800, fontSize: 18, cursor: 'pointer',
-          border: 'none', borderLeft: '4px solid var(--gc-bar-color)',
-          letterSpacing: '0.06em',
-        }}
-      >
-        {playing ? 'STOP' : '► START'}
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: desktop ? 22 : 18 }}>
 
-      {/* Time signature chips — below START */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-        {TIME_SIGS.map(ts => {
-          const active = timeSig.label === ts.label;
-          return (
-            <button data-active={!!active} key={ts.label} onClick={() => setTimeSig(ts)} style={{
-              padding: '10px 4px', border: `1.5px solid ${active ? T.primary : T.border}`,
-              background: active ? T.primary : T.bgInput,
-              color: active ? '#fff' : T.textMuted,
-              fontFamily: 'var(--gc-mono)', fontSize: 14, fontWeight: active ? 700 : 400,
-              cursor: 'pointer', letterSpacing: '0.04em',
-            }}>
-              {ts.label}
-            </button>
-          );
-        })}
-      </div>
+      <Rule label={he ? 'משקל' : 'Time'}>
+        <PillRow items={TIME_SIGS.map(t => ({ id: t.label, label: t.label }))} value={timeSig.label}
+          onChange={id => setTimeSig(TIME_SIGS.find(t => t.label === id)!)} label={he ? 'משקל' : 'Time signature'} />
+      </Rule>
 
-      {/* Tap + Subdivision */}
-      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <button
-          onClick={handleTap}
-          style={{
-            width: '100%', padding: '10px 0',
-            border: `1px solid ${T.border}`, background: T.bgInput,
-            color: T.textMuted, fontWeight: 400, fontSize: 13, cursor: 'pointer',
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}
-        >
-          Tap Tempo
-        </button>
+      <Rule label={he ? 'חלוקה' : 'Subdivision'}>
+        <PillRow items={SUBDIVISIONS.map(sd => ({ id: String(sd.clicksPerBeat), label: he ? sd.he : sd.label }))}
+          value={String(subdivision.clicksPerBeat)}
+          onChange={id => setSubdivision(SUBDIVISIONS.find(sd => String(sd.clicksPerBeat) === id)!)} label={he ? 'חלוקה' : 'Subdivision'} />
+      </Rule>
 
-        {/* Speed trainer — +4 BPM every 4 bars until the target */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={() => setTrainer(t => (t ? null : { target: Math.min(240, bpm + 40) }))} data-active={!!trainer} style={{
-            flex: 1, padding: '10px 0', cursor: 'pointer', fontSize: 13,
-            border: `1px solid ${trainer ? T.primary : T.border}`, background: trainer ? T.primary : T.bgInput,
-            color: trainer ? T.white : T.textMuted, borderLeft: '3px solid var(--gc-bar-color)',
-          }}>
-            {trainer ? `Speed trainer → ${trainer.target}` : 'Speed trainer'}
-          </button>
+      <Rule label={he ? 'טמפו' : 'Tempo'}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <Pill onClick={handleTap}>{he ? 'טאפ' : 'Tap'}</Pill>
+          {/* Speed trainer — +4 BPM every 4 bars until the target */}
+          <Pill active={!!trainer} onClick={() => setTrainer(t => (t ? null : { target: Math.min(240, bpm + 40) }))}>
+            {trainer ? `${he ? 'מאמן מהירות' : 'Speed trainer'} → ${trainer.target}` : (he ? 'מאמן מהירות' : 'Speed trainer')}
+          </Pill>
           {trainer && (
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <button onClick={() => setTrainer(t => t && { target: Math.max(bpm, t.target - 10) })} aria-label="Lower target" style={{ width: 34, height: 38, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, cursor: 'pointer' }}>−</button>
-              <button onClick={() => setTrainer(t => t && { target: Math.min(240, t.target + 10) })} aria-label="Raise target" style={{ width: 34, height: 38, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, cursor: 'pointer' }}>+</button>
-            </div>
+            <span dir="ltr" style={{ display: 'inline-flex', gap: 6 }}>
+              <Pill onClick={() => setTrainer(t => t && { target: Math.max(bpm, t.target - 10) })} label={he ? 'הורדת היעד' : 'Lower target'} style={{ padding: 0 }}>−</Pill>
+              <Pill onClick={() => setTrainer(t => t && { target: Math.min(240, t.target + 10) })} label={he ? 'העלאת היעד' : 'Raise target'} style={{ padding: 0 }}>+</Pill>
+            </span>
           )}
         </div>
         {trainer && (
-          <p style={{ margin: '-4px 0 0', fontSize: 11, color: T.textMuted, textAlign: 'center' }}>
-            +{TRAIN_STEP} BPM every {TRAIN_EVERY} bars until {trainer.target}
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)' }}>
+            {he ? `+${TRAIN_STEP} BPM כל ${TRAIN_EVERY} תיבות עד ${trainer.target}` : `+${TRAIN_STEP} BPM every ${TRAIN_EVERY} bars until ${trainer.target}`}
           </p>
         )}
-
-        <div>
-          <p style={{ ...SECTION, marginBottom: 8 }}>Subdivision</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {SUBDIVISIONS.map(sub => {
-              const active = subdivision.clicksPerBeat === sub.clicksPerBeat;
-              return (
-                <button data-active={!!active}
-                  key={sub.label}
-                  onClick={() => setSubdivision(sub)}
-                  style={{
-                    padding: '10px 4px',
-                    border: `1.5px solid ${active ? T.primary : T.border}`,
-                    background: active ? T.primaryBg : T.bgInput,
-                    color: active ? T.primary : T.textMuted,
-                    cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400,
-                    fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em',
-                  }}
-                >
-                  {sub.label.toUpperCase()}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      </Rule>
       </div>
-    </div>
+      </div>
+    </NightStage>
   );
 };

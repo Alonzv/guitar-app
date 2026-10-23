@@ -64,22 +64,22 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
       {Array.from({ length: FRET_COUNT + 1 }).map((_, f) => (
         <line key={f}
           x1={LEFT} y1={rowY(f)} x2={LEFT + (STRING_COUNT - 1) * COL_W} y2={rowY(f)}
-          stroke="var(--gc-fretboard-fret)" strokeWidth={1} />
+          stroke="var(--gc-fretboard-fret)" strokeWidth={1.5} />
       ))}
 
-      {/* Strings (columns) — graduating low-E thick */}
+      {/* Strings (columns) — thicker toward the low E */}
       {Array.from({ length: STRING_COUNT }).map((_, s) => (
         <line key={s}
           x1={colX(s)} y1={TOP} x2={colX(s)} y2={rowY(FRET_COUNT)}
-          stroke="var(--gc-fretboard-str)" strokeWidth={1.5 + s * 0.22} />
+          stroke="var(--gc-fretboard-str)" strokeWidth={2.6 - s * 0.32} />
       ))}
 
       {/* Nut — drawn last to cover overlapping lines */}
-      <rect x={LEFT} y={TOP - 3} width={(STRING_COUNT - 1) * COL_W} height={5} fill="var(--gc-fretboard-nut)" />
+      <rect x={LEFT - 1} y={TOP - 4} width={(STRING_COUNT - 1) * COL_W + 2} height={7} fill="var(--gc-fretboard-nut)" />
 
       {/* String labels (top) */}
       {COL_STR.map((lbl, s) => (
-        <text key={s} x={colX(s)} y={11} textAnchor="middle" fontSize={9} fontWeight={600} fill={T.textMuted}>
+        <text key={s} x={colX(s)} y={11} textAnchor="middle" fontSize={9} fontWeight={700} fontFamily="var(--gc-mono)" fill={T.textMuted}>
           {lbl}
         </text>
       ))}
@@ -89,9 +89,8 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
         <g key={i}>
           <circle cx={colX(d.s)} cy={rowY(d.f - 0.5)} r={9}
             fill={d.isRoot ? T.primary : T.secondary}
-            stroke={d.isRoot ? T.text : 'none'} strokeWidth={d.isRoot ? 1.9 : 0}
-            opacity={d.isRoot ? 0.95 : 0.8} />
-          <text x={colX(d.s)} y={rowY(d.f - 0.5) + 3} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">
+            stroke="none" strokeWidth={0} />
+          <text x={colX(d.s)} y={rowY(d.f - 0.5) + 3} textAnchor="middle" fontSize={7.5} fill={d.isRoot ? T.onPrimary : T.white} fontWeight="700" fontFamily="var(--gc-mono)">
             {d.note}
           </text>
         </g>
@@ -99,7 +98,7 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
 
       {/* Fret numbers (left edge) */}
       {[3, 5, 7, 9, 12].map(f => (
-        <text key={f} x={4} y={rowY(f - 0.5) + 3} fontSize={8} fill={T.textMuted}>{f}</text>
+        <text key={f} x={4} y={rowY(f - 0.5) + 3} fontSize={8} fontFamily="var(--gc-mono)" fill={T.textMuted}>{f}</text>
       ))}
     </svg>
   );

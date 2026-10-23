@@ -2,9 +2,12 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Note } from '@tonaljs/tonal';
 import { T, btn } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
+import { Pill, Cta, PosterTitle } from '../Transit/parts';
+import { splitName, degreeLabels, shapeMeta } from '../ChordBuilder/chordFormula';
 import type { FretPosition, Tuning } from '../../types/music';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
-import { buildChromaColorMap } from '../ChordBuilder/ChordStructure';
+import { buildChromaColorMap } from '../ChordBuilder/chordColors';
 import { fretToNote } from '../../utils/musicTheory';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
 
@@ -18,22 +21,6 @@ interface Props {
   onClose: () => void;
 }
 
-function Arrow({ dir, onClick, disabled }: { dir: 'left' | 'right'; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={dir === 'left' ? 'Previous voicing' : 'Next voicing'}
-      style={{
-        width: 34, height: 44, flexShrink: 0, borderRadius: 0,
-        border: `1px solid ${T.border}`, background: T.bgInput,
-        color: disabled ? T.textDim : T.text, fontSize: 18, lineHeight: 1,
-        cursor: disabled ? 'default' : 'pointer', borderLeft: '3px solid var(--gc-bar-color)',
-      }}
-    >{dir === 'left' ? '‹' : '›'}</button>
-  );
-}
-
 /**
  * Enlarged view of one voicing variation. Page between variations with the
  * arrows (or ←/→ keys), audition with Play, and add straight to the
@@ -45,8 +32,11 @@ export function VoicingViewer({ voicings, index, chordName, tuning, onNav, onAdd
   const chroma  = buildChromaColorMap(chordName);
   const dotColors = voicing.map(p => {
     const c = Note.chroma(fretToNote(p.string, p.fret, tuning.notes));
-    return c != null ? (chroma.get(c) ?? T.primary) : T.primary;
+    return c != null ? (chroma.get(c) ?? T.secondary) : T.secondary;
   });
+  const { lang } = useLang();
+  const he = lang === 'he';
+  const [root, suffix] = splitName(chordName);
 
   const go = (d: number) => { if (total > 1) onNav((index + d + total) % total); };
 
@@ -63,66 +53,58 @@ export function VoicingViewer({ voicings, index, chordName, tuning, onNav, onAdd
 
   const play = () => { unlockAudio(); playChord(voicing, tuning.openFreqs); };
 
-  // Portal to <body>: the pager track uses a CSS transform, which would
-  // otherwise capture position:fixed and push this off-screen.
+  // Portal to <body> so no transformed ancestor captures position:fixed.
   return createPortal(
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.62)',
+        position: 'fixed', inset: 0, zIndex: 9000, background: 'color-mix(in srgb, var(--gc-text) 55%, transparent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
         animation: 'gcVvFade 0.16s ease',
       }}
     >
       <style>{`@keyframes gcVvFade{from{opacity:0}to{opacity:1}}
-        @keyframes gcVvPop{0%{opacity:0;transform:translateY(10px) scale(0.96)}100%{opacity:1;transform:none}}`}</style>
+        @keyframes gcVvPop{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}`}</style>
       <div
+        role="dialog" aria-modal="true" aria-label={chordName}
+        dir={he ? 'rtl' : 'ltr'}
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 460, background: T.bgCard,
-          border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
-          padding: 18, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 14,
+          width: '100%', maxWidth: 480, background: T.bgDeep, color: T.text,
+          border: `var(--su-rule) solid ${T.border}`, padding: 20, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 16,
           maxHeight: '90vh', overflowY: 'auto',
-          animation: 'gcVvPop 0.2s cubic-bezier(0.34, 1.4, 0.5, 1)',
+          animation: 'gcVvPop var(--gc-dur-base) var(--gc-ease-out)',
         }}
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: T.text, lineHeight: 1.1 }}>{chordName}</div>
-            <div style={{ fontSize: 11, color: T.textDim, marginTop: 3 }}>Voicing {index + 1} / {total}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <PosterTitle head={root} tail={suffix || undefined} max={88} min={36} keepCase />
+            <div className="su-label" style={{ marginTop: 10 }}>
+              {he ? 'צורה' : 'Voicing'} {index + 1} / {total} · {shapeMeta(voicing, tuning.notes).shape}
+            </div>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{
-            width: 28, height: 28, flexShrink: 0, borderRadius: 0, border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.textMuted, fontSize: 15, cursor: 'pointer',
-          }}>✕</button>
+          <Pill onClick={onClose} label={he ? 'סגירה' : 'Close'} style={{ padding: 0, width: 44 }}>✕</Pill>
         </div>
 
         {/* Enlarged fretboard — full width for maximum size */}
-        <div style={{ background: T.bgInput, border: `1px solid ${T.border}`, padding: '18px 16px 12px' }}>
-          <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning.notes} />
+        <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 16 }}>
+          <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning.notes}
+            dotLabels={degreeLabels(voicing, chordName, tuning.notes)} showStringLabels showFretNumbers hideFretLabel />
         </div>
 
-        {/* Controls — two rows so nothing wraps or overflows on narrow phones.
-            Row 1: page arrows flank Play. Row 2: full-width Add. */}
+        {/* Page ‹ Play › on one row, Add underneath — nothing wraps on a phone. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-            <Arrow dir="left" onClick={() => go(-1)} disabled={total < 2} />
-            <button
-              onClick={play}
-              style={{
-                flex: 1, minWidth: 0, padding: '12px 0', borderRadius: 0, cursor: 'pointer',
-                border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
-                fontSize: 14, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
-                whiteSpace: 'nowrap',
-              }}
-            >▶ Play</button>
-            <Arrow dir="right" onClick={() => go(1)} disabled={total < 2} />
+          <div dir="ltr" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Pill onClick={() => go(-1)} disabled={total < 2} label={he ? 'הצורה הקודמת' : 'Previous voicing'} style={{ padding: 0, width: 44 }}>‹</Pill>
+            <Cta onClick={play} style={{ flex: 1 }}>{he ? '▶ נגן' : '▶ Play'}</Cta>
+            <Pill onClick={() => go(1)} disabled={total < 2} label={he ? 'הצורה הבאה' : 'Next voicing'} style={{ padding: 0, width: 44 }}>›</Pill>
           </div>
           <button
             onClick={() => onAdd(voicing)}
+            className="gc-no-bar"
             style={{ ...btn.primary(false), width: '100%', whiteSpace: 'nowrap' }}
-          >+ Add to Progression</button>
+          >{he ? '+ הוספה למהלך' : '+ Add to progression'}</button>
         </div>
       </div>
     </div>,

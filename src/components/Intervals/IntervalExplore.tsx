@@ -2,7 +2,9 @@ import { useState, useMemo } from 'react';
 import { CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { IntervalNeck, strY, noteX, DOT_R, FB_H, FB_TOP, STR_SP } from './IntervalNeck';
 import { playScale, playInterval } from '../../utils/audioPlayback';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { Rule, PillRow, Cta, KeyGrid } from '../Transit/parts';
+import { pillStyle } from '../Transit/styles';
 import { previewMidi, previewInterval } from '../../utils/previewSound';
 import { DiceButton } from '../DiceButton';
 import { pickOne } from '../../utils/random';
@@ -46,7 +48,7 @@ const AREAS: { id: Area; label: string; range: [number, number] }[] = [
   { id: '9-12', label: '9–12',  range: [9, 12] },
 ];
 
-const BRACKET_EXTRA = 30;
+const BRACKET_EXTRA = 40;
 
 
 function getPositions(note: string, fretRange: [number, number]) {
@@ -61,10 +63,6 @@ function getPositions(note: string, fretRange: [number, number]) {
   return res;
 }
 
-const MONO_LBL: React.CSSProperties = {
-  margin: '0 0 8px', fontSize: 10, color: '#9C958C',
-  fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase',
-};
 
 export function IntervalExplore() {
   const [root,     setRoot]     = useState('E');
@@ -125,156 +123,77 @@ export function IntervalExplore() {
   const bracketPair = pairs.length > 0 ? pairs[0] : null;
   const svgH = FB_H + (bracketPair ? BRACKET_EXTRA : 8);
 
+  const dot = (fill: string, ink: string) => ({ fill, ink });
+  const ROOT = dot(T.primary, T.onPrimary), IV = dot(T.secondary, T.white);
+  const key = (fill: string) => (
+    <span aria-hidden style={{ width: 12, height: 12, borderRadius: '50%', background: fill, display: 'inline-block' }} />
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-      {/* Root picker */}
-      <div>
-<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <p style={MONO_LBL}>Root Note</p>
-          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
-          {ALL_NOTES.map(n => {
-            const sharp = n.includes('#');
-            const sel   = n === root;
-            return (
-              <button data-active={!!sel} key={n} onClick={() => { setRoot(n); hear(n, interval); }} style={{
-                padding: '9px 2px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 10 : 12, fontWeight: sel ? 700 : 400,
-                border: `1px solid ${sel ? T.primary : T.border}`,
-                background: sel ? T.primary : sharp ? T.bgInput : T.bgCard,
-                color: sel ? '#fff' : sharp ? T.textMuted : T.text,
-                borderTop: `3px solid ${sel ? T.primary : 'transparent'}`,
-              }}>{n}</button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Interval chips */}
-      <div>
-        <p style={MONO_LBL}>Interval</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-          {INTERVALS.map(iv => {
-            const sel = iv.semitones === interval;
-            return (
-              <button data-active={!!sel}
-                key={iv.semitones}
-                className="gc-notation"
-                onClick={() => { setInterval(sel ? null : iv.semitones); if (!sel) hear(root, iv.semitones); }}
-                style={{
-                  padding: '8px 4px', borderRadius: 0, cursor: 'pointer',
-                  border: `1px solid ${sel ? T.primary : T.border}`,
-                  background: sel ? T.primary : T.bgCard,
-                  color: sel ? '#fff' : T.textMuted,
-                  fontSize: 11, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em',
-                  fontWeight: sel ? 700 : 400,
-                  borderTop: `2px solid ${sel ? T.primary : 'transparent'}`,
-                }}
-              >
-                {iv.abbrev}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {selectedInterval && intervalNote && (
         <>
-          {/* Result card */}
-          <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `4px solid ${T.primary}` }}>
-            <p style={{ ...MONO_LBL, margin: '0 0 8px' }}>Interval from {root}</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 30, fontWeight: 900, color: T.primary, fontFamily: 'var(--gc-mono)', lineHeight: 1 }}>
-                {selectedInterval.abbrev}
-              </span>
-              <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>
-                {selectedInterval.name}
-              </span>
-            </div>
-            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 10 }}>
-              {selectedInterval.semitones} semitone{selectedInterval.semitones !== 1 ? 's' : ''}
-              {' · '}
-              {CONSONANCE[selectedInterval.semitones]}
-              {'  ·  '}
-              <span style={{ fontWeight: 600, color: T.text }}>{root} → {intervalNote}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${T.border}` }}>
-                {(['melodic', 'harmonic'] as const).map(m => (
-                  <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
-                    padding: '5px 10px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                    background: mode === m ? T.secondary : T.bgInput,
-                    color: mode === m ? '#fff' : T.textMuted,
-                  }}>{m === 'melodic' ? 'MEL' : 'HARM'}</button>
-                ))}
+          {/* The interval, as a poster */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="su-label" style={{ margin: '0 0 10px' }}>Interval from {root}</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+                <span className="su-poster gc-notation" style={{ fontSize: 96, textTransform: 'none' }}>{selectedInterval.abbrev}</span>
+                <span className="su-semi" style={{ fontSize: 26, textTransform: 'uppercase', lineHeight: 1 }}>{selectedInterval.name}</span>
               </div>
-              <button onClick={handlePlay} style={{
-                padding: '5px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
-                border: `1px solid ${T.secondary}`, background: 'transparent', color: T.secondary,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>PLAY</button>
+              <p style={{ margin: '10px 0 0', fontSize: 11, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em', color: T.textMuted }}>
+                {selectedInterval.semitones} SEMITONE{selectedInterval.semitones !== 1 ? 'S' : ''} · {CONSONANCE[selectedInterval.semitones].toUpperCase()} ·{' '}
+                <b style={{ color: T.text }}>{root} → {intervalNote}</b>
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PillRow label="Play mode" items={[{ id: 'melodic' as const, label: 'Mel' }, { id: 'harmonic' as const, label: 'Harm' }]}
+                value={mode} onChange={setMode} />
+              <Cta onClick={handlePlay}>Play ▶</Cta>
             </div>
           </div>
 
-          {/* Fretboard */}
-          <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 6 }}>
-              <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
-              {AREAS.map(a => (
-                <button data-active={area === a.id} key={a.id} onClick={() => setArea(a.id)} style={{
-                  padding: '2px 8px', borderRadius: 0, cursor: 'pointer',
-                  fontSize: 9, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
-                  background: area === a.id ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.1)',
-                  color: area === a.id ? '#1A1818' : 'rgba(255,255,255,0.65)',
-                  border: 'none', borderLeft: '2px solid var(--gc-bar-color)',
-                }}>{a.label}</button>
-              ))}
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, fontSize: 9, alignItems: 'center' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gc-success)', display: 'inline-block' }} />
-                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>Root</span>
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: T.primary, display: 'inline-block', border: '1px solid rgba(255,255,255,0.3)' }} />
-                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>Interval</span>
-                </span>
+          {/* The neck */}
+          <Rule label="On the neck">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+              <PillRow label="Area" items={AREAS.map(a => ({ id: a.id, label: a.label }))} value={area} onChange={setArea} />
+              <div style={{ display: 'flex', gap: 14, fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{key(ROOT.fill)}Root</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{key(IV.fill)}Interval</span>
               </div>
             </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <IntervalNeck height={svgH}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <IntervalNeck height={svgH} minWidth={520}>
                 {pairs.map((p, i) => (
                   <line key={`conn-${i}`}
                     x1={noteX(p.rootFret)} y1={strY(p.string)}
                     x2={noteX(p.intFret)} y2={strY(p.string)}
-                    stroke="var(--gc-success)" strokeWidth={1.5} strokeDasharray="5 3" opacity={0.7} />
+                    stroke={T.text} strokeWidth={1.5} strokeDasharray="5 3" opacity={0.5} />
                 ))}
 
                 {intervalDots.map((p, i) => (
                   <g key={`iv-${i}`}>
-                    {/* Theme ink (T.primary), not a hardcoded near-black, so the
-                        dot stays visible on the dark fretboard. */}
-                    <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill={T.primary} />
+                    <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill={IV.fill} />
                     <text x={noteX(p.fret)} y={strY(p.string)} dominantBaseline="central"
-                      textAnchor="middle" fontSize={10} fill="#fff" fontWeight="700">{intervalNote}</text>
+                      textAnchor="middle" fontSize={10} fill={IV.ink} fontWeight="700" fontFamily="var(--gc-mono)">{intervalNote}</text>
                   </g>
                 ))}
 
                 {rootDots.map((p, i) => (
                   <g key={`r-${i}`}>
-                    <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill="var(--gc-success)" />
+                    <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R} fill={ROOT.fill} />
                     <text x={noteX(p.fret)} y={strY(p.string)} dominantBaseline="central"
-                      textAnchor="middle" fontSize={10} fill="#fff" fontWeight="700">{root}</text>
+                      textAnchor="middle" fontSize={10} fill={ROOT.ink} fontWeight="700" fontFamily="var(--gc-mono)">{root}</text>
                   </g>
                 ))}
 
+                {/* The distance: a 2px ink bracket under the neck, labelled in mono */}
                 {bracketPair && (() => {
                   const x1   = noteX(bracketPair.rootFret);
                   const x2   = noteX(bracketPair.intFret);
-                  const bY   = FB_TOP + 5 * STR_SP + 14;
-                  const bH   = 6;
+                  const bY   = FB_TOP + 5 * STR_SP + 18;
+                  const bH   = 7;
                   const xL   = Math.min(x1, x2);
                   const xR   = Math.max(x1, x2);
                   const cX   = (xL + xR) / 2;
@@ -282,19 +201,30 @@ export function IntervalExplore() {
                   const lbl  = `${selectedInterval.name.toUpperCase()} · ${frets} FRET${frets !== 1 ? 'S' : ''}`;
                   return (
                     <g>
-                      <line x1={xL} y1={bY} x2={xL} y2={bY + bH} stroke="var(--gc-success)" strokeWidth={1.5} />
-                      <line x1={xL} y1={bY + bH} x2={xR} y2={bY + bH} stroke="var(--gc-success)" strokeWidth={1.5} />
-                      <line x1={xR} y1={bY} x2={xR} y2={bY + bH} stroke="var(--gc-success)" strokeWidth={1.5} />
-                      <text x={cX} y={bY + bH + 11} textAnchor="middle" fontSize={7}
-                        fill="var(--gc-success)" fontFamily="monospace" letterSpacing="0.08em">{lbl}</text>
+                      <path d={`M${xL} ${bY} V${bY + bH} H${xR} V${bY}`} fill="none" stroke={T.text} strokeWidth={2} />
+                      <text x={cX} y={bY + bH + 12} textAnchor="middle" fontSize={8.5}
+                        fill={T.text} fontFamily="var(--gc-mono)" letterSpacing="0.14em">{lbl}</text>
                     </g>
                   );
                 })()}
               </IntervalNeck>
             </div>
-          </div>
+          </Rule>
         </>
       )}
+
+      {/* Interval keys */}
+      <Rule label="Interval">
+        <div dir="ltr"><KeyGrid cols={7} label="Interval" value={interval}
+          items={INTERVALS.map(iv => ({ id: iv.semitones, label: iv.abbrev, title: iv.name }))}
+          onChange={semis => { const sel = semis === interval; setInterval(sel ? null : semis); if (!sel) hear(root, semis); }} /></div>
+      </Rule>
+
+      {/* Root keys */}
+      <Rule label="Root note" right={<DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />}>
+        <div dir="ltr"><KeyGrid label="Root note" value={root} items={ALL_NOTES.map(n => ({ id: n, label: n }))}
+          onChange={n => { setRoot(n); hear(n, interval); }} /></div>
+      </Rule>
     </div>
   );
 }

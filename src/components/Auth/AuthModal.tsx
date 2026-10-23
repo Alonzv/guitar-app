@@ -2,25 +2,31 @@ import React, { useState } from 'react';
 import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { sendPasswordReset } from '../../services/auth';
+import { useLang } from '../../contexts/LanguageContext';
+import { Sheet } from '../Workspace/Sheet';
+import { Pill, PillRow, Cta } from '../Transit/parts';
+import { ctaStyle } from '../Transit/styles';
 
 interface Props { onClose: () => void }
 
 type Mode = 'signin' | 'signup';
 
 const LABEL: React.CSSProperties = {
-  display: 'block', fontSize: 10, color: T.textMuted, marginBottom: 5,
-  textTransform: 'uppercase', letterSpacing: '-0.02em', fontWeight: 400,
+  display: 'block', fontSize: 10, color: T.textMuted, marginBottom: 6, fontFamily: 'var(--gc-mono)',
+  textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 400,
 };
 
+// Raised field: card paper in a 2px ink frame.
 const INPUT: React.CSSProperties = {
-  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 0,
-  border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
-  fontSize: 14, fontFamily: 'inherit', outline: 'none',
-  borderLeft: '3px solid var(--gc-bar-color)',
+  width: '100%', boxSizing: 'border-box', height: 48, padding: '0 14px', borderRadius: 0,
+  border: `var(--su-rule) solid ${T.text}`, background: T.bgCard, color: T.text,
+  fontSize: 15, fontFamily: 'inherit', outline: 'none',
 };
 
 export const AuthModal: React.FC<Props> = ({ onClose }) => {
   const { configured, signIn, signUp, signInGoogle, signInApple } = useAuth();
+  const { lang } = useLang();
+  const he = lang === 'he';
   const [mode, setMode]         = useState<Mode>('signin');
   const [name, setName]         = useState('');
   const [email, setEmail]       = useState('');
@@ -86,91 +92,46 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
     }
   };
 
+  const off = !configured || busy;
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9000,
-        background: 'rgba(0,0,0,0.62)', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', padding: 16,
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '100%', maxWidth: 380, background: T.bgCard,
-          border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
-          padding: '22px 22px 24px', boxSizing: 'border-box',
-          maxHeight: '92vh', overflowY: 'auto',
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <span style={{ fontSize: 17, fontWeight: 800, color: T.text, letterSpacing: '-0.5px' }}>
-            <span style={{ color: T.secondary }}>Scale</span><span style={{ color: T.brandAccent }}>Up</span>
-          </span>
-          <button onClick={onClose} aria-label="Close" style={{
-            width: 28, height: 28, borderRadius: 0, border: `1px solid ${T.border}`,
-            background: T.bgInput, color: T.textMuted, fontSize: 15, cursor: 'pointer',
-          }}>✕</button>
+    <Sheet onClose={onClose} maxWidth={400}
+      kicker={<span>Scale<span style={{ color: T.primary }}>Up</span></span>}
+      title={signupDone ? (he ? 'בדקו את המייל' : 'Check your inbox') : mode === 'signin' ? (he ? 'כניסה' : 'Sign in') : (he ? 'הרשמה' : 'Sign up')}>
+      {signupDone ? (
+        /* Post-signup confirmation — a clear state, not a buried notice */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: T.textMuted }}>
+            {he ? 'שלחנו קישור אישור אל' : 'We sent a confirmation link to'}
+          </p>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.text, wordBreak: 'break-all', fontFamily: 'var(--gc-mono)' }}>
+            {signupDone}
+          </p>
+          <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: T.textMuted }}>
+            {he
+              ? 'לחצו על הקישור במייל כדי להפעיל את החשבון, ואז חזרו להתחבר. לא מוצאים? בדקו בספאם.'
+              : <>Click the link in that email to activate your account, then come back and sign in. Can&apos;t find it? Check your spam folder.</>}
+          </p>
+          <Cta onClick={() => { setSignupDone(null); setMode('signin'); setError(''); setNotice(''); }} style={{ width: '100%' }}>
+            {he ? 'הבנתי — כניסה' : 'Got it — sign in'}
+          </Cta>
         </div>
-
-        {signupDone ? (
-          /* Post-signup confirmation — a clear state, not a buried notice */
-          <div style={{ textAlign: 'center', padding: '14px 4px 8px' }}>
-            <div style={{ fontSize: 42, lineHeight: 1, marginBottom: 14 }}>✉</div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 17, fontWeight: 700, color: T.text }}>
-              Check your inbox
-            </h3>
-            <p style={{ margin: '0 0 4px', fontSize: 13, lineHeight: 1.6, color: T.textMuted }}>
-              We sent a confirmation link to
-            </p>
-            <p style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: T.text, wordBreak: 'break-all' }}>
-              {signupDone}
-            </p>
-            <p style={{ margin: '0 0 20px', fontSize: 12, lineHeight: 1.6, color: T.textDim }}>
-              Click the link in that email to activate your account, then come
-              back and sign in. Can&apos;t find it? Check your spam folder.
-            </p>
-            <button
-              onClick={() => { setSignupDone(null); setMode('signin'); setError(''); setNotice(''); }}
-              style={{
-                width: '100%', padding: '12px 0', borderRadius: 0, cursor: 'pointer',
-                background: T.primary, color: T.white, border: 'none',
-                fontSize: 14, fontFamily: 'inherit', fontWeight: 400,
-                textTransform: 'uppercase', letterSpacing: '-0.02em',
-                borderLeft: '4px solid var(--gc-bar-color)',
-              }}
-            >
-              Got it — Sign In
-            </button>
-          </div>
-        ) : (
-        <>
+      ) : (
+      <>
         {/* Mode switch */}
-        <div style={{ display: 'flex', gap: 0, marginBottom: 18 }}>
-          {(['signin', 'signup'] as Mode[]).map(m => {
-            const active = mode === m;
-            return (
-              <button data-active={!!active} key={m} onClick={() => { setMode(m); setError(''); setNotice(''); }}
-                style={{
-                  flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
-                  background: active ? T.primary : T.bgInput,
-                  color: active ? T.white : T.textMuted,
-                  fontSize: 12, fontWeight: active ? 500 : 400, fontFamily: 'inherit',
-                  textTransform: 'uppercase', letterSpacing: '-0.02em',
-                  borderLeft: '3px solid var(--gc-bar-color)',
-                }}>
-                {m === 'signin' ? 'Sign In' : 'Sign Up'}
-              </button>
-            );
-          })}
-        </div>
+        <PillRow<Mode>
+          label={he ? 'מצב' : 'Mode'}
+          value={mode}
+          onChange={m => { setMode(m); setError(''); setNotice(''); }}
+          items={[
+            { id: 'signin', label: he ? 'כניסה' : 'Sign in' },
+            { id: 'signup', label: he ? 'הרשמה' : 'Sign up' },
+          ]}
+        />
 
         {!configured && (
           <p style={{
-            margin: '0 0 16px', padding: '9px 11px', fontSize: 11.5, lineHeight: 1.5,
-            background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondaryFaint}`,
+            margin: 0, padding: '10px 0', fontSize: 11.5, lineHeight: 1.5,
+            color: T.text, borderTop: `1px solid ${T.hairline}`, borderBottom: `1px solid ${T.hairline}`,
           }}>
             Sign-in is not configured yet. Add your Supabase keys to <code>.env</code> to
             enable accounts.
@@ -178,77 +139,57 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
         )}
 
         {/* Social */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-          <button disabled={!configured || busy} onClick={() => social('google')} style={{
-            width: '100%', padding: '11px 0', borderRadius: 0, cursor: configured ? 'pointer' : 'not-allowed',
-            border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
-            fontSize: 13, fontFamily: 'inherit', opacity: configured ? 1 : 0.5,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}>
-            <span style={{ fontWeight: 700, color: 'var(--gc-text)' }}>G</span> Continue with Google
-          </button>
-          <button disabled={!configured || busy} onClick={() => social('apple')} style={{
-            width: '100%', padding: '11px 0', borderRadius: 0, cursor: configured ? 'pointer' : 'not-allowed',
-            border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
-            fontSize: 13, fontFamily: 'inherit', opacity: configured ? 1 : 0.5,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}>
-            <span style={{ fontSize: 15 }}></span> Continue with Apple
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Pill disabled={off} onClick={() => social('google')} style={{ width: '100%' }}>
+            {he ? 'המשך עם Google' : 'Continue with Google'}
+          </Pill>
+          <Pill disabled={off} onClick={() => social('apple')} style={{ width: '100%' }}>
+            {he ? 'המשך עם Apple' : 'Continue with Apple'}
+          </Pill>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 16px' }}>
-          <div style={{ flex: 1, height: 1, background: T.border }} />
-          <span style={{ fontSize: 10, color: T.textDim, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>or</span>
-          <div style={{ flex: 1, height: 1, background: T.border }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, height: 1, background: T.hairline }} />
+          <span className="su-label">{he ? 'או' : 'or'}</span>
+          <div style={{ flex: 1, height: 1, background: T.hairline }} />
         </div>
 
         {/* Email form */}
-        <form onSubmit={submit}>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {mode === 'signup' && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={LABEL}>Name</label>
-              <input style={INPUT} value={name} onChange={e => setName(e.target.value)}
-                placeholder="Jimi Hendrix" autoComplete="name" />
+            <div>
+              <label htmlFor="su-auth-name" style={LABEL}>{he ? 'שם' : 'Name'}</label>
+              <input id="su-auth-name" style={INPUT} value={name} onChange={e => setName(e.target.value)}
+                placeholder="Jimi Hendrix" autoComplete="name" dir="auto" />
             </div>
           )}
-          <div style={{ marginBottom: 12 }}>
-            <label style={LABEL}>Email</label>
-            <input style={INPUT} type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com" autoComplete="email" />
+          <div>
+            <label htmlFor="su-auth-email" style={LABEL}>{he ? 'אימייל' : 'Email'}</label>
+            <input id="su-auth-email" style={INPUT} type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" autoComplete="email" dir="ltr" />
           </div>
-          <div style={{ marginBottom: 6 }}>
-            <label style={LABEL}>Password</label>
-            <input style={INPUT} type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} />
+          <div>
+            <label htmlFor="su-auth-pass" style={LABEL}>{he ? 'סיסמה' : 'Password'}</label>
+            <input id="su-auth-pass" style={INPUT} type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} dir="ltr" />
           </div>
 
           {mode === 'signin' && (
-            <button type="button" onClick={forgot} style={{
-              background: 'none', border: 'none', color: T.secondary, fontSize: 11,
-              cursor: 'pointer', padding: '2px 0', marginBottom: 10, fontFamily: 'inherit',
-            }}>Forgot password?</button>
+            <button type="button" onClick={forgot} className="gc-no-bar" style={{
+              alignSelf: 'flex-start', minHeight: 36, background: 'none', border: 'none', color: T.text, fontSize: 11,
+              cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline', letterSpacing: '0.06em',
+            }}>{he ? 'שכחתם סיסמה?' : 'Forgot password?'}</button>
           )}
 
-          {error && <p style={{ margin: '6px 0 0', color: T.primary, fontSize: 12 }}>{error}</p>}
-          {notice && <p style={{ margin: '6px 0 0', color: T.secondary, fontSize: 12 }}>{notice}</p>}
+          {error && <p role="alert" style={{ margin: 0, color: T.text, fontSize: 12, fontWeight: 700 }}>{error}</p>}
+          {notice && <p role="status" style={{ margin: 0, color: T.textMuted, fontSize: 12 }}>{notice}</p>}
 
-          <button type="submit" disabled={!configured || busy} style={{
-            width: '100%', marginTop: 14, padding: '12px 0', borderRadius: 0,
-            cursor: (!configured || busy) ? 'not-allowed' : 'pointer',
-            background: (!configured || busy) ? T.border : T.primary,
-            color: T.white, fontSize: 14, fontFamily: 'inherit', fontWeight: 400,
-            textTransform: 'uppercase', letterSpacing: '-0.02em',
-            borderLeft: '4px solid var(--gc-bar-color)',
-          }}>
-            {busy ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+          <button type="submit" disabled={off} className="gc-no-bar" style={{ ...ctaStyle(off), width: '100%', marginTop: 4 }}>
+            {busy ? (he ? 'רק רגע…' : 'Please wait…') : mode === 'signin' ? (he ? 'כניסה' : 'Sign in') : (he ? 'יצירת חשבון' : 'Create account')}
           </button>
         </form>
-        </>
-        )}
-      </div>
-    </div>
+      </>
+      )}
+    </Sheet>
   );
 };

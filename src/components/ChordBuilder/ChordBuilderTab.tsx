@@ -8,7 +8,15 @@ import { ProgressionPanel } from './ProgressionPanel';
 import { identifyChord } from '../../utils/chordIdentifier';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
-import { T, card, btn } from '../../theme';
+import { btn } from '../../theme';
+import { Chord, Note } from '@tonaljs/tonal';
+import { fretToNote } from '../../utils/musicTheory';
+import { useLang } from '../../contexts/LanguageContext';
+import { playChord, unlockAudio } from '../../utils/audioPlayback';
+import { Rule, Pill, Cta } from '../Transit/parts';
+import { pillStyle } from '../Transit/styles';
+import { PillSelect } from './ChordParts';
+import { degreeLabels } from './chordFormula';
 import { TUNINGS } from '../../utils/musicTheory';
 import { RollLabel } from '../RollLabel';
 import { useFlash } from '../../motion/useFlash';
@@ -31,31 +39,6 @@ interface Props {
   onRedo: () => void;
   desktop?: boolean;
 }
-
-const LABEL_STYLE: React.CSSProperties = {
-  margin: '0 0 10px',
-  fontSize: 10,
-  fontWeight: 400,
-  color: T.textDim,
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
-};
-
-const SELECT_STYLE: React.CSSProperties = {
-  appearance: 'none',
-  WebkitAppearance: 'none',
-  background: T.bgInput,
-  border: `1px solid ${T.border}`,
-  borderRadius: 0,
-  color: T.text,
-  fontFamily: 'inherit',
-  fontSize: 12,
-  fontWeight: 400,
-  padding: '5px 26px 5px 10px',
-  cursor: 'pointer',
-  outline: 'none',
-  borderLeft: '3px solid var(--gc-bar-color)',
-};
 
 export function ChordBuilderTab({
   progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
@@ -96,150 +79,136 @@ export function ChordBuilderTab({
     ? findChordVoicings(chords[0].name, 6, tuning.notes)
     : [];
 
-  const fretboardPanel = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* ── Fretboard ── */}
-      <div style={card()}>
-        <p style={LABEL_STYLE}>Click a fret to place a note · click again to remove</p>
+  const { lang } = useLang();
+  const he = lang === 'he';
+  const name = chords[0]?.name ?? null;
+  const rootPc = name ? Note.chroma(Chord.get(name).tonic ?? '') : null;
+  const labels = name ? degreeLabels(activeDots, name, tuning.notes, capo) : null;
+  const labelFor = (p: FretPosition) => {
+    const i = activeDots.findIndex(d => d.string === p.string && d.fret === p.fret);
+    return labels && i >= 0 ? labels[i] : undefined;
+  };
+  const isRoot = (p: FretPosition) => rootPc != null && Note.chroma(fretToNote(p.string, p.fret, tuning.notes, capo)) === rootPc;
+  // STRUM — the one cobalt action: plays the placed notes.
+  const strum = () => { if (activeDots.length) unlockAudio().then(() => playChord(activeDots, tuning.openFreqs, capo)); };
 
-        <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 3, minWidth: 0 }}>
-            <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Tuning</span>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <select
-                aria-label="Tuning"
-                value={tuning.name}
-                onChange={e => {
-                  const t = TUNINGS.find(t => t.name === e.target.value);
-                  if (t) onTuningChange(t);
-                }}
-                style={{ ...SELECT_STYLE, width: '100%' }}
-              >
-                {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
-              </select>
-              <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 2, minWidth: 0 }}>
-            <span style={{ fontSize: 10, color: T.textMuted, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Capo</span>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <select
-                aria-label="Capo"
-                value={capo}
-                onChange={e => onCapoChange(Number(e.target.value))}
-                style={{ ...SELECT_STYLE, width: '100%' }}
-              >
-                {Array.from({ length: 12 }, (_, n) => (
-                  <option key={n} value={n}>{n === 0 ? 'None' : `Fret ${n}`}</option>
-                ))}
-              </select>
-              <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', fontSize: 9, color: T.textMuted }}>▾</span>
-            </div>
-          </div>
+  const poster = <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} max={desktop ? 210 : 150} />;
+
+  const neck = (
+    <Rule label={he ? 'הקישו על שריג כדי להניח תו · שוב כדי להסיר' : 'Tap a fret to place a note · again to remove'}>
+      <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} tuning={tuning.notes} capo={capo}
+        labelFor={labelFor} isRoot={isRoot} />
+    </Rule>
+  );
+
+  const formula = name ? <ChordStructure chordName={name} /> : null;
+
+  const variations = showVariations ? (
+    <VoicingVariations
+      voicings={voicings}
+      selectedIndex={selectedVariationIndex}
+      chordName={chords[0]?.name}
+      tuning={tuning.notes}
+      gridColumns={desktop ? 4 : undefined}
+      onSelect={(voicing, index) => {
+        previewVoicing(voicing, tuning.openFreqs, capo);
+        setActiveDots(voicing);
+        setSelectedVariationIndex(index);
+      }}
+    />
+  ) : null;
+
+  // ── The dock: tuning, capo, then STRUM / Add / Clear and the extras ──
+  const controls = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+      <Rule label={he ? 'כיוון וקאפו' : 'Tuning & capo'}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <PillSelect label={he ? 'כיוון' : 'Tuning'} value={tuning.name}
+            onChange={v => { const t = TUNINGS.find(x => x.name === v); if (t) onTuningChange(t); }}>
+            {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
+          </PillSelect>
+          <PillSelect label={he ? 'קאפו' : 'Capo'} value={capo} onChange={v => onCapoChange(Number(v))}>
+            {Array.from({ length: 12 }, (_, n) => (
+              <option key={n} value={n}>{n === 0 ? (he ? 'ללא' : 'None') : `${he ? 'שריג' : 'Fret'} ${n}`}</option>
+            ))}
+          </PillSelect>
         </div>
+      </Rule>
 
-        <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} tuning={tuning.notes} capo={capo} />
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        <Cta round={92} onClick={strum} disabled={activeDots.length === 0} label={he ? 'פריטה' : 'Strum'}>
+          {he ? 'פריטה' : 'STRUM'}
+        </Cta>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={handleAdd} disabled={chords.length === 0} className="gc-no-bar"
+            style={{ ...btn.primary(chords.length === 0), width: '100%', whiteSpace: 'nowrap' }}>
+            <RollLabel>{added ? (he ? '✓ נוסף' : '✓ Added') : (he ? '+ למהלך' : '+ Add to progression')}</RollLabel>
+          </button>
+          <Pill onClick={() => setActiveDots([])} disabled={activeDots.length === 0} style={{ width: '100%' }}>
+            {he ? 'ניקוי' : 'Clear'}
+          </Pill>
+        </div>
       </div>
 
-      {/* ── Chord name — hidden until notes are placed ── */}
-      {activeDots.length >= 2 && (
-        <div className="gc-result-card" style={{ alignItems: 'center', justifyContent: 'center', gap: 12, padding: '16px 12px' }}>
-          <ChordName positions={activeDots} tuning={tuning.notes} capo={capo} />
-          {chords.length > 0 && (
-            <button data-active={!!showVariations}
-              onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}
-              style={{
-                padding: '6px 16px', borderRadius: 0, border: `1px solid ${T.border}`,
-                cursor: 'pointer', fontSize: 12, fontWeight: 500,
-                background: showVariations ? T.primaryBg : T.bgInput,
-                color: showVariations ? T.primary : T.textMuted,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}
-            >
-              {showVariations ? 'Hide variations' : 'Show more variations'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* ── Chord structure ── */}
       {chords.length > 0 && (
-        <div style={{ textAlign: 'center', padding: '6px 0' }}>
-          <ChordStructure chordName={chords[0].name} />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Pill size="sm" active={showVariations}
+            onClick={() => { setShowVariations(v => !v); setSelectedVariationIndex(undefined); }}>
+            {showVariations ? (he ? 'הסתר וריאציות' : 'Hide variations') : (he ? 'עוד וריאציות' : 'More variations')}
+          </Pill>
+          <SaveToLibraryButton
+            size="sm"
+            style={{ ...pillStyle(false, 'sm') }}
+            label={he ? 'שמירה לספרייה' : 'Save voicing to Library'}
+            getPayload={() => ({
+              kind: 'progression',
+              name: chords[0].name,
+              chords: [{ id: `chord-${Date.now()}`, chord: chords[0], fretPositions: [...activeDots] }],
+            })}
+          />
         </div>
-      )}
-
-      {/* ── Voicing variations ── */}
-      {showVariations && (
-        <VoicingVariations
-          voicings={voicings}
-          selectedIndex={selectedVariationIndex}
-          chordName={chords[0]?.name}
-          tuning={tuning.notes}
-          onSelect={(voicing, index) => {
-            previewVoicing(voicing, tuning.openFreqs, capo);
-            setActiveDots(voicing);
-            setSelectedVariationIndex(index);
-          }}
-        />
-      )}
-
-      {/* ── Actions ── */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={() => setActiveDots([])} style={{ ...btn.secondary(), flex: 1 }}>
-          Clear
-        </button>
-        <button onClick={handleAdd} disabled={chords.length === 0} style={{ ...btn.primary(chords.length === 0), flex: 2 }}>
-          <RollLabel>{added ? '✓ Added' : '+ Add to Progression'}</RollLabel>
-        </button>
-      </div>
-      {chords.length > 0 && (
-        <SaveToLibraryButton
-          style={{ width: '100%', justifyContent: 'center' }}
-          label="Save voicing to Library"
-          getPayload={() => ({
-            kind: 'progression',
-            name: chords[0].name,
-            chords: [{ id: `chord-${Date.now()}`, chord: chords[0], fretPositions: [...activeDots] }],
-          })}
-        />
-      )}
-
-      {/* ── Progression (mobile only) ── */}
-      {!desktop && (
-        <ProgressionPanel
-          progression={progression}
-          onAddToProgression={onAddToProgression}
-          onRemoveFromProgression={onRemoveFromProgression}
-          onClearProgression={onClearProgression}
-          onReorderProgression={onReorderProgression}
-          onTransposeProgression={onTransposeProgression}
-          canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
-          tuning={tuning} capo={capo}
-        />
       )}
     </div>
   );
 
+  const progressionPanel = (
+    <ProgressionPanel
+      progression={progression}
+      onAddToProgression={onAddToProgression}
+      onRemoveFromProgression={onRemoveFromProgression}
+      onClearProgression={onClearProgression}
+      onReorderProgression={onReorderProgression}
+      onTransposeProgression={onTransposeProgression}
+      canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
+      tuning={tuning} capo={capo}
+    />
+  );
+
   if (desktop) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 32, alignItems: 'start' }}>
-        {fretboardPanel}
-        <div style={{ position: 'sticky', top: 24 }}>
-          <ProgressionPanel
-            progression={progression}
-            onAddToProgression={onAddToProgression}
-            onRemoveFromProgression={onRemoveFromProgression}
-            onClearProgression={onClearProgression}
-            onReorderProgression={onReorderProgression}
-            onTransposeProgression={onTransposeProgression}
-            canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
-            tuning={tuning} capo={capo}
-          />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {poster}
+        <div style={{ display: 'grid', gridTemplateColumns: '340px minmax(0, 1fr)', gap: 40, alignItems: 'start' }}>
+          <div style={{ position: 'sticky', top: 0 }}>{controls}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0 }}>
+            {neck}
+            {formula}
+            {variations}
+          </div>
         </div>
+        {progressionPanel}
       </div>
     );
   }
 
-  return fretboardPanel;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {poster}
+      {neck}
+      {formula}
+      {controls}
+      {variations}
+      {progressionPanel}
+    </div>
+  );
 }

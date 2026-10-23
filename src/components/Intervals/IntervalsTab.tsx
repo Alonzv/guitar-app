@@ -2,19 +2,11 @@ import { IntervalExplore } from './IntervalExplore';
 import { IntervalPlayground } from './IntervalPlayground';
 import { IntervalInChord } from './IntervalInChord';
 import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
-import { T, card } from '../../theme';
-import { Segment } from '../SwipePager';
+import { T } from '../../theme';
+import { Rule } from '../Transit/parts';
 import { playMidi } from '../../utils/audioPlayback';
 
 export type IntervalsSub = 'explore' | 'measure' | 'inchord' | 'practice';
-type Sub = IntervalsSub;
-
-const SUBS: { id: Sub; label: string }[] = [
-  { id: 'explore',  label: 'Explore'   },
-  { id: 'measure',  label: 'Measure'   },
-  { id: 'inchord',  label: 'In a Chord' },
-  { id: 'practice', label: 'Practice'  },
-];
 
 const INTERVAL_REF = [
   { abbrev: 'P1',  semitones: 0,  name: 'Unison',        quality: 'Perfect',    feel: 'Same note' },
@@ -48,29 +40,17 @@ function playMotif(midis: number[]) {
   motifTimers = midis.map((m, i) => setTimeout(() => playMidi(m, i === 0 ? 0.5 : 0.4), i * 330));
 }
 
+// Quality in ink only: the stable intervals in ink, the restless ones grey.
 const QUALITY_COLOR: Record<string, string> = {
-  Perfect:    T.primary,
-  Consonant:  T.secondary,
-  Mild:       '#6B655C',
-  Dissonant:  '#9C958C',
+  Perfect:    T.text,
+  Consonant:  T.text,
+  Mild:       T.textMuted,
+  Dissonant:  T.textMuted,
 };
 
-const SECTION: React.CSSProperties = {
-  fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
-  textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
-};
-
-// The sub-tab lives in App with every other panel's, so navigation (the
-// command palette, the tools map) can open any of them directly.
-export function IntervalsTab({ desktop, sub, onSubChange }: {
-  desktop?: boolean; sub: string; onSubChange: (s: string) => void;
-}) {
-  const pick = (s: Sub) => onSubChange(s);
-
-  // Same bar as every other panel (it used to be the one hand-built exception).
-  const tabBar = (
-    <Segment items={SUBS} active={sub} onChange={id => pick(id as Sub)} helpPrefix="intervals" />
-  );
+// The view is chosen by the shell: Explore / Measure / In a chord are the
+// Intervals stop's pills, and 'practice' is its own stop (Ear training, L4).
+export function IntervalsTab({ desktop, sub }: { desktop?: boolean; sub: string }) {
 
   const tool =
     sub === 'explore'  ? <IntervalExplore /> :
@@ -80,9 +60,8 @@ export function IntervalsTab({ desktop, sub, onSubChange }: {
 
   const mainContent = (
     <div>
-      {tabBar}
       {sub === 'practice'
-        ? <div style={{ maxWidth: desktop ? 680 : undefined, margin: '0 auto', width: '100%' }}>{tool}</div>
+        ? <div style={{ maxWidth: desktop ? 680 : undefined, width: '100%' }}>{tool}</div>
         : tool}
     </div>
   );
@@ -91,48 +70,49 @@ export function IntervalsTab({ desktop, sub, onSubChange }: {
   if (!desktop || sub === 'practice' || sub === 'inchord') return mainContent;
 
   const sidePanel = (
-    <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={card({ padding: '12px 14px' })}>
-        <p style={SECTION}>Interval reference</p>
-        {/* Header row */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 70px 80px 90px',
-          gap: 0, borderBottom: `1px solid ${T.border}`, paddingBottom: 6, marginBottom: 4,
-        }}>
-          {['Name', 'Abbr', 'Semitones', 'Quality'].map(h => (
-            <span key={h} style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{h}</span>
+    <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <Rule label="Interval reference">
+        <div role="table" aria-label="Interval reference">
+          <div role="row" style={{
+            display: 'grid', gridTemplateColumns: '1fr 56px 46px 86px',
+            borderBottom: `var(--su-rule) solid ${T.border}`, paddingBottom: 6,
+          }}>
+            {['Name', 'Abbr', 'Semi', 'Quality'].map(h => (
+              <span key={h} role="columnheader" className="su-label" style={{ fontSize: 9 }}>{h}</span>
+            ))}
+          </div>
+          {INTERVAL_REF.map(iv => (
+            <div key={iv.abbrev} role="row" style={{
+              display: 'grid', gridTemplateColumns: '1fr 56px 46px 86px',
+              padding: '5px 0', borderBottom: `1px solid ${T.hairline}`, alignItems: 'center',
+            }}>
+              <span role="cell" className="su-semi" style={{ fontSize: 15, textTransform: 'uppercase' }}>{iv.name}</span>
+              <span role="cell" style={{ fontSize: 11, fontFamily: 'var(--gc-mono)', fontWeight: 700 }}>{iv.abbrev}</span>
+              <span role="cell" style={{ fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)' }}>{iv.semitones}</span>
+              <span role="cell" style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: QUALITY_COLOR[iv.quality] ?? T.textMuted }}>{iv.quality}</span>
+            </div>
           ))}
         </div>
-        {INTERVAL_REF.map(iv => (
-          <div key={iv.abbrev} style={{
-            display: 'grid', gridTemplateColumns: '1fr 70px 80px 90px',
-            gap: 0, padding: '4px 0', borderBottom: `1px solid ${T.border}`,
-            alignItems: 'center',
-          }}>
-            <span style={{ fontSize: 11, color: T.text, fontWeight: 400 }}>{iv.name}</span>
-            <span style={{ fontSize: 11, color: T.primary, fontFamily: 'var(--gc-mono)', fontWeight: 600 }}>{iv.abbrev}</span>
-            <span style={{ fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)' }}>{iv.semitones}</span>
-            <span style={{ fontSize: 10, color: QUALITY_COLOR[iv.quality] ?? T.textDim }}>{iv.quality}</span>
-          </div>
-        ))}
-      </div>
+      </Rule>
 
-      <div style={card({ padding: '12px 14px' })}>
-        <p style={SECTION}>Ear training hints</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <Rule label="Ear training hints">
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
           {/* Tap a song to hear how its opening makes the interval. */}
           {HINTS.map(({ abbrev, hint, motif }) => (
-            <button key={abbrev} onClick={() => playMotif(motif)} className="gc-notation" title="Hear it" style={{
-              display: 'flex', gap: 8, alignItems: 'baseline', padding: '3px 0', background: 'transparent',
-              border: 'none', cursor: 'pointer', textAlign: 'left', letterSpacing: 'normal',
+            <button key={abbrev} onClick={() => playMotif(motif)} className="gc-notation gc-no-bar" title="Hear it"
+              aria-label={`${abbrev}: ${hint} — hear it`} style={{
+              display: 'flex', gap: 10, alignItems: 'center', minHeight: 44, padding: 0, background: 'transparent',
+              border: 'none', borderBottom: `1px solid ${T.hairline}`, cursor: 'pointer', textAlign: 'start', letterSpacing: 'normal', color: T.text,
             }}>
-              <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', color: T.primary, fontWeight: 600, flexShrink: 0, minWidth: 28 }}>{abbrev}</span>
-              <span style={{ fontSize: 11, color: T.textMuted, flex: 1 }}>{hint}</span>
-              <span style={{ fontSize: 9, color: T.textDim }}>▶</span>
+              <span style={{ fontSize: 11, fontFamily: 'var(--gc-mono)', fontWeight: 700, flexShrink: 0, minWidth: 30 }}>{abbrev}</span>
+              <span style={{ fontSize: 12, color: T.text, flex: 1 }}>{hint}</span>
+              <span aria-hidden style={{ width: 32, height: 32, borderRadius: '50%', border: `1.5px solid ${T.text}`, display: 'inline-flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 10, flex: 'none' }}>▶</span>
             </button>
           ))}
         </div>
-      </div>
+      </Rule>
     </div>
   );
 

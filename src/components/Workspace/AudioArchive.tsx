@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { audioTabs } from '../../services/workspace';
 import type { AudioTab } from '../../services/types';
 import { ItemMenu } from './ItemMenu';
-import { EmptyState, RenameDialog, MiniAudioPlayer, formatDate } from './shared';
+import { EmptyState, RenameDialog, MiniAudioPlayer, Tile } from './shared';
+import { matches, formatDate, TILE_GRID, TILE_GRID_DESKTOP } from './library';
 
-const AUDIO_ACCENT = '#6B655C';
-
-export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
+export const AudioArchive: React.FC<{ desktop?: boolean; query?: string; onCount?: (n: number) => void }> = ({ desktop, query, onCount }) => {
   const { user } = useAuth();
   const [items, setItems]     = useState<AudioTab[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,10 +22,13 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       .finally(() => setLoading(false));
   }, [user]);
 
+  // Report the count to the Library's filter pills.
+  useEffect(() => { if (!loading) onCount?.(items.length); }, [items, loading, onCount]);
+
   if (loading) return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 20 }}>Loading…</p>;
   if (items.length === 0) return (
-    <EmptyState icon="" title="No audio transcriptions yet"
-      hint="Upload a clip in Tools → Audio→Tab and it will be archived here for quick playback." />
+    <EmptyState title="No audio transcriptions yet"
+      hint="Record or upload a clip at Audio → Tab (L3) and it will be archived here for quick playback." />
   );
 
   const remove = async (it: AudioTab) => {
@@ -62,59 +64,25 @@ export const AudioArchive: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     exportTabMidi(parseGrid(it), it.name);
   };
 
+  const shown = items.filter(it => matches(it.name, query));
+  if (!shown.length) return <EmptyState title="Nothing matches" hint="Try another word, or clear the search." />;
+
+  const menu = (it: AudioTab) => (
+    <ItemMenu items={[
+      { label: 'Rename',      onClick: () => setRenaming(it) },
+      { label: 'Duplicate',   onClick: () => duplicate(it) },
+      { label: 'Export PDF',  onClick: () => exportPdf(it) },
+      { label: 'Export MIDI', onClick: () => exportMidiFile(it) },
+      { label: 'Delete',      onClick: () => remove(it), danger: true },
+    ]} />
+  );
+
   return (
-    <div style={desktop
-      ? { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }
-      : { display: 'flex', flexDirection: 'column', gap: 8 }
-    }>
-      {items.map(it => (
-        <div key={it.id} style={{
-          ...card({ padding: '12px 14px' }),
-          display: 'flex',
-          flexDirection: desktop ? 'column' : 'row',
-          alignItems: desktop ? 'flex-start' : 'center',
-          gap: 12,
-          borderLeft: `4px solid ${AUDIO_ACCENT}`,
-        }}>
-          {desktop ? (
-            <>
-              <div style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 2 }}>Audio</div>
-              <div style={{ fontSize: 14, color: T.text, fontWeight: 500, lineHeight: 1.25, width: '100%' }}>{it.name}</div>
-              <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>
-                {formatDate(it.updated_at)}{it.duration_seconds ? ` · ${Math.round(it.duration_seconds)}s` : ''}
-              </div>
-              {it.original_audio_url && <MiniAudioPlayer url={it.original_audio_url} />}
-              <div style={{ display: 'flex', gap: 6, marginTop: 'auto', width: '100%' }}>
-                <ItemMenu items={[
-                  { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
-                  { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
-                  { label: 'Export PDF',icon: '⤓', onClick: () => exportPdf(it) },
-                  { label: 'Export MIDI',icon: '⤓', onClick: () => exportMidiFile(it) },
-                  { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
-                ]} />
-              </div>
-            </>
-          ) : (
-            <>
-              {it.original_audio_url
-                ? <MiniAudioPlayer url={it.original_audio_url} />
-                : <span style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, flexShrink: 0 }}></span>}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: T.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
-                <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>
-                  {formatDate(it.updated_at)}{it.duration_seconds ? ` · ${Math.round(it.duration_seconds)}s` : ''}
-                </div>
-              </div>
-              <ItemMenu items={[
-                { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
-                { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
-                { label: 'Export PDF',icon: '⤓', onClick: () => exportPdf(it) },
-                { label: 'Export MIDI',icon: '⤓', onClick: () => exportMidiFile(it) },
-                { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
-              ]} />
-            </>
-          )}
-        </div>
+    <div style={desktop ? TILE_GRID_DESKTOP : TILE_GRID}>
+      {shown.map(it => (
+        <Tile key={it.id} line="L3" type="Audio" name={it.name} menu={menu(it)}
+          date={`${formatDate(it.updated_at)}${it.duration_seconds ? ` · ${Math.round(it.duration_seconds)}s` : ''}`}
+          lead={it.original_audio_url ? <MiniAudioPlayer url={it.original_audio_url} /> : undefined} />
       ))}
 
       {renaming && (

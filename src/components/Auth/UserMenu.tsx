@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { T } from '../../theme';
+import { T, btn } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from './AuthModal';
+import { useLang } from '../../contexts/LanguageContext';
 
 interface Props {
-  /** Opens the Workspace tab. */
+  /** Opens the Library stop. */
   onOpenWorkspace: () => void;
   /** Compact (mobile header) renders a smaller trigger. */
   compact?: boolean;
+  /** Open the menu upwards (the desktop sidebar's footer). */
+  up?: boolean;
 }
 
 function initials(name: string | null, email: string | null): string {
@@ -16,7 +19,9 @@ function initials(name: string | null, email: string | null): string {
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
 
-export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact }) => {
+export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact, up }) => {
+  const { lang } = useLang();
+  const he = lang === 'he';
   const { user, profile, signOut, deleteAccount } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [open, setOpen]         = useState(false);
@@ -35,18 +40,18 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact }) => {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
-  const sz = compact ? 26 : 30;
+  const sz = compact ? 40 : 44;
 
   // ── Logged out ──
   if (!user) {
     return (
       <>
-        <button onClick={() => setAuthOpen(true)} style={{
-          height: sz, padding: '0 12px', borderRadius: 0, cursor: 'pointer',
-          border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary,
-          fontSize: compact ? 11 : 12, fontFamily: 'inherit', fontWeight: 400,
-          textTransform: 'uppercase', letterSpacing: '-0.02em',
-        }}>Sign In</button>
+        <button onClick={() => setAuthOpen(true)} className="gc-no-bar" style={{
+          height: sz, padding: '0 16px', borderRadius: 'var(--su-pill)', cursor: 'pointer', whiteSpace: 'nowrap',
+          border: `1.5px solid ${T.text}`, background: T.secondary, color: T.white,
+          fontSize: 11, fontFamily: 'inherit', fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '0.1em',
+        }}>{he ? 'כניסה' : 'Sign in'}</button>
         {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
       </>
     );
@@ -62,9 +67,9 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact }) => {
   // ── Logged in ──
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(o => !o)} aria-label="Account menu" style={{
-        width: sz, height: sz, borderRadius: 0, cursor: 'pointer',
-        border: `1px solid ${T.secondary}`, background: T.secondary, color: T.white,
+      <button onClick={() => setOpen(o => !o)} aria-label={he ? 'תפריט החשבון' : 'Account menu'} aria-expanded={open} className="gc-no-bar" style={{
+        width: sz, height: sz, borderRadius: '50%', cursor: 'pointer',
+        border: `1.5px solid ${T.text}`, background: T.secondary, color: T.white,
         fontSize: compact ? 10 : 11, fontWeight: 700, fontFamily: 'inherit',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
         overflow: 'hidden',
@@ -76,12 +81,11 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact }) => {
 
       {open && (
         <div style={{
-          position: 'absolute', right: 0, top: sz + 6, minWidth: 210, zIndex: 60,
-          background: T.bgCard, border: `1px solid ${T.border}`,
-          borderLeft: '3px solid var(--gc-bar-color)',
-          boxShadow: '0 6px 22px rgba(0,0,0,0.28)', padding: 6,
+          position: 'absolute', insetInlineEnd: up ? undefined : 0, insetInlineStart: up ? 0 : undefined,
+          top: up ? undefined : sz + 6, bottom: up ? sz + 6 : undefined, minWidth: 230, zIndex: 60,
+          background: T.bgDeep, border: `var(--su-rule) solid ${T.border}`, padding: 8,
         }}>
-          <div style={{ padding: '6px 10px 10px', borderBottom: `1px solid ${T.border}`, marginBottom: 6 }}>
+          <div style={{ padding: '6px 10px 10px', borderBottom: `var(--su-rule) solid ${T.border}`, marginBottom: 6 }}>
             <div style={{ fontSize: 13, color: T.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {profile?.display_name || 'Guitarist'}
             </div>
@@ -92,29 +96,22 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact }) => {
 
           {!confirmDelete ? (
             <>
-              <MenuRow label="My Workspace" icon="▣" onClick={() => { setOpen(false); onOpenWorkspace(); }} />
-              <MenuRow label="Sign Out" icon="⤴" onClick={() => { setOpen(false); signOut(); }} />
-              <div style={{ height: 1, background: T.border, margin: '6px 0' }} />
-              <MenuRow label="Delete Account" icon="" danger onClick={() => setConfirmDelete(true)} />
+              <MenuRow label={he ? 'הספרייה' : 'Library'} onClick={() => { setOpen(false); onOpenWorkspace(); }} />
+              <MenuRow label={he ? 'יציאה' : 'Sign out'} onClick={() => { setOpen(false); signOut(); }} />
+              <div style={{ height: 1, background: T.hairline, margin: '6px 0' }} />
+              <MenuRow label={he ? 'מחיקת החשבון' : 'Delete account'} muted onClick={() => setConfirmDelete(true)} />
             </>
           ) : (
             <div style={{ padding: '4px 8px 8px' }}>
               <p style={{ margin: '0 0 10px', fontSize: 11.5, lineHeight: 1.5, color: T.text }}>
-                This permanently deletes your account and all saved tabs,
-                progressions and audio. This cannot be undone.
+                {he ? 'זה מוחק לצמיתות את החשבון ואת כל הטאבים, המהלכים וההקלטות השמורים. אי אפשר לבטל.'
+                    : 'This permanently deletes your account and all saved tabs, progressions and audio. This cannot be undone.'}
               </p>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button disabled={busy} onClick={doDelete} style={{
-                  flex: 1, padding: '8px 0', borderRadius: 0, cursor: 'pointer',
-                  background: T.primary, color: T.white, border: 'none',
-                  fontSize: 11.5, fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '-0.02em',
-                  borderLeft: '3px solid var(--gc-bar-color)',
-                }}>{busy ? 'Deleting…' : 'Delete'}</button>
-                <button disabled={busy} onClick={() => setConfirmDelete(false)} style={{
-                  flex: 1, padding: '8px 0', borderRadius: 0, cursor: 'pointer',
-                  background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}`,
-                  fontSize: 11.5, fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '-0.02em',
-                }}>Cancel</button>
+                <button disabled={busy} onClick={doDelete} className="gc-no-bar" style={{ ...btn.primary(busy), flex: 1 }}>
+                  {busy ? (he ? 'מוחק…' : 'Deleting…') : (he ? 'מחיקה' : 'Delete')}</button>
+                <button disabled={busy} onClick={() => setConfirmDelete(false)} className="gc-no-bar" style={{ ...btn.secondary(), flex: 1 }}>
+                  {he ? 'ביטול' : 'Cancel'}</button>
               </div>
             </div>
           )}
@@ -124,17 +121,17 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact }) => {
   );
 };
 
-const MenuRow: React.FC<{ label: string; icon: string; onClick: () => void; danger?: boolean }> = ({ label, icon, onClick, danger }) => (
-  <button onClick={onClick} style={{
-    width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-    padding: '9px 10px', borderRadius: 0, cursor: 'pointer',
-    background: 'transparent', border: 'none', textAlign: 'left',
-    color: danger ? T.primary : T.text, fontSize: 12.5, fontFamily: 'inherit', fontWeight: 400,
-    textTransform: 'uppercase', letterSpacing: '-0.02em',
+const MenuRow: React.FC<{ label: string; onClick: () => void; muted?: boolean }> = ({ label, onClick, muted }) => (
+  <button onClick={onClick} className="gc-no-bar" style={{
+    width: '100%', display: 'flex', alignItems: 'center', minHeight: 44,
+    padding: '0 10px', borderRadius: 0, cursor: 'pointer',
+    background: 'transparent', border: 'none', textAlign: 'start',
+    color: muted ? T.textMuted : T.text, fontSize: 12, fontFamily: 'inherit', fontWeight: 700,
+    textTransform: 'uppercase', letterSpacing: '0.1em',
   }}
     onMouseEnter={e => { e.currentTarget.style.background = T.bgInput; }}
     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
   >
-    <span style={{ width: 16, textAlign: 'center' }}>{icon}</span>{label}
+    {label}
   </button>
 );

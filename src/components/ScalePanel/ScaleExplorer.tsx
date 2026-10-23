@@ -1,17 +1,23 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Scale, Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
+import { Scale, Note as TonalNote, Chord as TonalChord, Key, Mode } from '@tonaljs/tonal';
 import type { Note } from '../../types/music';
-import { DisplayFretboard, type DisplayDot } from '../Fretboard/DisplayFretboard';
+import { Neck, type NeckDot } from '../Fretboard/Neck';
 import { getScalePositions } from '../../utils/scaleUtils';
-import { fretToNote, STRING_COUNT, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
+import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
 import { playScale, playChord, unlockAudio } from '../../utils/audioPlayback';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { formatChordName } from '../../utils/chordIdentifier';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
 import { previewNote, previewMidi, previewRun } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
 import { DiceButton } from '../DiceButton';
 import { pickOne } from '../../utils/random';
+import { useLang } from '../../contexts/LanguageContext';
+import { STOPS } from '../../data/tools';
+import { requestNavigate } from '../../services/navigate';
+import { PosterTitle, Rule, Pill, PillRow, Cta, KeyGrid, Stepper } from '../Transit/parts';
+import { pillStyle, keyStyle } from '../Transit/styles';
+import { StopActions } from '../Transit/StopActions';
 
 const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -68,7 +74,6 @@ const INTERVAL_DEGREE: Record<string, { num: string; name: string }> = {
 };
 
 const POSITION_WINDOWS = [[0,3],[2,5],[4,8],[6,10],[9,12]] as const;
-const POS_COLORS = [T.primary, T.secondary, '#5C5650', '#8A8378', '#9C958C'];
 
 export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   // Opens on C major rather than an empty neck, the way the Chord Wheel does —
@@ -92,6 +97,10 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   }
   const [pos, setPos]               = useState<number | null>(null);
   const [viewMode, setViewMode]     = useState<'fretboard' | 'tab'>('fretboard');
+  // The degree legend's isolate filter: one degree stays, the rest fade.
+  const [isolate, setIsolate]       = useState<number | null>(null);
+  const { lang } = useLang();
+  const he = lang === 'he';
 
   const scale       = useMemo(() => scaleType ? Scale.get(`${root} ${scaleType}`) : Scale.get(''), [root, scaleType]);
 
@@ -136,7 +145,11 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     if (!jam) return null;
     return new Set(TonalChord.get(jam.chords[jam.step].replace(/M$/, '')).notes.map(n => TonalNote.chroma(n)));
   }, [jam]);
-  const allPos      = useMemo(() => scaleType ? getScalePositions(root, scaleType) : [], [root, scaleType]);
+  // The neck runs to fret 15; frets 13–15 repeat 1–3 an octave up.
+  const allPos      = useMemo(() => {
+    const ps = scaleType ? getScalePositions(root, scaleType) : [];
+    return [...ps, ...ps.filter(p => p.fret >= 1 && p.fret <= 3).map(p => ({ ...p, fret: p.fret + 12 }))];
+  }, [root, scaleType]);
 
   const displayPos  = useMemo(() => {
     if (pos === null) return allPos;
@@ -163,25 +176,29 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     return ids;
   }, [allPos, scale]);
 
-  const dots: DisplayDot[] = useMemo(() =>
+  const degreeOf = (i: number) => INTERVAL_DEGREE[scale.intervals[i] ?? ''] ?? { num: String(i + 1), name: '' };
+  const neckDots: NeckDot[] = useMemo(() =>
     displayPos.map(p => {
       const note   = fretToNote(p.string, p.fret);
+      const deg    = scale.notes.findIndex(n => samePitch(n, note));
       const isRoot = samePitch(note, root);
+      const iso = isolate !== null && isolate < scale.notes.length ? isolate : null;
+      const kind: NeckDot['kind'] = iso !== null && deg !== iso ? 'faded' : isRoot ? 'root' : 'tone';
       return {
-        ...p, id: dotIds.get(`${p.string}-${p.fret}`),
-        color: isRoot ? T.primary : (pos !== null ? POS_COLORS[pos] : T.secondary),
-        // Spelled as the scale spells it (D major has C#, never Db).
-        label: scale.notes.find(n => samePitch(n, note)) ?? note,
+        string: p.string, fret: p.fret, id: dotIds.get(`${p.string}-${p.fret}`) ?? `${p.string}-${p.fret}`,
+        // Each dot names its degree (1, ♭3, 5…).
+        label: INTERVAL_DEGREE[scale.intervals[deg] ?? '']?.num ?? (deg >= 0 ? String(deg + 1) : note),
+        kind,
         target: !!jamTones?.has(TonalNote.chroma(note)),
       };
     }),
-    [displayPos, root, pos, dotIds, scale, jamTones]
+    [displayPos, root, dotIds, scale, jamTones, isolate]
   );
 
   const roll = () => {
     const r = pickOne(ALL_NOTES) as Note;
     const type = pickOne(SCALE_GROUPS.flatMap(g => g.scales)).id;
-    setRoot(r); setScaleType(type); setPos(null);
+    setRoot(r); setScaleType(type); setPos(null); setIsolate(null);
     previewRun(scaleMidis(r, type));
   };
 
@@ -206,249 +223,249 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
       .join('\n');
   };
 
-  const controlsPane = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+  // ── Presentation ─────────────────────────────────────────────────────────
+  const scaleLabel = scaleType ? (SCALE_GROUPS.flatMap(g => g.scales).find(sc => sc.id === scaleType)?.label ?? scaleType) : '—';
+  const stepRoot = (d: number) => {
+    const r = ALL_NOTES[(ALL_NOTES.indexOf(root) + d + 12) % 12];
+    setRoot(r); previewNote(r);
+  };
+  const playWholeScale = () => {
+    const midiNotes = [
+      ...scale.notes.map(n => TonalNote.midi(`${n}4`) ?? 60),
+      TonalNote.midi(`${root}5`) ?? 72,
+    ];
+    playScale(midiNotes);
+  };
 
-      {/* ── Root note ── */}
-      <div style={card()}>
-<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <p className="gc-sec-label" style={{ margin: '0 0 10px' }}>Root Note</p>
-          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 7 }}>
-          {ALL_NOTES.map(n => {
-            const sharp    = n.includes('#');
-            const selected = n === root;
-            return (
-              <button data-active={!!selected} key={n} onClick={() => { setRoot(n); previewNote(n); }} style={{
-                padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 11 : 13, fontWeight: selected ? 500 : 400,
-                border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
-                background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
-                color: selected ? T.primary : sharp ? T.textMuted : T.text,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>
-                {n}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  // What sits next to this scale, where the theory says so. A cell with no
+  // answer is left out rather than guessed.
+  const related = useMemo(() => {
+    const cells: { label: string; value: string; go?: () => void }[] = [];
+    if (scale.empty || !scaleType) return cells;
+    const rel =
+      scaleType === 'major' ? { tonic: Key.majorKey(root).minorRelative, type: 'minor', name: 'minor' } :
+      scaleType === 'minor' ? { tonic: Key.minorKey(root).relativeMajor, type: 'major', name: 'major' } :
+      scaleType === 'major pentatonic' ? { tonic: Key.majorKey(root).minorRelative, type: 'minor pentatonic', name: 'minor pent.' } :
+      scaleType === 'minor pentatonic' ? { tonic: Key.minorKey(root).relativeMajor, type: 'major pentatonic', name: 'major pent.' } : null;
+    const asNote = (n: string) => (ALL_NOTES.find(a => samePitch(a, n)) ?? null) as Note | null;
+    if (rel) {
+      const r = asNote(rel.tonic);
+      cells.push({ label: he ? 'יחסי' : 'Relative', value: `${rel.tonic} ${rel.name}`, go: r ? () => { setRoot(r); setScaleType(rel.type); setIsolate(null); } : undefined });
+    }
+    if (['dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'].includes(scaleType)) {
+      const parent = Mode.relativeTonic('major', scaleType, root);
+      const r = asNote(parent);
+      if (parent) cells.push({ label: he ? 'סולם האם' : 'Parent mode', value: `${parent} major · mode ${Mode.get(scaleType).modeNum + 1}`,
+        go: r ? () => { setRoot(r); setScaleType('major'); setIsolate(null); } : undefined });
+    }
+    const mode = Mode.get(scaleType === 'major' ? 'ionian' : scaleType === 'minor' ? 'aeolian' : scaleType);
+    if (!mode.empty) {
+      cells.push({ label: he ? 'מתאים מעל' : 'Fits over', value: [root + mode.triad, root + mode.seventh].map(formatChordName).join(' · ') });
+    }
+    return cells;
+  }, [scale, scaleType, root, he]);
+  const nextStop = useMemo(() => {
+    const here = STOPS.findIndex(st => st.id === 'scales');
+    return STOPS.slice(here + 1).find(st => st.line === STOPS[here].line) ?? null;
+  }, []);
 
-      {/* ── Scale type ── */}
-      <div>
-        <button
-          onClick={() => setScaleMenuOpen(o => !o)}
-          style={{
-            width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
-            background: T.secondary, color: '#fff',
-            fontSize: 13, fontWeight: 400, textAlign: 'left',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}
-        >
-          <span>
-            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Scale Type</span>
-            {scaleType
-              ? SCALE_GROUPS.flatMap(g => g.scales).find(s => s.id === scaleType)?.label ?? scaleType
-              : '— Select —'}
-          </span>
-          <span style={{ fontSize: 11 }}>{scaleMenuOpen ? '▲' : '▼'}</span>
-        </button>
-
-        {scaleMenuOpen && (
-          <div style={{ ...card(), marginTop: 2, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {SCALE_GROUPS.map(g => (
-              <div key={g.label}>
-                <p className="gc-sec-label" style={{ margin: '0 0 7px' }}>
-                  {g.label}
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {g.scales.map(s => {
-                    const sel = scaleType === s.id;
-                    return (
-                      <button data-active={!!sel} key={s.id} onClick={() => { setScaleType(s.id); setScaleMenuOpen(false); previewRun(scaleMidis(root, s.id)); }} style={{
-                        padding: '6px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
-                        fontWeight: sel ? 500 : 400,
-                        border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
-                        background: sel ? T.secondaryBg : T.bgInput,
-                        color: sel ? T.secondary : T.textMuted,
-                        borderLeft: '3px solid var(--gc-bar-color)',
-                      }}>
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+  // Degree legend — tap a degree to isolate it on the neck; tap again to clear.
+  const legend = !scale.empty && (
+    <div role="group" aria-label={he ? 'דרגות הסולם' : 'Scale degrees'} dir="ltr"
+      style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(scale.notes.length, 5)}, minmax(0, 1fr))`, gap: 4 }}>
+      {scale.notes.map((note, i) => {
+        const deg = degreeOf(i);
+        const on = isolate === i;
+        return (
+          <button key={i} type="button" aria-pressed={on} data-active={on || undefined} className="gc-no-bar gc-notation"
+            title={deg.name}
+            onClick={() => { setIsolate(on ? null : i); previewMidi(TonalNote.midi(`${note}4`) ?? 60); }}
+            style={{ ...keyStyle(on), flexDirection: 'column', gap: 3, minHeight: 58, padding: '6px 2px', letterSpacing: 'normal',
+              opacity: isolate !== null && !on ? 0.55 : 1 }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{deg.num}</span>
+            <span style={{ fontFamily: 'var(--gc-mono)', fontStretch: 'normal', fontSize: 11, fontWeight: 700 }}>{note}</span>
+          </button>
+        );
+      })}
     </div>
   );
 
-  const outputPane = !scale.empty ? (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, ...(desktop ? { position: 'sticky' as const, top: 24 } : {}) }}>
-          {/* ── Scale info chips ── */}
-          <div style={card({ padding: '12px 16px' })}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ fontSize: 17, fontWeight: 800, color: T.text }}>{root} {scaleType}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, color: T.textMuted }}>{scale.notes.length} notes</span>
-                <button
-                  onClick={() => {
-                    const midiNotes = [
-                      ...scale.notes.map(n => TonalNote.midi(`${n}4`) ?? 60),
-                      TonalNote.midi(`${root}5`) ?? 72,
-                    ];
-                    playScale(midiNotes);
-                  }}
-                  className="gc-btn-heavy"
-                  style={{
-                    padding: '4px 14px', borderRadius: 0,
-                    background: T.primary, color: '#fff', fontSize: 12,
-                    fontWeight: 400, cursor: 'pointer',
-                  }}
-                >PLAY</button>
-                <button onClick={toggleJam} data-active={!!jam} title="Loop chords in this key to improvise over"
-                  style={{
-                    padding: '4px 14px', borderRadius: 0, fontSize: 12, cursor: 'pointer',
-                    background: jam ? T.primary : T.bgInput, color: jam ? '#fff' : T.text, border: `1px solid ${jam ? T.primary : T.border}`,
-                  }}>{jam ? '■ JAM' : 'JAM'}</button>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {scale.notes.map((note, i) => {
-                const isR = samePitch(note, root);
-                const interval = scale.intervals[i] ?? '';
-                const deg = INTERVAL_DEGREE[interval] ?? { num: String(i + 1), name: '' };
-                return (
-                  <button key={i} onClick={() => previewMidi(TonalNote.midi(`${note}4`) ?? 60)} className="gc-notation" style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    padding: '8px 6px', borderRadius: 0, gap: 3, flex: 1, minWidth: 48,
-                    background: isR ? T.primaryBg : T.bgInput,
-                    border: `1px solid ${isR ? T.primary : T.border}`,
-                    borderTop: isR ? `3px solid ${T.primary}` : `3px solid ${T.border}`,
-                  }}>
-                    <span style={{ fontSize: 11, fontWeight: 400, color: T.primary, lineHeight: 1 }}>{deg.num}</span>
-                    <span style={{ fontSize: 18, fontWeight: isR ? 800 : 600, color: isR ? T.primary : T.text, lineHeight: 1.1 }}>{note}</span>
-                    <span style={{ fontSize: 9, color: T.textMuted, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{deg.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ── Jam: the loop, with the chord that is playing lit ── */}
-          {jam && (
-            <div className="gc-drop-in" dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Jam · {bpm} bpm</span>
-              {jam.chords.map((c, i) => (
-                <span key={i} className="gc-notation" style={{
-                  padding: '4px 10px', fontSize: 13, fontWeight: 700,
-                  background: i === jam.step ? T.primary : T.bgInput, color: i === jam.step ? '#fff' : T.text,
-                  transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out)',
-                }}>{formatChordName(c)}</span>
-              ))}
-              <span style={{ fontSize: 11, color: T.textMuted }}>· ringed notes = the chord's tones</span>
-            </div>
-          )}
-
-          {/* ── View toggle ── */}
-          <div style={{ display: 'flex', gap: 0 }}>
-            {(['fretboard', 'tab'] as const).map(v => (
-              <button data-active={viewMode === v} key={v} onClick={() => setViewMode(v)} style={{
-                flex: 1, padding: '9px 0', borderRadius: 0, cursor: 'pointer',
-                fontSize: 13, fontWeight: viewMode === v ? 500 : 400,
-                background: viewMode === v ? T.primary : T.bgCard,
-                color: viewMode === v ? T.white : T.textMuted,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>
-                {v === 'fretboard' ? 'Fretboard' : 'Tab'}
-              </button>
-            ))}
-          </div>
-
-          {/* ── Position selector ── */}
-          <div className="gc-pos-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: T.textMuted }}>Position:</span>
-            <button data-active={pos === null} onClick={() => setPos(null)} style={{
-              padding: '4px 13px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
-              background: pos === null ? T.text : T.bgInput,
-              color: pos === null ? T.bgDeep : T.textMuted,
-              fontWeight: pos === null ? 500 : 400,
-              borderLeft: '3px solid var(--gc-bar-color)',
-            }}>
-              Full Neck
-            </button>
-            {POSITION_WINDOWS.map((_, i) => (
-              <button key={i} data-active={pos === i} onClick={() => setPos(pos === i ? null : i)}
-                title={`Frets ${POSITION_WINDOWS[i][0]}–${POSITION_WINDOWS[i][1]}`}
-                style={{
-                  width: 'var(--gc-pos-btn)', height: 'var(--gc-pos-btn)',
-                  borderRadius: 0, cursor: 'pointer',
-                  fontSize: 12, fontWeight: 400,
-                  background: POS_COLORS[i],
-                  color: '#fff',
-                  border: pos === i ? `2px solid ${T.text}` : '2px solid transparent',
-                  opacity: pos === i ? 1 : 0.75,
-                  flexShrink: 0,
-                }}>
-                {i + 1}
-              </button>
-            ))}
-          </div>
-
-          {/* ── Fretboard / Tab ── */}
-          {viewMode === 'fretboard' ? (
-            <div style={card()}>
-              {dots.length > 0
-                ? <DisplayFretboard dots={dots} compact onDotClick={d => previewMidi(STANDARD_OPEN_MIDI[d.string] + d.fret)} />
-                : <p style={{ textAlign: 'center', color: T.textDim, fontSize: 13, margin: 0 }}>No notes in this position</p>
-              }
-            </div>
-          ) : (
-            <div style={{ ...card(), background: T.bgDeep, overflowX: 'auto' }}>
-              <pre style={{ fontSize: 12, color: T.secondary, fontFamily: 'monospace', lineHeight: 1.7, margin: 0, whiteSpace: 'pre' }}>
-                {generateTab()}
-              </pre>
-            </div>
-          )}
-
-          {/* ── Legend ── */}
-          <div style={{ display: 'flex', gap: 16, fontSize: 11, color: T.textMuted }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 0, background: T.primary, display: 'inline-block' }} />
-              Root ({root})
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 0, background: T.secondary, display: 'inline-block' }} />
-              Scale tones
-            </span>
-          </div>
-    </div>
-  ) : desktop ? (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: T.textDim, fontSize: 13, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em' }}>
-      ← Select root + scale type
-    </div>
-  ) : (
-    <div style={{ textAlign: 'center', padding: 32, color: T.textDim, fontSize: 13 }}>Scale not found</div>
+  const rootGrid = (
+    <Rule label={he ? 'טוניקה' : 'Root'} right={<DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />}>
+      <div dir="ltr">
+        <KeyGrid items={ALL_NOTES.map(n => ({ id: n, label: n }))} value={root}
+          onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Root'} />
+      </div>
+    </Rule>
   );
 
+  const scaleMenu = (
+    <Rule label={he ? 'סולם' : 'Scale'} right={
+      <Pill size="sm" active={scaleMenuOpen} onClick={() => setScaleMenuOpen(o => !o)}>
+        {scaleLabel} {scaleMenuOpen ? '▴' : '▾'}
+      </Pill>
+    }>
+      {(scaleMenuOpen || desktop) && (
+        <div className="gc-drop-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {SCALE_GROUPS.map(g => (
+            <div key={g.label}>
+              <p className="su-label" style={{ margin: '0 0 6px' }}>{g.label}</p>
+              <PillRow wrap items={g.scales.map(sc => ({ id: sc.id, label: sc.label }))} value={scaleType}
+                onChange={id => { setScaleType(id); setIsolate(null); if (!desktop) setScaleMenuOpen(false); previewRun(scaleMidis(root, id)); }} />
+            </div>
+          ))}
+        </div>
+      )}
+    </Rule>
+  );
+
+  const positionRow = (
+    <Rule label={he ? 'פוזיציה · תצוגה' : 'Position · view'}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div role="group" aria-label={he ? 'פוזיציה' : 'Position'} dir="ltr" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <Pill size="sm" active={pos === null} onClick={() => setPos(null)}>{he ? 'כל הצוואר' : 'Full neck'}</Pill>
+          {POSITION_WINDOWS.map((w, i) => (
+            <Pill key={i} size="sm" active={pos === i} onClick={() => setPos(pos === i ? null : i)}
+              title={`Frets ${w[0]}–${w[1]}`} label={`${he ? 'פוזיציה' : 'Position'} ${i + 1}, ${he ? 'שריגים' : 'frets'} ${w[0]}–${w[1]}`}
+              style={{ padding: 0 }}>{i + 1}</Pill>
+          ))}
+        </div>
+        <PillRow items={[{ id: 'fretboard' as const, label: he ? 'צוואר' : 'Neck' }, { id: 'tab' as const, label: he ? 'טאב' : 'Tab' }]}
+          value={viewMode} onChange={setViewMode} label={he ? 'תצוגה' : 'View'} />
+      </div>
+    </Rule>
+  );
+
+  const jamRow = jam && (
+    <div className="gc-drop-in" dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+      <span className="su-label">Jam · {bpm} bpm</span>
+      {jam.chords.map((c, i) => (
+        <span key={i} className="gc-notation su-semi" style={{
+          height: 36, padding: '0 14px', display: 'inline-flex', alignItems: 'center', fontSize: 16, borderRadius: 'var(--su-pill)',
+          border: `1.5px solid ${T.text}`,
+          background: i === jam.step ? T.secondary : 'transparent', color: i === jam.step ? T.white : T.text,
+          transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out)',
+        }}>{formatChordName(c)}</span>
+      ))}
+      <span style={{ fontSize: 11, color: T.textMuted }}>{he ? '· התווים המוקפים = צלילי האקורד' : '· ringed notes = the chord\'s tones'}</span>
+    </div>
+  );
+
+  const jamPill = !scale.empty && (
+    <StopActions>
+      <Pill size="sm" active={!!jam} onClick={toggleJam} title="Loop chords in this key to improvise over">
+        {jam ? '■ Jam' : 'Jam'}
+      </Pill>
+    </StopActions>
+  );
+
+  const tabView = (
+    <div style={{ overflowX: 'auto', borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 12 }}>
+      <pre style={{ fontSize: 12, color: T.text, fontFamily: 'var(--gc-mono)', lineHeight: 1.7, margin: 0, whiteSpace: 'pre' }}>
+        {generateTab()}
+      </pre>
+    </div>
+  );
+  const empty = <p className="su-label" style={{ margin: 0, padding: '20px 0' }}>{he ? 'אין תווים בפוזיציה הזו' : 'No notes in this position'}</p>;
+  const neckLabel = `${root} ${scaleLabel}`;
+
+  if (scale.empty) {
+    return <div style={{ padding: 32, textAlign: 'center' }} className="su-label">{he ? 'הסולם לא נמצא' : 'Scale not found'}</div>;
+  }
+
+  // ── Desktop: poster, a 0–15 neck across the page, controls below ─────────
   if (desktop) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 30, alignItems: 'start' }}>
-        {controlsPane}
-        {outputPane}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {jamPill}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
+          <PosterTitle head={`${root} `} tail={scaleLabel} max={200} min={56} style={{ flex: 1 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flex: 'none', paddingBottom: 6 }}>
+            <Stepper value={root} onPrev={() => stepRoot(-1)} onNext={() => stepRoot(1)} label={he ? 'טוניקה' : 'Key'} />
+            <Cta onClick={playWholeScale}>{he ? 'נגן סולם' : 'Play scale'} ▶</Cta>
+          </div>
+        </div>
+        <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו דרגה לבידוד' : 'notes · tap a degree to isolate it'}`}>{legend}</Rule>
+        {jamRow}
+        <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 16 }}>
+          {viewMode === 'tab' ? tabView : neckDots.length ? <Neck dots={neckDots} from={0} to={15} label={neckLabel} /> : empty}
+        </div>
+        {positionRow}
+        {(related.length > 0 || nextStop) && (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${related.length + (nextStop ? 1 : 0)}, minmax(0, 1fr))`, borderTop: `var(--su-rule) solid ${T.border}` }}>
+            {related.map((c, i) => (
+              <RelatedCell key={c.label} first={i === 0} label={c.label} value={c.value} onClick={c.go} />
+            ))}
+            {nextStop && (
+              <RelatedCell first={related.length === 0} label={he ? 'התחנה הבאה' : 'Next stop'} value={`${nextStop.name[lang]} ${he ? '←' : '→'}`}
+                onClick={() => requestNavigate({ stop: nextStop.id })} />
+            )}
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 32, alignItems: 'start' }}>
+          {rootGrid}
+          {scaleMenu}
+        </div>
       </div>
     );
   }
 
+  // ── Mobile: a vertical neck with the scale's name up its spine ───────────
+  const spineSize = Math.max(44, Math.min(96, Math.floor(600 / Math.max(neckLabel.length * 0.5, 1))));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {controlsPane}
-      {outputPane}
+      {jamPill}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <Stepper value={root} onPrev={() => stepRoot(-1)} onNext={() => stepRoot(1)} label={he ? 'טוניקה' : 'Key'} />
+        <Pill size="sm" active={scaleMenuOpen} onClick={() => setScaleMenuOpen(o => !o)}>{scaleLabel} {scaleMenuOpen ? '▴' : '▾'}</Pill>
+      </div>
+      {scaleMenuOpen && (
+        <div className="gc-drop-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {SCALE_GROUPS.map(g => (
+            <div key={g.label}>
+              <p className="su-label" style={{ margin: '0 0 6px' }}>{g.label}</p>
+              <PillRow wrap items={g.scales.map(sc => ({ id: sc.id, label: sc.label }))} value={scaleType}
+                onChange={id => { setScaleType(id); setIsolate(null); setScaleMenuOpen(false); previewRun(scaleMidis(root, id)); }} />
+            </div>
+          ))}
+        </div>
+      )}
+      {viewMode === 'tab' ? tabView : (
+        <div dir="ltr" style={{ display: 'flex', gap: 8, alignItems: 'stretch', borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 12 }}>
+          <h2 className="su-poster" style={{
+            margin: 0, writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: spineSize,
+            whiteSpace: 'nowrap', textAlign: 'end', flex: 'none',
+          }}>
+            {root} <span style={spineSize >= 60 ? { color: 'transparent', WebkitTextStroke: `3px ${T.text}` } : undefined}>{scaleLabel}</span>
+          </h2>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 210 }}>
+              {neckDots.length ? <Neck dots={neckDots} from={0} to={12} vertical label={neckLabel} /> : empty}
+            </div>
+          </div>
+        </div>
+      )}
+      <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו לבידוד' : 'notes · tap to isolate'}`}>{legend}</Rule>
+      <Cta onClick={playWholeScale} style={{ width: '100%' }}>{he ? 'נגן סולם' : 'Play scale'} ▶</Cta>
+      {jamRow}
+      {positionRow}
+      {rootGrid}
     </div>
   );
+}
+
+function RelatedCell({ label, value, onClick, first }: { label: string; value: string; onClick?: () => void; first?: boolean }) {
+  const inner = (
+    <>
+      <span className="su-label" style={{ display: 'block' }}>{label}</span>
+      <span className="su-semi gc-notation" dir="auto" style={{ display: 'block', marginTop: 8, fontSize: 24, lineHeight: 1 }}>{value}</span>
+    </>
+  );
+  const style: React.CSSProperties = {
+    padding: '12px 16px 14px', minHeight: 72, textAlign: 'start', background: 'transparent', color: T.text, border: 'none',
+    borderInlineStart: first ? 'none' : `var(--su-rule) solid ${T.border}`, minWidth: 0,
+  };
+  return onClick
+    ? <button type="button" onClick={onClick} className="gc-no-bar gc-notation" style={{ ...style, cursor: 'pointer', letterSpacing: 'normal' }}>{inner}</button>
+    : <div style={style}>{inner}</div>;
 }

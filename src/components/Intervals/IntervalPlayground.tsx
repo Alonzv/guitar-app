@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import type { FretPosition } from '../../types/music';
 import { fretToNote } from '../../utils/musicTheory';
-import { IntervalNeck, strY, noteX, midiAt, DOT_R } from './IntervalNeck';
+import { IntervalNeck, strY, noteX, midiAt, DOT_R, FB_H, FB_TOP, STR_SP } from './IntervalNeck';
 import { playMidi, playInterval } from '../../utils/audioPlayback';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { Rule, Pill, PillRow, Cta } from '../Transit/parts';
 
 // ── Free-play interval area ──────────────────────────────────────────────────
 // The user taps notes directly on a 12-fret neck. Each tap sounds the note and
@@ -12,16 +13,12 @@ import { T, card } from '../../theme';
 // a G high up read as a Minor 10th, not a Minor 3rd. Third tap rolls the pair:
 // the oldest note drops so there are never more than two.
 
-const A_COLOR = 'var(--gc-success)';       // first note — matches Note A elsewhere
-const B_COLOR = T.primary;       // second note
+const A_COLOR = T.primary;       // first note — the one cobalt mark
+const B_COLOR = T.secondary;     // second note, in ink
 
 // Fretboard geometry — mirrors the Explore/Calculate necks for visual parity.
 
 
-const MONO_LBL: React.CSSProperties = {
-  margin: '0 0 8px', fontSize: 10, color: '#9C958C',
-  fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase',
-};
 
 // ── Octave-aware interval naming ─────────────────────────────────────────────
 const ORDINALS = [
@@ -83,8 +80,9 @@ function describeInterval(dRaw: number): IntervalDesc {
   };
 }
 
+// Quality in ink only: the stable intervals in ink, the restless ones grey.
 const CONS_COLOR: Record<string, string> = {
-  Perfect: T.primary, Consonant: T.secondary, Mild: '#6B655C', Dissonant: '#9C958C',
+  Perfect: T.text, Consonant: T.text, Mild: T.textMuted, Dissonant: T.textMuted,
 };
 
 export function IntervalPlayground() {
@@ -119,97 +117,58 @@ export function IntervalPlayground() {
     playInterval(midiAt(a), midiAt(b), mode);
   };
 
+  const bracket = a && b && a.fret !== b.fret && desc ? { from: Math.min(a.fret, b.fret), to: Math.max(a.fret, b.fret) } : null;
+  const legend = (fill: string, label: string) => (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span aria-hidden style={{ width: 12, height: 12, borderRadius: '50%', background: fill, display: 'inline-block' }} />{label}
+    </span>
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ ...MONO_LBL, margin: 0 }}>
-        Tap any two notes on the neck to hear them and name the interval
-      </p>
-
-      {/* Result card — appears with two notes; placeholder otherwise. Ordered
-          below the neck so the neck stays put when this card grows. */}
-      <div style={{ ...card({ padding: '12px 16px' }), borderLeft: `4px solid ${desc ? T.primary : T.border}`, minHeight: 64, order: 2 }}>
-        {a && b && desc ? (
-          <>
-            <p style={{ ...MONO_LBL, margin: '0 0 6px' }}>{noteName(a)} → {noteName(b)}</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 30, fontWeight: 900, color: T.primary, fontFamily: 'var(--gc-mono)', lineHeight: 1 }}>
-                {desc.abbrev}
-              </span>
-              <span style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{desc.name}</span>
-            </div>
-            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 10 }}>
-              {desc.semitones} semitone{desc.semitones !== 1 ? 's' : ''}
-              {'  ·  '}
-              <span style={{ color: CONS_COLOR[desc.cons] ?? T.textMuted, fontWeight: 600 }}>{desc.cons}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${T.border}` }}>
-                {(['melodic', 'harmonic'] as const).map(m => (
-                  <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
-                    padding: '5px 10px', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                    background: mode === m ? T.secondary : T.bgInput,
-                    color: mode === m ? '#fff' : T.textMuted,
-                  }}>{m === 'melodic' ? 'MEL' : 'HARM'}</button>
-                ))}
-              </div>
-              <button onClick={handlePlay} style={{
-                padding: '5px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
-                border: `1px solid ${T.secondary}`, background: 'transparent', color: T.secondary,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>PLAY</button>
-            </div>
-          </>
-        ) : (
-          <div style={{ textAlign: 'center', color: T.textDim, fontSize: 12, padding: '8px 0' }}>
-            {selected.length === 0 ? 'Tap a note on the neck to start' : 'Tap a second note to see the interval'}
-          </div>
-        )}
-      </div>
-
-      {/* Interactive neck — kept above the result card (order 1) so it doesn't
-          shift down when the card expands to show the interval info. */}
-      <div style={{ background: 'var(--gc-fretboard-bg)', padding: '10px 10px 6px', border: `1px solid ${T.border}`, order: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 9 }}>
-          <span style={{ fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', color: 'var(--gc-text-dim)', textTransform: 'uppercase', marginRight: 4 }}>On the Neck</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: A_COLOR, display: 'inline-block' }} />
-            <span style={{ color: 'var(--gc-text)' }}>1st</span>
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: B_COLOR, display: 'inline-block', border: '1px solid var(--gc-border)' }} />
-            <span style={{ color: 'var(--gc-text)' }}>2nd</span>
-          </span>
-          {selected.length > 0 && (
-            <button onClick={() => setSelected([])} style={{
-              marginLeft: 'auto', padding: '2px 8px', borderRadius: 0, cursor: 'pointer',
-              fontSize: 9, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
-              background: 'var(--gc-bg-input)', color: 'var(--gc-text-dim)',
-              border: 'none', borderLeft: '2px solid var(--gc-bar-color)',
-            }}>CLEAR</button>
-          )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Interactive neck — kept above the result (order 1) so it doesn't
+          shift down when the result grows. */}
+      <Rule style={{ order: 1 }} label="Tap any two notes on the neck" right={selected.length > 0
+        ? <Pill size="sm" onClick={() => setSelected([])}>Clear</Pill> : undefined}>
+        <div style={{ display: 'flex', gap: 14, fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+          {legend(A_COLOR, '1st')}{legend(B_COLOR, '2nd')}
         </div>
-
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {/* 40% larger than the container so it reads clearly; overflow scrolls
               horizontally (string names stay pinned to the left of the board). */}
-          <IntervalNeck showOpenNotes width="140%" minWidth={460}>
+          <IntervalNeck showOpenNotes width="140%" minWidth={460} height={FB_H + 40}>
             {/* Connector between the two chosen notes */}
             {a && b && (
               <line x1={noteX(a.fret)} y1={strY(a.string)} x2={noteX(b.fret)} y2={strY(b.string)}
-                stroke={A_COLOR} strokeWidth={1.5} strokeDasharray="5 3" opacity={0.7} />
+                stroke={T.text} strokeWidth={1.5} strokeDasharray="5 3" opacity={0.5} />
             )}
 
             {/* Selected dots */}
             {selected.map((p, i) => (
               <g key={`sel-${i}`}>
                 <circle cx={noteX(p.fret)} cy={strY(p.string)} r={DOT_R}
-                  fill={i === 0 ? A_COLOR : B_COLOR} stroke="#fff" strokeWidth={1.5} />
+                  fill={i === 0 ? A_COLOR : B_COLOR} stroke={T.bgDeep} strokeWidth={1.5} />
                 <text x={noteX(p.fret)} y={strY(p.string)} dominantBaseline="central"
-                  textAnchor="middle" fontSize={10} fill="#fff" fontWeight="700">
+                  textAnchor="middle" fontSize={10} fill={i === 0 ? T.onPrimary : T.white} fontWeight="700" fontFamily="var(--gc-mono)">
                   {fretToNote(p.string, p.fret)}
                 </text>
               </g>
             ))}
+
+            {/* The distance: a 2px ink bracket under the neck, labelled in mono */}
+            {bracket && desc && (() => {
+              const xL = noteX(bracket.from), xR = noteX(bracket.to), bY = FB_TOP + 5 * STR_SP + 18;
+              const frets = bracket.to - bracket.from;
+              return (
+                <g>
+                  <path d={`M${xL} ${bY} V${bY + 7} H${xR} V${bY}`} fill="none" stroke={T.text} strokeWidth={2} />
+                  <text x={(xL + xR) / 2} y={bY + 19} textAnchor="middle" fontSize={8.5} fill={T.text}
+                    fontFamily="var(--gc-mono)" letterSpacing="0.14em">
+                    {`${desc.name.toUpperCase()} · ${frets} FRET${frets !== 1 ? 'S' : ''}`}
+                  </text>
+                </g>
+              );
+            })()}
 
             {/* Clickable cells over every string/fret (drawn last, transparent so
                 the dots below stay visible; tapping an active cell deselects). */}
@@ -224,7 +183,35 @@ export function IntervalPlayground() {
             )}
           </IntervalNeck>
         </div>
-      </div>
+      </Rule>
+
+      {/* The result — appears with two notes; a prompt otherwise. */}
+      <Rule style={{ order: 2, minHeight: 64 }}>
+        {a && b && desc ? (
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="su-label" style={{ margin: '0 0 10px' }}>{noteName(a)} → {noteName(b)}</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+                <span className="su-poster gc-notation" style={{ fontSize: 96, textTransform: 'none' }}>{desc.abbrev}</span>
+                <span className="su-semi" style={{ fontSize: 26, textTransform: 'uppercase', lineHeight: 1 }}>{desc.name}</span>
+              </div>
+              <p style={{ margin: '10px 0 0', fontSize: 11, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em', color: T.textMuted }}>
+                {desc.semitones} SEMITONE{desc.semitones !== 1 ? 'S' : ''} ·{' '}
+                <b style={{ color: CONS_COLOR[desc.cons] ?? T.textMuted }}>{desc.cons.toUpperCase()}</b>
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PillRow label="Play mode" items={[{ id: 'melodic' as const, label: 'Mel' }, { id: 'harmonic' as const, label: 'Harm' }]}
+                value={mode} onChange={setMode} />
+              <Cta onClick={handlePlay}>Play ▶</Cta>
+            </div>
+          </div>
+        ) : (
+          <p className="su-label" style={{ margin: 0, padding: '14px 0' }}>
+            {selected.length === 0 ? 'Tap a note on the neck to start' : 'Tap a second note to see the interval'}
+          </p>
+        )}
+      </Rule>
     </div>
   );
 }

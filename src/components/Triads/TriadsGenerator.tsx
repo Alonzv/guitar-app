@@ -3,7 +3,11 @@ import { Note as TonalNote, Chord as TonalChord } from '@tonaljs/tonal';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { playScale, playChord } from '../../utils/audioPlayback';
-import { T, card, alpha } from '../../theme';
+import { T } from '../../theme';
+import { Rule, Pill, PillRow, KeyGrid, Formula } from '../Transit/parts';
+import { StopActions } from '../Transit/StopActions';
+import { Neck, type NeckDot } from '../Fretboard/Neck';
+import { useLang } from '../../contexts/LanguageContext';
 import { TwoPane } from '../desktop/TwoPane';
 import type { Note, ChordInProgression } from '../../types/music';
 import { previewVoicing, previewRun, pcToMidi } from '../../utils/previewSound';
@@ -33,10 +37,12 @@ const TRIADS: Record<TriadType, TriadDef> = {
   augmented:  { label: 'Augmented',  suffix: '+', intervals: [0, 4, 8], intervalLabels: ['1', '3',  '♯5'] },
 };
 
+// Monochrome degrees: the root is the one cobalt thing, the third ink, the
+// fifth grey.
 const DEGREE_COLORS: Record<Degree, string> = {
   root:  T.primary,
   third: T.secondary,
-  fifth: '#5C5650',
+  fifth: T.coral,
 };
 
 const DEGREES: Degree[] = ['root', 'third', 'fifth'];
@@ -156,25 +162,12 @@ function toggleInSet<T>(set: Set<T>, value: T): Set<T> {
   return next;
 }
 
-// ── Filter pill helper ────────────────────────────────────────────────────────
-function pill(active: boolean, onClick: () => void, label: string) {
-  return (
-    <button data-active={!!active} key={label} onClick={onClick} style={{
-      padding: '4px 10px', borderRadius: 0, cursor: 'pointer',
-      fontSize: 11, fontWeight: active ? 500 : 400,
-      background: active ? T.text : T.bgInput,
-      color:      active ? T.bgDeep : T.textMuted,
-      border:     active ? 'none' : `1px solid ${T.border}`,
-      borderLeft: '3px solid var(--gc-bar-color)',
-    }}>{label}</button>
-  );
-}
-
 export function TriadsGenerator({ desktop, globalProgression }: { desktop?: boolean; globalProgression?: ChordInProgression[] } = {}) {
+  const { lang } = useLang();
+  const he = lang === 'he';
   const [root,               setRoot]               = useState<Note>('C');
   // Same reason as Scale Explorer: open on something, not on a prompt.
   const [triadType,          setTriadType]          = useState<TriadType | null>('major');
-  const [triadMenuOpen,      setTriadMenuOpen]      = useState(false);
   // Chords imported from the user's progression (Chords tab). Click one to load
   // its root + closest triad quality into the generator.
   const [imported,           setImported]           = useState<string[] | null>(null);
@@ -217,7 +210,6 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
   const [expandedIdx,        setExpandedIdx]        = useState<number | null>(null);
   const [filtersOpen,        setFiltersOpen]        = useState(false);
   const [sortMode,           setSortMode]           = useState<SortMode>('strings');
-  const [sortOpen,           setSortOpen]           = useState(false);
 
   const def   = triadType ? TRIADS[triadType] : null;
   const notes = useMemo(() => def ? getTriadNotes(root, def.intervals) : ([] as string[]), [root, def]);
@@ -345,136 +337,118 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
 
   const visibleSets = selectedSets.size ? [0, 1, 2, 3].filter(i => selectedSets.has(i)) : [0, 1, 2, 3];
 
+  // A small label + pills row inside the filters.
+  const filterRow = (title: string, children: React.ReactNode) => (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+      <span className="su-label" style={{ minWidth: 76 }}>{title}</span>
+      {children}
+    </div>
+  );
+
+  // One shape: a square tile on a 2px rule — its inversion and frets, the
+  // diagram, and the notes from low to high in their degree's ink.
+  const shapeTile = (c: ExpandedCard, top: string) => (
+    <button key={`${c.setIdx}_${c.inv}`} type="button"
+      onClick={() => { setExpandedIdx(c.globalIdx); previewVoicing(c.fretPositions); }}
+      aria-label={`${c.chordName} · ${c.setLabel} · ${c.invLabel} · ${c.fretBadge}`}
+      className="gc-pressable gc-no-bar"
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, cursor: 'pointer', textAlign: 'start',
+        background: 'transparent', color: T.text, padding: '8px 0 6px', borderRadius: 0,
+        borderWidth: 'var(--su-rule) 0 0 0', borderStyle: 'solid', borderColor: T.border,
+      }}>
+      <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6, width: '100%' }}>
+        <span className="su-semi" style={{ fontSize: 15, textTransform: 'uppercase' }}>{top}</span>
+        <span className="su-label" style={{ color: T.text }}>{c.fretBadge}</span>
+      </span>
+      <MiniFretboard voicing={c.fretPositions} dotColors={c.colors} dotLabels={c.labels} hideFretLabel showStringLabels showFretNumbers />
+      <span style={{ display: 'flex', gap: 8, justifyContent: 'center', width: '100%', fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700 }}>
+        {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
+          <span key={j} style={{ color: p.degree === 'fifth' ? T.textMuted : p.degree === 'root' ? T.primary : T.text }}>
+            {fretToNote(p.string, p.fret)}
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+
+  const legend = (
+    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 11, fontFamily: 'var(--gc-mono)' }}>
+      {DEGREES.map((deg, i) => (
+        <span key={deg} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span aria-hidden style={{ width: 12, height: 12, borderRadius: '50%', background: DEGREE_COLORS[deg], display: 'inline-block' }} />
+          {def?.intervalLabels[i]} · {notes[i]}
+        </span>
+      ))}
+    </div>
+  );
+
   const triadsLeft = (
     <>
       {/* Import from the user's progression */}
       {globalProgression && globalProgression.length > 0 && (
-        <div style={card()}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>From your progression</p>
-            <button
-              onClick={() => setImported(imported ? null : globalProgression.map(c => c.chord.name))}
-              style={{
-                padding: '5px 12px', borderRadius: 0, border: `1px solid ${T.border}`,
-                background: T.bgInput, color: T.textMuted, fontSize: 11, fontWeight: 400,
-                cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)',
-              }}
-            >{imported ? 'Hide' : `Import (${globalProgression.length})`}</button>
-          </div>
+        <Rule label={he ? 'מהמהלך שלך' : 'From your progression'}
+          right={<Pill size="sm" active={!!imported}
+            onClick={() => setImported(imported ? null : globalProgression.map(c => c.chord.name))}>
+            {imported ? (he ? 'הסתרה' : 'Hide') : `${he ? 'ייבוא' : 'Import'} (${globalProgression.length})`}
+          </Pill>}>
           {imported && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {imported.map((name, i) => (
-                <button
-                  key={i}
-                  onClick={() => loadChord(name)}
-                  title={`Load ${name} triad`}
-                  style={{
-                    padding: '6px 11px', borderRadius: 0, border: `1px solid ${T.border}`,
-                    background: T.bgDeep, color: T.text, fontSize: 13, fontWeight: 400, cursor: 'pointer',
-                  }}
-                >{name}</button>
+                <Pill key={i} size="sm" onClick={() => loadChord(name)} title={`Load ${name} triad`}
+                  style={{ textTransform: 'none', letterSpacing: 'normal', fontSize: 13 }}>{name}</Pill>
               ))}
             </div>
           )}
-        </div>
+        </Rule>
       )}
 
-      {/* Root selector */}
-      <div style={card()}>
-<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <p style={{ margin: '0 0 8px', fontSize: 11, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Root Note</p>
-          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
-          {ALL_NOTES.map(n => {
-            const sharp = n.includes('#'), sel = n === root;
-            return (
-              <button data-active={!!sel} key={n} onClick={() => { setRoot(n); hearTriad(n, triadType); }} style={{
-                padding: '9px 4px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? 11 : 13, fontWeight: sel ? 500 : 400,
-                border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
-                background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
-                color: sel ? T.primary : sharp ? T.textMuted : T.text,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>{n}</button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Root */}
+      <Rule label={he ? 'תו שורש' : 'Root note'} right={<DiceButton onRoll={roll} />}>
+        <KeyGrid label={he ? 'תו שורש' : 'Root note'} cols={6}
+          items={ALL_NOTES.map(n => ({ id: n as Note, label: n }))}
+          value={root} onChange={n => { setRoot(n); hearTriad(n, triadType); }} />
+      </Rule>
 
-      {/* Triad type — collapsible */}
-      <div>
-        <button
-          onClick={() => setTriadMenuOpen(o => !o)}
-          style={{
-            width: '100%', padding: '11px 16px', borderRadius: 0, cursor: 'pointer',
-            background: T.secondary, color: '#fff',
-            fontSize: 13, fontWeight: 400, textAlign: 'left',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}
-        >
-          <span>
-            <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Triad Type</span>
-            {triadType ? TRIADS[triadType].label : '— Select —'}
-          </span>
-          <span style={{ fontSize: 11 }}>{triadMenuOpen ? '▲' : '▼'}</span>
-        </button>
-
-        {triadMenuOpen && (
-          <div style={{ ...card(), marginTop: 2 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-              {(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => {
-                const sel = triadType === type;
-                return (
-                  <button data-active={!!sel} key={type} onClick={() => { setTriadType(type); setTriadMenuOpen(false); hearTriad(root, type); }} style={{
-                    padding: '9px 10px', borderRadius: 0, cursor: 'pointer', textAlign: 'left',
-                    border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
-                    background: sel ? T.secondaryBg : T.bgInput,
-                    color: sel ? T.secondary : T.textMuted,
-                    borderLeft: '3px solid var(--gc-bar-color)',
-                  }}>
-                    <span style={{ fontSize: 13, fontWeight: 400 }}>{d.label}</span>
-                    <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Triad type */}
+      <Rule label={he ? 'סוג טריאדה' : 'Triad type'}>
+        <PillRow wrap label={he ? 'סוג טריאדה' : 'Triad type'}
+          items={(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => ({
+            id: type, label: d.label, title: d.intervalLabels.join(' · '),
+          }))}
+          value={triadType} onChange={type => { setTriadType(type); hearTriad(root, type); }} />
+      </Rule>
     </>
   );
 
   const triadsRight = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-      {/* Chord summary + controls */}
-      {def && <div style={card({ padding: '10px 14px' })}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{root}{def.suffix}</span>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
-              title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
-              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 400, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderLeft: '3px solid var(--gc-bar-color)' }}
-            >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
-            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>PLAY</button>
-            <button onClick={walkNeck} data-active={walking} title="Play every shape below, from the nut up the neck" style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: walking ? T.primary : T.secondaryBg, color: walking ? '#fff' : T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>{walking ? '■ WALK' : 'WALK THE NECK'}</button>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {notes.map((n, i) => {
-            const color = DEGREE_COLORS[DEGREES[i]];
-            return (
-              <div key={i} style={{ flex: 1, textAlign: 'center', padding: '6px', borderRadius: 0, background: T.bgInput, border: `1px solid ${color}44` }}>
-                <div style={{ fontSize: 9, fontWeight: 400, color, lineHeight: 1 }}>{def!.intervalLabels[i]}</div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: T.text, lineHeight: 1.3 }}>{n}</div>
+      {/* The chord: its name, its formula, and what to do with it */}
+      {def && (
+        <>
+          <StopActions>
+            <Pill size="sm" onClick={handlePlay}>{he ? 'נגן' : 'Play'}</Pill>
+          </StopActions>
+          <Rule>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+              <span className="su-poster" style={{ fontSize: desktop ? 72 : 60, textTransform: 'none' }}>{root}{def.suffix}</span>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <Pill size="sm" active={displayMode === 'intervals'}
+                  onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
+                  title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
+                  label={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}>1·3·5</Pill>
+                <Pill size="sm" active={walking} onClick={walkNeck} title="Play every shape below, from the nut up the neck">
+                  {walking ? '■ ' : ''}{he ? 'הליכה על הצוואר' : 'Walk the neck'}
+                </Pill>
               </div>
-            );
-          })}
-        </div>
-      </div>}
+            </div>
+            <Formula mark={0}
+              tones={notes.map((n, i) => ({ degree: def.intervalLabels[i], note: n }))}
+              onTone={i => { const m = pcToMidi(notes[i], 4); if (m != null) previewRun([m]); }} />
+          </Rule>
+        </>
+      )}
 
       {/* ── Filters + Sort by ────────────────────────────────────────────── */}
       {def && <>
@@ -486,125 +460,50 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
           ...FRET_AREAS.filter(a => a.id !== 'all' && selectedAreas.has(a.id as Exclude<FretArea, 'all'>)).map(a => a.label),
         ];
         return (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-
-            {/* Filters — flex 1 */}
-            <div style={{ flex: 1, ...card({ padding: 0 }), overflow: 'hidden' }}>
-              <button
-                onClick={() => { setFiltersOpen(o => !o); setSortOpen(false); }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '9px 12px', border: 'none', background: 'transparent', cursor: 'pointer',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ fontSize: 12, fontWeight: 400, color: T.text }}>Filters</span>
-                  {activeLabels.length > 0 && (
-                    <span style={{
-                      fontSize: 10, fontWeight: 400, color: T.primary,
-                      background: T.primaryBg, border: `1px solid ${alpha(T.primary, 33)}`,
-                      padding: '1px 6px', borderRadius: 0,
-                    }}>{activeLabels.join(' · ')}</span>
-                  )}
-                </div>
-                <span style={{ fontSize: 12, color: T.textMuted, transform: filtersOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
-              </button>
-
-              {filtersOpen && (
-                <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: `1px solid ${T.border}` }}>
-                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', paddingTop: 10 }}>
-                    <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Strings:</span>
-                    {pill(selectedSets.size === 0, () => setSelectedSets(new Set()), 'All')}
-                    {STRING_SETS.map((ss, i) => pill(
-                      selectedSets.has(i),
-                      () => setSelectedSets(s => toggleInSet(s, i)),
-                      ss.label,
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Inversion:</span>
-                    {pill(selectedInversions.size === 0, () => setSelectedInversions(new Set()), 'All')}
-                    {([0, 1, 2] as const).map(inv => pill(
-                      selectedInversions.has(inv),
-                      () => setSelectedInversions(s => toggleInSet(s, inv)),
-                      INV_SHORT_LABELS[inv],
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 10, color: T.textMuted, minWidth: 56 }}>Position:</span>
-                    {FRET_AREAS.map(a => a.id === 'all'
-                      ? pill(selectedAreas.size === 0, () => setSelectedAreas(new Set()), a.label)
-                      : pill(
-                          selectedAreas.has(a.id as Exclude<FretArea, 'all'>),
-                          () => setSelectedAreas(s => toggleInSet(s, a.id as Exclude<FretArea, 'all'>)),
-                          a.label,
-                        ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sort by */}
-            <div style={{ ...card({ padding: 0 }), overflow: 'hidden', flexShrink: 0, minWidth: 100 }}>
-              <button
-                onClick={() => { setSortOpen(o => !o); setFiltersOpen(false); }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '9px 12px', border: 'none', background: 'transparent', cursor: 'pointer', gap: 6,
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 10, color: T.textMuted, lineHeight: 1, marginBottom: 2 }}>Sort by</div>
-                  <div style={{ fontSize: 12, fontWeight: 400, color: T.text, lineHeight: 1 }}>
-                    {sortMode === 'strings' ? 'Strings' : 'Position'}
-                  </div>
-                </div>
-                <span style={{ fontSize: 12, color: T.textMuted, transform: sortOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
-              </button>
-
-              {sortOpen && (
-                <div style={{ padding: '6px 10px 10px', display: 'flex', flexDirection: 'column', gap: 4, borderTop: `1px solid ${T.border}` }}>
-                  {pill(sortMode === 'strings',   () => { setSortMode('strings');   setSortOpen(false); }, 'Strings'  )}
-                  {pill(sortMode === 'position',  () => { setSortMode('position');  setSortOpen(false); }, 'Position' )}
-                </div>
-              )}
-            </div>
-
-          </div>
+          <Rule
+            label={<>{he ? 'סינון' : 'Filters'}{activeLabels.length > 0 && <span style={{ color: T.text }}> · {activeLabels.join(' · ')}</span>}</>}
+            right={
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <Pill size="sm" active={filtersOpen} onClick={() => setFiltersOpen(o => !o)}>
+                  {filtersOpen ? (he ? 'סגירה' : 'Close') : (he ? 'סינון' : 'Filter')}
+                </Pill>
+              </div>
+            }>
+            {filtersOpen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                {filterRow(he ? 'מיתרים' : 'Strings', <>
+                  <Pill size="sm" active={selectedSets.size === 0} onClick={() => setSelectedSets(new Set())}>All</Pill>
+                  {STRING_SETS.map((ss, i) => (
+                    <Pill key={ss.label} size="sm" active={selectedSets.has(i)} onClick={() => setSelectedSets(s => toggleInSet(s, i))}>{ss.label}</Pill>
+                  ))}
+                </>)}
+                {filterRow(he ? 'היפוך' : 'Inversion', <>
+                  <Pill size="sm" active={selectedInversions.size === 0} onClick={() => setSelectedInversions(new Set())}>All</Pill>
+                  {([0, 1, 2] as const).map(inv => (
+                    <Pill key={inv} size="sm" active={selectedInversions.has(inv)} onClick={() => setSelectedInversions(s => toggleInSet(s, inv))}>{INV_SHORT_LABELS[inv]}</Pill>
+                  ))}
+                </>)}
+                {filterRow(he ? 'מיקום' : 'Position', <>
+                  {FRET_AREAS.map(a => a.id === 'all'
+                    ? <Pill key={a.id} size="sm" active={selectedAreas.size === 0} onClick={() => setSelectedAreas(new Set())}>{a.label}</Pill>
+                    : <Pill key={a.id} size="sm" active={selectedAreas.has(a.id as Exclude<FretArea, 'all'>)}
+                        onClick={() => setSelectedAreas(s => toggleInSet(s, a.id as Exclude<FretArea, 'all'>))}>{a.label}</Pill>)}
+                </>)}
+              </div>
+            )}
+            {filterRow(he ? 'מיון' : 'Sort by', (
+              <PillRow label={he ? 'מיון' : 'Sort by'} value={sortMode} onChange={setSortMode}
+                items={[{ id: 'strings', label: he ? 'מיתרים' : 'Strings' }, { id: 'position', label: he ? 'מיקום' : 'Position' }]} />
+            ))}
+          </Rule>
         );
       })()}
 
       {/* ── Shape grid ───────────────────────────────────────────────────── */}
       {sortMode === 'position' ? (
         // Flat grid sorted by fret position
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {sortedCards.map(c => (
-            <div key={`${c.setIdx}_${c.inv}`}
-              onClick={() => { setExpandedIdx(c.globalIdx); previewVoicing(c.fretPositions); }}
-                    className="gc-pressable"
-              style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {c.setLabel}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 0 }}>
-                  {c.fretBadge}
-                </span>
-              </div>
-              <span style={{ fontSize: 9, color: T.textMuted, textAlign: 'center', marginTop: -2 }}>{INVERSION_LABELS[c.inv]}</span>
-              <MiniFretboard voicing={c.fretPositions} dotColors={c.colors} dotLabels={c.labels} hideFretLabel showStringLabels showFretNumbers />
-              <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
-                {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
-                  <span key={j} style={{
-                    fontSize: 8, fontWeight: 400,
-                    color:      DEGREE_COLORS[p.degree],
-                    background: alpha(DEGREE_COLORS[p.degree], 9),
-                    padding: '1px 4px', borderRadius: 0,
-                  }}>{fretToNote(p.string, p.fret)}</span>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: '14px 12px' }}>
+          {sortedCards.map(c => shapeTile(c, `${c.setLabel} · ${INV_SHORT_LABELS[c.inv]}`))}
         </div>
       ) : (
         // Grouped by string set (default)
@@ -612,165 +511,83 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
           const ss    = STRING_SETS[setIdx];
           const cards = cardsBySet.get(setIdx) ?? [];
           if (cards.length === 0) return null;
-
           return (
             <div key={setIdx}>
-              <p style={{ margin: '0 0 6px 2px', fontSize: 11, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {ss.label}
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
-                {cards.map(c => (
-                  <div key={`${c.setIdx}_${c.inv}`}
-                    onClick={() => { setExpandedIdx(c.globalIdx); previewVoicing(c.fretPositions); }}
-                    className="gc-pressable"
-                    style={{ ...card({ padding: '10px 8px 7px' }), display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {INVERSION_LABELS[c.inv]}
-                      </span>
-                      <span style={{ fontSize: 11, fontWeight: 400, color: T.text, background: T.bgDeep, border: `1px solid ${T.border}`, padding: '1px 7px', borderRadius: 0 }}>
-                        {c.fretBadge}
-                      </span>
-                    </div>
-                    <MiniFretboard voicing={c.fretPositions} dotColors={c.colors} dotLabels={c.labels} hideFretLabel showStringLabels showFretNumbers />
-                    <div style={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
-                      {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
-                        <span key={j} style={{
-                          fontSize: 8, fontWeight: 400,
-                          color:      DEGREE_COLORS[p.degree],
-                          background: alpha(DEGREE_COLORS[p.degree], 9),
-                          padding: '1px 4px', borderRadius: 0,
-                        }}>{fretToNote(p.string, p.fret)}</span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <p className="su-label" style={{ margin: '0 0 6px', color: T.text }}>{ss.label}</p>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, minmax(0, 1fr))`, gap: 12 }}>
+                {cards.map(c => shapeTile(c, INV_SHORT_LABELS[c.inv]))}
               </div>
             </div>
           );
         })
       )}
 
-      {/* Legend */}
-      <div style={{ display: 'flex', gap: 14, fontSize: 11, color: T.textMuted, flexWrap: 'wrap', paddingBottom: 4 }}>
-        {DEGREES.map((deg, i) => (
-          <span key={deg} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 0, background: DEGREE_COLORS[deg], display: 'inline-block' }} />
-            {def?.intervalLabels[i]} ({notes[i]})
-          </span>
-        ))}
-      </div>
+      {legend}
       </>}
 
-      {/* ── Expanded card modal (mobile + desktop) ───────────────────────── */}
-      {expandedCard && (
-        <div
-          onClick={() => setExpandedIdx(null)}
-          style={{
+      {/* ── Expanded shape (mobile + desktop) ────────────────────────────── */}
+      {expandedCard && (() => {
+        const frets = expandedCard.shape.map(p => p.fret);
+        const from = Math.max(0, Math.min(...frets) - 1);
+        const to = Math.max(from + 4, Math.max(...frets) + 1);
+        const neckDots: NeckDot[] = expandedCard.shape.map((p, j) => ({
+          string: p.string, fret: p.fret, id: `${p.string}`,
+          kind: p.degree === 'root' ? 'root' : 'tone', label: expandedCard.labels[j],
+        }));
+        const atStart = safeIdx === 0, atEnd = safeIdx === allVisibleCards.length - 1;
+        return (
+          <div onClick={() => setExpandedIdx(null)} style={{
             position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.72)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px 16px',
-          }}
-        >
-          <div onClick={e => e.stopPropagation()} style={{
-            background: T.bgCard,
-            border:     `1px solid ${T.border}`,
-            borderRadius: 0,
-            padding: '18px 18px 14px',
-            width: '100%', maxWidth: 440,
-            display: 'flex', flexDirection: 'column', gap: 14,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+            background: 'color-mix(in srgb, var(--gc-text) 55%, transparent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 16px',
           }}>
-
-            {/* Header row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: T.text, lineHeight: 1 }}>
-                  {expandedCard.chordName}
+            <div role="dialog" aria-modal="true" aria-label={`${expandedCard.chordName} ${expandedCard.invLabel}`}
+              onClick={e => e.stopPropagation()} style={{
+              background: T.bgDeep, color: T.text, border: `var(--su-rule) solid ${T.border}`,
+              padding: '18px 20px 18px', width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto',
+              display: 'flex', flexDirection: 'column', gap: 16, boxSizing: 'border-box',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div className="su-poster" style={{ fontSize: 64, textTransform: 'none' }}>{expandedCard.chordName}</div>
+                  <div className="su-label" style={{ marginTop: 10 }}>
+                    {expandedCard.setLabel} · {expandedCard.invLabel} · <span style={{ color: T.text }}>{expandedCard.fretBadge}</span>
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>
-                  {expandedCard.setLabel} · {expandedCard.invLabel} · <span style={{ color: T.text, fontWeight: 400 }}>{expandedCard.fretBadge}</span>
-                </div>
+                <Pill onClick={() => setExpandedIdx(null)} label={he ? 'סגירה' : 'Close'} style={{ padding: 0, width: 44 }}>×</Pill>
               </div>
-              <button onClick={() => setExpandedIdx(null)} style={{
-                width: 32, height: 32, borderRadius: 0,
-                border: `1px solid ${T.border}`,
-                background: T.bgInput, color: T.textMuted,
-                fontSize: 18, cursor: 'pointer', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>×</button>
-            </div>
 
-            {/* Large fretboard */}
-            <div style={{ background: T.bgDeep, borderRadius: 0, padding: '16px 12px 12px' }}>
-              <MiniFretboard
-                voicing={expandedCard.fretPositions}
-                dotColors={expandedCard.colors}
-                dotLabels={expandedCard.labels}
-                hideFretLabel showStringLabels showFretNumbers
-              />
-            </div>
+              <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 12 }}>
+                <Neck dots={neckDots} from={from} to={to} label={`${expandedCard.chordName} ${expandedCard.invLabel}`} />
+              </div>
 
-            {/* Note badges */}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {[...expandedCard.shape].sort((a, b) => a.string - b.string).map((p, j) => (
-                <span key={j} style={{
-                  fontSize: 13, fontWeight: 800,
-                  color:      DEGREE_COLORS[p.degree],
-                  background: alpha(DEGREE_COLORS[p.degree], 13),
-                  border:     `1px solid ${alpha(DEGREE_COLORS[p.degree], 33)}`,
-                  padding: '4px 12px', borderRadius: 0,
-                }}>{fretToNote(p.string, p.fret)}</span>
-              ))}
-            </div>
+              <div style={{ display: 'flex', gap: 14, justifyContent: 'center', fontFamily: 'var(--gc-mono)', fontSize: 14, fontWeight: 700 }}>
+                {[...expandedCard.shape].sort((a, b) => a.string - b.string).map((p, j) => (
+                  <span key={j} style={{ color: p.degree === 'fifth' ? T.textMuted : p.degree === 'root' ? T.primary : T.text }}>
+                    {fretToNote(p.string, p.fret)}
+                  </span>
+                ))}
+              </div>
 
-            {/* Navigation row */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <button
-                disabled={safeIdx === 0}
-                onClick={() => setExpandedIdx(i => i !== null ? i - 1 : i)}
-                style={{
-                  flex: 1, padding: '8px 0', borderRadius: 0, cursor: safeIdx === 0 ? 'default' : 'pointer',
-                  border: `1px solid ${T.border}`, background: T.bgInput,
-                  color: safeIdx === 0 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
-                }}
-              >‹</button>
-
-              <span style={{ fontSize: 10, color: T.textMuted, textAlign: 'center', minWidth: 48 }}>
-                {(safeIdx ?? 0) + 1} / {allVisibleCards.length}
-              </span>
-
-              <button
-                disabled={safeIdx === allVisibleCards.length - 1}
-                onClick={() => setExpandedIdx(i => i !== null ? i + 1 : i)}
-                style={{
-                  flex: 1, padding: '8px 0', borderRadius: 0,
-                  cursor: safeIdx === allVisibleCards.length - 1 ? 'default' : 'pointer',
-                  border: `1px solid ${T.border}`, background: T.bgInput,
-                  color: safeIdx === allVisibleCards.length - 1 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
-                }}
-              >›</button>
-            </div>
-
-            {/* Degree legend */}
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', fontSize: 11, color: T.textMuted }}>
-              {DEGREES.map((deg, i) => (
-                <span key={deg} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 0, background: DEGREE_COLORS[deg], display: 'inline-block' }} />
-                  {def?.intervalLabels[i]} ({notes[i]})
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }} dir="ltr">
+                <Pill disabled={atStart} onClick={() => setExpandedIdx(i => i !== null ? i - 1 : i)} label={he ? 'הצורה הקודמת' : 'Previous shape'}
+                  style={{ flex: 1 }}>‹</Pill>
+                <span className="su-label" style={{ minWidth: 56, textAlign: 'center', color: T.text }}>
+                  {(safeIdx ?? 0) + 1} / {allVisibleCards.length}
                 </span>
-              ))}
+                <Pill disabled={atEnd} onClick={() => setExpandedIdx(i => i !== null ? i + 1 : i)} label={he ? 'הצורה הבאה' : 'Next shape'}
+                  style={{ flex: 1 }}>›</Pill>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center' }}>{legend}</div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {!def && desktop && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: T.textDim, fontSize: 13, fontFamily: 'var(--gc-mono)', letterSpacing: '0.04em' }}>
-          ← Select root + triad type
+        <div className="su-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+          ← {he ? 'בחרו שורש וסוג' : 'Select root + triad type'}
         </div>
       )}
     </div>
@@ -781,7 +598,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {triadsLeft}
       {triadsRight}
     </div>

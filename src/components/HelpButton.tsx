@@ -22,11 +22,12 @@ export function HelpButton({ topic }: { topic: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="What is this tab?"
+        aria-label={lang === 'he' ? 'מה זה?' : 'What is this?'}
+        className="gc-no-bar"
         style={{
-          width: 22, height: 22, flexShrink: 0, borderRadius: 0,
-          border: `1px solid ${T.border}`, background: T.bgInput,
-          color: T.textMuted, fontSize: 12, fontWeight: 400, lineHeight: 1,
+          width: 40, height: 40, flexShrink: 0, borderRadius: '50%',
+          border: `1.5px solid ${T.text}`, background: 'transparent',
+          color: T.text, fontSize: 15, fontWeight: 700, lineHeight: 1,
           cursor: 'pointer', fontFamily: 'var(--gc-font)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
@@ -37,7 +38,7 @@ export function HelpButton({ topic }: { topic: string }) {
           onClick={() => setOpen(false)}
           style={{
             position: 'fixed', inset: 0, zIndex: 9000,
-            background: 'rgba(0,0,0,0.62)', display: 'flex',
+            background: 'color-mix(in srgb, var(--gc-text) 55%, transparent)', display: 'flex',
             alignItems: 'center', justifyContent: 'center', padding: 16,
             animation: 'gcHelpFade 0.16s ease',
           }}
@@ -47,29 +48,28 @@ export function HelpButton({ topic }: { topic: string }) {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 440, background: T.bgCard,
-              border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
-              padding: '18px 18px 20px', boxSizing: 'border-box',
+              width: '100%', maxWidth: 440, background: T.bgDeep, color: T.text,
+              border: `var(--su-rule) solid ${T.border}`,
+              padding: '18px 20px 22px', boxSizing: 'border-box',
               maxHeight: '86vh', overflowY: 'auto', fontFamily: 'var(--gc-font)',
               animation: 'gcHelpPop 0.2s cubic-bezier(0.34, 1.4, 0.5, 1)',
             }}
           >
             {/* Header: close */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 14 }}>
-              <button onClick={() => setOpen(false)} aria-label="Close" style={{
-                width: 28, height: 28, flexShrink: 0, borderRadius: 0, border: `1px solid ${T.border}`,
-                background: T.bgInput, color: T.textMuted, fontSize: 15, cursor: 'pointer',
+              <button onClick={() => setOpen(false)} aria-label={lang === 'he' ? 'סגירה' : 'Close'} className="gc-no-bar" style={{
+                width: 44, height: 44, flexShrink: 0, borderRadius: '50%', border: `1.5px solid ${T.text}`,
+                background: 'transparent', color: T.text, fontSize: 15, cursor: 'pointer',
               }}>✕</button>
             </div>
 
             {/* Content */}
             <div dir={rtl ? 'rtl' : 'ltr'} style={{ textAlign: rtl ? 'right' : 'left' }}>
-              <h2 style={{
-                margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: T.text,
-                lineHeight: 1.2,
+              <h2 className="su-poster" style={{
+                margin: '0 0 14px', fontSize: 44, color: T.text,
               }}>{text.title}</h2>
               <p style={{
-                margin: 0, fontSize: 14, lineHeight: 1.6, color: T.textMuted, fontWeight: 400,
+                margin: 0, fontSize: 14, lineHeight: 1.6, color: T.text, fontWeight: 400,
               }}>{text.body}</p>
             </div>
           </div>

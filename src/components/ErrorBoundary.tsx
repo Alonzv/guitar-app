@@ -1,6 +1,5 @@
 import React, { Suspense } from 'react';
-import { T } from '../theme';
-import { IconWarn } from './Icons';
+import { T, btn } from '../theme';
 import { TabLoader } from './TabLoader';
 
 interface State { hasError: boolean; error: Error | null }
@@ -26,25 +25,18 @@ export class ErrorBoundary extends React.Component<
       return <Suspense fallback={<TabLoader />}>{this.props.children}</Suspense>;
     }
     return (
-      <div style={{
-        padding: 32, textAlign: 'center',
-        border: `1px dashed ${T.border}`, borderRadius: 0, margin: 8,
-      }}>
-        <div style={{ marginBottom: 12, color: T.textMuted }}><IconWarn size={32} /></div>
-        <p style={{ fontWeight: 400, color: T.text, marginBottom: 6, margin: '0 0 6px' }}>
-          Something went wrong{this.props.label ? ` in ${this.props.label}` : ''}
+      <div role="alert" style={{ borderTop: `var(--su-rule) solid ${T.border}`, padding: '16px 0 24px' }}>
+        <p className="su-poster" style={{ margin: '0 0 12px', fontSize: 56 }}>
+          Off the line
         </p>
-        <p style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: T.text, margin: '0 0 6px' }}>
+          Something went wrong{this.props.label ? ` in ${this.props.label}` : ''}.
+        </p>
+        <p className="su-label" style={{ margin: '0 0 16px', textTransform: 'none', letterSpacing: '0.04em' }}>
           {this.state.error?.message}
         </p>
-        <button
-          onClick={() => this.setState({ hasError: false, error: null })}
-          style={{
-            padding: '8px 20px', borderRadius: 0, border: 'none',
-            background: T.primary, color: T.white, fontWeight: 400, cursor: 'pointer',
-          }}
-        >
-          Try Again
+        <button onClick={() => this.setState({ hasError: false, error: null })} className="gc-no-bar" style={btn.primary(false)}>
+          Try again
         </button>
       </div>
     );
