@@ -95,7 +95,7 @@ export function SongMap({ open, onClose, desktop, userId, sync }: Props) {
         sync: { local: 'Saved on this device', saving: 'Saving to the cloud…', cloud: 'Saved to the cloud ✓', error: 'Not saved to the cloud — kept on this device' }, current: 'open' };
 
   const melodyNotes = song.melody ? song.melody.grid.reduce((n, row) => n + row.filter(c => c.fret !== '').length, 0) : 0;
-  const goTo = (id: string, tab: number, sub: string) => { close(); requestNavigate({ id, tab, sub }); };
+  const goTo = (stop: string) => { close(); requestNavigate({ stop }); };
   const btn: React.CSSProperties = {
     padding: '7px 12px', fontSize: 11, cursor: 'pointer', background: T.bgInput, color: T.text,
     border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)', borderRadius: 0,
@@ -207,8 +207,8 @@ export function SongMap({ open, onClose, desktop, userId, sync }: Props) {
               ? `${melodyNotes} ${he ? 'תווים' : 'notes'}${song.melodyFrom ? ` · ${he ? 'מ-' : 'from '}${({ tabbuilder: 'Tab Builder', harmonizer: 'Harmonize', audiotab: 'Audio→Tab' } as Record<string, string>)[song.melodyFrom] ?? song.melodyFrom}` : ''}`
               : t.noMelody}
           </span>
-          <button onClick={() => goTo('tools:tabbuilder', 4, 'tabbuilder')} style={btn}>{t.tab}</button>
-          <button onClick={() => goTo('voicings:harmonizer', 3, 'harmonizer')} style={btn}>{t.harm}</button>
+          <button onClick={() => goTo('tab-writer')} style={btn}>{t.tab}</button>
+          <button onClick={() => goTo('harmonize')} style={btn}>{t.harm}</button>
         </section>
 
         {/* My songs */}

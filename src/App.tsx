@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { ChordInProgression, Tuning } from './types/music';
 import { CHROMATIC } from './utils/musicTheory';
 
-// ── Panel components ───────────────────────────────────────────────────────
+// ── Stop components ────────────────────────────────────────────────────────
 // Statically imported (single bundle). Tab-level code-splitting was tried for
 // a smaller initial download, but a hashed chunk going 404 after a redeploy —
 // amplified by the PWA service worker serving a stale index.html — broke every
@@ -37,17 +37,14 @@ import { ScalesPracticeTab } from './components/ScalePractice/ScalesPracticeTab'
 
 import { TabBuilder }        from './components/Tools/TabBuilder';
 import { AudioToTab }        from './components/Tools/AudioToTab';
-import { WorkspaceOverlay }  from './components/Workspace/WorkspaceOverlay';
-import { CommandPalette, type PaletteAction } from './components/CommandPalette';
-import { ToolsMap }          from './components/ToolsMap';
+import { WorkspacePanel }    from './components/Workspace/WorkspacePanel';
 import { useLang }           from './contexts/LanguageContext';
-import { soundEnabled, setSoundEnabled } from './utils/previewSound';
 
 // ── Shell ──────────────────────────────────────────────────────────────────
-import { SwipePager, Segment } from './components/SwipePager';
-import { DesktopShell }        from './components/desktop/DesktopShell';
+import { TransitShell }        from './components/Transit/TransitShell';
 import { UserMenu }            from './components/Auth/UserMenu';
 import { ErrorBoundary }       from './components/ErrorBoundary';
+import { DEFAULT_STOP, stopById } from './data/tools';
 
 // ── Hooks ──────────────────────────────────────────────────────────────────
 import { useIsDesktop }        from './hooks/useIsDesktop';
@@ -55,51 +52,7 @@ import { useIsDesktop }        from './hooks/useIsDesktop';
 // ── Services ───────────────────────────────────────────────────────────────
 import { subscribeHandoff, requestOpenTabInBuilder, subscribeHarmonizationHandoff, subscribeVoicingsHandoff } from './services/handoff';
 import type { TabContent } from './services/types';
-import { T } from './theme';
-import { PANEL_TITLES } from './constants/panels';
-
-// ── Types & constants ──────────────────────────────────────────────────────
-// 'analyzer' retired from the tab bar. ChordAnalyzerTab.tsx and its
-// 'chords:analyzer' help entry are kept on disk (currently unreferenced) so the
-// sub-tab can be restored by re-adding the id, the CHORDS_SEGS entry, the
-// import and the two render lines.
-type ChordsSub    = 'builder' | 'finder' | 'target' | 'extensions' | 'practice';
-type ScalesSub    = 'explorer' | 'triads' | 'wheel' | 'practice';
-// Target moved to CHORDS: it finds chords around a note, which is a chord
-// question, not a voicing one.
-type VoicingsSub  = 'voiceleading' | 'harmonizer' | 'reharmonize';
-// TOOLS holds the four non-theory tools. Tab Builder and Audio→Tab used to sit
-// in a STUDIO tab of their own; they moved here because what they share with
-// the tuner and the metronome is exactly what separates them from every other
-// tab — none of them teach anything, they are workbench.
-type ToolsSub     = 'tuner' | 'metronome' | 'tabbuilder' | 'audiotab';
-
-
-
-const CHORDS_SEGS    = [
-  { id: 'finder',     label: 'By Name'    },
-  { id: 'builder',    label: 'By Ear'     },
-  { id: 'target',     label: 'Target'     },
-  { id: 'extensions', label: 'Extensions' },
-  { id: 'practice',   label: 'Practice'   },
-];
-const SCALES_SEGS    = [
-  { id: 'explorer',  label: 'Explorer' },
-  { id: 'triads',    label: 'Triads'   },
-  { id: 'wheel',     label: 'Wheel'    },
-  { id: 'practice',  label: 'Practice' },
-];
-const VOICINGS_SEGS  = [
-  { id: 'voiceleading', label: 'VL Studio' },
-  { id: 'harmonizer',   label: 'Harmonize' },
-  { id: 'reharmonize',  label: 'Reharm'    },
-];
-const TOOLS_SEGS     = [
-  { id: 'tuner',      label: 'Tuner'       },
-  { id: 'metronome',  label: 'Metronome'   },
-  { id: 'tabbuilder', label: 'Tab Builder' },
-  { id: 'audiotab',   label: 'Audio→Tab'   },
-];
+import { T, btn } from './theme';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const FLAT_TO_SHARP: Record<string, string> = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
@@ -135,6 +88,9 @@ function writeLS(key: string, val: string) {
   try { localStorage.setItem(key, val); } catch {}
 }
 
+const LAST_STOP_KEY = 'scaleup_last_stop';
+const INTERVAL_VIEWS = ['explore', 'measure', 'inchord'];
+
 // ════════════════════════════════════════════════════════════════════════════
 export default function App() {
   // ── Dark mode ─────────────────────────────────────────────────────────────
@@ -143,9 +99,6 @@ export default function App() {
     document.body.classList.toggle('dark', darkMode);
     writeLS('scaleup_dark', darkMode ? '1' : '0');
   }, [darkMode]);
-
-  // ── My Workspace (dedicated full-screen personal area) ────────────────────
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
   // ── The song ──────────────────────────────────────────────────────────────
   // Every tool works on one song (song/SongContext): its chords, key, tempo,
@@ -175,20 +128,66 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler);
   }, [handleUndo, handleRedo]);
 
+  const isDesktop = useIsDesktop();
+
+  // ── Where we are: a stop on the network map ──────────────────────────────
+  // Mobile opens on the map ('home'); desktop always shows a stop, the last
+  // one used. The last stop is remembered for the Next-stop pill.
+  const [lastStop, setLastStop] = useState(() => {
+    const v = readLS(LAST_STOP_KEY, DEFAULT_STOP);
+    return stopById(v) ? v : DEFAULT_STOP;
+  });
+  const [stop, setStop] = useState<string>('home');
+  const shown = stop === 'home' && isDesktop ? lastStop : stop;
+
+  // Each stop with views keeps its own. The chord builder always opens on
+  // "By name"; Intervals remembers its view.
+  const [chordView, setChordView] = useState('name');
+  const [intervalView, setIntervalView] = useState(() => {
+    const v = readLS('scaleup_seg_intervals', 'explore');
+    // 'identify' promised a quiz and delivered a ruler; it is now 'measure'.
+    if (v === 'identify') return 'measure';
+    return INTERVAL_VIEWS.includes(v) ? v : 'explore';
+  });
+  const subOf = (id: string) => id === 'chord-builder' ? chordView : id === 'intervals' ? intervalView : undefined;
+  const setSub = (id: string, s: string) => {
+    if (id === 'chord-builder') setChordView(s);
+    if (id === 'intervals' && INTERVAL_VIEWS.includes(s)) { setIntervalView(s); writeLS('scaleup_seg_intervals', s); }
+  };
+
+  // On mobile a stop is a page: the phone's back button returns to the map.
+  const go = useCallback((id: string, sub?: string) => {
+    if (id === 'home') { setStop('home'); return; }
+    if (!stopById(id)) return;
+    if (sub) setSub(id, sub);
+    setStop(id);
+    setLastStop(id);
+    writeLS(LAST_STOP_KEY, id);
+    if (!isDesktop && history.state?.suStop == null) history.pushState({ suStop: id }, '');
+    window.scrollTo(0, 0);
+  }, [isDesktop]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const goHome = () => {
+    if (history.state?.suStop != null) history.back();
+    else setStop('home');
+  };
+  useEffect(() => {
+    const onPop = () => { if (history.state?.suStop == null) setStop('home'); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
   // ── Shared progression banner ─────────────────────────────────────────────
   const [sharedProgression] = useState<ChordInProgression[] | null>(decodeSharedProgression);
   const [showSharedBanner, setShowSharedBanner] = useState(() => !!decodeSharedProgression());
-
+  const dismissShared = () => { setShowSharedBanner(false); history.replaceState(history.state, '', window.location.pathname); };
   const handleLoadShared = () => {
-    if (sharedProgression) { pushHistory(sharedProgression); setPagerTab(0); }
-    setShowSharedBanner(false);
-    history.replaceState(null, '', window.location.pathname);
+    if (sharedProgression) { pushHistory(sharedProgression); go('chord-builder', 'ear'); }
+    dismissShared();
   };
-
 
   // ── Progression handlers ───────────────────────────────────────────────────
   // Every "add" path lands here, so the chord's flight from the button that was
-  // pressed into the session bar happens once for the whole app.
+  // pressed into the song dock happens once for the whole app.
   const handleAddToProgression = (item: ChordInProgression) => {
     pushHistory([...songApi.section.progression, item]);
     flyToDock(formatChordName(item.chord.name));
@@ -210,395 +209,106 @@ export default function App() {
     songApi.setChordNames(progression.map(item => transposeChordName(item.chord.name, semitones)));
   };
 
-  // ── SwipePager state ──────────────────────────────────────────────────────
-  // Clamped: a browser that stored tab 5 back when STUDIO existed would
-  // otherwise restore to a panel that is no longer there.
-  const [pagerTab, setPagerTab]             = useState(() => {
-    const t = parseInt(readLS('scaleup_pager_tab', '0'), 10) || 0;
-    return Math.min(Math.max(t, 0), PANEL_TITLES.length - 1);
-  });
-  // Always land on "By Name" when the app opens (not the last-used chords tab).
-  const [chordsSegment, setChordsSegment]   = useState<ChordsSub>('finder');
-  const [scalesSegment, setScalesSegment]   = useState<ScalesSub>(() => {
-    const v = readLS('scaleup_seg_scales', 'explorer');   // 'intervals' moved to its own top tab
-    return (v === 'intervals' ? 'explorer' : v) as ScalesSub;
-  });
-  const [voicingsSegment, setVoicingsSegment] = useState<VoicingsSub>(() => {
-    const v = readLS('scaleup_seg_voicings', 'voiceleading');   // 'paths' folded into VL Studio
-    return (v === 'voiceleading' || v === 'harmonizer' || v === 'reharmonize') ? v as VoicingsSub : 'voiceleading';
-  });
-  const [toolsSegment, setToolsSegment] = useState<ToolsSub>(() => {
-    // 'eartraining' → Intervals, 'scaletrainer' → Scales, both long gone.
-    const v = readLS('scaleup_seg_tools', readLS('scaleup_seg_practice', 'tuner'));
-    return TOOLS_SEGS.some(s => s.id === v) ? v as ToolsSub : 'tuner';
-  });
-
-  const [intervalsSegment, setIntervalsSegment] = useState<string>(() => {
-    const v = readLS('scaleup_seg_intervals', 'explore');
-    // 'identify' promised a quiz and delivered a ruler; it is now 'measure'.
-    if (v === 'identify') return 'measure';
-    return ['explore', 'measure', 'inchord', 'practice'].includes(v) ? v : 'explore';
-  });
-  const handleIntervalsSegChange = (s: string) => { setIntervalsSegment(s); writeLS('scaleup_seg_intervals', s); };
-
-  const handleTabChange = (t: number) => { setPagerTab(t); writeLS('scaleup_pager_tab', String(t)); };
-  const handleChordsSegChange   = (s: string) => { setChordsSegment(s as ChordsSub);   writeLS('scaleup_seg_chords',   s); };
-  // ── Finding a tool: the tools map (logo) and the command palette (⌘K) ────
-  // The map opens by itself on a first visit so a newcomer sees every tool.
-  const [mapOpen, setMapOpen] = useState(() => readLS('scaleup_seen_map', '0') !== '1');
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const closeMap = useCallback(() => { setMapOpen(false); writeLS('scaleup_seen_map', '1'); }, []);
-  const handleLogoClick = () => setMapOpen(true);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(o => !o); }
-      else if (e.key === '/' && !typing) { e.preventDefault(); setPaletteOpen(true); }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-  const handleScalesSegChange   = (s: string) => { setScalesSegment(s as ScalesSub);   writeLS('scaleup_seg_scales',   s); };
-  const handleVoicingsSegChange = (s: string) => { setVoicingsSegment(s as VoicingsSub); writeLS('scaleup_seg_voicings', s); };
-  const handleToolsSegChange    = (s: string) => { setToolsSegment(s as ToolsSub);     writeLS('scaleup_seg_tools',    s); };
-
-  // ── Handoff: Workspace "Open in Builder" → TOOLS/Tab Builder ──────────────
-  useEffect(() => subscribeHandoff(() => {
-    setWorkspaceOpen(false);
-    setPagerTab(4);
-    setToolsSegment('tabbuilder');
-    writeLS('scaleup_pager_tab', '4');
-    writeLS('scaleup_seg_tools', 'tabbuilder');
-  }), []);
-
-  // ── Handoff: Library "Open in Harmonizer" → VOICINGS/Harmonize ────────────
-  useEffect(() => subscribeHarmonizationHandoff(() => {
-    setWorkspaceOpen(false);
-    setPagerTab(3);
-    setVoicingsSegment('harmonizer');
-    writeLS('scaleup_pager_tab', '3');
-    writeLS('scaleup_seg_voicings', 'harmonizer');
-  }), []);
-
-  // ── Handoff: Library "Open in Reharm" → VOICINGS/Reharm ──────────────────
-  useEffect(() => subscribeVoicingsHandoff(() => {
-    setWorkspaceOpen(false);
-    setPagerTab(3);
-    setVoicingsSegment('reharmonize');
-    writeLS('scaleup_pager_tab', '3');
-    writeLS('scaleup_seg_voicings', 'reharmonize');
-  }), []);
-
-  // ── "See also" jumps between the key-related tools ─────────────────────────
-  useEffect(() => subscribeNavigate(({ tab, sub }) => {
-    setWorkspaceOpen(false);
-    setPagerTab(tab); writeLS('scaleup_pager_tab', String(tab));
-    if (tab === 0) handleChordsSegChange(sub);
-    else if (tab === 1) handleScalesSegChange(sub);
-    else if (tab === 2) handleIntervalsSegChange(sub);
-    else if (tab === 3) handleVoicingsSegChange(sub);
-    else if (tab === 4) handleToolsSegChange(sub);
-  }), []);   // eslint-disable-line react-hooks/exhaustive-deps
-
   // A voicing tool edited the chord list by name; the song keeps the shapes of
   // chords it already had and finds shapes for new ones.
   const handleChordNamesChange = songApi.setChordNames;
 
-  // ── Workspace handlers ─────────────────────────────────────────────────────
+  // ── Handoffs from the Library and the song map land on their stop ─────────
+  useEffect(() => subscribeHandoff(() => go('tab-writer')), [go]);
+  useEffect(() => subscribeHarmonizationHandoff(() => go('harmonize')), [go]);
+  useEffect(() => subscribeVoicingsHandoff(() => go('reharmonize')), [go]);
+  useEffect(() => subscribeNavigate(({ stop: id, sub }) => go(id, sub)), [go]);
+
   const handleOpenProgression = (chords: ChordInProgression[]) => {
     pushHistory(chords.map((c, i) => ({ ...c, id: `chord-loaded-${Date.now()}-${i}` })));
-    setPagerTab(0);
-    setChordsSegment('builder');
-    writeLS('scaleup_pager_tab', '0');
-    writeLS('scaleup_seg_chords', 'builder');
+    go('chord-builder', 'ear');
   };
   const handleOpenTab = (content: TabContent) => {
     requestOpenTabInBuilder(content);
-    setPagerTab(4);
-    setToolsSegment('tabbuilder');
-    writeLS('scaleup_pager_tab', '4');
-    writeLS('scaleup_seg_tools', 'tabbuilder');
+    go('tab-writer');
   };
 
-  const isDesktopBrowser = useIsDesktop();
-
-  const currentToolId = `${PANEL_TITLES[pagerTab].toLowerCase()}:${
-    [chordsSegment, scalesSegment, intervalsSegment, voicingsSegment, toolsSegment][pagerTab]}`;
-
-  const { lang, setLang } = useLang();
+  const { lang } = useLang();
   const he = lang === 'he';
-  const paletteActions: PaletteAction[] = [
-    { id: 'map',   label: he ? 'כל הכלים (מפה)' : 'All tools (map)', hint: he ? 'לוגו' : 'logo', run: () => setMapOpen(true) },
-    { id: 'song',  label: he ? 'מפת השיר · השירים שלי' : 'Song map · my songs', run: () => setSongMapOpen(true) },
-    { id: 'new',   label: he ? 'שיר חדש' : 'New song', run: () => songApi.newSong() },
-    { id: 'dark',  label: darkMode ? (he ? 'מצב בהיר' : 'Light mode') : (he ? 'מצב כהה' : 'Dark mode'), run: () => setDarkMode(d => !d) },
-    { id: 'sound', label: soundEnabled() ? (he ? 'השתקת צלילי לחיצה' : 'Mute tap sounds') : (he ? 'הפעלת צלילי לחיצה' : 'Turn tap sounds on'), run: () => setSoundEnabled(!soundEnabled()) },
-    { id: 'lang',  label: he ? 'English' : 'עברית', run: () => setLang(he ? 'en' : 'he') },
-    { id: 'ws',    label: he ? 'האזור האישי' : 'My workspace', run: () => setWorkspaceOpen(true) },
-  ];
-
-  const finders = (
-    <>
-      <ToolsMap open={mapOpen} onClose={closeMap} currentId={currentToolId}
-        onSearch={() => { closeMap(); setPaletteOpen(true); }} desktop={isDesktopBrowser} />
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)}
-        currentId={currentToolId} actions={paletteActions} />
-      <SongMap open={songMapOpen} onClose={() => setSongMapOpen(false)} desktop={isDesktopBrowser}
-        userId={user?.id ?? null} sync={songSync} />
-    </>
-  );
 
   const sharedBanner = showSharedBanner && sharedProgression ? (
-    <div style={{ background: T.secondaryBg, borderBottom: `1px solid ${T.secondary}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
-      <span style={{ fontSize: 13, color: T.secondary, fontWeight: 600 }}>Shared progression — {sharedProgression.length} chords</span>
+    <div style={{ borderBottom: `var(--su-rule) solid ${T.border}`, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', flexShrink: 0, background: T.bgDeep }}>
+      <span style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+        {he ? `מהלך ששותף · ${sharedProgression.length} אקורדים` : `Shared progression · ${sharedProgression.length} chords`}
+      </span>
       <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={handleLoadShared} style={{ padding: '5px 14px', borderRadius: 0, background: T.secondary, color: T.white, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>Load</button>
-        <button onClick={() => { setShowSharedBanner(false); history.replaceState(null, '', window.location.pathname); }} style={{ padding: '5px 10px', borderRadius: 0, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
+        <button onClick={handleLoadShared} className="gc-no-bar" style={{ ...btn.cta(false), minHeight: 36 }}>{he ? 'טעינה' : 'Load'}</button>
+        <button onClick={dismissShared} className="gc-no-bar" style={{ ...btn.secondary, minHeight: 36 }}>{he ? 'סגירה' : 'Dismiss'}</button>
       </div>
     </div>
   ) : null;
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Desktop browser layout — DesktopShell
-  // ══════════════════════════════════════════════════════════════════════════
-  if (isDesktopBrowser) {
-    return (
-      <SongProvider value={songApi}>
-        {finders}
-        {workspaceOpen && (
-          <WorkspaceOverlay
-            desktop
-            onClose={() => setWorkspaceOpen(false)}
-            onOpenTabInBuilder={handleOpenTab}
-            onOpenProgressionInBuilder={(chords) => { handleOpenProgression(chords); setWorkspaceOpen(false); }}
-          />
-        )}
-        <DesktopShell
-          tab={pagerTab}
-          onTabChange={handleTabChange}
-          darkMode={darkMode}
-          onToggleDark={() => setDarkMode(d => !d)}
-          userMenu={<UserMenu onOpenWorkspace={() => setWorkspaceOpen(true)} />}
-          sharedBanner={sharedBanner}
-          onLogoClick={handleLogoClick}
-          onSearch={() => setPaletteOpen(true)}
-        >
-          <SongDock onOpenMap={() => setSongMapOpen(true)} />
+  // ── The stop itself ────────────────────────────────────────────────────────
+  const d = isDesktop || undefined;
+  const removeChord = (id: string) => pushHistory(progression.filter(c => c.id !== id));
+  const progressionProps = {
+    progression, onAddToProgression: handleAddToProgression, onRemoveFromProgression: removeChord,
+    onClearProgression: () => pushHistory([]), onReorderProgression: handleReorderProgression,
+    onTransposeProgression: handleTransposeProgression,
+    canUndo: songApi.canUndo, canRedo: songApi.canRedo, onUndo: handleUndo, onRedo: handleRedo,
+    tuning, onTuningChange: setTuning, capo,
+  };
+  // Tuner and metronome are narrow instruments; on desktop they read better
+  // centred in a single column than stretched across the stop.
+  const narrow = (node: ReactNode) => isDesktop
+    ? <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}>{node}</div> : node;
 
-          {/* ── Panel 0: CHORDS ──────────────────────────────────────── */}
-          {pagerTab === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} helpPrefix="chords" />
-              <ErrorBoundary label="Chords">
-                {chordsSegment === 'builder' && (
-                  <ChordBuilderTab
-                    desktop
-                    progression={progression}
-                    onAddToProgression={handleAddToProgression}
-                    onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
-                    onClearProgression={() => pushHistory([])}
-                    onReorderProgression={handleReorderProgression}
-                    onTransposeProgression={handleTransposeProgression}
-                    tuning={tuning} onTuningChange={setTuning}
-                    capo={capo} onCapoChange={setCapo}
-                    canUndo={songApi.canUndo} canRedo={songApi.canRedo}
-                    onUndo={handleUndo} onRedo={handleRedo}
-                  />
-                )}
-                {chordsSegment === 'finder' && (
-                  <ChordPickerTab
-                    desktop
-                    onAddToProgression={handleAddToProgression}
-                    progression={progression}
-                    onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
-                    onClearProgression={() => pushHistory([])}
-                    onReorderProgression={handleReorderProgression}
-                    onTransposeProgression={handleTransposeProgression}
-                    canUndo={songApi.canUndo} canRedo={songApi.canRedo}
-                    onUndo={handleUndo} onRedo={handleRedo}
-                    tuning={tuning} onTuningChange={setTuning} capo={capo}
-                  />
-                )}
-                {chordsSegment === 'target' && <TargetNoteTab desktop tuning={tuning} capo={capo} onAddToProgression={handleAddToProgression} />}
-                {chordsSegment === 'extensions' && <DiatonicExtensions desktop onAddToProgression={handleAddToProgression} />}
-                {chordsSegment === 'practice' && <ChordsPracticeTab desktop />}
-              </ErrorBoundary>
-            </div>
-          )}
+  const renderStop = (id: string): ReactNode => {
+    switch (id) {
+      case 'chord-builder': return chordView === 'ear'
+        ? <ChordBuilderTab desktop={d} {...progressionProps} onCapoChange={setCapo} />
+        : <ChordPickerTab desktop={d} {...progressionProps} />;
+      case 'triads':        return <TriadsGenerator desktop={d} globalProgression={progression} />;
+      case 'target-note':   return <TargetNoteTab desktop={d} tuning={tuning} capo={capo} onAddToProgression={handleAddToProgression} />;
+      case 'voice-leading': return <VoiceLeadingStudio desktop={d} globalProgression={progression} tuning={tuning} onChordsChange={handleChordNamesChange} />;
+      case 'harmonize':
+      case 'reharmonize':   return <VoicingsTab desktop={d} globalProgression={progression} onChordsChange={handleChordNamesChange} tuning={tuning}
+                                     activeSub={id === 'harmonize' ? 'harmonizer' : 'reharmonize'} />;
+      case 'scales':        return <ScaleExplorer desktop={d} />;
+      case 'intervals':     return <IntervalsTab desktop={d} sub={intervalView} />;
+      case 'chord-wheel':   return <ChordWheel desktop={d} onAddToProgression={handleAddToProgression} />;
+      case 'extensions':    return <DiatonicExtensions desktop={d} onAddToProgression={handleAddToProgression} />;
+      case 'tab-writer':    return <TabBuilder desktop={d} />;
+      case 'audio-tab':     return <AudioToTab desktop={d} />;
+      case 'library':       return <WorkspacePanel desktop={d} onOpenTabInBuilder={handleOpenTab} onOpenProgressionInBuilder={handleOpenProgression} />;
+      case 'tuner':         return narrow(<Tuner tuning={tuning} />);
+      case 'metronome':     return narrow(<Metronome />);
+      case 'chord-practice': return <ChordsPracticeTab desktop={d} />;
+      case 'scale-practice': return <ScalesPracticeTab desktop={d} />;
+      case 'ear-training':  return <IntervalsTab desktop={d} sub="practice" />;
+      default:              return null;
+    }
+  };
 
-          {/* ── Panel 1: SCALES ──────────────────────────────────────── */}
-          {pagerTab === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} helpPrefix="scales" />
-              <ErrorBoundary label="Scales">
-                {scalesSegment === 'explorer'  && <ScaleExplorer desktop />}
-                {scalesSegment === 'triads'    && <TriadsGenerator desktop globalProgression={progression} />}
-                {scalesSegment === 'wheel'     && <ChordWheel desktop onAddToProgression={handleAddToProgression} />}
-                {scalesSegment === 'practice'  && <ScalesPracticeTab desktop />}
-              </ErrorBoundary>
-            </div>
-          )}
+  const stopName = stopById(shown)?.name.en ?? 'Stop';
 
-          {/* ── Panel 2: INTERVALS ───────────────────────────────────── */}
-          {pagerTab === 2 && (
-            <ErrorBoundary label="Intervals">
-              <IntervalsTab desktop sub={intervalsSegment} onSubChange={handleIntervalsSegChange} />
-            </ErrorBoundary>
-          )}
-
-          {/* ── Panel 3: VOICINGS ────────────────────────────────────── */}
-          {pagerTab === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
-              <ErrorBoundary label="Voicings">
-                {voicingsSegment === 'voiceleading'
-                  ? <VoiceLeadingStudio desktop globalProgression={progression} tuning={tuning} onChordsChange={handleChordNamesChange} />
-                  : <VoicingsTab
-                      desktop
-                      globalProgression={progression}
-                      onChordsChange={handleChordNamesChange}
-                      tuning={tuning}
-                      activeSub={voicingsSegment}
-                    />}
-              </ErrorBoundary>
-            </div>
-          )}
-
-          {/* ── Panel 4: TOOLS ───────────────────────────────────────── */}
-          {pagerTab === 4 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Segment items={TOOLS_SEGS} active={toolsSegment} onChange={handleToolsSegChange} helpPrefix="tools" />
-              <ErrorBoundary label="Tools">
-                {/* Tuner and metronome are narrow instruments; they read better
-                    centred in a single column than stretched across the shell. */}
-                {toolsSegment === 'tuner' && (
-                  <div style={{ maxWidth: 420, margin: '24px auto 24px', width: '100%' }}><Tuner tuning={tuning} /></div>
-                )}
-                {toolsSegment === 'metronome' && (
-                  <div style={{ maxWidth: 420, margin: '24px auto 24px', width: '100%' }}><Metronome /></div>
-                )}
-                {toolsSegment === 'tabbuilder' && <TabBuilder desktop />}
-                {toolsSegment === 'audiotab'   && <AudioToTab desktop />}
-              </ErrorBoundary>
-            </div>
-          )}
-
-        </DesktopShell>
-      </SongProvider>
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Mobile layout — SwipePager
-  // ══════════════════════════════════════════════════════════════════════════
   return (
     <SongProvider value={songApi}>
-      {finders}
-      {workspaceOpen && (
-        <WorkspaceOverlay
-          onClose={() => setWorkspaceOpen(false)}
-          onOpenTabInBuilder={handleOpenTab}
-          onOpenProgressionInBuilder={(chords) => { handleOpenProgression(chords); setWorkspaceOpen(false); }}
-        />
-      )}
-
-      <SwipePager
-        tab={pagerTab}
-        onTabChange={handleTabChange}
-        tabTitles={PANEL_TITLES}
+      <SongMap open={songMapOpen} onClose={() => setSongMapOpen(false)} desktop={isDesktop}
+        userId={user?.id ?? null} sync={songSync} />
+      <TransitShell
+        desktop={isDesktop}
+        stop={shown}
+        sub={subOf(shown)}
+        onGo={go}
+        onSub={s => setSub(shown, s)}
+        onHome={goHome}
+        lastStop={lastStop}
         darkMode={darkMode}
-        onToggleDark={() => setDarkMode(d => !d)}
-        userMenu={<UserMenu compact onOpenWorkspace={() => setWorkspaceOpen(true)} />}
+        onToggleDark={() => setDarkMode(m => !m)}
+        userMenu={<UserMenu compact={!isDesktop} up={isDesktop} onOpenWorkspace={() => go('library')} />}
         sharedBanner={sharedBanner}
-        sessionBar={<SongDock compact onOpenMap={() => setSongMapOpen(true)} />}
-        onLogoClick={handleLogoClick}
-        onSearch={() => setPaletteOpen(true)}
+        dock={<SongDock compact={!isDesktop} onOpenMap={() => setSongMapOpen(true)} />}
       >
-
-        {/* Session bar is rendered inside each panel on mobile via the pager,
-            so it is placed once here at the top of the panel stack. */}
-        {/* ── Panel 0: CHORDS ─────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={CHORDS_SEGS} active={chordsSegment} onChange={handleChordsSegChange} helpPrefix="chords" />
-          <ErrorBoundary label="Chords">
-            {chordsSegment === 'builder' && (
-              <ChordBuilderTab
-                progression={progression}
-                onAddToProgression={handleAddToProgression}
-                onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
-                onClearProgression={() => pushHistory([])}
-                onReorderProgression={handleReorderProgression}
-                onTransposeProgression={handleTransposeProgression}
-                tuning={tuning} onTuningChange={setTuning}
-                capo={capo} onCapoChange={setCapo}
-                canUndo={songApi.canUndo} canRedo={songApi.canRedo}
-                onUndo={handleUndo} onRedo={handleRedo}
-              />
-            )}
-            {chordsSegment === 'finder' && (
-              <ChordPickerTab
-                onAddToProgression={handleAddToProgression}
-                progression={progression}
-                onRemoveFromProgression={id => pushHistory(progression.filter(c => c.id !== id))}
-                onClearProgression={() => pushHistory([])}
-                onReorderProgression={handleReorderProgression}
-                onTransposeProgression={handleTransposeProgression}
-                canUndo={songApi.canUndo} canRedo={songApi.canRedo}
-                onUndo={handleUndo} onRedo={handleRedo}
-                tuning={tuning} onTuningChange={setTuning} capo={capo}
-              />
-            )}
-            {chordsSegment === 'target' && <TargetNoteTab tuning={tuning} capo={capo} onAddToProgression={handleAddToProgression} />}
-            {chordsSegment === 'extensions' && <DiatonicExtensions onAddToProgression={handleAddToProgression} />}
-            {chordsSegment === 'practice' && <ChordsPracticeTab />}
-          </ErrorBoundary>
-        </div>
-
-        {/* ── Panel 1: SCALES ─────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={SCALES_SEGS} active={scalesSegment} onChange={handleScalesSegChange} helpPrefix="scales" />
-          <ErrorBoundary label="Scales">
-            {scalesSegment === 'explorer'  && <ScaleExplorer />}
-            {scalesSegment === 'triads'    && <TriadsGenerator globalProgression={progression} />}
-            {scalesSegment === 'wheel'     && <ChordWheel onAddToProgression={handleAddToProgression} />}
-            {scalesSegment === 'practice'  && <ScalesPracticeTab />}
-          </ErrorBoundary>
-        </div>
-
-        {/* ── Panel 2: INTERVALS ──────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <ErrorBoundary label="Intervals">
-            <IntervalsTab sub={intervalsSegment} onSubChange={handleIntervalsSegChange} />
-          </ErrorBoundary>
-        </div>
-
-        {/* ── Panel 3: VOICINGS ───────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={VOICINGS_SEGS} active={voicingsSegment} onChange={handleVoicingsSegChange} helpPrefix="voicings" />
-          <ErrorBoundary label="Voicings">
-            {voicingsSegment === 'voiceleading'
-              ? <VoiceLeadingStudio globalProgression={progression} tuning={tuning} onChordsChange={handleChordNamesChange} />
-              : <VoicingsTab
-                  globalProgression={progression}
-                  onChordsChange={handleChordNamesChange}
-                  tuning={tuning}
-                  activeSub={voicingsSegment}
-                />}
-          </ErrorBoundary>
-        </div>
-
-        {/* ── Panel 4: TOOLS ──────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Segment items={TOOLS_SEGS} active={toolsSegment} onChange={handleToolsSegChange} helpPrefix="tools" />
-          <ErrorBoundary label="Tools">
-            {toolsSegment === 'tuner'      && <Tuner tuning={tuning} />}
-            {toolsSegment === 'metronome'  && <Metronome />}
-            {toolsSegment === 'tabbuilder' && <TabBuilder />}
-            {toolsSegment === 'audiotab'   && <AudioToTab />}
-          </ErrorBoundary>
-        </div>
-
-      </SwipePager>
+        <ErrorBoundary key={shown} label={stopName}>
+          {renderStop(shown)}
+        </ErrorBoundary>
+      </TransitShell>
     </SongProvider>
   );
 }

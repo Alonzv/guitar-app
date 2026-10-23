@@ -3,18 +3,9 @@ import { IntervalPlayground } from './IntervalPlayground';
 import { IntervalInChord } from './IntervalInChord';
 import { EarTrainingTab } from '../EarTraining/EarTrainingTab';
 import { T, card } from '../../theme';
-import { Segment } from '../SwipePager';
 import { playMidi } from '../../utils/audioPlayback';
 
 export type IntervalsSub = 'explore' | 'measure' | 'inchord' | 'practice';
-type Sub = IntervalsSub;
-
-const SUBS: { id: Sub; label: string }[] = [
-  { id: 'explore',  label: 'Explore'   },
-  { id: 'measure',  label: 'Measure'   },
-  { id: 'inchord',  label: 'In a Chord' },
-  { id: 'practice', label: 'Practice'  },
-];
 
 const INTERVAL_REF = [
   { abbrev: 'P1',  semitones: 0,  name: 'Unison',        quality: 'Perfect',    feel: 'Same note' },
@@ -60,17 +51,9 @@ const SECTION: React.CSSProperties = {
   textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
 };
 
-// The sub-tab lives in App with every other panel's, so navigation (the
-// command palette, the tools map) can open any of them directly.
-export function IntervalsTab({ desktop, sub, onSubChange }: {
-  desktop?: boolean; sub: string; onSubChange: (s: string) => void;
-}) {
-  const pick = (s: Sub) => onSubChange(s);
-
-  // Same bar as every other panel (it used to be the one hand-built exception).
-  const tabBar = (
-    <Segment items={SUBS} active={sub} onChange={id => pick(id as Sub)} helpPrefix="intervals" />
-  );
+// The view is chosen by the shell: Explore / Measure / In a chord are the
+// Intervals stop's pills, and 'practice' is its own stop (Ear training, L4).
+export function IntervalsTab({ desktop, sub }: { desktop?: boolean; sub: string }) {
 
   const tool =
     sub === 'explore'  ? <IntervalExplore /> :
@@ -80,7 +63,6 @@ export function IntervalsTab({ desktop, sub, onSubChange }: {
 
   const mainContent = (
     <div>
-      {tabBar}
       {sub === 'practice'
         ? <div style={{ maxWidth: desktop ? 680 : undefined, margin: '0 auto', width: '100%' }}>{tool}</div>
         : tool}
