@@ -425,6 +425,9 @@ body.dark, .su-night {
 .su-night { background: var(--gc-bg-deep); color: var(--gc-text); }
 
 .su-neck-dot:focus-visible { outline: none; }
+/* SVG buttons (wheel slices, chart dots) show focus in their own shape, not a box. */
+svg [role="button"]:focus { outline: none; }
+svg path[role="button"]:focus-visible { stroke: var(--gc-primary); stroke-width: 3px; }
 .su-neck-dot:focus-visible circle:not(.gc-dot-ring) { stroke: var(--gc-primary); stroke-width: 3px; }
 
 /* Paper grain — mounted once (<div class="su-grain" />) */

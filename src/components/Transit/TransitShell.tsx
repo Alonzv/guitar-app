@@ -86,6 +86,19 @@ function SubPills({ stop, sub, onSub }: { stop: Stop; sub?: string; onSub: (s: s
   );
 }
 
+/** The map in miniature: a line with three stations, the last one filled
+ *  (you are here) — the same marks the network map draws. */
+function MapGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.2">
+      <path d="M4 17 V11 H11 V5 H18" strokeLinejoin="miter" />
+      <circle cx="4" cy="17" r="2.6" fill="var(--gc-bg-deep)" />
+      <circle cx="11" cy="11" r="2.6" fill="var(--gc-bg-deep)" />
+      <circle cx="18" cy="5" r="2.6" fill="currentColor" />
+    </svg>
+  );
+}
+
 const helpTopic = (stop: Stop, sub?: string) => stop.subs?.find(s => s.id === sub)?.help ?? stop.help;
 
 /** The stop's name as a poster, sized down until it fits its width. */
@@ -106,8 +119,8 @@ function StopPoster({ text, max }: { text: string; max: number }) {
     return () => ro.disconnect();
   }, [text, max]);
   return (
-    <div style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
-      <span ref={ref} className="su-poster" style={{ display: 'inline-block', fontSize: size }}>{text}</span>
+    <div style={{ overflowX: 'clip', whiteSpace: 'nowrap' }}>
+      <span ref={ref} className="su-poster" style={{ display: 'inline-block', fontSize: size, paddingBottom: '0.12em' }}>{text}</span>
     </div>
   );
 }
@@ -129,11 +142,8 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, padding: '12px 20px 0' }}>
           <SoundToggle compact /><LangToggle compact /><ThemeToggle dark={darkMode} onToggle={onToggleDark} />{userMenu}
         </div>
-        <div style={{ padding: '14px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, minWidth: 0 }}>
-          <Wordmark size="min(72px, 17vw)" />
-          <div style={{ fontSize: 10, lineHeight: 1.6, textAlign: rtl ? 'left' : 'right', letterSpacing: '0.08em', textTransform: 'uppercase', minWidth: 0 }}>
-            {he ? 'מפת הרשת' : 'Network map'}<br />{results.length} {he ? 'תחנות · 4 קווים' : 'stops · 4 lines'}
-          </div>
+        <div style={{ padding: '14px 20px 16px' }}>
+          <Wordmark size="min(72px, 19vw)" />
         </div>
         <div style={{ margin: '0 20px' }}>
           <StopSearch value={q} onChange={setQ} onSubmit={() => { if (results[0]) onGo(results[0].id); }} />
@@ -175,11 +185,20 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
         padding: 'calc(10px + env(safe-area-inset-top)) 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
         borderBottom: `var(--su-rule) solid ${T.border}`,
       }}>
-        <button onClick={onHome} className="gc-no-bar" aria-label={he ? 'חזרה למפה' : 'Back to the map'}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, minWidth: 0, background: 'transparent', border: 'none', cursor: 'pointer', color: T.text, fontSize: 11, letterSpacing: '0.1em', padding: 0 }}>
-          <LineBadge stop={stop} />
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rtl ? '→' : '←'} {stop.name[lang].toUpperCase()}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <button onClick={onHome} className="gc-no-bar" aria-label={he ? 'חזרה למפה' : 'Back to the map'} title={he ? 'למפה' : 'Map'}
+            style={{
+              width: 44, height: 44, flex: 'none', borderRadius: '50%', border: `1.5px solid ${T.text}`, background: 'transparent',
+              color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+            }}>
+            <MapGlyph />
+          </button>
+          <button onClick={onHome} tabIndex={-1} aria-hidden className="gc-no-bar"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, minWidth: 0, background: 'transparent', border: 'none', cursor: 'pointer', color: T.text, fontSize: 11, letterSpacing: '0.1em', padding: 0 }}>
+            <LineBadge stop={stop} />
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stop.name[lang].toUpperCase()}</span>
+          </button>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
           <div ref={setActionsSlot} style={{ display: 'flex', alignItems: 'center', gap: 6 }} />
           {topic && <HelpButton topic={topic} />}

@@ -15,7 +15,7 @@ import { pickOne } from '../../utils/random';
 import { useLang } from '../../contexts/LanguageContext';
 import { STOPS } from '../../data/tools';
 import { requestNavigate } from '../../services/navigate';
-import { PosterTitle, Rule, Pill, PillRow, Cta, KeyGrid, Stepper } from '../Transit/parts';
+import { PosterTitle, Rule, Pill, PillRow, Cta, KeyGrid, KeyPicker } from '../Transit/parts';
 import { pillStyle, keyStyle } from '../Transit/styles';
 import { StopActions } from '../Transit/StopActions';
 
@@ -225,10 +225,6 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
 
   // ── Presentation ─────────────────────────────────────────────────────────
   const scaleLabel = scaleType ? (SCALE_GROUPS.flatMap(g => g.scales).find(sc => sc.id === scaleType)?.label ?? scaleType) : '—';
-  const stepRoot = (d: number) => {
-    const r = ALL_NOTES[(ALL_NOTES.indexOf(root) + d + 12) % 12];
-    setRoot(r); previewNote(r);
-  };
   const playWholeScale = () => {
     const midiNotes = [
       ...scale.notes.map(n => TonalNote.midi(`${n}4`) ?? 60),
@@ -381,7 +377,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
           <PosterTitle head={`${root} `} tail={scaleLabel} max={200} min={56} style={{ flex: 1 }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flex: 'none', paddingBottom: 6 }}>
-            <Stepper value={root} onPrev={() => stepRoot(-1)} onNext={() => stepRoot(1)} label={he ? 'טוניקה' : 'Key'} />
+            <KeyPicker value={root} options={ALL_NOTES as readonly Note[]} onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Key'} align={desktop ? 'end' : 'start'} />
             <Cta onClick={playWholeScale}>{he ? 'נגן סולם' : 'Play scale'} ▶</Cta>
           </div>
         </div>
@@ -416,7 +412,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {jamPill}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <Stepper value={root} onPrev={() => stepRoot(-1)} onNext={() => stepRoot(1)} label={he ? 'טוניקה' : 'Key'} />
+        <KeyPicker value={root} options={ALL_NOTES as readonly Note[]} onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Key'} align={desktop ? 'end' : 'start'} />
         <Pill size="sm" active={scaleMenuOpen} onClick={() => setScaleMenuOpen(o => !o)}>{scaleLabel} {scaleMenuOpen ? '▴' : '▾'}</Pill>
       </div>
       {scaleMenuOpen && (
