@@ -129,9 +129,9 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, padding: '12px 20px 0' }}>
           <SoundToggle compact /><LangToggle compact /><ThemeToggle dark={darkMode} onToggle={onToggleDark} />{userMenu}
         </div>
-        <div style={{ padding: '14px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 }}>
-          <Wordmark size={72} />
-          <div style={{ fontSize: 10, lineHeight: 1.6, textAlign: rtl ? 'left' : 'right', letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+        <div style={{ padding: '14px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, minWidth: 0 }}>
+          <Wordmark size="min(72px, 17vw)" />
+          <div style={{ fontSize: 10, lineHeight: 1.6, textAlign: rtl ? 'left' : 'right', letterSpacing: '0.08em', textTransform: 'uppercase', minWidth: 0 }}>
             {he ? 'מפת הרשת' : 'Network map'}<br />{results.length} {he ? 'תחנות · 4 קווים' : 'stops · 4 lines'}
           </div>
         </div>

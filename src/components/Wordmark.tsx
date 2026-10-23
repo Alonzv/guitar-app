@@ -4,7 +4,7 @@ import { T } from '../theme';
 // SCALEUP in the display face — condensed, black, uppercase — with "Up" in the
 // one colour. Rendered as text so it follows the theme and the page language.
 
-export function Wordmark({ size = 64 }: { size?: number }) {
+export function Wordmark({ size = 64 }: { size?: number | string }) {
   return (
     <span aria-label="ScaleUp" style={{
       fontFamily: 'var(--su-display)', fontStretch: '62%', fontWeight: 900, fontSize: size,

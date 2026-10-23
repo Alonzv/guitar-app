@@ -107,6 +107,12 @@
 
 
 
+/* The page itself never scrolls sideways: a stray wide element must not let
+   the whole map be dragged left and right on a phone. clip (not hidden)
+   keeps position: sticky working. Wide content (a neck) scrolls in its own
+   box. */
+html, body { overflow-x: clip; overscroll-behavior-x: none; }
+
 body {
   margin: 0;
   min-width: 320px;

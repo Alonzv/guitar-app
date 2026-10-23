@@ -522,7 +522,7 @@ export function ReharmonizeTab({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {/* Paths as pills; the first is the smoothest — the pick */}
                     <div role="group" aria-label={he ? 'מסלולי פוזיציה' : 'Voicing paths'} className="gc-no-scrollbar"
-                      style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 1 }}>
+                      style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingBottom: 1 }}>
                       {reharmPaths.map((path, pi) => {
                         const active = pi === selectedPathIdx;
                         return (

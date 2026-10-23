@@ -215,12 +215,12 @@ export function ChordPickerTab({
   const controls = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
       <Rule label={he ? 'איכות' : 'Quality'} right={<DiceButton onRoll={roll} />}>
-        <div dir="ltr"><PillRow label={he ? 'איכות' : 'Quality'} wrap={desktop}
+        <div dir="ltr"><PillRow label={he ? 'איכות' : 'Quality'}
           items={TRIADS.map(t => ({ id: t.key, label: t.display }))}
           value={selectedTriad} onChange={handleTriadSelect} /></div>
         {selectedTriad && validExt.length > 1 && (
           <div dir="ltr" style={{ marginTop: 8 }}>
-            <PillRow label={he ? 'הרחבה' : 'Extension'} wrap={desktop}
+            <PillRow label={he ? 'הרחבה' : 'Extension'}
               items={EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => ({ id: e.key, label: e.display }))}
               value={selectedExtension} onChange={handleExtensionSelect} />
           </div>
@@ -242,7 +242,7 @@ export function ChordPickerTab({
               specific variation can also be added from the enlarged viewer. */}
           <button onClick={() => current && addVoicing(current)} disabled={!current} className="gc-no-bar"
             style={{ ...btn.primary(!current), width: '100%', whiteSpace: 'nowrap' }}>
-            <RollLabel>{added ? (he ? '✓ נוסף' : '✓ Added') : (he ? '+ למהלך' : '+ Add to progression')}</RollLabel>
+            <RollLabel>{added ? (he ? '✓ נוסף' : '✓ Added') : (he ? '+ למהלך' : '+ Add to song')}</RollLabel>
           </button>
           <PillSelect label={he ? 'כיוון' : 'Tuning'} value={tuningName} onChange={handleTuningChange}>
             {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}

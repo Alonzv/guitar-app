@@ -93,14 +93,17 @@ export function Cta({ onClick, children, disabled, label, style, round }: {
   );
 }
 
-/** A row of pills that scrolls sideways rather than wrapping (or wraps). */
-export function PillRow<V extends string>({ items, value, onChange, wrap, size = 'sm', label }: {
+/** A row of pills that wraps onto the next line — never runs off the edge,
+ *  where a half-visible pill reads as a cut button. `scroll` keeps one
+ *  sideways-scrolling line instead (long, open-ended lists only). */
+export function PillRow<V extends string>({ items, value, onChange, wrap = true, scroll, size = 'sm', label }: {
   items: { id: V; label: ReactNode; title?: string }[]; value: V | null; onChange: (v: V) => void;
-  wrap?: boolean; size?: 'sm' | 'md'; label?: string;
+  wrap?: boolean; scroll?: boolean; size?: 'sm' | 'md'; label?: string;
 }) {
+  const oneLine = scroll || !wrap;
   return (
     <div role="group" aria-label={label} className="gc-no-scrollbar" style={{
-      display: 'flex', gap: 6, flexWrap: wrap ? 'wrap' : 'nowrap', overflowX: wrap ? undefined : 'auto',
+      display: 'flex', gap: 6, flexWrap: oneLine ? 'nowrap' : 'wrap', overflowX: oneLine ? 'auto' : undefined,
       scrollbarWidth: 'none', minWidth: 0, paddingBottom: 1,
     }}>
       {items.map(it => (

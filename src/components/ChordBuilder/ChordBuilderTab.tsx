@@ -142,7 +142,7 @@ export function ChordBuilderTab({
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button onClick={handleAdd} disabled={chords.length === 0} className="gc-no-bar"
             style={{ ...btn.primary(chords.length === 0), width: '100%', whiteSpace: 'nowrap' }}>
-            <RollLabel>{added ? (he ? '✓ נוסף' : '✓ Added') : (he ? '+ למהלך' : '+ Add to progression')}</RollLabel>
+            <RollLabel>{added ? (he ? '✓ נוסף' : '✓ Added') : (he ? '+ למהלך' : '+ Add to song')}</RollLabel>
           </button>
           <Pill onClick={() => setActiveDots([])} disabled={activeDots.length === 0} style={{ width: '100%' }}>
             {he ? 'ניקוי' : 'Clear'}
