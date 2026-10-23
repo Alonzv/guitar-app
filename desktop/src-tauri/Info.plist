@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- The tuner, Audio → Tab and Play-to-answer listen to the guitar. -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>ScaleUp listens to your guitar for the tuner, Audio → Tab and the practice exercises.</string>
+</dict>
+</plist>

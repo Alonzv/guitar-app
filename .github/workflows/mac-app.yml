@@ -1,0 +1,51 @@
+# Builds ScaleUp for macOS (Tauri) and publishes the .dmg as a GitHub Release.
+# The app is a native window on the live site, so it only needs rebuilding
+# when the desktop/ shell itself changes — the web app updates on its own.
+name: Mac app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/mac-app.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Install the Tauri CLI
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build the universal app and publish the release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          tauriScript: npx tauri
+          args: --target universal-apple-darwin
+          tagName: mac-v__VERSION__
+          releaseName: ScaleUp for Mac __VERSION__
+          releaseBody: |
+            Download the .dmg below, open it and drag ScaleUp to Applications.
+            The first time, right-click ScaleUp → Open (the app is not signed with an Apple developer certificate).
+          releaseDraft: false
+          prerelease: false
