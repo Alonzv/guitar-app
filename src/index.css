@@ -377,7 +377,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --su-grain:    0.22;    /* paper texture opacity (0 to disable) */
 }
 
-body.dark {
+body.dark, .su-night {
   --gc-bg-deep:      #111110;
   --gc-bg-card:      #1A1918;
   --gc-bg-input:     #242220;
@@ -412,6 +412,12 @@ body.dark {
   --gc-fretboard-pos:  rgba(240,234,216,0.08);
   --su-grain:    0;     /* no grain at night */
 }
+
+/* Night surface for a single stop (the tuner, the metronome) in light mode */
+.su-night { background: var(--gc-bg-deep); color: var(--gc-text); }
+
+.su-neck-dot:focus-visible { outline: none; }
+.su-neck-dot:focus-visible circle:not(.gc-dot-ring) { stroke: var(--gc-primary); stroke-width: 3px; }
 
 /* Paper grain — mounted once (<div class="su-grain" />) */
 .su-grain {

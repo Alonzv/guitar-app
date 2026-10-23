@@ -90,6 +90,9 @@ function writeLS(key: string, val: string) {
 
 const LAST_STOP_KEY = 'scaleup_last_stop';
 const INTERVAL_VIEWS = ['explore', 'measure', 'inchord'];
+// Stops whose tool draws its own poster title (the chord name, the scale, the
+// tuner's note, the tempo, the song title) — the shell skips the stop name.
+const OWN_POSTER = new Set(['chord-builder', 'scales', 'tuner', 'metronome', 'tab-writer']);
 
 // ════════════════════════════════════════════════════════════════════════════
 export default function App() {
@@ -304,6 +307,7 @@ export default function App() {
         userMenu={<UserMenu compact={!isDesktop} up={isDesktop} onOpenWorkspace={() => go('library')} />}
         sharedBanner={sharedBanner}
         dock={<SongDock compact={!isDesktop} onOpenMap={() => setSongMapOpen(true)} />}
+        ownPoster={OWN_POSTER.has(shown)}
       >
         <ErrorBoundary key={shown} label={stopName}>
           {renderStop(shown)}
