@@ -211,7 +211,7 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
       ) : (
         <Rule>
           <div dir="ltr">
-            <PosterTitle head={`${ch.root} `} tail={scaleName(ch.scale)} max={desktop ? 120 : 76} min={32} as="div" />
+            <PosterTitle head={`${ch.root} `} tail={<span style={{ WebkitTextStrokeColor: T.text }}>{scaleName(ch.scale)}</span>} max={desktop ? 120 : 76} min={32} as="div" />
           </div>
           <p className="su-label" style={{ margin: '12px 0 14px', color: phase === 'done' ? T.primary : T.textMuted }}>
             {phase === 'spell' ? `${t.spell} · ${SCALE_DATA[ch.scale][lang].formula}` : '✓'}

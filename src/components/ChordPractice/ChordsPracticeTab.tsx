@@ -271,7 +271,7 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
           ) : (
             <Rule>
               <div dir="ltr">
-                <PosterTitle head={`${challenge.root} `} tail={qName} max={desktop ? 120 : 76} min={32} as="div" />
+                <PosterTitle head={`${challenge.root} `} tail={<span style={{ WebkitTextStrokeColor: T.text }}>{qName}</span>} max={desktop ? 120 : 76} min={32} as="div" />
               </div>
               <p className="su-label" style={{ margin: '12px 0 14px', color: phase === 'done' ? T.primary : T.textMuted }}>
                 {phase === 'spell' ? `${t.spell} · ${formula}` : t.done}
