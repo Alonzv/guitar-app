@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { Rule, Pill, Cta, PosterTitle } from '../Transit/parts';
+import { StopActions } from '../Transit/StopActions';
 import {
   transcribeAudioBuffer, transcribeWithMT3Server, refineNotesWithAI, notesToTab, buildWaveform,
   exportTabToPDF, midiToFreq, OPEN_MIDI, STRING_NAMES,
@@ -138,7 +140,8 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
   const { events, totalColumns } = tabData;
 
   // Clear selection when parent signals (e.g. after keyboard edit commits)
-  useEffect(() => { setSelectedCol(null); }, [clearToken]);
+  const [seenToken, setSeenToken] = useState(clearToken);
+  if (seenToken !== clearToken) { setSeenToken(clearToken); setSelectedCol(null); }
 
   if (totalColumns === 0) {
     return (
@@ -581,80 +584,75 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  // Desktop helper: wraps in 440px|1fr grid; on mobile returns left as-is
+  // Desktop: capture/progress on the left, output on the right. A phone
+  // stacks the two (the output used to be dropped there).
   const dt = (left: React.ReactNode, right?: React.ReactNode) => {
-    if (!desktop || !right) return <>{left}</>;
+    if (!right) return <>{left}</>;
+    if (!desktop) return <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>{left}{right}</div>;
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '440px 1fr', gap: 36, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '420px minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
         <div>{left}</div>
-        <div style={{ position: 'sticky', top: 24 }}>{right}</div>
+        <div style={{ position: 'sticky', top: 0 }}>{right}</div>
       </div>
     );
   };
 
+  // The big round capture button: an ink ring around the cobalt record dot
+  // (or, while recording, a cobalt disc with a paper stop square).
+  const captureBtn = (recording: boolean) => (
+    <button onClick={recording ? stopRecording : startRecording} className="gc-no-bar"
+      aria-label={recording ? 'Stop recording' : 'Record'}
+      style={{
+        width: 92, height: 92, borderRadius: '50%', flexShrink: 0, cursor: 'pointer', padding: 0,
+        border: `var(--su-rule) solid ${recording ? T.primary : T.text}`, background: recording ? T.primary : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+      {recording
+        ? <span style={{ width: 26, height: 26, background: T.onPrimary }} />
+        : <span style={{ width: 44, height: 44, borderRadius: '50%', background: T.primary }} />}
+    </button>
+  );
+
   // Ghost output pane shown before transcription exists
   const ghostOut = (
-    <div style={{ ...card({ padding: '16px 16px 20px' }) }}>
-      <p style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' as const, margin: '0 0 12px' }}>Transcription output</p>
-      <div style={{ background: TAB_BG, padding: '20px 16px', opacity: 0.35, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {[90, 70, 85, 60].map((w, i) => (
-          <div key={i} style={{ height: 12, background: TAB_LINE, width: `${w}%` }} />
-        ))}
+    <Rule label="Transcription output">
+      <div aria-hidden style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '12px 0', opacity: 0.35 }}>
+        {[0, 1, 2, 3, 4, 5].map(i => <div key={i} style={{ height: 1, background: T.text }} />)}
       </div>
-      <p style={{ margin: '12px 0 0', fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.02em' }}>
-        ← Record or upload audio to transcribe
-      </p>
-    </div>
+      <p className="su-label" style={{ margin: '10px 0 0' }}>{desktop ? '← ' : ''}Record or upload audio to transcribe</p>
+    </Rule>
   );
 
   if (stage === 'idle') return dt(
-    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <style>{RESPONSIVE_CSS}</style>
 
-      {/* Primary: large centered record button */}
-      <div style={{ ...card({ padding: '36px 20px' }), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
-        <button
-          onClick={startRecording}
-          style={{
-            width: 88, height: 88, borderRadius: '50%',
-            background: T.primary, border: '4px solid var(--gc-success-soft)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, outline: 'none',
-          }}
-        >
-          <svg viewBox="0 0 24 24" width={32} height={32} fill="none" stroke="#fff" strokeWidth={2}>
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M5 11c0 3.9 3.1 7 7 7s7-3.1 7-7" strokeLinecap="round" />
-            <line x1="12" y1="18" x2="12" y2="22" />
-            <line x1="9" y1="22" x2="15" y2="22" />
-          </svg>
-        </button>
-        <div>
-          <p style={{ margin: 0, fontSize: 15, fontWeight: 400, color: T.text }}>Tap to Record</p>
-          <p style={{ margin: 0, fontSize: 12, color: T.textMuted, marginTop: 4 }}>Play a single line into the microphone</p>
+      {/* Capture */}
+      <Rule label="Capture">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '10px 0 4px' }}>
+          {captureBtn(false)}
+          <div style={{ minWidth: 0 }}>
+            <p className="su-poster" style={{ margin: 0, fontSize: 44 }}>Record</p>
+            <p style={{ margin: '10px 0 0', fontSize: 12.5, color: T.textMuted, lineHeight: 1.5 }}>Play a single line into the microphone</p>
+          </div>
         </div>
-      </div>
+      </Rule>
 
-      {/* Secondary: drag / upload */}
+      {/* Drop zone */}
       <div
+        role="button" tabIndex={0}
+        aria-label="Upload an audio file"
         onDragOver={e => e.preventDefault()}
         onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
         style={{
-          ...card({ padding: '16px 20px' }),
-          display: 'flex', alignItems: 'center', gap: 12,
-          cursor: 'pointer', borderStyle: 'dashed', borderColor: T.border,
+          border: `var(--su-rule) dashed ${T.text}`, padding: '22px 18px', cursor: 'pointer',
+          display: 'flex', flexDirection: 'column', gap: 8, minHeight: 44,
         }}
       >
-        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke={T.textMuted} strokeWidth={2}>
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
-        <div>
-          <p style={{ margin: 0, fontSize: 13, color: T.text }}>Upload audio file</p>
-          <p style={{ margin: 0, fontSize: 11, color: T.textMuted, marginTop: 2 }}>MP3 · WAV · OGG · M4A · up to 5 min</p>
-        </div>
+        <span className="su-semi" style={{ fontSize: 22, textTransform: 'uppercase' }}>Drop an audio file — or tap to choose</span>
+        <span className="su-label">MP3 · WAV · OGG · M4A · up to 5 min</span>
         <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
       </div>
@@ -663,66 +661,47 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   if (stage === 'recording') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ ...card({ padding: '36px 20px' }), textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        <RecordingBars />
-        <p style={{ margin: 0, fontSize: 34, fontWeight: 700, color: T.primary, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-          {String(Math.floor(recSecs / 60)).padStart(1, '0')}:{String(recSecs % 60).padStart(2, '0')}
-        </p>
-        <p style={{ margin: 0, fontSize: 11, color: T.textMuted, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Recording</p>
-        <button onClick={stopRecording} style={{
-          width: 88, height: 88, borderRadius: '50%',
-          background: T.primary, border: '4px solid var(--gc-success-soft)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, outline: 'none',
-        }}>
-          <div style={{ width: 28, height: 28, background: '#fff', borderRadius: 2 }} />
-        </button>
-        <p style={{ margin: 0, fontSize: 11, color: T.textDim }}>Tap to stop</p>
-      </div>
+      <Rule label="Recording">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '8px 0 4px' }}>
+          <p className="su-poster" aria-live="polite" style={{ margin: 0, fontSize: 96, fontVariantNumeric: 'tabular-nums' }}>
+            {String(Math.floor(recSecs / 60))}:{String(recSecs % 60).padStart(2, '0')}
+          </p>
+          <RecordingBars />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {captureBtn(true)}
+            <span className="su-label">Tap to stop</span>
+          </div>
+        </div>
+      </Rule>
     </div>
   );
 
   if (stage === 'processing') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={card({ padding: '22px 18px' })}>
+      <Rule label="Transcribing" right={<ClearBtn onClear={reset} />}>
         {waveform && waveform.length > 0 && (
-          <div style={{ marginBottom: 16, borderRadius: 0, overflow: 'hidden', padding: '4px 0' }}>
+          <div style={{ margin: '6px 0 16px' }}>
             <ProcessingScan data={waveform} progress={progress} />
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: T.text }}>
-            {phaseLabel || 'Processing…'}
-          </p>
-          <span style={{ fontSize: 12, color: T.textMuted, fontVariantNumeric: 'tabular-nums' }}>{progress}%</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.text }}>{phaseLabel || 'Processing…'}</p>
+          <span className="su-poster" style={{ fontSize: 34, fontVariantNumeric: 'tabular-nums' }}>{progress}%</span>
         </div>
-        <div style={{ background: T.bgInput, borderRadius: 0, height: 8, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', borderRadius: 0, background: T.primary,
-            width: `${progress}%`, transition: 'width 0.3s',
-          }} />
+        <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} style={{ background: T.hairline, height: 6 }}>
+          <div style={{ height: '100%', background: T.text, width: `${progress}%`, transition: 'width 0.3s' }} />
         </div>
-        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
-          <ClearBtn onClear={reset} />
-        </div>
-      </div>
+      </Rule>
     </div>
   , ghostOut);
 
   if (stage === 'error') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ ...card({ padding: '18px 16px' }), borderLeft: `3px solid ${T.coral}` }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={{ fontSize: 18, lineHeight: 1.4 }}>⚠️</span>
-          <p style={{ margin: 0, fontSize: 13, color: T.text, direction: 'rtl', textAlign: 'right', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{error}</p>
-        </div>
-      </div>
-      <button onClick={reset} style={{
-        padding: '12px 0', borderRadius: 0, cursor: 'pointer',
-        background: T.primary, color: '#fff', fontWeight: 400, fontSize: 14,
-        }}>
-        Try Again
-      </button>
+      <Rule label="Error">
+        <p className="su-poster" style={{ margin: '4px 0 12px', fontSize: 40 }}>Couldn’t transcribe</p>
+        <p dir="auto" style={{ margin: 0, fontSize: 13, color: T.text, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{error}</p>
+      </Rule>
+      <Cta onClick={reset} style={{ alignSelf: 'flex-start' }}>Try again</Cta>
     </div>
   , ghostOut);
 
@@ -733,15 +712,25 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const resultLeft = (
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <style>{RESPONSIVE_CSS}</style>
+      <StopActions>
+        <SaveToLibraryButton
+          size="sm" label="Save"
+          getPayload={() => !tabData ? null : ({
+            kind: 'audio',
+            name: (fileName.replace(/\.[^.]+$/, '') || tabData.title || 'Transcription'),
+            tab_content: tabDataToAscii(tabData),
+            audioBlob: lastBlobRef.current,
+            audioExt: (lastBlobRef.current as File | null)?.name?.split('.').pop() || 'webm',
+            duration_seconds: tabData.duration,
+          })}
+        />
+      </StopActions>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 400, color: T.text,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
-            {fileName}
-          </p>
-          <p style={{ margin: 0, fontSize: 11, color: T.textMuted }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <PosterTitle head={fileName.replace(/\.[^.]+$/, '') || 'Transcription'} max={desktop ? 72 : 56} min={28} />
+          <p className="su-label" style={{ margin: '10px 0 0' }}>
             {notes.length} notes detected · {tabData.duration.toFixed(1)}s
           </p>
         </div>
@@ -750,7 +739,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
       {/* Waveform */}
       {waveform && waveform.length > 0 && (
-        <div style={{ borderRadius: 0, overflow: 'hidden', padding: '4px 0' }}>
+        <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, padding: '12px 0 0' }}>
           <Waveform data={waveform} height={72} />
         </div>
       )}
@@ -759,93 +748,42 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   const resultRight = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Export buttons */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button
-          onClick={() => exportTabToPDF(tabData)}
-          style={{
-            flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.secondary, color: '#fff', fontWeight: 400, fontSize: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-        >
-          <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          Export to PDF
-        </button>
-        <button
-          onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}
-          style={{
-            flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.primary, color: '#fff', fontWeight: 400, fontSize: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-        >
-          <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
-            <path d="M9 18V5l12-2v13" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="6" cy="18" r="3" />
-            <circle cx="18" cy="16" r="3" />
-          </svg>
-          Export to MIDI
-        </button>
+      {/* Export and hand-off */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <Pill onClick={() => exportTabToPDF(tabData)}>Export PDF</Pill>
+        <Pill onClick={() => exportNotesMidi(notes, `${fileName.replace(/\.[^.]+$/, '') || 'transcription'}.mid`)}>Export MIDI</Pill>
+        {/* Into the song, as its melody — Tab Writer and Harmonize pick it up. */}
+        {song && tabData && (
+          <Pill onClick={() => {
+            const cols = Math.max(1, tabData.totalColumns);
+            const grid = Array.from({ length: 6 }, () => Array.from({ length: cols }, () => ({ fret: '' })));
+            tabData.events.forEach(ev => { const row = 5 - ev.string; if (grid[row]?.[ev.column]) grid[row][ev.column] = { fret: String(ev.fret) }; });
+            song.update({ melody: { title: tabData.title || 'Transcription', subtitle: '', grid, bars: [] }, melodyFrom: 'audiotab' });
+            flashSent();
+          }}>
+            <RollLabel>{sent ? '✓ The song’s melody now' : 'Use as the song’s melody'}</RollLabel>
+          </Pill>
+        )}
       </div>
-
-      {/* Into the song, as its melody — Tab Builder and Harmonize pick it up. */}
-      {song && tabData && (
-        <button onClick={() => {
-          const cols = Math.max(1, tabData.totalColumns);
-          const grid = Array.from({ length: 6 }, () => Array.from({ length: cols }, () => ({ fret: '' })));
-          tabData.events.forEach(ev => { const row = 5 - ev.string; if (grid[row]?.[ev.column]) grid[row][ev.column] = { fret: String(ev.fret) }; });
-          song.update({ melody: { title: tabData.title || 'Transcription', subtitle: '', grid, bars: [] }, melodyFrom: 'audiotab' });
-          flashSent();
-        }} style={{
-          width: '100%', padding: '13px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14,
-          background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, }}>
-          <RollLabel>{sent ? '✓ The song’s melody now' : 'Use as the song’s melody'}</RollLabel>
-        </button>
-      )}
-
-      {/* Save to personal library */}
-      <SaveToLibraryButton
-        style={{ width: '100%', justifyContent: 'center', padding: '13px 0', fontSize: 14 }}
-        getPayload={() => !tabData ? null : ({
-          kind: 'audio',
-          name: (fileName.replace(/\.[^.]+$/, '') || tabData.title || 'Transcription'),
-          tab_content: tabDataToAscii(tabData),
-          audioBlob: lastBlobRef.current,
-          audioExt: (lastBlobRef.current as File | null)?.name?.split('.').pop() || 'webm',
-          duration_seconds: tabData.duration,
-        })}
-      />
 
       {/* Tab — click a note to select, then type to edit */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2 }}>
-          <p style={{ ...LABEL, margin: 0 }}>Tab</p>
-          {!selNote && (
-            <span style={{ fontSize: 11, color: T.textMuted }}>Tap a note to edit</span>
-          )}
-        </div>
+      <Rule label="Tab" right={!selNote ? <span className="su-label">Tap a note to edit</span> : undefined}>
         <TabDisplay tabData={tabData} onSelectNote={handleNoteSelect} clearToken={editClearToken} />
-      </div>
+      </Rule>
 
       {/* Keyboard edit hint — shown when a note is selected */}
       {selNote && (
-        <div style={{
+        <div aria-live="polite" style={{
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-          padding: '9px 13px', background: T.bgInput, borderRadius: 0,
-          borderLeft: `3px solid ${T.primary}`,
+          padding: '10px 0', borderTop: `1px solid ${T.hairline}`,
         }}>
-          <span style={{ fontSize: 13, fontWeight: 400, color: T.text }}>
-            ✎ String {strName(selNote.string)}{' '}
-            <span style={{ color: T.primary, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'var(--gc-mono)' }}>
+            String {strName(selNote.string)}{' '}
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
               {fretInput ? `→ ${fretInput}` : `· Fret ${selNote.fret}`}
             </span>
           </span>
-          <span style={{ fontSize: 11, color: T.textMuted, marginLeft: 'auto' }}>
+          <span className="su-label" style={{ marginInlineStart: 'auto' }}>
             Type new fret · ⌫ Delete · Esc Cancel
           </span>
         </div>
