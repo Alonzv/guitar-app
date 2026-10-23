@@ -25,7 +25,7 @@ export function HelpButton({ topic }: { topic: string }) {
         aria-label={lang === 'he' ? 'מה זה?' : 'What is this?'}
         className="gc-no-bar"
         style={{
-          width: 40, height: 40, flexShrink: 0, borderRadius: '50%',
+          width: 44, height: 44, flexShrink: 0, borderRadius: '50%',
           border: `1.5px solid ${T.text}`, background: 'transparent',
           color: T.text, fontSize: 15, fontWeight: 700, lineHeight: 1,
           cursor: 'pointer', fontFamily: 'var(--gc-font)',
