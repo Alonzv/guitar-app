@@ -6,6 +6,7 @@ import { NetworkMap } from './NetworkMap';
 import { StopSearch } from './StopSearch';
 import { setActionsSlot } from './actionsSlot';
 import { Wordmark } from '../Wordmark';
+import { slideIn } from '../../utils/motion';
 import { HelpButton } from '../HelpButton';
 import { SoundToggle } from '../SoundToggle';
 import { LangToggle } from '../LangToggle';
@@ -135,7 +136,17 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
   const stop = stopById(stopId);
   const last = stopById(lastStop);
 
-  if (stopId === 'home' || !stop) {
+  // Coming back to the map with a different last stop: its name slides in.
+  const nextRef = useRef<HTMLSpanElement>(null);
+  const shownNext = useRef(lastStop);
+  const home = stopId === 'home' || !stop;
+  useEffect(() => {
+    if (!home || shownNext.current === lastStop) return;
+    shownNext.current = lastStop;
+    slideIn(nextRef.current);
+  }, [home, lastStop]);
+
+  if (home) {
     return (
       <div dir={rtl ? 'rtl' : 'ltr'} style={{ minHeight: '100dvh', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)' }}>
         {sharedBanner}
@@ -162,7 +173,7 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
             <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--gc-primary)', flex: 'none' }} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontSize: 9, letterSpacing: '0.16em', opacity: 0.7 }}>{he ? 'התחנה הבאה' : 'NEXT STOP'}</span>
-              <span style={{ fontFamily: 'var(--su-display)', fontStretch: '75%', fontWeight: 700, fontSize: 18, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span ref={nextRef} style={{ fontFamily: 'var(--su-display)', fontStretch: '75%', fontWeight: 700, fontSize: 18, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {last.name[lang]}
               </span>
             </div>

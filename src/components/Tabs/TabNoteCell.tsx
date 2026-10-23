@@ -33,16 +33,19 @@ interface Props {
   fretColor?: string;
   /** Render the harmonizer's › anchor marker at the cell's top-left. */
   anchorMark?: boolean;
+  /** "string-col" — lets the Tab Writer find the cell to animate. */
+  cellId?: string;
 }
 
 export function TabNoteCell({
   cell, cw, ch, fs, circleD,
   isSel = false, isHov = false, editable = false,
   onClick, onMouseEnter,
-  emphasized = false, markColor, fretColor, anchorMark = false,
+  emphasized = false, markColor, fretColor, anchorMark = false, cellId,
 }: Props) {
   return (
     <div
+      data-tabcell={cellId}
       // onClick isn't gated on `editable` — result views pass a click handler
       // for revoicable columns while staying non-editable.
       onClick={onClick}
@@ -71,7 +74,7 @@ export function TabNoteCell({
 
       {/* The cursor — the one cobalt cell */}
       {isSel && (
-        <div style={{
+        <div className="su-tab-cursor" style={{
           position: 'absolute', width: circleD, height: circleD,
           background: T.primary,
           top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -96,7 +99,7 @@ export function TabNoteCell({
 
       {/* Fret number */}
       {cell.fret !== '' && (
-        <span style={{
+        <span className="su-tab-fret" style={{
           position: 'absolute', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
           fontSize: fs, fontFamily: 'var(--gc-mono)',

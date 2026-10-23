@@ -1,0 +1,27 @@
+/* ScaleUp motion tokens + global press feedback. Import once, after tokens.css. */
+:root {
+  /* iOS-style easing: fast out, long settle */
+  --ease: cubic-bezier(.32, .72, 0, 1);
+  /* Spring with ~2.5% overshoot (requires CSS linear(); Chrome 113+, Safari 17.2+, Firefox 112+) */
+  --spring: linear(0, 0.06 2%, 0.23 5%, 0.5 10%, 0.74 16%, 0.9 23%, 0.99 31%, 1.02 38%, 1.025 45%, 1.012 58%, 1.002 75%, 1);
+  --dur-press: .1s;   /* press-down */
+  --dur-release: .55s;/* spring back */
+  --dur-color: .35s;  /* bg / fg / border */
+}
+
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    scale var(--dur-release) var(--spring),
+    background-color var(--dur-color) var(--ease),
+    color var(--dur-color) var(--ease),
+    border-color var(--dur-color) var(--ease),
+    opacity var(--dur-color) var(--ease);
+}
+button:active, a:active, [role="button"]:active { scale: .94; transition-duration: var(--dur-press); }
+/* Full-width rows and large surfaces: barely move */
+[data-press="soft"]:active { scale: .985; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
+}

@@ -135,12 +135,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .gc-notation, button.gc-notation { text-transform: none; }
 
 /* ─────────────────────────────────────────────────────────────
-   Motion — one timing scale for the whole app (200–400ms).
-   The black left bar is the thing that moves: it thickens on
-   hover, swells on press, and selection pours out of it.
-   Press/selection state is driven by src/motion (classes
-   gc-pressed / gc-fill-in / gc-fill-out), not by :active, so a
-   quick tap still shows the full press.
+   Motion — the Transit motion pass (motion.css holds the easing
+   tokens and the press). The --gc-* durations below remain for
+   the existing one-shot effects (fly to dock, sounding glow…).
 ───────────────────────────────────────────────────────────── */
 :root {
   --gc-dur-fast: 200ms;
@@ -149,80 +146,34 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   --gc-ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1);
   --gc-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --gc-ease-snap:   cubic-bezier(0.3, 1.25, 0.5, 1);
-  /* Press: the button sinks 6px and its 3px bar swells to 12px — the bar
-     grows in proportion to the depth (+1.5px of bar per 1px of sink). */
-  --gc-press-depth: 6px;
-  --gc-press-bar:   9px;   /* added on top of the 3px border bar */
-  --gc-hover-bar:   3px;
 }
 
-/* Every pressable surface shares one transition. !important because many
-   components still carry an inline `transition` that would otherwise
-   silently cancel the press. */
-:is(button, [role="button"], .gc-pressable) {
+/* Press and colour transitions live in motion.css (the Transit motion pass):
+   scale to 94% instantly on press, spring back on release. The old 6px sink,
+   swelling bar and selection wipe are retired. !important here only because
+   many components carry an inline `transition` that would otherwise cancel
+   the press feedback. */
+:is(button, a, [role="button"]) {
   transition:
-    transform        var(--gc-dur-base) var(--gc-ease-spring),
-    box-shadow       var(--gc-dur-base) var(--gc-ease-out),
-    background-color var(--gc-dur-base) var(--gc-ease-out),
-    color            var(--gc-dur-base) var(--gc-ease-out),
-    border-color     var(--gc-dur-base) var(--gc-ease-out),
-    filter           var(--gc-dur-fast) var(--gc-ease-out),
-    opacity          var(--gc-dur-base) var(--gc-ease-out) !important;
+    scale var(--dur-release) var(--spring),
+    background-color var(--dur-color) var(--ease),
+    color var(--dur-color) var(--ease),
+    border-color var(--dur-color) var(--ease),
+    opacity var(--dur-color) var(--ease) !important;
 }
-
-/* Press — sink and swell the bar. Going down is quick and settles;
-   coming back up (the base transition above) springs. */
-:is(button, [role="button"], .gc-pressable).gc-pressed {
-  transform: translateY(var(--gc-press-depth)) !important;
-  box-shadow: inset var(--gc-press-bar) 0 0 0 var(--gc-bar-color) !important;
-  filter: brightness(0.93);
-  transition:
-    transform        var(--gc-dur-fast) var(--gc-ease-out),
-    box-shadow       var(--gc-dur-fast) var(--gc-ease-out),
-    background-color var(--gc-dur-base) var(--gc-ease-out),
-    color            var(--gc-dur-base) var(--gc-ease-out),
-    filter           var(--gc-dur-fast) var(--gc-ease-out) !important;
+:is(button, a, [role="button"]):active { transition-duration: var(--dur-press) !important; }
+/* SVG buttons (neck dots, wheel slices, chart dots) scale around themselves. */
+svg [role="button"] { transform-box: fill-box; transform-origin: center; }
+/* Isolating a degree: other dots dim and shrink, and come back on the spring. */
+.su-neck-dot { transition: opacity .4s var(--ease), scale .55s var(--spring) !important; }
+/* Reduce motion wins over the two !important rules above. */
+@media (prefers-reduced-motion: reduce) {
+  :is(button, a, [role="button"]), .su-neck-dot { transition-duration: 0s !important; }
 }
-
-/* Bare text buttons (the desktop nav) have no bar to swell — they only sink. */
-:is(button, [role="button"], .gc-pressable).gc-no-bar.gc-pressed { box-shadow: none !important; }
-
-/* Hover — mouse only, so a touch never leaves a button stuck "hovered". */
-@media (hover: hover) and (pointer: fine) {
-  :is(button, [role="button"], .gc-pressable):not(:disabled):not(.gc-pressed):not(.gc-no-bar):hover {
-    box-shadow: inset var(--gc-hover-bar) 0 0 0 var(--gc-bar-color);
-  }
-}
-
-/* Selection — the new state pours out of the left bar. A button that opts in
-   with data-active gets an overlay in its previous colour that withdraws:
-   toward the right when it turns on (fill sweeps out of the bar), toward the
-   left when it turns off (fill retreats into the bar). */
-:is(button, [role="button"], .gc-pressable)[data-active] { position: relative; }
-/* Pills and round buttons clip the selection fill to their shape. */
-:is(button, [role="button"])[style*="--su-pill"], :is(button, [role="button"])[style*="border-radius: 50%"], .su-pill { overflow: hidden; }
-:is(button, [role="button"], .gc-pressable):is(.gc-fill-in, .gc-fill-out) {
-  transition:
-    transform  var(--gc-dur-base) var(--gc-ease-spring),
-    box-shadow var(--gc-dur-base) var(--gc-ease-out),
-    filter     var(--gc-dur-fast) var(--gc-ease-out) !important;
-}
-.gc-fill-in::after, .gc-fill-out::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: var(--gc-fill-from);
-  animation: gc-fill-withdraw var(--gc-dur-base) var(--gc-ease-out) forwards;
-}
-.gc-fill-in::after  { transform-origin: right center; }
-.gc-fill-out::after { transform-origin: left center; }
-@keyframes gc-fill-withdraw { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* A button that just became usable pulses its bar once to draw the eye. */
-.gc-enable-pulse { animation: gc-bar-pulse var(--gc-dur-slow) var(--gc-ease-out); }
-@keyframes gc-bar-pulse {
-  0%   { box-shadow: inset 0 0 0 0 var(--gc-bar-color); }
-  45%  { box-shadow: inset var(--gc-press-bar) 0 0 0 var(--gc-bar-color); }
-  100% { box-shadow: inset 0 0 0 0 var(--gc-bar-color); }
-}
+.gc-enable-pulse { animation: gc-enable-pulse var(--dur-release) var(--spring); }
+@keyframes gc-enable-pulse { 0% { scale: 0.94; } 100% { scale: 1; } }
 
 /* Wrong input — two short steps sideways. */
 .gc-shake { animation: gc-shake var(--gc-dur-fast) var(--gc-ease-out); }
@@ -297,8 +248,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 @keyframes gc-die-roll { from { transform: rotate(-180deg) scale(0.6); } to { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(button, [role="button"], .gc-pressable).gc-pressed { transform: none !important; }
-  .gc-fill-in::after, .gc-fill-out::after { display: none; }
+  
   .gc-enable-pulse, .gc-shake, .gc-roll-in, .gc-roll-out, .gc-land, .gc-die,
   .gc-fade-in, .gc-drop-in, .gc-list-in, .gc-tile-now, .gc-stamp, .gc-record, .gc-pop, .gc-fall { animation: none !important; }
   .gc-slide, .gc-dot-pos { transition: none !important; }

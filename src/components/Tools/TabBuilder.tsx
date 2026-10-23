@@ -13,6 +13,7 @@ import { subscribeHandoff, consumePendingTab } from '../../services/handoff';
 import type { TabContent } from '../../services/types';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { TabNoteCell } from '../Tabs/TabNoteCell';
+import { appear, land, useOnChange } from '../../utils/motion';
 import {
   useTabEditing, emptyGrid as baseEmptyGrid, nextFret, circleDiameter,
   STR_ROWS, BASE_CW, BASE_CH, BASE_FS,
@@ -277,6 +278,14 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     });
   }, [withHistory]);
 
+  // The cursor appears in its new cell; a typed fret lands in the cell that
+  // received it (next frame, once React has drawn the number).
+  useOnChange(sel ? `${sel[0]}-${sel[1]}` : '', (_, key) => {
+    if (key) appear(document.querySelector(`[data-tabcell="${key}"] .su-tab-cursor`));
+  });
+  const landAt = (s: number, c: number) =>
+    requestAnimationFrame(() => land(document.querySelector(`[data-tabcell="${s}-${c}"] .su-tab-fret`)));
+
   // Hidden numeric input — focused on cell tap so the soft keyboard opens on mobile
   const fretInputRef = useRef<HTMLInputElement>(null);
 
@@ -285,6 +294,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     const [s, c] = sel;
     const cur = grid[s][c].fret;
     setCell(s, c, { fret: nextFret(cur, d) });
+    landAt(s, c);
   }, [sel, grid, setCell]);
 
   const clearCell = useCallback((s: number, c: number) => {
@@ -468,6 +478,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     const fret = two && parseInt(two, 10) <= 24 ? two : d;
     setPrefix(null);
     setCell(s, c, { fret });
+    landAt(s, c);
     advance(s, c);
   };
   // A technique belongs to the note it leaves from: after a fret is entered
@@ -621,6 +632,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                         cw={cw} ch={ch} fs={fs} circleD={circleD}
                         isSel={isSel} isHov={isHov || c === playCol} editable
                         markColor={c === playCol ? T.hairline : undefined}
+                        cellId={`${si}-${c}`}
                         onClick={() => selectCell(si, c)}
                         onMouseEnter={() => setHov([si, c])}
                       />
