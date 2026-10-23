@@ -22,7 +22,7 @@ export function DiceButton({ onRoll, style }: { onRoll: () => void; style?: Reac
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 12px', borderRadius: 0,
         cursor: 'pointer', fontSize: 11, background: T.bgInput, color: T.text,
-        border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)', ...style,
+        border: `1px solid ${T.border}`, ...style,
       }}
     >
       <svg key={face} width="14" height="14" viewBox="0 0 16 16" aria-hidden className="gc-die">

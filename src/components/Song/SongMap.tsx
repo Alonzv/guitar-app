@@ -98,7 +98,7 @@ export function SongMap({ open, onClose, desktop, userId, sync }: Props) {
   const goTo = (stop: string) => { close(); requestNavigate({ stop }); };
   const btn: React.CSSProperties = {
     padding: '7px 12px', fontSize: 11, cursor: 'pointer', background: T.bgInput, color: T.text,
-    border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)', borderRadius: 0,
+    border: `1px solid ${T.border}`, borderRadius: 0,
   };
   const lbl: React.CSSProperties = { margin: 0, fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' };
 

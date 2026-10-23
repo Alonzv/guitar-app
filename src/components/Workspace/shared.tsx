@@ -35,8 +35,7 @@ export const SignInPrompt: React.FC<{ onSignIn: () => void }> = ({ onSignIn }) =
       background: T.primary, color: T.white, border: 'none',
       fontSize: 13, fontFamily: 'inherit', fontWeight: 400,
       textTransform: 'uppercase', letterSpacing: '-0.02em',
-      borderLeft: '4px solid var(--gc-bar-color)',
-    }}>Sign In</button>
+      }}>Sign In</button>
   </div>
 );
 
@@ -54,8 +53,7 @@ export const RenameDialog: React.FC<{
     }}>
       <div onClick={e => e.stopPropagation()} style={{
         width: '100%', maxWidth: 340, background: T.bgCard,
-        border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
-        padding: 20, boxSizing: 'border-box',
+        border: `1px solid ${T.border}`, padding: 20, boxSizing: 'border-box',
       }}>
         <p style={SECTION_LABEL}>Rename</p>
         <input
@@ -65,16 +63,14 @@ export const RenameDialog: React.FC<{
             width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 0,
             border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
             fontSize: 14, fontFamily: 'inherit', outline: 'none', marginBottom: 14,
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}
+            }}
         />
         <div style={{ display: 'flex', gap: 8 }}>
           <button disabled={!value.trim()} onClick={() => onSave(value.trim())} style={{
             flex: 1, padding: '10px 0', borderRadius: 0, cursor: value.trim() ? 'pointer' : 'not-allowed',
             background: value.trim() ? T.primary : T.border, color: T.white, border: 'none',
             fontSize: 12.5, fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '-0.02em',
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}>Save</button>
+            }}>Save</button>
           <button onClick={onCancel} style={{
             flex: 1, padding: '10px 0', borderRadius: 0, cursor: 'pointer',
             background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}`,

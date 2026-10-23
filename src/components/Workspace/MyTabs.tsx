@@ -92,8 +92,7 @@ export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
             background: T.primary, color: T.white, border: 'none',
             fontSize: 11.5, fontFamily: 'inherit', fontWeight: 400,
             textTransform: 'uppercase', letterSpacing: '-0.02em',
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}>Open in Builder</button>
+            }}>Open in Builder</button>
         </div>
       ))}
 

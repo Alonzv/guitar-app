@@ -104,7 +104,6 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
         textTransform: 'uppercase', letterSpacing: '-0.02em',
         background: saved ? T.secondaryBg : T.primary,
         color: saved ? T.secondary : T.white,
-        borderLeft: '3px solid var(--gc-bar-color)',
         display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
         ...style,
       }}>

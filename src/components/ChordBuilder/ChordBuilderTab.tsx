@@ -54,8 +54,7 @@ const SELECT_STYLE: React.CSSProperties = {
   padding: '5px 26px 5px 10px',
   cursor: 'pointer',
   outline: 'none',
-  borderLeft: '3px solid var(--gc-bar-color)',
-};
+  };
 
 export function ChordBuilderTab({
   progression, onAddToProgression, onRemoveFromProgression, onClearProgression,
@@ -153,8 +152,7 @@ export function ChordBuilderTab({
                 cursor: 'pointer', fontSize: 12, fontWeight: 500,
                 background: showVariations ? T.primaryBg : T.bgInput,
                 color: showVariations ? T.primary : T.textMuted,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}
+                }}
             >
               {showVariations ? 'Hide variations' : 'Show more variations'}
             </button>

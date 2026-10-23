@@ -85,7 +85,7 @@ function readLS(key: string, fallback: string): string {
   try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
 }
 function writeLS(key: string, val: string) {
-  try { localStorage.setItem(key, val); } catch {}
+  try { localStorage.setItem(key, val); } catch { /* storage unavailable */ }
 }
 
 const LAST_STOP_KEY = 'scaleup_last_stop';
@@ -165,7 +165,7 @@ export default function App() {
     writeLS(LAST_STOP_KEY, id);
     if (!isDesktop && history.state?.suStop == null) history.pushState({ suStop: id }, '');
     window.scrollTo(0, 0);
-  }, [isDesktop]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isDesktop]);
   const goHome = () => {
     if (history.state?.suStop != null) history.back();
     else setStop('home');
@@ -238,7 +238,7 @@ export default function App() {
       </span>
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={handleLoadShared} className="gc-no-bar" style={{ ...btn.cta(false), minHeight: 36 }}>{he ? 'טעינה' : 'Load'}</button>
-        <button onClick={dismissShared} className="gc-no-bar" style={{ ...btn.secondary, minHeight: 36 }}>{he ? 'סגירה' : 'Dismiss'}</button>
+        <button onClick={dismissShared} className="gc-no-bar" style={{ ...btn.secondary(), minHeight: 36 }}>{he ? 'סגירה' : 'Dismiss'}</button>
       </div>
     </div>
   ) : null;

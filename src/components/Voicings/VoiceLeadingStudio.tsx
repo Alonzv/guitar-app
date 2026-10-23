@@ -192,7 +192,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', alignItems: 'center', paddingBottom: 4, flex: 1 }}>
             {chords.map((c, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: T.bgInput, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)', padding: '8px 6px 8px 12px', flexShrink: 0 }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: T.bgInput, border: `1px solid ${T.border}`, padding: '8px 6px 8px 12px', flexShrink: 0 }}>
                 <span dir="ltr" style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{toDisplayChord(c)}</span>
                 <button onClick={() => removeChord(i)} style={{ border: 'none', background: 'transparent', color: T.textDim, cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '0 2px' }}>×</button>
               </div>
@@ -200,7 +200,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
             <button onClick={() => setPickOpen(o => !o)} style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 0, cursor: 'pointer', fontSize: 20, fontWeight: 500, border: `1px dashed ${T.border}`, background: 'transparent', color: T.textMuted }}>+</button>
           </div>
           {chords.length > 0 && (
-            <button onClick={clearChords} style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.clear}</button>
+            <button onClick={clearChords} style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}` }}>{t.clear}</button>
           )}
         </div>
         {pickOpen && (
@@ -208,15 +208,15 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
             <select value={pRoot} onChange={e => setPRoot(e.target.value)} style={sel_}>{ROOTS.map(r => <option key={r} value={r}>{r}</option>)}</select>
             <select value={pTri} onChange={e => { setPTri(e.target.value); setPExt(''); }} style={sel_}>{TRIADS.map(q => <option key={q.k} value={q.k}>{q.l}</option>)}</select>
             <select value={pExt} onChange={e => setPExt(e.target.value)} style={sel_}>{validExts(pTri).map(e => <option key={e.k} value={e.k}>{e.l}</option>)}</select>
-            <button onClick={addChord} style={{ padding: '8px 18px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 600, background: T.primary, color: T.white, border: 'none', borderLeft: '3px solid var(--gc-bar-color)' }}>{t.addChord}</button>
+            <button onClick={addChord} style={{ padding: '8px 18px', borderRadius: 0, cursor: 'pointer', fontSize: 13, fontWeight: 600, background: T.primary, color: T.white, border: 'none' }}>{t.addChord}</button>
           </div>
         )}
       </div>
 
       {/* Controls */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' }}>
-        <button onClick={calc} style={{ padding: '9px 26px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 700, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.calc}</button>
-        {result && <button onClick={play} style={{ padding: '9px 20px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.play}</button>}
+        <button onClick={calc} style={{ padding: '9px 26px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 700, background: T.primary, color: T.white, border: 'none' }}>{t.calc}</button>
+        {result && <button onClick={play} style={{ padding: '9px 20px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none' }}>{t.play}</button>}
         {analysis && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginInlineStart: 'auto' }}>
             <span style={{ ...LBL, margin: 0 }}>{t.key}</span>
@@ -257,7 +257,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
         </div>
       ) : (
         <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
-          <div dir="ltr" style={{ display: 'inline-flex', flexDirection: 'column', border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)' }}>
+          <div dir="ltr" style={{ display: 'inline-flex', flexDirection: 'column', border: `1px solid ${T.border}` }}>
             {/* Header: chord name + Roman numeral */}
             <div style={{ display: 'flex', borderBottom: `2px solid ${T.border}` }}>
               <div style={{ width: LW, flexShrink: 0, background: T.bgCard }} />

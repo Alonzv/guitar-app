@@ -19,7 +19,7 @@ export function ExampleChips({ onPick, title }: { onPick: (chords: string[]) => 
           <button key={ex.label} onClick={() => onPick(ex.chords)} className="gc-notation" style={{
             padding: '7px 12px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
             background: T.bgInput, color: T.text, border: `1px solid ${T.border}`,
-            borderLeft: '3px solid var(--gc-bar-color)', display: 'flex', gap: 8, alignItems: 'baseline',
+            display: 'flex', gap: 8, alignItems: 'baseline',
           }}>
             <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 9, color: T.textDim, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{ex.label}</span>
             <span style={{ fontWeight: 600 }}>{ex.chords.map(formatChordName).join(' – ')}</span>

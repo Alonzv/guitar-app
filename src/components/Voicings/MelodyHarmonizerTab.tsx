@@ -889,7 +889,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           cursor: canHarmonize ? 'pointer' : 'not-allowed',
           background: canHarmonize ? T.primary : T.border,
           color: canHarmonize ? '#fff' : T.textDim, fontSize: 15, fontWeight: 400,
-          borderLeft: '4px solid var(--gc-bar-color)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
           {loadingKind === 'harmonize' ? (<><span style={spinnerStyle('#fff')} /> Harmonizing…</>) : 'Harmonize'}
@@ -903,7 +902,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
           cursor: (!result || !!loadingKind) ? 'not-allowed' : 'pointer',
           background: 'transparent', color: (!result || !!loadingKind) ? T.textDim : T.secondary,
           fontSize: 14, opacity: (!result || !!loadingKind) ? 0.5 : 1,
-          borderLeft: '4px solid var(--gc-bar-color)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
           {loadingKind === 'regenerate' ? (<><span style={spinnerStyle(T.secondary)} /> Regenerating…</>) : 'Regenerate'}
@@ -950,15 +948,13 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                   style={{
                     padding: '6px 12px', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
                     background: muteHarmony ? T.bgInput : T.secondary, color: muteHarmony ? T.textMuted : '#fff',
-                    borderLeft: '3px solid var(--gc-bar-color)',
-                  }}
+                    }}
                 >
                   {muteHarmony ? 'Harmony muted' : 'Harmony on'}
                 </button>
                 <button data-active={!!playing} onClick={handlePlay} className="gc-btn-heavy" style={{
                   padding: '7px 18px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em',
-                  background: playing ? T.coral : T.primary, color: '#fff', borderLeft: '3px solid var(--gc-bar-color)',
-                }}>
+                  background: playing ? T.coral : T.primary, color: '#fff', }}>
                   {playing ? 'STOP' : 'PLAY'}
                 </button>
               </div>
@@ -1015,7 +1011,6 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
                     flex: 1, padding: '9px 0', border: 'none',
                     background: revoiceBusy ? T.border : T.secondary, color: '#fff',
                     fontSize: 12, fontWeight: 600, cursor: revoiceBusy ? 'wait' : 'pointer',
-                    borderLeft: '3px solid var(--gc-bar-color)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   }}
                 >
@@ -1116,7 +1111,7 @@ function secBtn(disabled: boolean): React.CSSProperties {
   return {
     padding: '5px 12px', border: `1px solid ${T.border}`, background: T.bgInput,
     color: disabled ? T.textDim : T.textMuted, fontSize: 11, cursor: disabled ? 'wait' : 'pointer',
-    borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap',
   };
 }
 // Result-panel action buttons (Export PDF / MIDI / Open in Builder)
@@ -1127,7 +1122,7 @@ function actionBtn(busy: boolean): React.CSSProperties {
     color: T.secondary, fontSize: 12.5, fontWeight: 400,
     textTransform: 'uppercase', letterSpacing: '-0.02em',
     cursor: busy ? 'wait' : 'pointer',
-    borderLeft: '3px solid var(--gc-bar-color)', whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap',
   };
 }
 const selectStyle: React.CSSProperties = {

@@ -31,7 +31,6 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
           <div key={i} style={{
             borderRadius: 0,
             border: `1px solid ${T.border}`,
-            borderLeft: '4px solid var(--gc-bar-color)',
             background: T.bgCard,
             padding: '6px 4px 2px',
           }}>

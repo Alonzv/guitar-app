@@ -319,7 +319,6 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
           background: listening ? T.coral : T.primary,
           color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
           border: 'none',
-          borderLeft: '4px solid var(--gc-bar-color)',
           letterSpacing: '0.06em',
         }}
       >

@@ -47,7 +47,6 @@ const toolBtn = (opts?: {
     textTransform: 'uppercase', letterSpacing: '-0.02em',
     cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
     display: 'inline-flex', alignItems: 'center', gap: 4,
-    borderLeft: '3px solid var(--gc-bar-color)',
     transition: 'background 0.15s, color 0.15s',
   };
 };
@@ -56,8 +55,7 @@ const toolBtn = (opts?: {
 const SAVE_BTN_STYLE: React.CSSProperties = {
   padding: '5px 10px', fontSize: 11, fontWeight: 400,
   background: T.bgInput, color: T.textMuted,
-  border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)',
-};
+  border: `1px solid ${T.border}`, };
 
 export function ProgressionPanel({
   progression, onRemoveFromProgression, onClearProgression,
@@ -149,8 +147,7 @@ export function ProgressionPanel({
             marginLeft: 'auto', width: 132, maxWidth: '100%', padding: '4px 8px', borderRadius: 0,
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.text, fontSize: 12, fontFamily: 'inherit',
-            boxSizing: 'border-box', borderLeft: '3px solid var(--gc-bar-color)',
-          }}
+            boxSizing: 'border-box', }}
         />
       </div>
 

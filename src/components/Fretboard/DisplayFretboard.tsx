@@ -3,7 +3,7 @@ import type { FretPosition } from '../../types/music';
 import { fretToNote, FRET_COUNT, STRING_COUNT, STANDARD_OPEN_MIDI } from '../../utils/musicTheory';
 import { useSounding } from '../../motion/useSounding';
 import { Dot } from './Dot';
-import { T } from '../../theme';
+import { T, onFill } from '../../theme';
 
 export interface DisplayDot extends FretPosition {
   color: string;
@@ -101,9 +101,9 @@ export const DisplayFretboard: React.FC<Props> = ({ dots, compact, onDotClick })
             style={onDotClick ? { cursor: 'pointer' } : undefined}>
             <Dot x={fretX(dot.fret)} y={strY(dot.string)} r={DOT_R}
               glow={sounding.midi(STANDARD_OPEN_MIDI[dot.string] + dot.fret)}>
-              {dot.target && <circle r={DOT_R + 4} fill="none" stroke="var(--gc-success)" strokeWidth={2.5} />}
-              <circle r={DOT_R} fill={dot.color} stroke="#fff" strokeWidth={1.9} opacity={dot.opacity ?? 0.92} />
-              <text y={4} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">{label}</text>
+              {dot.target && <circle r={DOT_R + 4} fill="none" stroke={T.text} strokeWidth={2} />}
+              <circle r={DOT_R} fill={dot.color} stroke={T.bgDeep} strokeWidth={1.9} opacity={dot.opacity ?? 1} />
+              <text y={4} textAnchor="middle" fontSize={7.5} fill={onFill(dot.color)} fontWeight="700" opacity={dot.opacity ?? 1}>{label}</text>
             </Dot>
           </g>
         );

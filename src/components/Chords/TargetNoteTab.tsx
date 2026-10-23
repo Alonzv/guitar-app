@@ -443,8 +443,7 @@ const Pill: React.FC<{
     background: active ? (color ?? T.secondary) : T.bgInput,
     color: active ? T.white : T.textMuted,
     flexShrink: 0,
-    borderLeft: '3px solid var(--gc-bar-color)',
-  }}>
+    }}>
     {label}
   </button>
 );
@@ -716,8 +715,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
               position: 'absolute', top: 12, right: 12,
               background: T.bgInput, border: 'none', borderRadius: 0,
               cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px', borderLeft: '3px solid var(--gc-bar-color)',
-            }}>✕</button>
+              padding: '3px 7px', }}>✕</button>
 
             {/* Chord name */}
             <div style={{ textAlign: 'center' }}>
@@ -748,8 +746,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
                 padding: '11px 0', borderRadius: 0, border: 'none',
                 cursor: 'pointer', fontWeight: 400, fontSize: 14,
                 background: T.secondary, color: T.white,
-                borderLeft: '4px solid var(--gc-bar-color)',
-              }}
+                }}
             >PLAY</button>
             {onAddToProgression && (
               <button
@@ -763,8 +760,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
                 }}
                 style={{
                   padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14,
-                  background: T.primary, color: T.white, borderLeft: '4px solid var(--gc-bar-color)',
-                }}
+                  background: T.primary, color: T.white, }}
               ><RollLabel>{added ? '✓ Added' : '+ Add to song'}</RollLabel></button>
             )}
 
@@ -831,8 +827,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
                   cursor: expandedIdx === 0 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === 0 ? T.textDim : T.textMuted,
-                  fontWeight: 400, fontSize: 16, borderLeft: '3px solid var(--gc-bar-color)',
-                }}
+                  fontWeight: 400, fontSize: 16, }}
               >‹</button>
               <span style={{ fontSize: 11, color: T.textDim, minWidth: 48, textAlign: 'center' }}>
                 {expandedIdx + 1} / {results.length}
@@ -846,8 +841,7 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
                   cursor: expandedIdx === results.length - 1 ? 'not-allowed' : 'pointer',
                   background: T.bgInput,
                   color: expandedIdx === results.length - 1 ? T.textDim : T.textMuted,
-                  fontWeight: 400, fontSize: 16, borderLeft: '3px solid var(--gc-bar-color)',
-                }}
+                  fontWeight: 400, fontSize: 16, }}
               >›</button>
             </div>
           </div>

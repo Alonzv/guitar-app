@@ -1,5 +1,5 @@
 import React from 'react';
-import { T } from '../../theme';
+import { T, onFill } from '../../theme';
 import { OPEN_MIDI, N_STRINGS, WINDOW, midiAt, noteName } from './engine';
 import type { Pos } from './engine';
 
@@ -147,8 +147,8 @@ export const WindowedFretboard: React.FC<Props> = ({
               <rect x={cx - FRET_SP / 2} y={cy - STR_GAP / 2} width={FRET_SP} height={STR_GAP} fill="transparent" />
               {fill && (
                 <>
-                  <circle cx={cx} cy={cy} r={DOT_R} fill={fill} stroke="#fff" strokeWidth={2} />
-                  <text x={cx} y={cy + 3.5} textAnchor="middle" fontSize={10} fontWeight={700} fill="#fff">{label}</text>
+                  <circle cx={cx} cy={cy} r={DOT_R} fill={fill} stroke={T.bgDeep} strokeWidth={2} />
+                  <text x={cx} y={cy + 3.5} textAnchor="middle" fontSize={10} fontWeight={700} fill={onFill(fill)}>{label}</text>
                 </>
               )}
             </g>

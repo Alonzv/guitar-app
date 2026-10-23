@@ -294,8 +294,7 @@ export const Metronome: React.FC = () => {
           width: '100%', padding: '18px 0',
           background: playing ? T.coral : T.primary,
           color: '#fff', fontWeight: 800, fontSize: 18, cursor: 'pointer',
-          border: 'none', borderLeft: '4px solid var(--gc-bar-color)',
-          letterSpacing: '0.06em',
+          border: 'none', letterSpacing: '0.06em',
         }}
       >
         {playing ? 'STOP' : '► START'}
@@ -327,8 +326,7 @@ export const Metronome: React.FC = () => {
             width: '100%', padding: '10px 0',
             border: `1px solid ${T.border}`, background: T.bgInput,
             color: T.textMuted, fontWeight: 400, fontSize: 13, cursor: 'pointer',
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}
+            }}
         >
           Tap Tempo
         </button>
@@ -338,8 +336,7 @@ export const Metronome: React.FC = () => {
           <button onClick={() => setTrainer(t => (t ? null : { target: Math.min(240, bpm + 40) }))} data-active={!!trainer} style={{
             flex: 1, padding: '10px 0', cursor: 'pointer', fontSize: 13,
             border: `1px solid ${trainer ? T.primary : T.border}`, background: trainer ? T.primary : T.bgInput,
-            color: trainer ? T.white : T.textMuted, borderLeft: '3px solid var(--gc-bar-color)',
-          }}>
+            color: trainer ? T.white : T.textMuted, }}>
             {trainer ? `Speed trainer → ${trainer.target}` : 'Speed trainer'}
           </button>
           {trainer && (

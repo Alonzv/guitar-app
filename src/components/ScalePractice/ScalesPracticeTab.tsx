@@ -188,12 +188,12 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
         !earCh ? (
           <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
             <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.6, color: T.textMuted }}>{t.earPrompt}</p>
-            <button onClick={() => startEar()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.earStart}</button>
+            <button onClick={() => startEar()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none' }}>{t.earStart}</button>
           </div>
         ) : (
           <div style={card({ padding: 16 })}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-              <button onClick={() => playRun(earCh)} style={{ padding: '12px 30px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.play}</button>
+              <button onClick={() => playRun(earCh)} style={{ padding: '12px 30px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none' }}>{t.play}</button>
             </div>
             <p style={LBL}>{t.which}</p>
             <div ref={answerArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
@@ -211,14 +211,14 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               })}
             </div>
             {revealed && (
-              <button onClick={() => startEar()} style={{ width: '100%', marginTop: 14, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.next}</button>
+              <button onClick={() => startEar()} style={{ width: '100%', marginTop: 14, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none' }}>{t.next}</button>
             )}
           </div>
         )
       ) : !ch ? (
         <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
           <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.6, color: T.textMuted }}>{t.spellPrompt}</p>
-          <button onClick={() => startSpell()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.start}</button>
+          <button onClick={() => startSpell()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none' }}>{t.start}</button>
         </div>
       ) : (
         <div style={card({ padding: 16 })}>
@@ -261,9 +261,9 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
           ) : (
             <>
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <button onClick={() => playScale(ch.midis)} style={{ flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.play}</button>
+                <button onClick={() => playScale(ch.midis)} style={{ flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}` }}>{t.play}</button>
               </div>
-              <button onClick={() => startSpell()} style={{ width: '100%', marginTop: 10, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.next}</button>
+              <button onClick={() => startSpell()} style={{ width: '100%', marginTop: 10, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none' }}>{t.next}</button>
             </>
           )}
         </div>

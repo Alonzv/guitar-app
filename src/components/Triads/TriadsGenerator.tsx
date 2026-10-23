@@ -165,8 +165,7 @@ function pill(active: boolean, onClick: () => void, label: string) {
       background: active ? T.text : T.bgInput,
       color:      active ? T.bgDeep : T.textMuted,
       border:     active ? 'none' : `1px solid ${T.border}`,
-      borderLeft: '3px solid var(--gc-bar-color)',
-    }}>{label}</button>
+      }}>{label}</button>
   );
 }
 
@@ -357,8 +356,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
               style={{
                 padding: '5px 12px', borderRadius: 0, border: `1px solid ${T.border}`,
                 background: T.bgInput, color: T.textMuted, fontSize: 11, fontWeight: 400,
-                cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)',
-              }}
+                cursor: 'pointer', }}
             >{imported ? 'Hide' : `Import (${globalProgression.length})`}</button>
           </div>
           {imported && (
@@ -395,8 +393,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
                 border: sel ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: sel ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: sel ? T.primary : sharp ? T.textMuted : T.text,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>{n}</button>
+                }}>{n}</button>
             );
           })}
         </div>
@@ -411,8 +408,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
             background: T.secondary, color: '#fff',
             fontSize: 13, fontWeight: 400, textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}
+            }}
         >
           <span>
             <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Triad Type</span>
@@ -432,8 +428,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
                     border: sel ? `2px solid ${T.secondary}` : `1px solid ${T.border}`,
                     background: sel ? T.secondaryBg : T.bgInput,
                     color: sel ? T.secondary : T.textMuted,
-                    borderLeft: '3px solid var(--gc-bar-color)',
-                  }}>
+                    }}>
                     <span style={{ fontSize: 13, fontWeight: 400 }}>{d.label}</span>
                     <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.7 }}>{d.intervalLabels.join(' · ')}</span>
                   </button>
@@ -457,10 +452,10 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
             <button
               onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
               title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
-              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 400, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted, borderLeft: '3px solid var(--gc-bar-color)' }}
+              style={{ padding: '4px 11px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 400, border: `1px solid ${T.border}`, background: T.bgInput, color: T.textMuted }}
             >{displayMode === 'notes' ? '1·3·5' : 'A·B·C'}</button>
-            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>PLAY</button>
-            <button onClick={walkNeck} data-active={walking} title="Play every shape below, from the nut up the neck" style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: walking ? T.primary : T.secondaryBg, color: walking ? '#fff' : T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer', borderLeft: '3px solid var(--gc-bar-color)' }}>{walking ? '■ WALK' : 'WALK THE NECK'}</button>
+            <button onClick={handlePlay} style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: T.secondaryBg, color: T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer' }}>PLAY</button>
+            <button onClick={walkNeck} data-active={walking} title="Play every shape below, from the nut up the neck" style={{ padding: '4px 12px', borderRadius: 0, border: `1px solid ${T.secondary}`, background: walking ? T.primary : T.secondaryBg, color: walking ? '#fff' : T.secondary, fontSize: 12, fontWeight: 400, cursor: 'pointer' }}>{walking ? '■ WALK' : 'WALK THE NECK'}</button>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -680,8 +675,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
             padding: '18px 18px 14px',
             width: '100%', maxWidth: 440,
             display: 'flex', flexDirection: 'column', gap: 14,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-          }}>
+            }}>
 
             {/* Header row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -734,8 +728,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
                   flex: 1, padding: '8px 0', borderRadius: 0, cursor: safeIdx === 0 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === 0 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
-                }}
+                  fontSize: 18, fontWeight: 400, }}
               >‹</button>
 
               <span style={{ fontSize: 10, color: T.textMuted, textAlign: 'center', minWidth: 48 }}>
@@ -750,8 +743,7 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
                   cursor: safeIdx === allVisibleCards.length - 1 ? 'default' : 'pointer',
                   border: `1px solid ${T.border}`, background: T.bgInput,
                   color: safeIdx === allVisibleCards.length - 1 ? T.textDim : T.text,
-                  fontSize: 18, fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)',
-                }}
+                  fontSize: 18, fontWeight: 400, }}
               >›</button>
             </div>
 

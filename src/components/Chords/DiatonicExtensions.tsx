@@ -195,7 +195,6 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
   const modeBtn = (active: boolean): React.CSSProperties => ({
     flex: 1, padding: '8px 4px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
     fontWeight: active ? 700 : 400, border: 'none',
-    borderLeft: '3px solid var(--gc-bar-color)',
     background: active ? T.secondary : T.bgInput, color: active ? '#fff' : T.textMuted,
   });
 
@@ -357,7 +356,7 @@ function ShapePopover({ name, x, y, shapes, title, empty, onPick, pickHint }: {
     <div dir="ltr" data-shape-popover className="gc-drop-in" style={{
       position: 'fixed', left, top, width, zIndex: 1000,
       background: T.bgCard, border: `1px solid ${T.border}`,
-      borderLeft: '4px solid var(--gc-bar-color)', padding: PAD,
+      padding: PAD,
       boxShadow: 'var(--gc-offset)', pointerEvents: onPick ? 'auto' : 'none',
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>

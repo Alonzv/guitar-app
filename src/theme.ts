@@ -76,6 +76,9 @@ export const label: React.CSSProperties = {
 
 // Buttons are pills (1.5px ink outline; selected = filled ink). Keys and tiles
 // are square (see key()). Cobalt is kept for the one primary action (cta).
+// Text on a filled dot or key: white on cobalt, paper on ink (sand at night).
+export const onFill = (fill: string | undefined): string => fill === T.primary ? T.onPrimary : T.white;
+
 export const btn = {
   primary: (disabled?: boolean): React.CSSProperties => ({
     padding: '12px 18px', minHeight: 44,

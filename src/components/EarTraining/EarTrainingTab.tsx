@@ -39,7 +39,6 @@ function Pill({ active, onClick, children, disabled }: {
         flex: 1, minWidth: 0, padding: '8px 10px', borderRadius: 0, cursor: disabled ? 'not-allowed' : 'pointer',
         fontSize: 12, fontWeight: active ? 600 : 400,
         border: active ? 'none' : `1px solid ${T.border}`,
-        borderLeft: '3px solid var(--gc-bar-color)',
         background: active ? T.secondary : T.bgInput,
         color: active ? '#fff' : (disabled ? T.textDim : T.textMuted),
         opacity: disabled ? 0.5 : 1,
@@ -306,7 +305,7 @@ const PracticeMode: React.FC<PracticeProps> = ({
         <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
           <p style={{ margin: '0 0 16px', fontSize: 14, color: T.textMuted }}>{t.listenPrompt}</p>
           <button onClick={() => nextExercise()}
-            style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>
+            style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none' }}>
             {t.startPractice}
           </button>
           {!signedIn && <p style={{ margin: '16px 0 0', fontSize: 11, color: T.textDim }}>{t.signInHint}</p>}
@@ -316,11 +315,11 @@ const PracticeMode: React.FC<PracticeProps> = ({
           {/* Replay + Play-root — prominent, above the neck */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
             <button onClick={() => playExercise(exercise)}
-              style={{ padding: '10px 26px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              style={{ padding: '10px 26px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               ↻ {t.replay}
             </button>
             <button onClick={() => playMidi(exercise.rootMidi)}
-              style={{ padding: '10px 22px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 500, background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              style={{ padding: '10px 22px', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 500, background: T.bgInput, color: T.textMuted, border: `1px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               ● {t.playRoot}
             </button>
           </div>

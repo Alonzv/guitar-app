@@ -19,7 +19,7 @@ export function PlayToAnswer({ lang, mic }: Props) {
       <button onClick={mic.toggle} data-active={mic.listening} aria-pressed={mic.listening} style={{
         display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 12, cursor: 'pointer',
         background: mic.listening ? T.primary : T.bgInput, color: mic.listening ? T.white : T.text,
-        border: `1px solid ${mic.listening ? T.primary : T.border}`, borderLeft: '4px solid var(--gc-bar-color)', borderRadius: 0,
+        border: `1px solid ${mic.listening ? T.primary : T.border}`, borderRadius: 0,
       }}>
         <IconMic size={14} />
         {mic.listening ? (he ? 'מקשיב — נגנו את התשובה' : 'Listening — play your answer') : (he ? 'ענו בנגינה' : 'Answer by playing')}

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { FretPosition } from '../../types/music';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
-import { T } from '../../theme';
+import { T, onFill } from '../../theme';
 import { useSounding } from '../../motion/useSounding';
 import { shapeKey } from '../../utils/audioPlayback';
 import { Dot } from './Dot';
@@ -143,8 +143,8 @@ export const MiniFretboard: React.FC<Props> = ({
         return (
           <Dot key={`${p.string}-${nth}`} x={fretX(p.fret)} y={strY(p.string)} r={7}
             glow={sounding.pos(p.string, p.fret, shape)}>
-            <circle r={7} fill={dotColors?.[i] ?? dotColor} stroke="#fff" strokeWidth={1.25} opacity={0.92} />
-            <text y={3} textAnchor="middle" fontSize={6} fill="#fff" fontWeight="700">{label}</text>
+            <circle r={7} fill={dotColors?.[i] ?? dotColor} stroke={T.bgDeep} strokeWidth={1.25} />
+            <text y={3} textAnchor="middle" fontSize={6} fill={onFill(dotColors?.[i] ?? dotColor)} fontWeight="700">{label}</text>
           </Dot>
         );
       })}

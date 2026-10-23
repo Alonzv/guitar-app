@@ -226,8 +226,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                 border: selected ? `2px solid ${T.primary}` : `2px solid transparent`,
                 background: selected ? T.primaryBg : sharp ? T.bgInput : T.bgCard,
                 color: selected ? T.primary : sharp ? T.textMuted : T.text,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>
+                }}>
                 {n}
               </button>
             );
@@ -244,8 +243,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
             background: T.secondary, color: '#fff',
             fontSize: 13, fontWeight: 400, textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}
+            }}
         >
           <span>
             <span style={{ opacity: 0.6, fontSize: 11, fontWeight: 400, marginRight: 8, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Scale Type</span>
@@ -273,8 +271,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                         border: sel ? `1px solid ${T.secondary}` : `1px solid ${T.border}`,
                         background: sel ? T.secondaryBg : T.bgInput,
                         color: sel ? T.secondary : T.textMuted,
-                        borderLeft: '3px solid var(--gc-bar-color)',
-                      }}>
+                        }}>
                         {s.label}
                       </button>
                     );
@@ -363,8 +360,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
                 fontSize: 13, fontWeight: viewMode === v ? 500 : 400,
                 background: viewMode === v ? T.primary : T.bgCard,
                 color: viewMode === v ? T.white : T.textMuted,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>
+                }}>
                 {v === 'fretboard' ? 'Fretboard' : 'Tab'}
               </button>
             ))}
@@ -378,8 +374,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
               background: pos === null ? T.text : T.bgInput,
               color: pos === null ? T.bgDeep : T.textMuted,
               fontWeight: pos === null ? 500 : 400,
-              borderLeft: '3px solid var(--gc-bar-color)',
-            }}>
+              }}>
               Full Neck
             </button>
             {POSITION_WINDOWS.map((_, i) => (

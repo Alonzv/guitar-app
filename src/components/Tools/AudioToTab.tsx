@@ -56,8 +56,7 @@ function ClearBtn({ onClear }: { onClear: () => void }) {
         padding: '7px 14px', borderRadius: 0, cursor: 'pointer', fontWeight: 400,
         fontSize: 12, border: `1px solid ${T.border}`,
         background: T.bgInput, color: T.textMuted, flexShrink: 0,
-        borderLeft: '3px solid var(--gc-bar-color)',
-      }}
+        }}
     >
       Clear
     </button>
@@ -744,8 +743,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       <button onClick={reset} style={{
         padding: '12px 0', borderRadius: 0, cursor: 'pointer',
         background: T.primary, color: '#fff', fontWeight: 400, fontSize: 14,
-        borderLeft: '4px solid var(--gc-bar-color)',
-      }}>
+        }}>
         Try Again
       </button>
     </div>
@@ -792,8 +790,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
             flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
             background: T.secondary, color: '#fff', fontWeight: 400, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            borderLeft: '4px solid var(--gc-bar-color)',
-          }}
+            }}
         >
           <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" />
@@ -808,8 +805,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
             flex: 1, padding: '13px 0', borderRadius: 0, cursor: 'pointer',
             background: T.primary, color: '#fff', fontWeight: 400, fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            borderLeft: '4px solid var(--gc-bar-color)',
-          }}
+            }}
         >
           <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={2.2}>
             <path d="M9 18V5l12-2v13" strokeLinecap="round" strokeLinejoin="round" />
@@ -830,8 +826,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
           flashSent();
         }} style={{
           width: '100%', padding: '13px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14,
-          background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
-        }}>
+          background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, }}>
           <RollLabel>{sent ? '✓ The song’s melody now' : 'Use as the song’s melody'}</RollLabel>
         </button>
       )}

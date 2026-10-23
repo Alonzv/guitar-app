@@ -110,7 +110,7 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact, up }) => {
               <div style={{ display: 'flex', gap: 6 }}>
                 <button disabled={busy} onClick={doDelete} className="gc-no-bar" style={{ ...btn.primary(busy), flex: 1 }}>
                   {busy ? (he ? 'מוחק…' : 'Deleting…') : (he ? 'מחיקה' : 'Delete')}</button>
-                <button disabled={busy} onClick={() => setConfirmDelete(false)} className="gc-no-bar" style={{ ...btn.secondary, flex: 1 }}>
+                <button disabled={busy} onClick={() => setConfirmDelete(false)} className="gc-no-bar" style={{ ...btn.secondary(), flex: 1 }}>
                   {he ? 'ביטול' : 'Cancel'}</button>
               </div>
             </div>

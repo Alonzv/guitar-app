@@ -69,8 +69,6 @@ export const ItemMenu: React.FC<Props> = ({ items, label = 'Actions' }) => {
             ...(flip ? { bottom: 34 } : { top: 34 }),
             minWidth: 168, zIndex: 50,
             background: T.bgCard, border: `1px solid ${T.border}`,
-            borderLeft: '3px solid var(--gc-bar-color)',
-            boxShadow: '0 6px 22px rgba(0,0,0,0.28)',
             display: 'flex', flexDirection: 'column', padding: 4,
           }}
         >

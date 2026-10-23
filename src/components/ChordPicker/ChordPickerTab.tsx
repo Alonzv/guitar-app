@@ -96,8 +96,7 @@ const SELECT_STYLE: React.CSSProperties = {
   padding: '5px 26px 5px 10px',
   cursor: 'pointer',
   outline: 'none',
-  borderLeft: '3px solid var(--gc-bar-color)',
-};
+  };
 
 const PICK_KEY = 'scaleup_byname_pick';
 function readPick(): { root: string | null; triad: string | null; ext: string } {

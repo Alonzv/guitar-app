@@ -213,8 +213,7 @@ export function IntervalExplore() {
               <button onClick={handlePlay} style={{
                 padding: '5px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
                 border: `1px solid ${T.secondary}`, background: 'transparent', color: T.secondary,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>PLAY</button>
+                }}>PLAY</button>
             </div>
           </div>
 
@@ -228,8 +227,7 @@ export function IntervalExplore() {
                   fontSize: 9, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
                   background: area === a.id ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.1)',
                   color: area === a.id ? '#1A1818' : 'rgba(255,255,255,0.65)',
-                  border: 'none', borderLeft: '2px solid var(--gc-bar-color)',
-                }}>{a.label}</button>
+                  border: 'none', }}>{a.label}</button>
               ))}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, fontSize: 9, alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

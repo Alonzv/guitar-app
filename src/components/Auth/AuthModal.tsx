@@ -16,8 +16,7 @@ const INPUT: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 0,
   border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
   fontSize: 14, fontFamily: 'inherit', outline: 'none',
-  borderLeft: '3px solid var(--gc-bar-color)',
-};
+  };
 
 export const AuthModal: React.FC<Props> = ({ onClose }) => {
   const { configured, signIn, signUp, signInGoogle, signInApple } = useAuth();
@@ -99,8 +98,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 380, background: T.bgCard,
-          border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
-          padding: '22px 22px 24px', boxSizing: 'border-box',
+          border: `1px solid ${T.border}`, padding: '22px 22px 24px', boxSizing: 'border-box',
           maxHeight: '92vh', overflowY: 'auto',
         }}
       >
@@ -139,8 +137,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
                 background: T.primary, color: T.white, border: 'none',
                 fontSize: 14, fontFamily: 'inherit', fontWeight: 400,
                 textTransform: 'uppercase', letterSpacing: '-0.02em',
-                borderLeft: '4px solid var(--gc-bar-color)',
-              }}
+                }}
             >
               Got it — Sign In
             </button>
@@ -159,8 +156,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
                   color: active ? T.white : T.textMuted,
                   fontSize: 12, fontWeight: active ? 500 : 400, fontFamily: 'inherit',
                   textTransform: 'uppercase', letterSpacing: '-0.02em',
-                  borderLeft: '3px solid var(--gc-bar-color)',
-                }}>
+                  }}>
                 {m === 'signin' ? 'Sign In' : 'Sign Up'}
               </button>
             );
@@ -184,8 +180,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
             border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
             fontSize: 13, fontFamily: 'inherit', opacity: configured ? 1 : 0.5,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}>
+            }}>
             <span style={{ fontWeight: 700, color: 'var(--gc-text)' }}>G</span> Continue with Google
           </button>
           <button disabled={!configured || busy} onClick={() => social('apple')} style={{
@@ -193,8 +188,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
             border: `1px solid ${T.border}`, background: T.bgInput, color: T.text,
             fontSize: 13, fontFamily: 'inherit', opacity: configured ? 1 : 0.5,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-            borderLeft: '3px solid var(--gc-bar-color)',
-          }}>
+            }}>
             <span style={{ fontSize: 15 }}></span> Continue with Apple
           </button>
         </div>
@@ -241,8 +235,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
             background: (!configured || busy) ? T.border : T.primary,
             color: T.white, fontSize: 14, fontFamily: 'inherit', fontWeight: 400,
             textTransform: 'uppercase', letterSpacing: '-0.02em',
-            borderLeft: '4px solid var(--gc-bar-color)',
-          }}>
+            }}>
             {busy ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
         </form>

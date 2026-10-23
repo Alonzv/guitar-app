@@ -4,7 +4,7 @@ import { useLang } from '../../contexts/LanguageContext';
 import { stopById, lineOf, searchStops, type Stop } from '../../data/tools';
 import { NetworkMap } from './NetworkMap';
 import { StopSearch } from './StopSearch';
-import { ACTIONS_SLOT_ID } from './StopActions';
+import { setActionsSlot } from './actionsSlot';
 import { Wordmark } from '../Wordmark';
 import { HelpButton } from '../HelpButton';
 import { SoundToggle } from '../SoundToggle';
@@ -181,7 +181,7 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rtl ? '→' : '←'} {stop.name[lang].toUpperCase()}</span>
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
-          <div id={ACTIONS_SLOT_ID} style={{ display: 'flex', alignItems: 'center', gap: 6 }} />
+          <div ref={setActionsSlot} style={{ display: 'flex', alignItems: 'center', gap: 6 }} />
           {topic && <HelpButton topic={topic} />}
         </div>
       </header>
@@ -257,7 +257,7 @@ function DesktopTransit({ stop: stopId, sub, onGo, onSub, darkMode, onToggleDark
             <b style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stop.name[lang].toUpperCase()}</b>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 'none' }}>
-            <div id={ACTIONS_SLOT_ID} style={{ display: 'flex', alignItems: 'center', gap: 8 }} />
+            <div ref={setActionsSlot} style={{ display: 'flex', alignItems: 'center', gap: 8 }} />
             {topic && <HelpButton topic={topic} />}
           </div>
         </div>

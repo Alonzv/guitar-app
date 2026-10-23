@@ -155,8 +155,7 @@ export function IntervalPlayground() {
               <button onClick={handlePlay} style={{
                 padding: '5px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600,
                 border: `1px solid ${T.secondary}`, background: 'transparent', color: T.secondary,
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>PLAY</button>
+                }}>PLAY</button>
             </div>
           </>
         ) : (
@@ -184,8 +183,7 @@ export function IntervalPlayground() {
               marginLeft: 'auto', padding: '2px 8px', borderRadius: 0, cursor: 'pointer',
               fontSize: 9, fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
               background: 'var(--gc-bg-input)', color: 'var(--gc-text-dim)',
-              border: 'none', borderLeft: '2px solid var(--gc-bar-color)',
-            }}>CLEAR</button>
+              border: 'none', }}>CLEAR</button>
           )}
         </div>
 

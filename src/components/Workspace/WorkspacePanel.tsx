@@ -70,8 +70,7 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
               cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap',
               background: active ? T.secondary : T.bgInput,
               color: active ? '#fff' : T.textMuted,
-              borderLeft: '3px solid var(--gc-bar-color)', 
-            }}>
+              }}>
               <span><span style={{ fontWeight: 700, opacity: 0.4, letterSpacing: 0 }}>_</span><span style={{ fontWeight: 400 }}>{s.label}</span></span>
             </button>
           );

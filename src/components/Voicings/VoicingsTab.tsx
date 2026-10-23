@@ -249,7 +249,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
       {chords.length > 0 && (
         <button
           onClick={() => setChords([])}
-          style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 400, borderLeft: '3px solid var(--gc-bar-color)' }}
+          style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 400 }}
         >Clear</button>
       )}
       <span style={{ width: '100%', fontSize: 10, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>
@@ -275,8 +275,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
                 background: root === r ? T.primary : T.bgDeep,
                 color: root === r ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>{r}</button>
+                }}>{r}</button>
             ))}
           </div>
         </div>
@@ -291,8 +290,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
                 background: triad === t.key ? T.secondary : T.bgDeep,
                 color: triad === t.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>{t.display}</button>
+                }}>{t.display}</button>
             ))}
           </div>
         </div>
@@ -307,8 +305,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
                 background: activeExt === e.key ? T.secondary : T.bgDeep,
                 color: activeExt === e.key ? '#fff' : T.textMuted,
                 fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                borderLeft: '3px solid var(--gc-bar-color)',
-              }}>{e.display}</button>
+                }}>{e.display}</button>
             ))}
           </div>
         </div>
@@ -326,8 +323,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
               background: (root && triad && chords.length < 8) ? T.secondary : T.border,
               color: '#fff', fontWeight: 400, fontSize: 14,
               cursor: (root && triad && chords.length < 8) ? 'pointer' : 'not-allowed',
-              borderLeft: '3px solid var(--gc-bar-color)',
-            }}
+              }}
           >
             + Add
           </button>

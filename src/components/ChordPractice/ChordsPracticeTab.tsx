@@ -252,13 +252,13 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
         !earCh ? (
           <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
             <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.6, color: T.textMuted }}>{t.earPrompt}</p>
-            <button onClick={() => startEar()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.earStart}</button>
+            <button onClick={() => startEar()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none' }}>{t.earStart}</button>
           </div>
         ) : (
           <div style={card({ padding: 16 })}>
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              <button onClick={() => playHarmonic(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.harm}</button>
-              <button onClick={() => playArpeggio(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.arp}</button>
+              <button onClick={() => playHarmonic(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}` }}>{t.harm}</button>
+              <button onClick={() => playArpeggio(earCh)} style={{ flex: 1, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}` }}>{t.arp}</button>
             </div>
             <p style={LBL}>{t.which}</p>
             <div ref={answerArea} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -276,14 +276,14 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               })}
             </div>
             {revealed && (
-              <button onClick={() => startEar()} style={{ width: '100%', marginTop: 14, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.next}</button>
+              <button onClick={() => startEar()} style={{ width: '100%', marginTop: 14, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none' }}>{t.next}</button>
             )}
           </div>
         )
       ) : !challenge ? (
             <div style={{ ...card({ padding: 28 }), textAlign: 'center' }}>
               <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.6, color: T.textMuted }}>{t.startPrompt}</p>
-              <button onClick={() => start()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.start}</button>
+              <button onClick={() => start()} style={{ padding: '12px 40px', borderRadius: 0, cursor: 'pointer', fontSize: 15, fontWeight: 500, background: T.primary, color: T.white, border: 'none' }}>{t.start}</button>
             </div>
           ) : (
             <div style={card({ padding: 16 })}>
@@ -340,9 +340,9 @@ export function ChordsPracticeTab({ desktop }: { desktop?: boolean } = {}) {
               ) : (
                 <>
                   <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                    <button onClick={playChord} style={{ flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '3px solid var(--gc-bar-color)' }}>{t.hear}</button>
+                    <button onClick={playChord} style={{ flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.bgInput, color: T.text, border: `1px solid ${T.border}` }}>{t.hear}</button>
                   </div>
-                  <button onClick={() => start()} style={{ width: '100%', marginTop: 10, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none', borderLeft: '4px solid var(--gc-bar-color)' }}>{t.next}</button>
+                  <button onClick={() => start()} style={{ width: '100%', marginTop: 10, padding: '12px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, background: T.secondary, color: '#fff', border: 'none' }}>{t.next}</button>
                 </>
               )}
             </div>

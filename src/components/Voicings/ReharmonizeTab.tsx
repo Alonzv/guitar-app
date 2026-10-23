@@ -118,8 +118,7 @@ function ReharmModal({
     color: disabled ? T.textDim : T.text,
     cursor: disabled ? 'default' : 'pointer',
     fontSize: 18, fontWeight: 400, opacity: disabled ? 0.35 : 1,
-    transition: 'opacity 0.15s', borderLeft: '3px solid var(--gc-bar-color)',
-  });
+    transition: 'opacity 0.15s', });
 
   return (
     <div
@@ -138,8 +137,7 @@ function ReharmModal({
           border: `1px solid ${T.border}`,
           padding: 24, maxWidth: 340, width: '100%',
           display: 'flex', flexDirection: 'column', gap: 14,
-          boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
-        }}
+          }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 22, fontWeight: 800, color }}>{chordNames[idx]}</span>
@@ -399,8 +397,7 @@ export function ReharmonizeTab({
                   cursor: 'pointer', fontSize: 11, fontWeight: 600,
                   background: showNashville ? T.secondary : T.bgInput,
                   color: showNashville ? '#fff' : T.textMuted,
-                  borderLeft: '3px solid var(--gc-bar-color)',
-                }}
+                  }}
               >
                 Nashville
               </button>
@@ -444,8 +441,7 @@ export function ReharmonizeTab({
                       fontWeight: genre === g.id ? 600 : 400,
                       background: genre === g.id ? T.secondary : T.bgInput,
                       color: genre === g.id ? '#fff' : T.textMuted,
-                      whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
-                    }}
+                      whiteSpace: 'nowrap', }}
                   >
                     {g.label}
                   </button>
@@ -542,8 +538,7 @@ export function ReharmonizeTab({
               background: (chords.length === 0 || loading) ? T.border : T.secondary,
               color: (chords.length === 0 || loading) ? T.textDim : '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              borderLeft: '4px solid var(--gc-bar-color)',
-            }}
+              }}
           >
             {loading ? (
               <>
@@ -707,8 +702,7 @@ export function ReharmonizeTab({
                               color: active ? '#fff' : T.textMuted,
                               fontSize: 12, fontWeight: active ? 500 : 400,
                               cursor: 'pointer', 
-                              whiteSpace: 'nowrap', borderLeft: '3px solid var(--gc-bar-color)',
-                            }}
+                              whiteSpace: 'nowrap', }}
                           >
                             <span style={{
                               width: 16, height: 16, borderRadius: 0,
@@ -786,16 +780,14 @@ export function ReharmonizeTab({
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => { song.setChordNames(result.chords); flashUsed(); }} style={{
                     flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 12.5,
-                    background: T.primary, color: T.white, borderLeft: '4px solid var(--gc-bar-color)',
-                  }}><RollLabel>{used ? (lang === 'he' ? '✓ בשיר' : '✓ In the song') : (lang === 'he' ? 'השתמש בשיר' : 'Use in song')}</RollLabel></button>
+                    background: T.primary, color: T.white, }}><RollLabel>{used ? (lang === 'he' ? '✓ בשיר' : '✓ In the song') : (lang === 'he' ? 'השתמש בשיר' : 'Use in song')}</RollLabel></button>
                   <button onClick={() => {
                     const t = TUNINGS.find(x => x.name === song.song.tuningName) ?? TUNINGS[0];
                     song.saveVariant(`Reharm · ${GENRES.find(g => g.id === genre)?.label ?? genre}`, namesToProgression(result.chords, t.notes));
                     flashKept();
                   }} style={{
                     flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 12.5,
-                    background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, borderLeft: '4px solid var(--gc-bar-color)',
-                  }}><RollLabel>{kept ? (lang === 'he' ? '✓ נשמר כגרסה' : '✓ Kept as variant') : (lang === 'he' ? 'שמור כגרסה' : 'Keep as variant')}</RollLabel></button>
+                    background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, }}><RollLabel>{kept ? (lang === 'he' ? '✓ נשמר כגרסה' : '✓ Kept as variant') : (lang === 'he' ? 'שמור כגרסה' : 'Keep as variant')}</RollLabel></button>
                 </div>
               )}
 
@@ -821,8 +813,7 @@ export function ReharmonizeTab({
                     border: `1.5px solid ${T.secondary}`,
                     cursor: 'pointer', fontWeight: 400, fontSize: 14,
                     background: 'transparent', color: T.secondary,
-                    borderLeft: '4px solid var(--gc-bar-color)',
-                  }}
+                    }}
                 >
                   Export MIDI
                 </button>

@@ -111,8 +111,8 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
           return (
             <g key={`dot-${d.string}-${nth}`} style={{ pointerEvents: 'none' }}>
               <Dot x={fretX(d.fret)} y={strY(d.string)} r={DOT_R} glow={sounding.pos(d.string, d.fret)}>
-                <circle r={DOT_R} fill={T.primary} stroke="#fff" strokeWidth={1.9} />
-                <text y={4} textAnchor="middle" fontSize={9} fill="#fff" fontWeight="700">{fretToNote(d.string, d.fret, tuning, capo)}</text>
+                <circle r={DOT_R} fill={T.secondary} stroke={T.bgDeep} strokeWidth={1.9} />
+                <text y={4} textAnchor="middle" fontSize={9} fill={T.white} fontWeight="700">{fretToNote(d.string, d.fret, tuning, capo)}</text>
               </Dot>
             </g>
           );

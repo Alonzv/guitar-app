@@ -89,9 +89,8 @@ export const VerticalScaleFretboard: React.FC<Props> = ({ root, type, tuning }) 
         <g key={i}>
           <circle cx={colX(d.s)} cy={rowY(d.f - 0.5)} r={9}
             fill={d.isRoot ? T.primary : T.secondary}
-            stroke={d.isRoot ? T.text : 'none'} strokeWidth={d.isRoot ? 1.9 : 0}
-            opacity={d.isRoot ? 0.95 : 0.8} />
-          <text x={colX(d.s)} y={rowY(d.f - 0.5) + 3} textAnchor="middle" fontSize={7.5} fill="#fff" fontWeight="700">
+            stroke="none" strokeWidth={0} />
+          <text x={colX(d.s)} y={rowY(d.f - 0.5) + 3} textAnchor="middle" fontSize={7.5} fill={d.isRoot ? T.onPrimary : T.white} fontWeight="700">
             {d.note}
           </text>
         </g>

@@ -78,8 +78,7 @@ const SELECT: React.CSSProperties = {
   background: T.bgInput, border: `1px solid ${T.border}`, borderRadius: 0,
   color: T.text, fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
   padding: '9px 24px 9px 12px', cursor: 'pointer', outline: 'none',
-  borderLeft: '3px solid var(--gc-bar-color)',
-};
+  };
 
 // "Ebmaj7" → { root: 'D#', triad: 'M', ext: 'maj7' } in this tool's own terms,
 // or null when the chord is something its pickers can't show.
@@ -280,8 +279,7 @@ export function IntervalInChord({ desktop }: { desktop?: boolean } = {}) {
 
         <button onClick={playCurrent} style={{
           padding: '7px 16px', borderRadius: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700,
-          border: 'none', borderLeft: '3px solid var(--gc-bar-color)',
-          background: T.primary, color: T.white,
+          border: 'none', background: T.primary, color: T.white,
         }}>▶ Play</button>
 
         <span dir="ltr" style={{ marginInlineStart: 'auto', fontSize: 11, color: '#9C958C' }}>
