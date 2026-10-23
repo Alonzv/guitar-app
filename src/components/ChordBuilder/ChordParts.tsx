@@ -40,9 +40,9 @@ export function ChordDiagram({ voicing, name, tuning, capo = 0, side }: {
           dotLabels={degreeLabels(voicing, name, tuning)} showStringLabels showFretNumbers hideFretLabel />
       </div>
       <Meta cols={side ? 1 : 3} items={[
-        { label: he ? 'צורה' : 'Shape', value: meta.shape },
-        { label: he ? 'שריגים' : 'Frets', value: meta.frets },
-        { label: he ? 'תווים' : 'Notes', value: meta.notes },
+        { label: he ? 'צורה' : 'Shape', value: <span dir="ltr">{meta.shape}</span> },
+        { label: he ? 'שריגים' : 'Frets', value: <span dir="ltr">{meta.frets}</span> },
+        { label: he ? 'תווים' : 'Notes', value: <span dir="ltr">{meta.notes}</span> },
       ]} />
     </div>
   );

@@ -215,11 +215,11 @@ export function ChordPickerTab({
   const controls = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
       <Rule label={he ? 'איכות' : 'Quality'} right={<DiceButton onRoll={roll} />}>
-        <PillRow label={he ? 'איכות' : 'Quality'} wrap={desktop}
+        <div dir="ltr"><PillRow label={he ? 'איכות' : 'Quality'} wrap={desktop}
           items={TRIADS.map(t => ({ id: t.key, label: t.display }))}
-          value={selectedTriad} onChange={handleTriadSelect} />
+          value={selectedTriad} onChange={handleTriadSelect} /></div>
         {selectedTriad && validExt.length > 1 && (
-          <div style={{ marginTop: 8 }}>
+          <div dir="ltr" style={{ marginTop: 8 }}>
             <PillRow label={he ? 'הרחבה' : 'Extension'} wrap={desktop}
               items={EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => ({ id: e.key, label: e.display }))}
               value={selectedExtension} onChange={handleExtensionSelect} />
@@ -228,9 +228,9 @@ export function ChordPickerTab({
       </Rule>
 
       <Rule label={he ? 'שורש' : 'Root'}>
-        <KeyGrid label={he ? 'שורש' : 'Root'} cols={6}
+        <div dir="ltr"><KeyGrid label={he ? 'שורש' : 'Root'} cols={6}
           items={ROOTS.map(r => ({ id: r, label: r }))}
-          value={selectedRoot} onChange={handleRootSelect} />
+          value={selectedRoot} onChange={handleRootSelect} /></div>
       </Rule>
 
       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>

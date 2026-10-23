@@ -72,9 +72,9 @@ export const VoicingVariations: React.FC<Props> = ({ voicings, onSelect, selecte
             >
               <MiniFretboard voicing={voicing} dotColors={dotColors} tuning={tuning}
                 dotLabels={chordName ? degreeLabels(voicing, chordName, tuning) : undefined} />
-              <span style={{ display: 'flex', justifyContent: 'space-between', gap: 6, padding: '0 4px', fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.1em' }}>
-                <span style={{ color: T.textMuted }}>{String(i + 1).padStart(2, '0')}</span>
-                <span style={{ fontWeight: 700 }}>{shapeMeta(voicing, tuning).shape}</span>
+              <span dir="ltr" style={{ display: 'flex', justifyContent: 'space-between', gap: 6, padding: '0 4px', fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.06em', minWidth: 0 }}>
+                <span style={{ color: T.textMuted, flex: 'none' }}>{String(i + 1).padStart(2, '0')}</span>
+                <span style={{ fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shapeMeta(voicing, tuning).shape}</span>
               </span>
             </button>
           );
