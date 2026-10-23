@@ -55,7 +55,7 @@ export function Rule({ label, right, children, style, top = true }: {
   return (
     <section style={{ borderTop: top ? `var(--su-rule) solid ${T.border}` : undefined, paddingTop: 10, minWidth: 0, ...style }}>
       {(label || right) && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, minHeight: 28, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, minHeight: 28, marginBottom: 8 }}>
           {label ? <span className="su-label">{label}</span> : <span />}
           {right}
         </div>
@@ -173,7 +173,7 @@ export function Formula({ tones, mark, onTone }: {
   tones: { degree: string; note: string; name?: string }[]; mark?: number; onTone?: (i: number) => void;
 }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(tones.length, 3)}, minmax(0, 1fr))`, gap: 10 }}>
+    <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(tones.length, 3)}, minmax(0, 1fr))`, gap: 10 }}>
       {tones.map((t, i) => {
         const on = i === mark;
         const c = on ? T.primary : T.text;

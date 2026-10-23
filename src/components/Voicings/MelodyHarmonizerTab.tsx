@@ -777,7 +777,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       <Rule
         label={<span style={{ whiteSpace: 'nowrap' }}>{he ? 'מנגינה' : 'Melody input'}</span>}
         right={
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <Pill size="sm" onClick={() => fileRef.current?.click()} disabled={visionLoading}>
               {visionLoading ? (he ? 'קורא…' : 'Reading…') : (he ? 'תמונה' : 'Image')}
             </Pill>

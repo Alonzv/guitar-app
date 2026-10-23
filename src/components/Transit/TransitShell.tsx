@@ -146,7 +146,7 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
         {last && (
           <div style={{
             position: 'fixed', insetInline: 14, bottom: 'calc(18px + env(safe-area-inset-bottom))', height: 66, zIndex: 50,
-            borderRadius: 33, background: T.secondary, color: T.white,
+            borderRadius: 'var(--su-pill)', background: T.secondary, color: T.white,
             display: 'flex', alignItems: 'center', gap: 14, padding: '0 10px 0 22px',
           }}>
             <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--gc-primary)', flex: 'none' }} />

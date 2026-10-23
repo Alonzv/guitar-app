@@ -37,9 +37,12 @@ export function PosterInput({ value, onChange, placeholder, max = 120, min = 32,
 
   return (
     <div ref={box} style={{ position: 'relative', minWidth: 0 }}>
-      <span ref={twin} aria-hidden className="su-poster" style={{
-        position: 'absolute', visibility: 'hidden', whiteSpace: 'pre', fontSize: max, pointerEvents: 'none',
-      }}>{text}</span>
+      {/* A zero-size box keeps the measuring twin from widening the page. */}
+      <div aria-hidden style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+        <span ref={twin} className="su-poster" style={{
+          display: 'inline-block', visibility: 'hidden', whiteSpace: 'pre', fontSize: max, pointerEvents: 'none',
+        }}>{text}</span>
+      </div>
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
