@@ -144,9 +144,9 @@ export function Stepper({ value, onPrev, onNext, label, size = 'md', keepCase }:
   const he = lang === 'he';
   return (
     <div role="group" aria-label={label} dir="ltr" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <Pill size={size} onClick={onPrev} label={he ? 'הקודם' : 'Previous'} style={{ padding: 0 }}>‹</Pill>
+      <Pill size={size} onClick={onPrev} label={he ? 'הקודם' : 'Previous'} style={{ padding: 0 }}><span dir="ltr" style={{ unicodeBidi: 'isolate' }}>‹</span></Pill>
       <span className="su-semi" style={{ minWidth: 48, textAlign: 'center', fontSize: size === 'sm' ? 18 : 22, textTransform: keepCase ? 'none' : 'uppercase' }}>{value}</span>
-      <Pill size={size} onClick={onNext} label={he ? 'הבא' : 'Next'} style={{ padding: 0 }}>›</Pill>
+      <Pill size={size} onClick={onNext} label={he ? 'הבא' : 'Next'} style={{ padding: 0 }}><span dir="ltr" style={{ unicodeBidi: 'isolate' }}>›</span></Pill>
     </div>
   );
 }

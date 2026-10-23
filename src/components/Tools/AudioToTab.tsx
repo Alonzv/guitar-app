@@ -623,6 +623,9 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     </Rule>
   );
 
+  // The empty output pane sits beside the capture panel on a desktop only.
+  const ghost = desktop ? ghostOut : undefined;
+
   if (stage === 'idle') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <style>{RESPONSIVE_CSS}</style>
@@ -657,7 +660,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
       </div>
     </div>
-  );
+  , ghost);
 
   if (stage === 'recording') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -693,7 +696,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         </div>
       </Rule>
     </div>
-  , ghostOut);
+  , ghost);
 
   if (stage === 'error') return dt(
     <div className="at-root" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -703,7 +706,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       </Rule>
       <Cta onClick={reset} style={{ alignSelf: 'flex-start' }}>Try again</Cta>
     </div>
-  , ghostOut);
+  , ghost);
 
   if (!tabData) return null;
 

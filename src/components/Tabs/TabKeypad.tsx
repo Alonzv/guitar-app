@@ -44,7 +44,7 @@ export function TabKeypad({ where, prefix, tech, barOn, onDigit, onPrefix, onTec
   const small: CSSProperties = {
     height: 40, minWidth: 40, padding: '0 12px', borderRadius: 'var(--su-pill)', cursor: 'pointer',
     border: `1.5px solid ${fg}`, background: 'transparent', color: fg, fontSize: 12, fontWeight: 700,
-    fontFamily: 'var(--gc-font)', letterSpacing: '0.08em', flexShrink: 0,
+    fontFamily: 'var(--gc-font)', letterSpacing: '0.08em', flexShrink: 0, textTransform: 'none',
   };
 
   // Long-press 1 or 2 arms it as the tens digit of a two-digit fret.
