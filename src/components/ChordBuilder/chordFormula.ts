@@ -83,7 +83,9 @@ export function degreeLabels(voicing: FretPosition[], name: string | null | unde
 /** SHAPE / FRETS / NOTES for the meta row: "x32010", "0–3", "C E G". */
 export function shapeMeta(voicing: FretPosition[], tuning?: string[], capo = 0) {
   const byString = Array.from({ length: 6 }, (_, s) => voicing.find(p => p.string === s));
-  const shape = byString.map(p => (p ? (p.fret > 9 ? `(${p.fret})` : String(p.fret)) : 'x')).join('');
+  // "x32010"; with a two-digit fret anywhere, dashes keep it readable: "x-12-14-14-13-12".
+  const parts = byString.map(p => (p ? String(p.fret) : 'x'));
+  const shape = parts.some(t => t.length > 1) ? parts.join('-') : parts.join('');
   const frets = voicing.map(p => p.fret);
   const lo = frets.length ? Math.min(...frets) : 0, hi = frets.length ? Math.max(...frets) : 0;
   const notes = [...byString].filter((p): p is FretPosition => !!p).map(p => fretToNote(p.string, p.fret, tuning, capo));

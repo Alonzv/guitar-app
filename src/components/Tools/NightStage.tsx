@@ -18,7 +18,7 @@ export function NightToggle({ on, onToggle }: { on: boolean; onToggle: () => voi
   );
 }
 
-export function NightStage({ on, children }: { on: boolean; children: ReactNode }) {
+export function NightStage({ on, wide, children }: { on: boolean; wide?: boolean; children: ReactNode }) {
   const desktop = useIsDesktop();
   return (
     <div className={on ? 'su-night' : undefined} style={{
@@ -28,7 +28,7 @@ export function NightStage({ on, children }: { on: boolean; children: ReactNode 
       minHeight: desktop ? 'calc(100vh - 64px - 62px)' : 'calc(100dvh - 66px - 58px)',
       boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{ width: '100%', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: desktop ? 22 : 18, flex: 1 }}>
+      <div style={{ width: '100%', maxWidth: wide ? 1080 : 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: desktop ? 22 : 18, flex: 1 }}>
         {children}
       </div>
     </div>

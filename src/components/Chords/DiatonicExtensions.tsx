@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Scale, Note } from '@tonaljs/tonal';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { Rule, PillRow, KeyGrid } from '../Transit/parts';
 import { useLang } from '../../contexts/LanguageContext';
 import { previewRun, previewChordName, chordMidis } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
@@ -96,7 +97,7 @@ const COPY = {
 };
 
 const LBL: React.CSSProperties = {
-  margin: 0, fontSize: 10, color: '#9C958C', fontFamily: 'var(--gc-mono)',
+  margin: 0, fontSize: 10, color: T.textMuted, fontFamily: 'var(--gc-mono)',
   letterSpacing: '0.14em', textTransform: 'uppercase',
 };
 
@@ -187,49 +188,31 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
     setKey(k => ((m === 'major' ? KEYS_MAJOR : KEYS_MINOR).includes(k) ? k : (m === 'major' ? 'C' : 'A')));
   };
 
-  const sel: React.CSSProperties = {
-    appearance: 'none', WebkitAppearance: 'none', background: T.bgInput,
-    border: `1px solid ${T.border}`, borderRadius: 0, color: T.text, width: '100%',
-    fontSize: 15, fontWeight: 700, padding: '9px 12px', cursor: 'pointer', outline: 'none',
-  };
-  const modeBtn = (active: boolean): React.CSSProperties => ({
-    flex: 1, padding: '8px 4px', borderRadius: 0, cursor: 'pointer', fontSize: 12,
-    fontWeight: active ? 700 : 400, border: 'none',
-    background: active ? T.secondary : T.bgInput, color: active ? '#fff' : T.textMuted,
-  });
-
-
   const legend = (
-    <div style={card({ padding: '11px 13px' })}>
-      <p style={{ ...LBL, marginBottom: 8 }}>{t.legendTitle}</p>
+    <Rule label={t.legendTitle}>
       <ul style={{ margin: 0, paddingInlineStart: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {t.legend.map((line, i) => (
-          <li key={i} style={{ fontSize: 12, lineHeight: 1.5, color: T.textMuted }}>{line}</li>
+          <li key={i} style={{ fontSize: 12, lineHeight: 1.5, color: T.text }}>{line}</li>
         ))}
       </ul>
-    </div>
+    </Rule>
   );
 
   const pickers = (
-    <div style={{ display: 'flex', gap: 10, flexDirection: desktop ? 'column' : 'row', alignItems: desktop ? 'stretch' : 'flex-end' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ ...LBL, marginBottom: 6 }}>{t.mode}</p>
-        <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-          <button data-active={mode === 'major'} onClick={() => switchMode('major')} style={modeBtn(mode === 'major')}>{t.major}</button>
-          <button data-active={mode === 'minor'} onClick={() => switchMode('minor')} style={modeBtn(mode === 'minor')}>{t.minor}</button>
+    <Rule label={`${t.mode} · ${t.key}`}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <PillRow label={t.mode} items={[{ id: 'major' as const, label: t.major }, { id: 'minor' as const, label: t.minor }]}
+          value={mode} onChange={switchMode} />
+        <div dir="ltr">
+          <KeyGrid cols={6} label={t.key} value={key} items={keys.map(k => ({ id: k, label: `${k}${mode === 'minor' ? 'm' : ''}` }))}
+            onChange={setKey} />
         </div>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ ...LBL, marginBottom: 6 }}>{t.key}</p>
-        <select dir="ltr" value={key} onChange={e => setKey(e.target.value)} style={sel}>
-          {keys.map(k => <option key={k} value={k}>{k} {mode === 'major' ? 'major' : 'minor'}</option>)}
-        </select>
-      </div>
-    </div>
+    </Rule>
   );
 
   const controls = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {pickers}
       {legend}
     </div>
@@ -242,34 +225,34 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
   const grid = (
     <div dir="ltr" style={{
       display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-      gap: desktop ? 6 : 3, minWidth: 0, alignItems: 'stretch',
+      gap: desktop ? 10 : 4, minWidth: 0, alignItems: 'stretch',
     }}>
       {pattern.map((shape, i) => {
         const root = roots[i] ?? '';
         const raised11 = shape.ext['11'] === 'maj7#11';
         return (
           <div key={i} style={{
-            ...card({ padding: desktop ? '9px 6px' : '6px 3px' }),
-            minWidth: 0, display: 'flex', flexDirection: 'column', gap: desktop ? 5 : 3,
+            borderTop: `var(--su-rule) solid ${T.border}`, padding: desktop ? '10px 0 0' : '8px 0 0',
+            minWidth: 0, display: 'flex', flexDirection: 'column', gap: desktop ? 6 : 4,
             overflowWrap: 'anywhere',
           }}>
             {/* Degree + plain chord */}
             <div style={{ textAlign: 'center', minWidth: 0 }}>
-              <div style={{ fontFamily: 'var(--gc-mono)', fontSize: fs(8, 1.1, 11), fontWeight: 700, color: T.textDim }}>{romans[i]}</div>
-              <div {...peekProps(`${root}${shape.triad}`)} style={{
-                fontSize: fs(12, 2.1, 19), fontWeight: 700, lineHeight: 1.15, cursor: 'pointer',
-                color: peek?.name === `${root}${shape.triad}` ? T.success : T.text,
+              <div style={{ fontFamily: 'var(--gc-mono)', fontSize: fs(8, 1.1, 11), fontWeight: 700, color: T.textMuted }}>{romans[i]}</div>
+              <div {...peekProps(`${root}${shape.triad}`)} className="su-semi" style={{
+                fontSize: fs(15, 3.2, 30), lineHeight: 1.05, cursor: 'pointer', marginTop: 2,
+                color: peek?.name === `${root}${shape.triad}` ? T.primary : T.text,
               }}>{root}{shape.triad}</div>
               <div style={{ ...LBL, fontSize: fs(7, 0.9, 9), marginTop: 2, letterSpacing: '0.06em' }}>
                 {(desktop ? t.families : t.familiesShort)[shape.family]}
               </div>
               {desktop && (
-                <div style={{ fontSize: 10.5, color: T.textDim, marginTop: 3, minHeight: 26, lineHeight: 1.25 }}>{t.feel[shape.family]}</div>
+                <div style={{ fontSize: 10.5, color: T.textMuted, marginTop: 3, minHeight: 26, lineHeight: 1.25 }}>{t.feel[shape.family]}</div>
               )}
             </div>
 
             {/* Extensions */}
-            <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: desktop ? 5 : 3, display: 'flex', flexDirection: 'column', gap: desktop ? 3 : 2 }}>
+            <div style={{ borderTop: `1px solid ${T.hairline}`, paddingTop: desktop ? 6 : 4, display: 'flex', flexDirection: 'column', gap: desktop ? 4 : 3 }}>
               {STEPS.map(step => {
                 const suffix = shape.ext[step];
                 return (
@@ -277,17 +260,17 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
                     {/* On mobile the suffix already names the step (maj9, m11…), so the
                         number is only spelled out on the rows that have no chord. */}
                     {(desktop || !suffix) && (
-                      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: fs(7, 0.9, 10), fontWeight: 700, color: T.textDim, flexShrink: 0 }}>{step}</span>
+                      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: fs(7, 0.9, 10), fontWeight: 700, color: T.textMuted, flexShrink: 0 }}>{step}</span>
                     )}
                     {suffix ? (
                       // The root is already the column title, so narrow screens list
                       // just the suffix — that keeps names from wrapping mid-word.
                       <span {...peekProps(`${root}${suffix}`)} style={{
                         fontSize: fs(8.5, 1.5, 12.5), fontWeight: 700, cursor: 'pointer', minWidth: 0,
-                        color: peek?.name === `${root}${suffix}` ? T.success : T.text,
+                        color: peek?.name === `${root}${suffix}` ? T.primary : T.text,
                       }}>{desktop ? `${root}${suffix}` : suffix}</span>
                     ) : (
-                      <span style={{ fontSize: fs(8.5, 1.5, 12.5), color: T.textDim }}>—</span>
+                      <span style={{ fontSize: fs(8.5, 1.5, 12.5), color: T.textMuted }}>—</span>
                     )}
                   </div>
                 );
@@ -295,7 +278,7 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
             </div>
 
             {raised11 && desktop && (
-              <p style={{ margin: 0, fontSize: 10, lineHeight: 1.4, color: T.textDim }}>{t.sharp11}</p>
+              <p style={{ margin: 0, fontSize: 10, lineHeight: 1.4, color: T.textMuted }}>{t.sharp11}</p>
             )}
           </div>
         );
@@ -305,20 +288,18 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
 
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>{t.title}</h2>
-      </div>
+      {/* The shell names the stop; the tool keeps its one line of intro. */}
       <p style={{ margin: '0 0 16px', fontSize: 13, lineHeight: 1.6, color: T.textMuted }}>{t.intro}</p>
 
       {desktop ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '210px minmax(0, 1fr)', gap: 24, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gap: 32, alignItems: 'start' }}>
           {controls}
           {grid}
         </div>
       ) : (
         // Mobile: pickers, then the chart itself, then the legend — so the seven
         // degrees are on screen straight away rather than pushed below the fold.
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
           {pickers}
           {grid}
           {legend}
@@ -355,13 +336,13 @@ function ShapePopover({ name, x, y, shapes, title, empty, onPick, pickHint }: {
   return (
     <div dir="ltr" data-shape-popover className="gc-drop-in" style={{
       position: 'fixed', left, top, width, zIndex: 1000,
-      background: T.bgCard, border: `1px solid ${T.border}`,
+      background: T.bgDeep, border: `var(--su-rule) solid ${T.border}`,
       padding: PAD,
-      boxShadow: 'var(--gc-offset)', pointerEvents: onPick ? 'auto' : 'none',
+      pointerEvents: onPick ? 'auto' : 'none',
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>{name}</span>
-        <span style={{ fontSize: 10, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{title}</span>
+        <span className="su-semi" style={{ fontSize: 24, color: T.text }}>{name}</span>
+        <span className="su-label">{title}</span>
       </div>
       {shapes.length === 0 ? (
         <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>{empty}</p>

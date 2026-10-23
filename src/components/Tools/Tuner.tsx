@@ -7,6 +7,7 @@ import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { PosterTitle, Meta, Pill, Cta } from '../Transit/parts';
 import { keyStyle } from '../Transit/styles';
 import { NightStage, NightToggle } from './NightStage';
+import { StopActions } from '../Transit/StopActions';
 import { useNight } from './useNight';
 import { getSharedContext, unlockAudio, setMicSession, clearMicSession } from '../../utils/audioPlayback';
 import { previewFret } from '../../utils/previewSound';
@@ -201,8 +202,13 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
   // The letter turns cobalt only when the string is dead on (|cents| < 2).
   const letterColor = !display ? T.textMuted : absCents < 2 ? T.primary : T.text;
-  const letter = display ? display.note : listening && nextString >= 0 ? STRING_LABELS[nextString] : '–';
+  // Idle, the letter shows the string to play next, dimmed.
+  const letter = display ? display.note : STRING_LABELS[nextString >= 0 ? nextString : 0];
   const readout = !display ? '—' : absCents <= 5 ? (he ? 'מכוון' : 'IN TUNE') : cents > 0 ? `+${cents}¢` : `${cents}¢`;
+
+  const startStop = (style: React.CSSProperties) => listening
+    ? <Pill onClick={stop} style={style}>{he ? 'עצירה' : 'Stop'}</Pill>
+    : <Cta onClick={start} style={style}>{he ? 'התחלת כיוון' : 'Start tuning'}</Cta>;
 
   // Ruler −50…+50 cents
   const RW = 600, RX = 20, RSPAN = RW - RX * 2;
@@ -217,7 +223,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
       {/* The giant letter — readable from across the room */}
       <div aria-live="polite" style={{ textAlign: 'center', color: letterColor, transition: 'color var(--gc-dur-base) var(--gc-ease-out)' }}>
-        <PosterTitle head={letter} max={desktop ? 470 : 300} min={120} as="div"
+        <PosterTitle head={letter} max={desktop ? 400 : 300} min={120} as="div"
           style={{ display: 'flex', justifyContent: 'center', color: letterColor }} />
       </div>
 
@@ -289,11 +295,11 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
       </div>
 
       {error && <p role="alert" style={{ color: T.text, fontSize: 12, margin: 0 }}>{error}</p>}
-      <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'center' }}>
-        {listening
-          ? <Pill onClick={stop} style={{ width: '100%', height: 56 }}>{he ? 'עצירה' : 'Stop'}</Pill>
-          : <Cta onClick={start} style={{ width: '100%', height: 56 }}>{he ? 'התחלת כיוון' : 'Start tuning'}</Cta>}
-      </div>
+      {/* Start / stop: in the top bar on desktop (always in view), a wide
+          button at the bottom on the phone, under the thumb. */}
+      {desktop ? <StopActions>{startStop({})}</StopActions> : (
+        <div style={{ marginTop: 'auto' }}>{startStop({ width: '100%', height: 56 })}</div>
+      )}
     </NightStage>
   );
 };

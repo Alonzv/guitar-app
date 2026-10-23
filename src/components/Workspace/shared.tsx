@@ -5,19 +5,6 @@ import { LINES, type LineId } from '../../data/tools';
 import { Pill, Cta } from '../Transit/parts';
 import { Sheet } from './Sheet';
 
-export function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  if (sameDay) return `Today, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-export const SECTION_LABEL: React.CSSProperties = {
-  margin: '0 0 10px', fontSize: 10, color: T.textMuted, fontFamily: 'var(--gc-mono)',
-  textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 400,
-};
-
 /** Nothing here yet — a small poster and a line on where to make one.
  *  (`icon` is kept for callers but no longer drawn: icons were decoration.) */
 export const EmptyState: React.FC<{ icon?: string; title: string; hint: string }> = ({ title, hint }) => (

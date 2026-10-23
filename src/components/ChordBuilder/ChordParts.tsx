@@ -24,20 +24,22 @@ export function ChordPoster({ name, empty, aside, max }: { name: string | null; 
   );
 }
 
-/** The chord's shape, large, with what it is made of. */
-export function ChordDiagram({ voicing, name, tuning, capo = 0 }: {
-  voicing: FretPosition[]; name: string | null; tuning?: string[]; capo?: number;
+/** The chord's shape, large, with what it is made of — beside it when `side`. */
+export function ChordDiagram({ voicing, name, tuning, capo = 0, side }: {
+  voicing: FretPosition[]; name: string | null; tuning?: string[]; capo?: number; side?: boolean;
 }) {
   const { lang } = useLang();
   const he = lang === 'he';
   const meta = shapeMeta(voicing, tuning, capo);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-      <div style={{ maxWidth: 460, width: '100%' }}>
+    <div style={side
+      ? { display: 'grid', gridTemplateColumns: 'minmax(0, 380px) minmax(0, 1fr)', gap: 32, alignItems: 'center', minWidth: 0 }
+      : { display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      <div style={{ maxWidth: side ? 380 : 460, width: '100%' }}>
         <MiniFretboard voicing={voicing} tuning={tuning} dotColors={rootColors(voicing, name, tuning)}
           dotLabels={degreeLabels(voicing, name, tuning)} showStringLabels showFretNumbers hideFretLabel />
       </div>
-      <Meta items={[
+      <Meta cols={side ? 1 : 3} items={[
         { label: he ? 'צורה' : 'Shape', value: meta.shape },
         { label: he ? 'שריגים' : 'Frets', value: meta.frets },
         { label: he ? 'תווים' : 'Notes', value: meta.notes },

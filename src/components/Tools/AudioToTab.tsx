@@ -33,11 +33,13 @@ const DEFAULT_CFG: TranscribeConfig = { instrument: 'acoustic', mixType: 'solo' 
 
 // ── Tab visual constants ──────────────────────────────────────────────────────
 
-const TAB_BG   = T.secondary;
-const TAB_LINE = 'rgba(255,255,255,0.45)';
-const TAB_BAR  = 'rgba(255,255,255,0.9)';
-const TAB_LBL  = 'rgba(255,255,255,0.75)';
-const TAB_SEL  = 'var(--gc-success)';
+// Drawn like the Tab Writer: mono numbers on ink hairlines, the selected
+// note the one cobalt cell.
+const TAB_BG   = T.bgDeep;
+const TAB_LINE = T.text;
+const TAB_BAR  = T.text;
+const TAB_LBL  = T.textMuted;
+const TAB_SEL  = T.primary;
 
 const COL_W        = 16;
 const STR_GAP      = 16;
@@ -48,19 +50,7 @@ const VB_W = LEFT_PAD + COLS_PER_ROW * COL_W + 4;
 // ── Clear button ──────────────────────────────────────────────────────────────
 
 function ClearBtn({ onClear }: { onClear: () => void }) {
-  return (
-    <button
-      onClick={onClear}
-      title="Reset — back to start"
-      style={{
-        padding: '7px 14px', borderRadius: 0, cursor: 'pointer', fontWeight: 400,
-        fontSize: 12, border: `1px solid ${T.border}`,
-        background: T.bgInput, color: T.textMuted, flexShrink: 0,
-        }}
-    >
-      Clear
-    </button>
-  );
+  return <Pill size="sm" onClick={onClear} title="Reset — back to start">Clear</Pill>;
 }
 
 // ── Tab SVG row ───────────────────────────────────────────────────────────────
@@ -77,16 +67,15 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
   const svgH  = TOP + 5 * STR_GAP + 6;
   const els: React.ReactNode[] = [];
 
-  els.push(<rect key="bg" x={0} y={0} width={VB_W} height={svgH} fill={TAB_BG} />);
 
   for (let di = 0; di < 6; di++) {
     const sy = TOP + di * STR_GAP;
     els.push(
       <line key={`l${di}`} x1={LEFT_PAD - 2} y1={sy} x2={LEFT_PAD + lineW} y2={sy}
-        stroke={TAB_LINE} strokeWidth={2} />,
+        stroke={TAB_LINE} strokeWidth={0.75} />,
       <text key={`n${di}`} x={LEFT_PAD - 6} y={sy + 3.5}
         fontSize={9} fill={TAB_LBL} textAnchor="end"
-        fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
+        fontFamily="var(--gc-mono)" fontWeight="700">
         {STRING_NAMES[di]}
       </text>,
     );
@@ -100,7 +89,7 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
     const bx = LEFT_PAD + c * COL_W;
     els.push(
       <line key={`b${c}`} x1={bx} y1={TOP} x2={bx} y2={TOP + 5 * STR_GAP}
-        stroke={TAB_BAR} strokeWidth={1} opacity={0.5} />,
+        stroke={T.hairline} strokeWidth={1} />,
     );
   }
 
@@ -117,11 +106,11 @@ function TabSVGRow({ colStart, colEnd, colMap, selectedCol, onTap }: {
       els.push(
         <g key={`${c}-${si}`} onClick={e => onTap(c, si, e)} style={{ cursor: 'pointer' }}>
           <rect x={cx - (wide ? 7 : 5)} y={sy - 6} width={wide ? 14 : 10} height={12}
-            fill={sel ? TAB_SEL : TAB_BG} rx={0} />
-          <text x={cx} y={sy + 4.5} fontSize={8.5}
-            fill='#fff'
+            fill={sel ? TAB_SEL : TAB_BG} />
+          <text x={cx} y={sy + 3.2} fontSize={8.5}
+            fill={sel ? T.onPrimary : T.text}
             textAnchor="middle"
-            fontFamily="monospace, 'Courier New', monospace" fontWeight="700">
+            fontFamily="var(--gc-mono)" fontWeight="700">
             {lbl}
           </text>
         </g>,
@@ -153,8 +142,9 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
 
   if (totalColumns === 0) {
     return (
-      <div style={{ background: TAB_BG, borderRadius: 0, padding: '20px', textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: 13, color: TAB_LBL }}>No notes detected in audio</p>
+      <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, padding: '18px 0' }}>
+        <p className="su-poster" style={{ margin: 0, fontSize: 34 }}>No notes heard</p>
+        <p style={{ margin: '10px 0 0', fontSize: 12.5, color: TAB_LBL }}>No notes detected in the audio — try a louder, cleaner take.</p>
       </div>
     );
   }
@@ -177,10 +167,7 @@ function TabDisplay({ tabData, onSelectNote, clearToken }: {
   };
 
   return (
-    <div style={{
-      background: TAB_BG, borderRadius: 0, padding: '10px 8px',
-      display: 'flex', flexDirection: 'column', gap: 6,
-    }}>
+    <div dir="ltr" style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
       {Array.from({ length: numRows }, (_, r) => {
         const colStart = r * COLS_PER_ROW;
         const colEnd   = Math.min(colStart + COLS_PER_ROW, totalColumns);
@@ -215,15 +202,15 @@ function ProcessingScan({ data, progress }: { data: Float32Array; progress: numb
       {amp.map((v, i) => {
         const h = Math.max(2, (v / peak) * WAVE_H * 0.9);
         return <rect key={i} x={i * barW + 1} y={(WAVE_H - h) / 2} width={barW - 2} height={h}
-          fill={i < scanned ? 'var(--gc-text)' : 'var(--gc-border)'} style={{ transition: 'fill var(--gc-dur-base) var(--gc-ease-out)' }} />;
+          fill={i < scanned ? T.text : T.hairline} style={{ transition: 'fill var(--gc-dur-base) var(--gc-ease-out)' }} />;
       })}
       {[0, 1, 2, 3, 4, 5].map(r => (
         <line key={r} x1={0} x2={W} y1={TAB_TOP + r * LINE_GAP} y2={TAB_TOP + r * LINE_GAP} stroke="var(--gc-fretboard-str)" strokeWidth={1} />
       ))}
       {onsets.filter(o => o.i < scanned).map(({ i, v }) => (
-        <circle key={i} className="gc-fall" cx={i * barW + barW / 2} cy={TAB_TOP + (Math.round((1 - v / peak) * 5)) * LINE_GAP} r={3} fill="var(--gc-success)" />
+        <circle key={i} className="gc-fall" cx={i * barW + barW / 2} cy={TAB_TOP + (Math.round((1 - v / peak) * 5)) * LINE_GAP} r={3} fill={T.text} />
       ))}
-      <line x1={0} x2={0} y1={0} y2={TAB_TOP + LINE_GAP * 5 + 4} stroke="var(--gc-success)" strokeWidth={2}
+      <line x1={0} x2={0} y1={0} y2={TAB_TOP + LINE_GAP * 5 + 4} stroke={T.primary} strokeWidth={2}
         style={{ transform: `translateX(${scanned * barW}px)`, transition: 'transform var(--gc-dur-slow) var(--gc-ease-out)' }} />
     </svg>
   );
@@ -245,19 +232,13 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
     <>
       <style>{`
         @keyframes wv-flow {
-          0%,100% { transform: scaleY(0.7); opacity: 0.75; }
-          50%      { transform: scaleY(1);   opacity: 1;    }
+          0%,100% { transform: scaleY(0.7); }
+          50%      { transform: scaleY(1);   }
         }
+        @media (prefers-reduced-motion: reduce) { .su-wv rect { animation: none !important; } }
       `}</style>
       <svg width="100%" viewBox={`0 0 ${W} ${height}`}
-        preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
-        <defs>
-          <linearGradient id="wv-green" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stopColor="#5C5650" />
-            <stop offset="50%"  stopColor="#5C5650" />
-            <stop offset="100%" stopColor="var(--gc-bg-input)" />
-          </linearGradient>
-        </defs>
+        preserveAspectRatio="xMidYMid meet" className="su-wv" style={{ display: 'block' }}>
         {sampled.map((v, i) => {
           const h     = Math.max(2, v * mid * 0.94);
           const cx    = i * barW + barW / 2;
@@ -266,7 +247,7 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
             <rect key={i}
               x={i * barW + gap / 2} y={mid - h}
               width={Math.max(1.5, bw)} height={h * 2}
-              fill="url(#wv-green)" rx={Math.min(3, bw / 2)}
+              fill={T.text}
               style={{
                 transformOrigin: `${cx}px ${mid}px`,
                 animation: `wv-flow 2.4s ease-in-out ${delay} infinite`,
@@ -284,11 +265,11 @@ function Waveform({ data, height = 64 }: { data: Float32Array; height?: number }
 function RecordingBars() {
   return (
     <>
-      <style>{`@keyframes at-eq{from{transform:scaleY(.1)}to{transform:scaleY(1)}}`}</style>
-      <svg width={120} height={40} viewBox="0 0 120 40" style={{ display: 'block', margin: '0 auto' }}>
+      <style>{`@keyframes at-eq{from{transform:scaleY(.1)}to{transform:scaleY(1)}} @media (prefers-reduced-motion: reduce){.su-eq rect{animation:none!important}}`}</style>
+      <svg width={180} height={48} viewBox="0 0 120 40" className="su-eq" aria-hidden style={{ display: 'block' }}>
         {Array.from({ length: 10 }, (_, i) => (
           <rect key={i} x={i * 12 + 2} y={2} width={9} height={36}
-            fill={T.primary} rx={4.5} opacity={0.85}
+            fill={T.text}
             style={{
               transformOrigin: `${i * 12 + 6.5}px 20px`,
               animation: `at-eq .7s ease-in-out ${(i * 0.08).toFixed(2)}s infinite alternate`,
@@ -306,10 +287,6 @@ const RESPONSIVE_CSS = `
   .at-player-row { display: flex; gap: 10px; }
 `;
 
-const LABEL: React.CSSProperties = {
-  margin: '0 0 10px', fontSize: 10, fontWeight: 400,
-  color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.14em',
-};
 
 // ── Main component ────────────────────────────────────────────────────────────
 

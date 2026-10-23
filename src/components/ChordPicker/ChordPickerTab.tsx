@@ -207,7 +207,7 @@ export function ChordPickerTab({
 
   const diagram = chordName && current ? (
     <Rule>
-      <ChordDiagram voicing={current} name={chordName} tuning={tuning} />
+      <ChordDiagram voicing={current} name={chordName} tuning={tuning} side={desktop} />
     </Rule>
   ) : null;
 

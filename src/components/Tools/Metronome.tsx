@@ -194,12 +194,15 @@ export const Metronome: React.FC = () => {
     playing && beat === i * subdivision.clicksPerBeat;
 
   return (
-    <NightStage on={night}>
+    <NightStage on={night} wide>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <span className="su-label">{he ? 'מטרונום' : 'Metronome'} · {timeSig.label}</span>
         <NightToggle on={night} onToggle={toggleNight} />
       </div>
 
+      {/* Two columns when there is room: the beat on the left, the settings on the right */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: desktop ? 40 : 18, alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: desktop ? 22 : 18 }}>
       {/* Giant tempo — type a number, or step it */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
         <input
@@ -256,6 +259,9 @@ export const Metronome: React.FC = () => {
       {playing
         ? <Pill onClick={handleStartStop} style={{ width: '100%', height: 56 }}>{he ? 'עצירה' : 'Stop'}</Pill>
         : <Cta onClick={handleStartStop} style={{ width: '100%', height: 56 }}>{he ? 'התחלה' : 'Start'}</Cta>}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: desktop ? 22 : 18 }}>
 
       <Rule label={he ? 'משקל' : 'Time'}>
         <PillRow items={TIME_SIGS.map(t => ({ id: t.label, label: t.label }))} value={timeSig.label}
@@ -288,6 +294,8 @@ export const Metronome: React.FC = () => {
           </p>
         )}
       </Rule>
+      </div>
+      </div>
     </NightStage>
   );
 };

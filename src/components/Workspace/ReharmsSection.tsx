@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { savedReharms } from '../../services/workspace';
 import type { SavedReharm } from '../../services/types';
 import { requestOpenVoicings } from '../../services/handoff';
 import { exportMidi } from '../../utils/midiExport';
 import { ItemMenu } from './ItemMenu';
-import { EmptyState, RenameDialog, formatDate } from './shared';
+import { EmptyState, RenameDialog, Tile, Tag } from './shared';
+import { matches, formatDate, TILE_GRID, TILE_GRID_DESKTOP } from './library';
 
-export const ReharmsSection: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
+export const ReharmsSection: React.FC<{ desktop?: boolean; query?: string; onCount?: (n: number) => void }> = ({ desktop, query, onCount }) => {
   const { user } = useAuth();
   const [items, setItems]       = useState<SavedReharm[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -23,10 +24,13 @@ export const ReharmsSection: React.FC<{ desktop?: boolean }> = ({ desktop }) => 
       .finally(() => setLoading(false));
   }, [user]);
 
+  // Report the count to the Library's filter pills.
+  useEffect(() => { if (!loading) onCount?.(items.length); }, [items, loading, onCount]);
+
   if (loading) return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 20 }}>Loading…</p>;
   if (items.length === 0) return (
-    <EmptyState icon="↻" title="No re-harmonizations yet"
-      hint="Re-harmonize a progression in Voicings → Reharm and save the result to see it here." />
+    <EmptyState title="No re-harmonizations yet"
+      hint="Re-harmonize a progression at Reharmonize (L1) and save the result to see it here." />
   );
 
   const open = (it: SavedReharm) => {
@@ -56,57 +60,38 @@ export const ReharmsSection: React.FC<{ desktop?: boolean }> = ({ desktop }) => 
     setRenaming(null);
   };
 
+  const shown = items.filter(it => matches(`${it.name} ${it.genre ?? ''} ${it.original.join(' ')} ${(it.result?.chords ?? []).join(' ')}`, query));
+  if (!shown.length) return <EmptyState title="Nothing matches" hint="Try another word, or clear the search." />;
+
+  const chips = (cs: string[], strong: boolean) => (
+    <div dir="ltr" style={{ fontSize: 12, fontFamily: 'var(--gc-mono)', fontWeight: strong ? 700 : 400, color: strong ? T.text : T.textMuted, lineHeight: 1.5, overflowWrap: 'anywhere' }}>
+      {cs.join(' · ')}
+    </div>
+  );
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(150px, 1fr))', gap: desktop ? 14 : 8 }}>
-      {items.map(it => (
-        <div key={it.id} style={{ ...card({ padding: '12px 12px 10px' }), display: 'flex', flexDirection: 'column', gap: 8, borderLeft: `4px solid ${T.coral}` }}>
-          {desktop && <div style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Re-Harmonization</div>}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
-            <div style={{ fontSize: 14, color: T.text, fontWeight: 500, lineHeight: 1.25, overflow: 'hidden' }}>
-              {it.name}
+    <div style={desktop ? TILE_GRID_DESKTOP : TILE_GRID}>
+      {shown.map(it => (
+        <Tile key={it.id} line="L1" type="Re-harmonization" name={it.name} date={formatDate(it.updated_at)}
+          action={{ label: 'Open in Reharm', onClick: () => open(it) }}
+          menu={<ItemMenu items={[
+            { label: 'Open in Reharm', onClick: () => open(it) },
+            { label: 'Rename',         onClick: () => setRenaming(it) },
+            { label: 'Duplicate',      onClick: () => duplicate(it) },
+            { label: 'Export MIDI',    onClick: () => exportMidi(it.result.chords, it.name) },
+            { label: 'Delete',         onClick: () => remove(it), danger: true },
+          ]} />}>
+          {/* Original → re-harmonized */}
+          {chips(it.original, false)}
+          <span aria-hidden className="su-label" style={{ lineHeight: 1 }}>↓</span>
+          {chips(it.result?.chords ?? [], true)}
+          {(it.genre || it.tension != null) && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {it.genre && <Tag>{it.genre}</Tag>}
+              {it.tension != null && <Tag>Tension {it.tension}</Tag>}
             </div>
-            <ItemMenu items={[
-              { label: 'Open in Reharm', icon: '↗', onClick: () => open(it) },
-              { label: 'Rename',         icon: '✎', onClick: () => setRenaming(it) },
-              { label: 'Duplicate',      icon: '⧉', onClick: () => duplicate(it) },
-              { label: 'Export MIDI',    icon: '⤓', onClick: () => exportMidi(it.result.chords, it.name) },
-              { label: 'Delete',         icon: '', onClick: () => remove(it), danger: true },
-            ]} />
-          </div>
-
-          {/* Original → Reharmonized chips */}
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-            {it.original.map((c, i) => (
-              <span key={i} style={{
-                fontSize: 10.5, color: T.textMuted, background: T.bgDeep, border: `1px solid ${T.border}`,
-                padding: '1px 6px',
-              }}>{c}</span>
-            ))}
-          </div>
-          <div style={{ fontSize: 11, color: T.textDim, lineHeight: 1 }}>↓</div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {(it.result?.chords ?? []).map((c, i) => (
-              <span key={i} style={{
-                fontSize: 11, color: T.text, background: T.secondaryBg, border: `1px solid ${T.secondaryFaint}`,
-                padding: '2px 8px',
-              }}>{c}</span>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {it.genre && <Tag>{it.genre}</Tag>}
-            {it.tension != null && <Tag>Tension {it.tension}</Tag>}
-          </div>
-
-          <div style={{ fontSize: 11, color: T.textDim, marginTop: 'auto' }}>{formatDate(it.updated_at)}</div>
-
-          <button onClick={() => open(it)} style={{
-            width: '100%', padding: '8px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.primary, color: T.white, border: 'none',
-            fontSize: 11.5, fontFamily: 'inherit', fontWeight: 400,
-            textTransform: 'uppercase', letterSpacing: '-0.02em',
-            }}>Open in Reharm</button>
-        </div>
+          )}
+        </Tile>
       ))}
 
       {renaming && (
@@ -116,9 +101,3 @@ export const ReharmsSection: React.FC<{ desktop?: boolean }> = ({ desktop }) => 
   );
 };
 
-const Tag: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span style={{
-    fontSize: 10, color: T.textMuted, background: T.bgInput, border: `1px solid ${T.border}`,
-    padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '-0.02em',
-  }}>{children}</span>
-);

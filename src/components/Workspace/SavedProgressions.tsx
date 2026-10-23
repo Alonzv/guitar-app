@@ -1,21 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { savedProgressions } from '../../services/workspace';
 import type { SavedProgression } from '../../services/types';
 import type { ChordInProgression } from '../../types/music';
 import { ItemMenu } from './ItemMenu';
-import { EmptyState, RenameDialog, formatDate } from './shared';
-
-const PROG_ACCENT = '#5C5650';
+import { EmptyState, RenameDialog, Tile, Tag } from './shared';
+import { matches, formatDate, TILE_GRID, TILE_GRID_DESKTOP } from './library';
 
 interface Props {
   /** Loads a saved progression back into the Chord Builder. */
   onOpenInBuilder: (chords: ChordInProgression[]) => void;
   desktop?: boolean;
+  /** The Library's search text. */
+  query?: string;
+  /** Reports how many items this section holds (the filter pill's count). */
+  onCount?: (n: number) => void;
 }
 
-export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
+export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop, query, onCount }) => {
   const { user } = useAuth();
   const [items, setItems]       = useState<SavedProgression[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -30,10 +33,13 @@ export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop })
       .finally(() => setLoading(false));
   }, [user]);
 
+  // Report the count to the Library's filter pills.
+  useEffect(() => { if (!loading) onCount?.(items.length); }, [items, loading, onCount]);
+
   if (loading) return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 20 }}>Loading…</p>;
   if (items.length === 0) return (
-    <EmptyState icon="❏" title="No saved progressions yet"
-      hint="Build a progression in Theory → Chords and save it to reuse it any time." />
+    <EmptyState title="No saved progressions yet"
+      hint="Build a progression at Chord Builder (L1) and save it to reuse it any time." />
   );
 
   const remove = async (it: SavedProgression) => {
@@ -55,78 +61,32 @@ export const SavedProgressions: React.FC<Props> = ({ onOpenInBuilder, desktop })
     setRenaming(null);
   };
 
+  const shown = items.filter(it => matches(`${it.name} ${it.detected_key ?? ''} ${it.chords.map(c => c.chord.name).join(' ')}`, query));
+  if (!shown.length) return <EmptyState title="Nothing matches" hint="Try another word, or clear the search." />;
+
   return (
-    <div style={desktop
-      ? { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }
-      : { display: 'flex', flexDirection: 'column', gap: 8 }
-    }>
-      {items.map(it => (
-        <div key={it.id} style={{
-          ...card({ padding: '12px 14px' }),
-          display: 'flex',
-          flexDirection: desktop ? 'column' : 'row',
-          alignItems: desktop ? 'flex-start' : 'center',
-          gap: desktop ? 6 : 12,
-          borderLeft: `4px solid ${PROG_ACCENT}`,
-        }}>
-          {desktop ? (
-            <>
-              <div style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 2 }}>Progression</div>
-              <div style={{ fontSize: 14, color: T.text, fontWeight: 500, lineHeight: 1.25 }}>{it.name}</div>
-              <div style={{ fontSize: 11, color: T.textDim }}>
-                {it.detected_key ? `Key ${it.detected_key} · ` : ''}
-                {it.chords.length} chord{it.chords.length !== 1 ? 's' : ''} · {formatDate(it.updated_at)}
-              </div>
-              {it.chords.length > 0 && (
-                <div style={{ fontSize: 11, color: T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
-                  {it.chords.map(c => c.chord.name).join(' · ')}
-                </div>
-              )}
-              <button onClick={() => onOpenInBuilder(it.chords)} style={{
-                marginTop: 4, width: '100%', padding: '7px 0', borderRadius: 0, cursor: 'pointer',
-                background: T.primary, color: T.white, border: 'none',
-                fontSize: 11, fontFamily: 'inherit', fontWeight: 400,
-                textTransform: 'uppercase', letterSpacing: '-0.02em',
-                borderLeft: `3px solid ${PROG_ACCENT}`,
-              }}>Open in Builder</button>
-              <ItemMenu items={[
-                { label: 'Rename',    icon: '✎', onClick: () => setRenaming(it) },
-                { label: 'Duplicate', icon: '⧉', onClick: () => duplicate(it) },
-                { label: 'Export PDF',icon: '⤓', onClick: async () => { const { exportProgressionPDF } = await import('../../utils/pdfExport'); await exportProgressionPDF(it.name, it.chords); } },
-                { label: 'Export MIDI', icon: '⤓', onClick: async () => { const { exportMidi } = await import('../../utils/midiExport'); exportMidi(it.chords.map(c => c.chord.name), it.name); } },
-                { label: 'Delete',    icon: '', onClick: () => remove(it), danger: true },
-              ]} />
-            </>
-          ) : (
-            <>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: T.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
-                <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>
-                  {it.detected_key ? `Key ${it.detected_key} · ` : ''}
-                  {it.chords.length} chord{it.chords.length !== 1 ? 's' : ''} · {formatDate(it.updated_at)}
-                </div>
-                {it.chords.length > 0 && (
-                  <div style={{ fontSize: 11, color: T.textMuted, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {it.chords.map(c => c.chord.name).join(' · ')}
-                  </div>
-                )}
-              </div>
-              <button onClick={() => onOpenInBuilder(it.chords)} style={{
-                padding: '8px 12px', borderRadius: 0, cursor: 'pointer', flexShrink: 0,
-                background: T.primary, color: T.white, border: 'none',
-                fontSize: 11, fontFamily: 'inherit', fontWeight: 400,
-                textTransform: 'uppercase', letterSpacing: '-0.02em',
-                }}>Open in Builder</button>
-              <ItemMenu items={[
-                { label: 'Open in Builder', icon: '↗', onClick: () => onOpenInBuilder(it.chords) },
-                { label: 'Rename',          icon: '✎', onClick: () => setRenaming(it) },
-                { label: 'Duplicate',       icon: '⧉', onClick: () => duplicate(it) },
-                { label: 'Export PDF',      icon: '⤓', onClick: async () => { const { exportProgressionPDF } = await import('../../utils/pdfExport'); await exportProgressionPDF(it.name, it.chords); } },
-                { label: 'Delete',          icon: '', onClick: () => remove(it), danger: true },
-              ]} />
-            </>
+    <div style={desktop ? TILE_GRID_DESKTOP : TILE_GRID}>
+      {shown.map(it => (
+        <Tile key={it.id} line="L1" type="Progression" name={it.name} date={formatDate(it.updated_at)}
+          action={{ label: 'Open in Builder', onClick: () => onOpenInBuilder(it.chords) }}
+          menu={<ItemMenu items={[
+            { label: 'Open in Builder', onClick: () => onOpenInBuilder(it.chords) },
+            { label: 'Rename',      onClick: () => setRenaming(it) },
+            { label: 'Duplicate',   onClick: () => duplicate(it) },
+            { label: 'Export PDF',  onClick: async () => { const { exportProgressionPDF } = await import('../../utils/pdfExport'); await exportProgressionPDF(it.name, it.chords); } },
+            { label: 'Export MIDI', onClick: async () => { const { exportMidi } = await import('../../utils/midiExport'); exportMidi(it.chords.map(c => c.chord.name), it.name); } },
+            { label: 'Delete',      onClick: () => remove(it), danger: true },
+          ]} />}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {it.detected_key && <Tag>{it.detected_key}</Tag>}
+            <Tag>{it.chords.length} chord{it.chords.length !== 1 ? 's' : ''}</Tag>
+          </div>
+          {it.chords.length > 0 && (
+            <div dir="ltr" style={{ fontSize: 12, fontFamily: 'var(--gc-mono)', fontWeight: 700, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {it.chords.map(c => c.chord.name).join(' · ')}
+            </div>
           )}
-        </div>
+        </Tile>
       ))}
 
       {renaming && (

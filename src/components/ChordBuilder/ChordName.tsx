@@ -43,8 +43,8 @@ export const ChordName: React.FC<Props> = ({ positions, tuning, capo = 0, max })
           </span>
         )}
         {alts.length > 0 && (
-          <span className="su-label">
-            {he ? 'גם' : 'Also'} · {alts.slice(0, 4).map(c => formatChordName(c.name)).join(' · ')}
+          <span className="su-label" style={{ textTransform: 'none' }}>
+            {he ? 'גם' : 'ALSO'} · {alts.slice(0, 4).map(c => formatChordName(c.name)).join(' · ')}
           </span>
         )}
       </>

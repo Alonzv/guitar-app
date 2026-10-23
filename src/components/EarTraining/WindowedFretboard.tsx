@@ -105,9 +105,9 @@ export const WindowedFretboard: React.FC<Props> = ({
         const marker = MARKERS.includes(f);
         return (
           <text key={`fn${f}`} x={LEFT + (f - displayMin - 0.5) * FRET_SP} y={SVG_H - 7}
-            textAnchor="middle" fontSize={12}
+            textAnchor="middle" fontSize={11} fontFamily="var(--gc-mono)"
             fontWeight={marker ? 700 : 400}
-            fill={marker ? T.textMuted : T.textDim} opacity={marker ? 0.9 : 0.55}>
+            fill={T.textMuted} opacity={marker ? 1 : 0.6}>
             {f}
           </text>
         );
@@ -116,7 +116,7 @@ export const WindowedFretboard: React.FC<Props> = ({
       {/* string name labels + open-string 'O' when at the nut */}
       {Array.from({ length: N_STRINGS }).map((_, s) => (
         <g key={`sl${s}`}>
-          <text x={LABEL_W / 2} y={strY(s) + 4} textAnchor="middle" fontSize={11} fill={T.textDim}>
+          <text x={LABEL_W / 2} y={strY(s) + 4} textAnchor="middle" fontSize={11} fill={T.textMuted} fontFamily="var(--gc-mono)">
             {noteName(OPEN_MIDI[s])}
           </text>
         </g>
@@ -133,9 +133,10 @@ export const WindowedFretboard: React.FC<Props> = ({
 
           let fill: string | null = null;
           let label = '';
-          if (rootHere) { fill = T.primary; label = rootLabel; }
-          else if (pickedHere) { fill = feedback!.correct ? T.success : T.error; label = noteName(midiAt(s, f)); }
-          else if (revealHere) { fill = T.success; label = noteName(midiAt(s, f)); }
+          // One cobalt dot: the root until the answer shows, then the answer.
+          if (rootHere) { fill = showAnswer ? T.secondary : T.primary; label = rootLabel; }
+          else if (pickedHere) { fill = feedback!.correct ? T.primary : T.secondary; label = noteName(midiAt(s, f)); }
+          else if (revealHere) { fill = T.primary; label = noteName(midiAt(s, f)); }
 
           return (
             <g key={`${s}-${f}`}

@@ -775,7 +775,7 @@ export function MelodyHarmonizerTab({ tuning, desktop }: Props) {
       {hiddenFretInput}
       {/* Input stage */}
       <Rule
-        label={he ? 'מנגינה' : 'Melody input'}
+        label={<span style={{ whiteSpace: 'nowrap' }}>{he ? 'מנגינה' : 'Melody input'}</span>}
         right={
           <div style={{ display: 'flex', gap: 6 }}>
             <Pill size="sm" onClick={() => fileRef.current?.click()} disabled={visionLoading}>

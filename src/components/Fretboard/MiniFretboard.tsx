@@ -37,16 +37,19 @@ export const MiniFretboard: React.FC<Props> = ({
   const displayMax = Math.max(maxFret, displayMin + 4);
   const fretCount = displayMax - displayMin;
 
-  const W = 200, H = 90;
+  // Room under the strings for fret numbers, so a low-E dot never covers one.
+  const W = 200, H = showFretNumbers ? 100 : 90;
   const strLabelW = showStringLabels ? 14 : 0;
   const NUT_W = 6;
 
   const minLeftForOpen = displayMin === 0 && hasOpen
     ? Math.ceil((16 * fretCount + W - 8) / (2 * fretCount + 1))
     : 0;
-  const LEFT = Math.max(displayMin === 0 ? 16 : 24, minLeftForOpen) + strLabelW;
+  // With string names and open-string dots, the names sit left of the dots.
+  const openRoom = showStringLabels && displayMin === 0 && hasOpen ? 14 : 0;
+  const LEFT = Math.max(displayMin === 0 ? 16 : 24, minLeftForOpen) + strLabelW + openRoom;
   const fretSp = (W - LEFT - 8) / Math.max(fretCount, 1);
-  const strSp = (H - 20) / (STRING_COUNT - 1);
+  const strSp = (90 - 20) / (STRING_COUNT - 1);
   const topY = 8;
   const botY = topY + (STRING_COUNT - 1) * strSp;
   const midY = (topY + botY) / 2;
@@ -116,7 +119,7 @@ export const MiniFretboard: React.FC<Props> = ({
       {/* String name labels on the left */}
       {showStringLabels && Array.from({ length: STRING_COUNT }).map((_, s) => (
         <text key={`sl-${s}`}
-          x={LEFT - strLabelW / 2 - 1}
+          x={openRoom ? LEFT - fretSp * 0.5 - 13 : LEFT - strLabelW / 2 - 1}
           y={strY(s) + 2.5}
           textAnchor="middle" dominantBaseline="middle"
           fontSize={6.5} fontWeight={700} fill={T.textMuted} fontFamily="var(--gc-mono)"

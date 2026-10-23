@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { savedTabs } from '../../services/workspace';
 import type { SavedTab, TabContent } from '../../services/types';
 import { ItemMenu } from './ItemMenu';
-import { EmptyState, RenameDialog, formatDate } from './shared';
+import { EmptyState, RenameDialog, Tile, Tag } from './shared';
+import { matches, formatDate, TILE_GRID, TILE_GRID_DESKTOP } from './library';
 
 interface Props {
   /** Loads a saved tab into the Tab Builder. */
   onOpenInBuilder: (content: TabContent, id: string) => void;
   desktop?: boolean;
+  /** The Library's search text. */
+  query?: string;
+  /** Reports how many items this section holds (the filter pill's count). */
+  onCount?: (n: number) => void;
 }
 
-export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
+export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop, query, onCount }) => {
   const { user } = useAuth();
   const [items, setItems]       = useState<SavedTab[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -27,10 +32,13 @@ export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
       .finally(() => setLoading(false));
   }, [user]);
 
+  // Report the count to the Library's filter pills.
+  useEffect(() => { if (!loading) onCount?.(items.length); }, [items, loading, onCount]);
+
   if (loading) return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 20 }}>Loading…</p>;
   if (items.length === 0) return (
-    <EmptyState icon="✎" title="No saved tabs yet"
-      hint="Write a tab in Tools → Tab Builder and save it to your library to see it here." />
+    <EmptyState title="No saved tabs yet"
+      hint="Write a tab at Tab Writer (L3) and save it to your library to see it here." />
   );
 
   const remove = async (it: SavedTab) => {
@@ -61,39 +69,29 @@ export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
     );
   };
 
+  const shown = items.filter(it => matches(`${it.name} ${it.music_key ?? ''}`, query));
+  if (!shown.length) return <EmptyState title="Nothing matches" hint="Try another word, or clear the search." />;
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(150px, 1fr))', gap: desktop ? 14 : 8 }}>
-      {items.map(it => (
-        <div key={it.id} style={{ ...card({ padding: '12px 12px 10px' }), display: 'flex', flexDirection: 'column', gap: 8, borderLeft: `4px solid ${T.primary}` }}>
-          {desktop && <div style={{ fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Tab</div>}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
-            <div style={{ fontSize: 14, color: T.text, fontWeight: 500, lineHeight: 1.25, overflow: 'hidden' }}>
-              {it.name}
+    <div style={desktop ? TILE_GRID_DESKTOP : TILE_GRID}>
+      {shown.map(it => (
+        <Tile key={it.id} line="L3" type="Tab" name={it.name} date={formatDate(it.updated_at)}
+          action={{ label: 'Open in Builder', onClick: () => onOpenInBuilder(it.content, it.id) }}
+          menu={<ItemMenu items={[
+            { label: 'Open in Builder', onClick: () => onOpenInBuilder(it.content, it.id) },
+            { label: 'Rename',          onClick: () => setRenaming(it) },
+            { label: 'Duplicate',       onClick: () => duplicate(it) },
+            { label: 'Export PDF',      onClick: () => exportPdf(it) },
+            { label: 'Export MIDI',     onClick: async () => { const { exportTabMidi } = await import('../../utils/midiExport'); exportTabMidi(it.content.grid ?? [], it.name); } },
+            { label: 'Delete',          onClick: () => remove(it), danger: true },
+          ]} />}>
+          {(it.music_key || it.tempo) ? (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {it.music_key && <Tag>{it.music_key}</Tag>}
+              {it.tempo ? <Tag>{it.tempo} BPM</Tag> : null}
             </div>
-            <ItemMenu items={[
-              { label: 'Open in Builder', icon: '↗', onClick: () => onOpenInBuilder(it.content, it.id) },
-              { label: 'Rename',          icon: '✎', onClick: () => setRenaming(it) },
-              { label: 'Duplicate',       icon: '⧉', onClick: () => duplicate(it) },
-              { label: 'Export PDF',      icon: '⤓', onClick: () => exportPdf(it) },
-              { label: 'Export MIDI',     icon: '⤓', onClick: async () => { const { exportTabMidi } = await import('../../utils/midiExport'); exportTabMidi(it.content.grid ?? [], it.name); } },
-              { label: 'Delete',          icon: '', onClick: () => remove(it), danger: true },
-            ]} />
-          </div>
-
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {it.music_key && <Tag>{it.music_key}</Tag>}
-            {it.tempo ? <Tag>{it.tempo} BPM</Tag> : null}
-          </div>
-
-          <div style={{ fontSize: 11, color: T.textDim, marginTop: 'auto' }}>{formatDate(it.updated_at)}</div>
-
-          <button onClick={() => onOpenInBuilder(it.content, it.id)} style={{
-            width: '100%', padding: '8px 0', borderRadius: 0, cursor: 'pointer',
-            background: T.primary, color: T.white, border: 'none',
-            fontSize: 11.5, fontFamily: 'inherit', fontWeight: 400,
-            textTransform: 'uppercase', letterSpacing: '-0.02em',
-            }}>Open in Builder</button>
-        </div>
+          ) : null}
+        </Tile>
       ))}
 
       {renaming && (
@@ -103,9 +101,3 @@ export const MyTabs: React.FC<Props> = ({ onOpenInBuilder, desktop }) => {
   );
 };
 
-const Tag: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span style={{
-    fontSize: 10, color: T.textMuted, background: T.bgInput, border: `1px solid ${T.border}`,
-    padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '-0.02em',
-  }}>{children}</span>
-);

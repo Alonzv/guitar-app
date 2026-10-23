@@ -155,15 +155,16 @@ export function IntervalExplore() {
           </div>
 
           {/* The neck */}
-          <Rule label="On the neck" right={
-            <PillRow label="Area" items={AREAS.map(a => ({ id: a.id, label: a.label }))} value={area} onChange={setArea} />
-          }>
-            <div style={{ display: 'flex', gap: 14, fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{key(ROOT.fill)}Root</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{key(IV.fill)}Interval</span>
+          <Rule label="On the neck">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+              <PillRow label="Area" items={AREAS.map(a => ({ id: a.id, label: a.label }))} value={area} onChange={setArea} />
+              <div style={{ display: 'flex', gap: 14, fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{key(ROOT.fill)}Root</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{key(IV.fill)}Interval</span>
+              </div>
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <IntervalNeck height={svgH}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <IntervalNeck height={svgH} minWidth={520}>
                 {pairs.map((p, i) => (
                   <line key={`conn-${i}`}
                     x1={noteX(p.rootFret)} y1={strY(p.string)}

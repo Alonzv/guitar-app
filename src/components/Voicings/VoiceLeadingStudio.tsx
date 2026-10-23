@@ -196,7 +196,7 @@ export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange 
           }
         />
         {pickOpen && (
-          <div dir="ltr" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+          <div dir="ltr" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14, maxWidth: 560 }}>
             <KeyGrid label={he ? 'שורש' : 'Root'} items={ROOTS.map(r => ({ id: r, label: r }))} value={pRoot} onChange={setPRoot} />
             <PillRow label={he ? 'סוג' : 'Quality'} items={TRIADS.map(q => ({ id: q.k, label: q.l }))} value={pTri}
               onChange={k => { setPTri(k); setPExt(''); }} wrap />

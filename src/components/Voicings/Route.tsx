@@ -68,7 +68,7 @@ export function Route({ stations, current, onRemove, onReorder, trailing, label 
         );
       })}
       {trailing && (
-        <div style={{ flex: 'none', display: 'flex', alignItems: 'flex-start', paddingInlineStart: stations.length ? 6 : 0 }}>
+        <div style={{ flex: 'none', display: 'flex', alignItems: 'flex-start', marginTop: stations.length ? -11 : 0, paddingInlineStart: stations.length ? 6 : 0 }}>
           {trailing}
         </div>
       )}
