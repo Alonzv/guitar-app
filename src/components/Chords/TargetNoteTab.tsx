@@ -7,7 +7,10 @@ import { scalesContainingNotes, getScalePositions, type ScaleFit } from '../../u
 import { isPlayable } from '../../utils/chordVoicings';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { Rule, Pill, PillRow, Cta } from '../Transit/parts';
+import { pillStyle } from '../Transit/styles';
+import { useLang } from '../../contexts/LanguageContext';
 import { previewFret, previewVoicing } from '../../utils/previewSound';
 import { useFlash } from '../../motion/useFlash';
 import type { ChordInProgression } from '../../types/music';
@@ -235,7 +238,7 @@ function XORow({ voicing }: { voicing: FretPosition[] }) {
       {symbols.map(({ s, label, muted }) => (
         <span key={s} style={{
           fontSize: 9, fontWeight: 400, width: 12, textAlign: 'center',
-          color: muted ? T.textDim : label === 'O' ? T.primary : T.textMuted,
+          color: muted ? T.textMuted : T.text, fontFamily: 'var(--gc-mono)',
         }}>
           {label}
         </span>
@@ -245,8 +248,10 @@ function XORow({ voicing }: { voicing: FretPosition[] }) {
 }
 
 // ── Scrollable input fretboard ────────────────────────────────────────────
-// Same proportions as InteractiveFretboard so it looks identical in size.
-// minWidth: 540 ensures frets are always tap-friendly and triggers scroll on narrow screens.
+// The Transit neck drawn for input: every fret is a target you can tap, and
+// the chosen note is the view's one cobalt dot. Arrow keys move it (up/down a
+// string, left/right a fret) once the neck has focus.
+// minWidth: 540 keeps frets tap-friendly and scrolls on narrow screens.
 const FB_SVG_W   = 680;
 const FB_SVG_H   = 186;                          // extra height for air around fret numbers
 const FB_NUT_X   = 30;
@@ -255,7 +260,7 @@ const FB_FRET_SP = (FB_BOARD_R - FB_NUT_X) / 12; // ≈ 53.2 px per fret
 const FB_TOP_Y   = 12;
 const FB_STR_SP  = 27;
 const FB_BOARD_B = FB_TOP_Y + 5 * FB_STR_SP;     // bottom string y (147)
-const FB_DOT_R   = 11;
+const FB_DOT_R   = 12;
 
 const fretCX = (f: number) =>
   f === 0 ? FB_NUT_X / 2 : FB_NUT_X + (f - 0.5) * FB_FRET_SP;
@@ -265,7 +270,8 @@ const InputFretboard: React.FC<{
   selected: TargetPos | null;
   tuning: string[];
   onSelect: (pos: TargetPos) => void;
-}> = ({ selected, tuning, onSelect }) => {
+  label: string;
+}> = ({ selected, tuning, onSelect, label }) => {
   const handleClick = (s: number, f: number) => {
     // Second tap on same position → deselect
     if (selected?.string === s && selected?.fret === f) {
@@ -274,87 +280,81 @@ const InputFretboard: React.FC<{
       onSelect({ string: s, fret: f });
     }
   };
+  const onKey = (e: React.KeyboardEvent) => {
+    const cur = selected ?? { string: 5, fret: 0 };
+    const move: Record<string, [number, number]> = {
+      ArrowUp: [1, 0], ArrowDown: [-1, 0], ArrowRight: [0, 1], ArrowLeft: [0, -1],
+    };
+    const m = move[e.key];
+    if (!m) return;
+    e.preventDefault();
+    onSelect({
+      string: Math.min(STRING_COUNT - 1, Math.max(0, cur.string + m[0])),
+      fret: Math.min(12, Math.max(0, cur.fret + m[1])),
+    });
+  };
 
   return (
-    <div style={{
+    <div dir="ltr" style={{
       overflowX: 'auto',
       WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
-      borderRadius: 0,
-      background: 'var(--gc-fretboard-bg)',
       scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
     }}>
       <svg
         viewBox={`0 0 ${FB_SVG_W} ${FB_SVG_H}`}
+        role="group" tabIndex={0} aria-label={label} onKeyDown={onKey}
         style={{ width: '100%', minWidth: 540, maxHeight: 210, display: 'block' }}
       >
-        {/* Background */}
-        <rect x={0} y={0} width={FB_SVG_W} height={FB_SVG_H} fill="var(--gc-fretboard-bg)" />
-
-        {/* Open-string zone */}
-        <rect x={0} y={FB_TOP_Y} width={FB_NUT_X} height={5 * FB_STR_SP} fill="rgba(0,0,0,0.15)" />
-
-        {/* Nut */}
-        <rect x={FB_NUT_X - 3} y={FB_TOP_Y} width={3.5} height={5 * FB_STR_SP}
-          fill="var(--gc-fretboard-nut)" rx={1} />
-
         {/* Fret lines */}
-        {Array.from({ length: 13 }).map((_, i) => (
+        {Array.from({ length: 13 }).map((_, i) => i === 0 ? null : (
           <line key={i}
             x1={FB_NUT_X + i * FB_FRET_SP} y1={FB_TOP_Y}
             x2={FB_NUT_X + i * FB_FRET_SP} y2={FB_BOARD_B}
-            stroke="var(--gc-fretboard-fret)" strokeWidth={1.2}
+            stroke="var(--gc-fretboard-fret)" strokeWidth={1.5}
           />
         ))}
 
-        {/* Strings */}
+        {/* Strings — the low E thickest */}
         {Array.from({ length: STRING_COUNT }).map((_, s) => (
           <line key={s}
-            x1={0} y1={strY(s)} x2={FB_BOARD_R} y2={strY(s)}
-            stroke="var(--gc-fretboard-str)" strokeWidth={0.9 + s * 0.22}
+            x1={FB_NUT_X - 4} y1={strY(s)} x2={FB_BOARD_R} y2={strY(s)}
+            stroke="var(--gc-fretboard-str)" strokeWidth={2.6 - s * 0.32}
           />
         ))}
 
-        {/* Position dots */}
-        {[3, 5, 7, 9].map(f => (
-          <circle key={f}
-            cx={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
-            cy={FB_TOP_Y + 2.5 * FB_STR_SP}
-            r={4} fill="var(--gc-fretboard-pos)"
-          />
-        ))}
-        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 1.5 * FB_STR_SP} r={3.5} fill="var(--gc-fretboard-pos)" />
-        <circle cx={FB_NUT_X + 11.5 * FB_FRET_SP} cy={FB_TOP_Y + 3.5 * FB_STR_SP} r={3.5} fill="var(--gc-fretboard-pos)" />
+        {/* Nut */}
+        <rect x={FB_NUT_X - 7} y={FB_TOP_Y - 1} width={7} height={5 * FB_STR_SP + 2} fill="var(--gc-fretboard-nut)" />
 
-        {/* Fret number labels */}
+        {/* Fret numbers */}
         {[1,2,3,4,5,6,7,8,9,10,11,12].map(f => (
           <text key={f}
             x={FB_NUT_X + (f - 0.5) * FB_FRET_SP}
-            y={FB_BOARD_B + 22}
-            textAnchor="middle" fontSize={10} fill="var(--gc-fretboard-str)"
+            y={FB_BOARD_B + 24}
+            textAnchor="middle" fontSize={10} fontFamily="var(--gc-mono)"
+            fill={[3, 5, 7, 9, 12].includes(f) ? T.text : T.textMuted}
           >{f}</text>
         ))}
 
-        {/* Ghost hover rings */}
+        {/* Tap targets: a faint ring on every fret, the chosen note cobalt */}
         {Array.from({ length: STRING_COUNT }).map((_, s) =>
           Array.from({ length: 13 }).map((_, f) => {
             const isSelected = selected?.string === s && selected?.fret === f;
             const cx = fretCX(f);
             const cy = strY(s);
             const hitX = f === 0 ? 0 : FB_NUT_X + (f - 1) * FB_FRET_SP;
-            const hitW = f === 0 ? FB_NUT_X : FB_FRET_SP;
+            const hitW = f === 0 ? FB_NUT_X - 7 : FB_FRET_SP;
             return (
               <g key={`${s}-${f}`} onClick={() => handleClick(s, f)} style={{ cursor: 'pointer' }}>
                 <rect x={hitX} y={cy - FB_STR_SP / 2} width={hitW} height={FB_STR_SP} fill="transparent" />
                 {!isSelected && (
-                  <circle cx={cx} cy={cy} r={FB_DOT_R - 5}
-                    fill="transparent" stroke={T.border} strokeWidth={1} opacity={0.25} />
+                  <circle cx={cx} cy={cy} r={FB_DOT_R - 6}
+                    fill={T.bgDeep} stroke={T.hairline} strokeWidth={1.5} />
                 )}
                 {isSelected && (
                   <>
-                    <circle cx={cx} cy={cy} r={FB_DOT_R} fill={T.coral} opacity={0.92}
-                      style={{ filter: 'drop-shadow(0 0 5px var(--gc-coral))' }} />
-                    <text x={cx} y={cy + 4} textAnchor="middle" fontSize={9}
-                      fill="#fff" fontWeight="700">
+                    <circle cx={cx} cy={cy} r={FB_DOT_R} fill={T.primary} />
+                    <text x={cx} y={cy + 4} textAnchor="middle" fontSize={10} fontFamily="var(--gc-mono)"
+                      fill={T.onPrimary} fontWeight="700">
                       {fretToNote(s, f, tuning)}
                     </text>
                   </>
@@ -388,15 +388,13 @@ const ScaleStrip: React.FC<{
   const ssY  = (s: number) => SS_TOP + (STRING_COUNT - 1 - s) * SS_SSP;
 
   return (
-    <div style={{
-      overflowX: 'auto', borderRadius: 0, background: 'var(--gc-fretboard-bg)', marginTop: 8,
+    <div dir="ltr" style={{
+      overflowX: 'auto', marginTop: 8,
       scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
     }}>
       <svg viewBox={`0 0 ${SS_W} ${SS_H}`}
         style={{ width: '100%', minWidth: 460, maxHeight: 130, display: 'block' }}>
-        <rect x={0} y={0} width={SS_W} height={SS_H} fill="var(--gc-fretboard-bg)" />
-        <rect x={0} y={SS_TOP} width={SS_NUT} height={5 * SS_SSP} fill="rgba(0,0,0,0.15)" />
-        <rect x={SS_NUT - 2.5} y={SS_TOP} width={3} height={5 * SS_SSP} fill="var(--gc-fretboard-nut)" rx={1} />
+        <rect x={SS_NUT - 5} y={SS_TOP - 1} width={5} height={5 * SS_SSP + 2} fill="var(--gc-fretboard-nut)" />
 
         {Array.from({ length: 13 }).map((_, i) => (
           <line key={i} x1={SS_NUT + i * SS_FSP} y1={SS_TOP} x2={SS_NUT + i * SS_FSP} y2={SS_B}
@@ -404,11 +402,11 @@ const ScaleStrip: React.FC<{
         ))}
         {Array.from({ length: STRING_COUNT }).map((_, s) => (
           <line key={s} x1={0} y1={ssY(s)} x2={SS_R} y2={ssY(s)}
-            stroke="var(--gc-fretboard-str)" strokeWidth={0.8 + s * 0.18} />
+            stroke="var(--gc-fretboard-str)" strokeWidth={1.8 - s * 0.22} />
         ))}
         {[3,5,7,9,12].map(f => (
           <text key={f} x={SS_NUT + (f - 0.5) * SS_FSP} y={SS_H - 3}
-            textAnchor="middle" fontSize={8} fill="var(--gc-fretboard-str)">{f}</text>
+            textAnchor="middle" fontSize={8} fontFamily="var(--gc-mono)" fill={T.textMuted}>{f}</text>
         ))}
 
         {positions.map((p, i) => {
@@ -416,14 +414,16 @@ const ScaleStrip: React.FC<{
           const ch = TonalNote.chroma(note);
           const isTarget = ch === targetChroma;
           const isRoot = ch === rootChroma;
-          const fill = isTarget ? T.coral : isRoot ? T.primary : T.secondary;
+          // Monochrome: the target ink and ringed, the root ink, other scale
+          // tones grey (the modal's one cobalt thing is its primary action).
+          const fill = isTarget || isRoot ? T.secondary : T.coral;
           return (
             <g key={i}>
+              {isTarget && <circle cx={ssCX(p.fret)} cy={ssY(p.string)} r={10} fill="none" stroke={T.text} strokeWidth={1.5} />}
               <circle cx={ssCX(p.fret)} cy={ssY(p.string)} r={isTarget ? 7.5 : 6.5}
-                fill={fill} opacity={isTarget ? 0.95 : 0.78}
-                stroke={isTarget ? T.bgDeep : 'none'} strokeWidth={isTarget ? 1 : 0} />
+                fill={fill} stroke={T.bgDeep} strokeWidth={1} />
               <text x={ssCX(p.fret)} y={ssY(p.string) + 2.5} textAnchor="middle"
-                fontSize={5.5} fill="#fff" fontWeight="700">{note}</text>
+                fontSize={5.5} fill={T.white} fontWeight="700">{note}</text>
             </g>
           );
         })}
@@ -432,24 +432,10 @@ const ScaleStrip: React.FC<{
   );
 };
 
-// ── Pill button ───────────────────────────────────────────────────────────
-const Pill: React.FC<{
-  label: string; active: boolean; onClick: () => void; color?: string;
-}> = ({ label, active, onClick, color }) => (
-  <button data-active={!!active} onClick={onClick} style={{
-    padding: '4px 10px', borderRadius: 0,
-    border: active ? 'none' : `1px solid ${T.border}`,
-    cursor: 'pointer', fontSize: 11, fontWeight: active ? 500 : 400,
-    background: active ? (color ?? T.secondary) : T.bgInput,
-    color: active ? T.white : T.textMuted,
-    flexShrink: 0,
-    }}>
-    {label}
-  </button>
-);
-
 // ── Main component ────────────────────────────────────────────────────────
 export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToProgression }) => {
+  const { lang } = useLang();
+  const he = lang === 'he';
   const [added, flashAdded] = useFlash();
   // Opens on G on the high e string so there are chords to look at at once.
   const [targetPos, setTargetPos]             = useState<TargetPos | null>({ string: 5, fret: 3 });
@@ -512,180 +498,130 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
     return scalesContainingNotes(notes, 5);
   }, [expandedResult]);
 
-  const dotColors = useCallback((item: ResultItem) =>
-    item.voicing.map((_, i) => i === item.targetVoicingIdx ? T.primary : T.secondary),
+  // In the results the target note is the cobalt dot; in the open modal its
+  // primary action is, so there the target is ink and the rest grey.
+  const dotColors = useCallback((item: ResultItem, modal = false) =>
+    item.voicing.map((_, i) => i === item.targetVoicingIdx ? (modal ? T.secondary : T.primary) : (modal ? T.coral : T.secondary)),
   []);
 
+  const stringName = (st: number) => STRING_LABELS[st];
+  const posLabel = targetPos
+    ? (he ? `מיתר ${stringName(targetPos.string)} · ${targetPos.fret === 0 ? 'פתוח' : `שריג ${targetPos.fret}`}`
+          : `String ${stringName(targetPos.string)} · ${targetPos.fret === 0 ? 'Open' : `Fret ${targetPos.fret}`}`)
+    : '';
+
+  const settingRow = (title: string, children: React.ReactNode) => (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+      <span className="su-label" style={{ minWidth: 84 }}>{title}</span>
+      {children}
+    </div>
+  );
+
   const controlsLeft = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Input fretboard */}
-      <div style={{ ...card(), padding: '12px 14px' }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 8 }}>
-          Select target note
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* The target note: tap the neck */}
+      <Rule label={he ? 'בחרו תו מטרה' : 'Select target note'}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, minHeight: 64, marginBottom: 10 }}>
+          {targetPos ? (
+            <>
+              <span className="su-poster" style={{ fontSize: 64, textTransform: 'none' }}>{targetNoteName}</span>
+              <span className="su-label" style={{ color: T.text, paddingBottom: 4 }}>{posLabel}</span>
+            </>
+          ) : (
+            <span className="su-label">{he ? 'הקישו על הצוואר כדי לבחור תו' : 'Tap the fretboard to select a target note'}</span>
+          )}
         </div>
         <InputFretboard
           selected={targetPos}
           tuning={tuning.notes}
+          label={he
+            ? `צוואר לבחירת תו מטרה${targetPos ? ` — ${targetNoteName}, ${posLabel}` : ''}. חיצים מזיזים`
+            : `Target note neck${targetPos ? ` — ${targetNoteName}, ${posLabel}` : ''}. Arrow keys move`}
           onSelect={pos => {
             setTargetPos(pos.string === -1 ? null : pos);
             if (pos.string !== -1) previewFret(pos, tuning.openFreqs, capo);
           }}
         />
-        <div style={{
-          marginTop: 8, fontSize: 12, minHeight: 22,
-          color: targetPos ? T.text : T.textDim,
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          {targetPos ? (
-            <>
-              <span style={{
-                background: T.coralFaint2, color: T.coral,
-                borderRadius: 0, padding: '2px 8px', fontWeight: 400, fontSize: 13,
-              }}>
-                {targetNoteName}
-              </span>
-              <span style={{ color: T.textMuted }}>
-                String {STRING_LABELS[targetPos.string]} · {targetPos.fret === 0 ? 'Open' : `Fret ${targetPos.fret}`}
-              </span>
-            </>
-          ) : (
-            <span>Tap the fretboard to select a target note</span>
-          )}
-        </div>
-      </div>
+      </Rule>
 
-      {/* Controls accordion */}
-      <div style={{ ...card(), padding: 0, overflow: 'hidden' }}>
-        <button
-          onClick={() => setControlsOpen(o => !o)}
-          style={{
-            width: '100%', padding: '10px 14px',
-            background: T.secondary, border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}
-        >
-          <span style={{ fontSize: 12, fontWeight: 400, color: '#fff' }}>
-            ⚙ Search Settings
-          </span>
-          <span style={{
-            fontSize: 11, color: '#fff',
-            transform: controlsOpen ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.18s', display: 'inline-block',
-          }}>▼</span>
-        </button>
-
+      {/* Search settings */}
+      <Rule label={he ? 'הגדרות חיפוש' : 'Search settings'}
+        right={<Pill size="sm" active={controlsOpen} onClick={() => setControlsOpen(o => !o)}>
+          {controlsOpen ? (he ? 'סגירה' : 'Close') : (he ? 'הגדרות' : 'Settings')}
+        </Pill>}>
         {controlsOpen && (
-          <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Interval role</div>
-              <div style={{ marginBottom: 6 }}>
-                <div style={{ fontSize: 10, color: T.textDim, marginBottom: 4 }}>Core</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {CORE_INTERVALS.map(iv => (
-                    <Pill key={iv} label={iv} active={selectedIntervals.has(iv)}
-                      onClick={() => toggleInterval(iv)} color={T.secondary} />
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 10, color: T.textDim, marginBottom: 4 }}>Tensions</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {TENSION_INTERVALS.map(iv => (
-                    <Pill key={iv} label={iv} active={selectedIntervals.has(iv)}
-                      onClick={() => toggleInterval(iv)} color={T.primary} />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Position Lock</div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {(['anywhere', 'top', 'bass'] as const).map(pl => (
-                  <Pill key={pl}
-                    label={pl === 'anywhere' ? 'Anywhere' : pl === 'top' ? 'Top Voice' : 'Bass Note'}
-                    active={positionLock === pl}
-                    onClick={() => setPositionLock(pl)}
-                  />
-                ))}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: T.textDim, marginBottom: 5 }}>Complexity</div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {(['triads', '7ths', '9ths', 'full'] as const).map(c => (
-                  <Pill key={c}
-                    label={c === 'triads' ? 'Triads' : c === '7ths' ? '7ths' : c === '9ths' ? '9ths' : 'Full'}
-                    active={complexity === c}
-                    onClick={() => setComplexity(c)}
-                  />
-                ))}
-              </div>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {settingRow(he ? 'תפקיד — בסיס' : 'Role · core', CORE_INTERVALS.map(iv => (
+              <Pill key={iv} size="sm" active={selectedIntervals.has(iv)} onClick={() => toggleInterval(iv)}
+                style={{ textTransform: 'none' }}>{iv}</Pill>
+            )))}
+            {settingRow(he ? 'תפקיד — מתחים' : 'Role · tensions', TENSION_INTERVALS.map(iv => (
+              <Pill key={iv} size="sm" active={selectedIntervals.has(iv)} onClick={() => toggleInterval(iv)}
+                style={{ textTransform: 'none' }}>{iv}</Pill>
+            )))}
+            {settingRow(he ? 'נעילת מיקום' : 'Position lock', (
+              <PillRow wrap label={he ? 'נעילת מיקום' : 'Position lock'} value={positionLock} onChange={setPositionLock}
+                items={[
+                  { id: 'anywhere', label: he ? 'בכל מקום' : 'Anywhere' },
+                  { id: 'top', label: he ? 'קול עליון' : 'Top voice' },
+                  { id: 'bass', label: he ? 'בס' : 'Bass note' },
+                ]} />
+            ))}
+            {settingRow(he ? 'מורכבות' : 'Complexity', (
+              <PillRow wrap label={he ? 'מורכבות' : 'Complexity'} value={complexity} onChange={setComplexity}
+                items={[
+                  { id: 'triads', label: he ? 'טריאדות' : 'Triads' },
+                  { id: '7ths', label: '7ths' }, { id: '9ths', label: '9ths' },
+                  { id: 'full', label: he ? 'הכול' : 'Full' },
+                ]} />
+            ))}
           </div>
         )}
-      </div>
+      </Rule>
     </div>
   );
 
   const resultsPanel = (
-    <div>
+    <Rule label={!targetPos ? (he ? 'תוצאות' : 'Results')
+      : results.length > 0
+        ? (he ? `${results.length} אקורדים` : `${results.length} chord${results.length !== 1 ? 's' : ''} found`)
+        : (he ? 'לא נמצאו אקורדים — נסו הגדרות אחרות' : 'No chords found — try different settings')}>
       {!targetPos ? (
-        <div style={{ ...card({ padding: '28px 16px' }), textAlign: 'center', opacity: 0.5 }}>
-          <p style={{ margin: '0 0 6px', fontSize: 9, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Results</p>
-          <p style={{ margin: 0, fontSize: 12, color: T.textDim, fontFamily: 'var(--gc-mono)' }}>← Select a note on the fretboard</p>
+        <p className="su-label" style={{ margin: 0, padding: '18px 0' }}>
+          {he ? 'בחרו תו על הצוואר' : '← Select a note on the fretboard'}
+        </p>
+      ) : results.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '14px 12px' }}>
+          {results.map((item, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => { setExpandedIdx(idx); previewVoicing(item.voicing, tuning.openFreqs, capo); }}
+              aria-label={`${item.chordName} — ${targetNoteName} = ${item.intervalLabel}`}
+              className="gc-pressable gc-no-bar"
+              style={{
+                cursor: 'pointer', textAlign: 'start', display: 'flex', flexDirection: 'column', gap: 4, width: '100%', minWidth: 0,
+                background: 'transparent', color: T.text, padding: '8px 0 4px', borderRadius: 0,
+                borderWidth: 'var(--su-rule) 0 0 0', borderStyle: 'solid', borderColor: T.border,
+              }}
+            >
+              <span className="su-semi" style={{ fontSize: 22, lineHeight: 1, textTransform: 'none' }}>{item.chordName}</span>
+              <span className="su-label">{targetNoteName} = {item.intervalLabel}</span>
+              <span style={{ display: 'block', width: '100%', marginTop: 4 }}>
+                <XORow voicing={item.voicing} />
+                <MiniFretboard voicing={item.voicing} dotColors={dotColors(item)} tuning={tuning.notes} />
+              </span>
+            </button>
+          ))}
         </div>
-      ) : (
-        <>
-          <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 8, fontWeight: 600 }}>
-            {results.length > 0
-              ? `${results.length} chord${results.length !== 1 ? 's' : ''} found`
-              : 'No chords found — try different settings'}
-          </div>
-          {results.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {results.map((item, idx) => {
-                const RESULT_COLORS = ['var(--gc-success)', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
-                const bg = RESULT_COLORS[idx % RESULT_COLORS.length];
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => { setExpandedIdx(idx); previewVoicing(item.voicing, tuning.openFreqs, capo); }}
-                    style={{
-                      cursor: 'pointer', border: 'none',
-                      textAlign: 'left', display: 'block', width: '100%',
-                      background: 'none', padding: 0, borderRadius: 0,
-                    }}
-                  >
-                    <div style={{ background: bg, padding: '6px 10px 4px' }}>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: '#fff', lineHeight: 1.1 }}>
-                        {item.chordName}
-                      </div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>
-                        {targetNoteName} = {item.intervalLabel}
-                      </div>
-                    </div>
-                    <div style={{ background: T.bgInput, padding: '6px 10px 8px', border: `1px solid ${T.border}`, borderTop: 'none' }}>
-                      <XORow voicing={item.voicing} />
-                      <MiniFretboard
-                        voicing={item.voicing}
-                        dotColors={dotColors(item)}
-                        tuning={tuning.notes}
-                      />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </>
       )}
-    </div>
+    </Rule>
   );
 
   return (
     <div style={desktop
       ? { display: 'grid', gridTemplateColumns: '580px 1fr', gap: 32, alignItems: 'start' }
-      : { display: 'flex', flexDirection: 'column', gap: 12 }
+      : { display: 'flex', flexDirection: 'column', gap: 18 }
     }>
       {controlsLeft}
       {desktop
@@ -698,74 +634,62 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
         <div
           onClick={e => { if (e.target === e.currentTarget) setExpandedIdx(null); }}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            position: 'fixed', inset: 0, background: 'color-mix(in srgb, var(--gc-text) 55%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 200, padding: 16,
           }}
         >
-          <div style={{
-            ...card(), width: '100%', maxWidth: 380,
+          <div role="dialog" aria-modal="true" aria-label={expandedResult.chordName} style={{
+            background: T.bgDeep, color: T.text, border: `var(--su-rule) solid ${T.border}`,
+            width: '100%', maxWidth: 420, boxSizing: 'border-box',
             maxHeight: '88vh', overflowY: 'auto',
-            padding: '20px 20px 16px',
-            display: 'flex', flexDirection: 'column', gap: 12,
-            position: 'relative',
+            padding: '18px 20px 18px',
+            display: 'flex', flexDirection: 'column', gap: 14,
           }}>
-            {/* Close */}
-            <button onClick={() => setExpandedIdx(null)} style={{
-              position: 'absolute', top: 12, right: 12,
-              background: T.bgInput, border: 'none', borderRadius: 0,
-              cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px', }}>✕</button>
-
-            {/* Chord name */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: T.text }}>
-                {expandedResult.chordName}
+            {/* Name + close */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div className="su-poster" style={{ fontSize: 64, textTransform: 'none' }}>{expandedResult.chordName}</div>
+                <div className="su-label" style={{ marginTop: 10, color: T.text }}>
+                  {targetNoteName} = {expandedResult.intervalLabel}
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: T.coral, marginTop: 2 }}>
-                {targetNoteName} = {expandedResult.intervalLabel}
-              </div>
+              <Pill onClick={() => setExpandedIdx(null)} label={he ? 'סגירה' : 'Close'} style={{ padding: 0, width: 44 }}>×</Pill>
             </div>
 
             {/* Large diagram */}
-            <div style={{ padding: '0 16px' }}>
+            <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, padding: '12px 16px 0' }}>
               <XORow voicing={expandedResult.voicing} />
               <MiniFretboard
                 voicing={expandedResult.voicing}
-                dotColors={dotColors(expandedResult)}
+                dotColors={dotColors(expandedResult, true)}
                 tuning={tuning.notes}
                 showStringLabels
                 showFretNumbers
               />
             </div>
 
-            {/* Play */}
-            <button
-              onClick={() => { unlockAudio(); playChord(expandedResult!.voicing, tuning.openFreqs, capo); }}
-              style={{
-                padding: '11px 0', borderRadius: 0, border: 'none',
-                cursor: 'pointer', fontWeight: 400, fontSize: 14,
-                background: T.secondary, color: T.white,
-                }}
-            >PLAY</button>
-            {onAddToProgression && (
-              <button
-                onClick={() => {
-                  onAddToProgression({
-                    id: `chord-${Date.now()}`,
-                    chord: { name: expandedResult!.chordName, notes: [], aliases: [] },
-                    fretPositions: [...expandedResult!.voicing],
-                  });
-                  flashAdded();
-                }}
-                style={{
-                  padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 14,
-                  background: T.primary, color: T.white, }}
-              ><RollLabel>{added ? '✓ Added' : '+ Add to song'}</RollLabel></button>
-            )}
+            {/* Play · add to the song (the one cobalt action) */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Pill onClick={() => { unlockAudio(); playChord(expandedResult!.voicing, tuning.openFreqs, capo); }}
+                style={{ flex: onAddToProgression ? '0 0 auto' : 1, padding: '0 22px' }}>{he ? 'נגן' : 'Play'}</Pill>
+              {onAddToProgression && (
+                <Cta
+                  onClick={() => {
+                    onAddToProgression({
+                      id: `chord-${Date.now()}`,
+                      chord: { name: expandedResult!.chordName, notes: [], aliases: [] },
+                      fretPositions: [...expandedResult!.voicing],
+                    });
+                    flashAdded();
+                  }}
+                  style={{ flex: 1 }}
+                ><RollLabel>{added ? '✓ Added' : '+ Add to song'}</RollLabel></Cta>
+              )}
+            </div>
 
             <SaveToLibraryButton
-              style={{ width: '100%', justifyContent: 'center' }}
+              style={{ ...pillStyle(false), width: '100%', justifyContent: 'center' }}
               label="Save voicing to Library"
               getPayload={() => ({
                 kind: 'progression',
@@ -780,24 +704,18 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
 
             {/* Fits in — scales this chord lives in */}
             {fitScales.length > 0 && (
-              <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 400, color: T.textMuted, marginBottom: 6 }}>
-                  Fits in
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              <Rule label={he ? 'מתאים לסולמות' : 'Fits in'}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {fitScales.map((sc, i) => (
-                    <Pill
-                      key={sc.name}
-                      label={sc.name}
-                      active={scaleIdx === i}
+                    <Pill key={sc.name} size="sm" active={scaleIdx === i}
                       onClick={() => setScaleIdx(prev => prev === i ? null : i)}
-                    />
+                      style={{ textTransform: 'none', letterSpacing: '0.02em' }}>{sc.name}</Pill>
                   ))}
                 </div>
 
                 {scaleIdx !== null && fitScales[scaleIdx] && targetNoteName && (
                   <>
-                    <div style={{ fontSize: 11, color: T.coral, marginTop: 8 }}>
+                    <div className="su-label" style={{ marginTop: 10, color: T.text }}>
                       {targetNoteName} is the {degreeInScale(targetNoteName, fitScales[scaleIdx].root)} of {fitScales[scaleIdx].name}
                     </div>
                     <ScaleStrip
@@ -806,43 +724,31 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
                       targetChroma={TonalNote.chroma(targetNoteName) ?? -1}
                       rootChroma={TonalNote.chroma(fitScales[scaleIdx].root) ?? -1}
                     />
-                    <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 9, color: T.textDim }}>
-                      <span><span style={{ color: T.coral, fontWeight: 400 }}>●</span> target</span>
-                      <span><span style={{ color: T.primary, fontWeight: 400 }}>●</span> root</span>
-                      <span><span style={{ color: T.secondary, fontWeight: 400 }}>●</span> scale</span>
+                    <div className="su-label" style={{ display: 'flex', gap: 14, marginTop: 6, alignItems: 'center' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.secondary, outline: `1.5px solid ${T.text}`, outlineOffset: 2 }} />{he ? 'מטרה' : 'target'}
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.secondary }} />{he ? 'שורש' : 'root'}
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.coral }} />{he ? 'סולם' : 'scale'}
+                      </span>
                     </div>
                   </>
                 )}
-              </div>
+              </Rule>
             )}
 
             {/* Carousel */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                onClick={() => setExpandedIdx(i => Math.max((i ?? 0) - 1, 0))}
-                disabled={expandedIdx === 0}
-                style={{
-                  flex: 1, padding: '8px 0', borderRadius: 0,
-                  border: `1px solid ${T.border}`,
-                  cursor: expandedIdx === 0 ? 'not-allowed' : 'pointer',
-                  background: T.bgInput,
-                  color: expandedIdx === 0 ? T.textDim : T.textMuted,
-                  fontWeight: 400, fontSize: 16, }}
-              >‹</button>
-              <span style={{ fontSize: 11, color: T.textDim, minWidth: 48, textAlign: 'center' }}>
+            <div dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Pill onClick={() => setExpandedIdx(i => Math.max((i ?? 0) - 1, 0))} disabled={expandedIdx === 0}
+                label={he ? 'האקורד הקודם' : 'Previous chord'} style={{ flex: 1 }}>‹</Pill>
+              <span className="su-label" style={{ minWidth: 56, textAlign: 'center', color: T.text }}>
                 {expandedIdx + 1} / {results.length}
               </span>
-              <button
-                onClick={() => setExpandedIdx(i => Math.min((i ?? 0) + 1, results.length - 1))}
-                disabled={expandedIdx === results.length - 1}
-                style={{
-                  flex: 1, padding: '8px 0', borderRadius: 0,
-                  border: `1px solid ${T.border}`,
-                  cursor: expandedIdx === results.length - 1 ? 'not-allowed' : 'pointer',
-                  background: T.bgInput,
-                  color: expandedIdx === results.length - 1 ? T.textDim : T.textMuted,
-                  fontWeight: 400, fontSize: 16, }}
-              >›</button>
+              <Pill onClick={() => setExpandedIdx(i => Math.min((i ?? 0) + 1, results.length - 1))} disabled={expandedIdx === results.length - 1}
+                label={he ? 'האקורד הבא' : 'Next chord'} style={{ flex: 1 }}>›</Pill>
             </div>
           </div>
         </div>

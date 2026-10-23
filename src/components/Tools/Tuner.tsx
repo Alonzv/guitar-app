@@ -2,7 +2,12 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { T } from '../../theme';
 import type { Tuning } from '../../types/music';
 import { TUNINGS } from '../../utils/musicTheory';
-import { IconMic } from '../Icons';
+import { useLang } from '../../contexts/LanguageContext';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { PosterTitle, Meta, Pill, Cta } from '../Transit/parts';
+import { keyStyle } from '../Transit/styles';
+import { NightStage, NightToggle } from './NightStage';
+import { useNight } from './useNight';
 import { getSharedContext, unlockAudio, setMicSession, clearMicSession } from '../../utils/audioPlayback';
 import { previewFret } from '../../utils/previewSound';
 import { detectPitch } from '../../utils/pitch';
@@ -30,12 +35,11 @@ const OUTLIER_CENTS = 50;
 // Standard tuning string labels and open frequencies (low to high)
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
 
-const SECTION: React.CSSProperties = {
-  fontFamily: 'var(--gc-mono)', fontSize: 11, letterSpacing: '0.14em',
-  textTransform: 'uppercase', color: '#9C958C', margin: '0 0 14px',
-};
-
 export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
+  const { lang } = useLang();
+  const he = lang === 'he';
+  const desktop = useIsDesktop();
+  const [night, toggleNight] = useNight('scaleup_tuner_night');
   const stringsRef = useRef(
     tuning.notes.map((note, i) => ({ name: note, freq: tuning.openFreqs[i] }))
   );
@@ -186,144 +190,110 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0] }) => {
 
   const cents    = display?.cents ?? 0;
   const absCents = Math.abs(cents);
-  const tuneColor = !display    ? T.textDim
-    : absCents <= 5             ? T.secondary
-    : absCents <= 20            ? '#8A8378'
-    : T.primary;
-
-  const needlePct = display
-    ? Math.min(100, Math.max(0, 50 + (cents / 50) * 50))
-    : 50;
 
   // The lowest string not yet in tune — the one to play next.
   const nextString = [0, 1, 2, 3, 4, 5].find(i => !tuned.has(i)) ?? -1;
-  // Four logo bars that fill as the note closes in on pitch.
-  const meterBars = !display ? 0 : absCents <= 5 ? 4 : absCents <= 12 ? 3 : absCents <= 25 ? 2 : 1;
 
   // Detect which string is currently active (note match)
   const activeStringIdx = display
     ? tuning.notes.findIndex(n => n.replace(/\d/g, '') === display.note)
     : -1;
 
+  // The letter turns cobalt only when the string is dead on (|cents| < 2).
+  const letterColor = !display ? T.textMuted : absCents < 2 ? T.primary : T.text;
+  const letter = display ? display.note : listening && nextString >= 0 ? STRING_LABELS[nextString] : '–';
+  const readout = !display ? '—' : absCents <= 5 ? (he ? 'מכוון' : 'IN TUNE') : cents > 0 ? `+${cents}¢` : `${cents}¢`;
+
+  // Ruler −50…+50 cents
+  const RW = 600, RX = 20, RSPAN = RW - RX * 2;
+  const cx = (c: number) => RX + ((Math.max(-50, Math.min(50, c)) + 50) / 100) * RSPAN;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-      {/* Section label */}
-      <p style={SECTION}>Tuner</p>
-
-      {/* Main display — open, no card */}
-      <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-
-        {/* Giant note */}
-        <div className="gc-tuner-note" style={{
-          color: tuneColor,
-          marginBottom: 2,
-          transition: 'color 0.3s',
-          minHeight: 88,
-        }}>
-          {display ? display.note : ''}
-        </div>
-
-        {/* Hz — red mono */}
-        <div style={{
-          fontFamily: 'var(--gc-mono)', fontSize: 16, fontWeight: 600,
-          color: display ? T.primary : T.textDim,
-          letterSpacing: '0.04em', marginBottom: 20, minHeight: 22,
-          transition: 'color 0.3s',
-        }}>
-          {display ? `${display.hz} Hz` : (loudnessHint ? 'play louder' : 'play a string…')}
-        </div>
-
-        {/* Needle bar */}
-        <div style={{ position: 'relative', height: 2, background: T.border, marginBottom: 10, overflow: 'visible' }}>
-          {/* Centre mark */}
-          <div style={{
-            position: 'absolute', left: '50%', top: -8, width: 1, height: 18,
-            background: T.border, transform: 'translateX(-50%)',
-          }} />
-          {/* Needle */}
-          <div style={{
-            position: 'absolute', top: -10, width: 4, height: 22,
-            background: tuneColor, transform: 'translateX(-50%)',
-            left: `${needlePct}%`,
-            transition: 'left 0.15s ease-out, background 0.3s',
-          }} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textDim, marginBottom: 4, letterSpacing: '0.06em', fontFamily: 'var(--gc-mono)' }}>
-          <span>♭</span>
-          <span style={{ color: tuneColor, fontWeight: 600, display: 'inline-flex', alignItems: 'flex-end', gap: 8 }}>
-            <svg width="20" height="16" viewBox="0 0 20 16" aria-hidden>
-              {[0, 1, 2, 3].map(i => (
-                <rect key={i} x={i * 5} y={16 - (5 + i * 3.5)} width="3.5" height={5 + i * 3.5}
-                  fill={i < meterBars ? T.text : T.border} style={{ transition: 'fill var(--gc-dur-fast) var(--gc-ease-out)' }} />
-              ))}
-            </svg>
-            {!display ? '' : absCents <= 5 ? 'IN TUNE' : cents > 0 ? `+${cents}¢` : `${cents}¢`}
-          </span>
-          <span>♯</span>
-        </div>
+    <NightStage on={night}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <span className="su-label">{he ? 'טיונר' : 'Tuner'} · {tuning.name}</span>
+        <NightToggle on={night} onToggle={toggleNight} />
       </div>
 
-      {/* String buttons — open, no card */}
-      <div style={{ padding: '4px 0' }}>
-        <p style={{ ...SECTION, marginBottom: 10 }}>String</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+      {/* The giant letter — readable from across the room */}
+      <div aria-live="polite" style={{ textAlign: 'center', color: letterColor, transition: 'color var(--gc-dur-base) var(--gc-ease-out)' }}>
+        <PosterTitle head={letter} max={desktop ? 470 : 300} min={120} as="div"
+          style={{ display: 'flex', justifyContent: 'center', color: letterColor }} />
+      </div>
+
+      <Meta items={[
+        { label: 'Hz', value: display ? display.hz.toFixed(1) : (loudnessHint ? (he ? 'חזק יותר' : 'louder') : '—') },
+        { label: he ? 'סנט' : 'Cents', value: readout },
+        { label: he ? 'מיתר' : 'String', value: activeStringIdx >= 0 ? tuning.notes[activeStringIdx] : listening && nextString >= 0 ? tuning.notes[nextString] : '—' },
+      ]} />
+
+      {/* Ruler with the one cobalt needle */}
+      <svg viewBox={`0 0 ${RW} 64`} role="img" aria-label={display ? `${readout}` : (he ? 'נגנו מיתר' : 'Play a string')}
+        style={{ width: '100%', display: 'block', overflow: 'visible' }}>
+        <line x1={RX} y1={30} x2={RW - RX} y2={30} stroke={T.text} strokeWidth={2} />
+        {Array.from({ length: 21 }, (_, i) => -50 + i * 5).map(c => {
+          const h = c % 25 === 0 ? 22 : c % 10 === 0 ? 14 : 8;
+          return <line key={c} x1={cx(c)} y1={30 - h} x2={cx(c)} y2={30} stroke={c === 0 ? T.text : T.textMuted} strokeWidth={c === 0 ? 3 : 1.5} />;
+        })}
+        {[-50, -25, 0, 25, 50].map(c => (
+          <text key={c} x={cx(c)} y={50} textAnchor="middle" fontSize={11} fill={T.textMuted} fontFamily="var(--gc-mono)" letterSpacing="0.06em">
+            {c > 0 ? `+${c}` : c}
+          </text>
+        ))}
+        {display && (
+          <g style={{ transform: `translateX(${cx(cents)}px)`, transition: 'transform 150ms ease-out' }}>
+            <rect x={-2.5} y={0} width={5} height={36} fill={T.primary} />
+          </g>
+        )}
+      </svg>
+
+      {/* Strings — tap one to hear its reference pitch */}
+      <div>
+        <p className="su-label" style={{ margin: '0 0 8px' }}>{he ? 'מיתרים' : 'Strings'}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 4 }}>
           {STRING_LABELS.map((label, i) => {
             const active = activeStringIdx === i;
             const locked = tuned.has(i);
             const next = listening && !locked && i === nextString;
             return (
-              // Tapping a string plays its reference pitch to tune against by ear.
-              <button key={label} className="gc-notation" onClick={() => previewFret({ string: i, fret: 0 }, tuning.openFreqs)} title={`Hear ${label}`} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                height: 40, cursor: 'pointer',
-                background: active ? (absCents <= 5 ? T.secondary : T.primary) : locked ? T.text : T.bgInput,
-                border: `1.5px solid ${active ? (absCents <= 5 ? T.secondary : T.primary) : next ? T.text : T.border}`,
-                color: active || locked ? T.bgDeep : T.textMuted,
-                fontFamily: 'var(--gc-mono)', fontSize: 13, fontWeight: active || locked ? 700 : 400,
-                userSelect: 'none', position: 'relative',
-              }}>
-                <span key={locked ? 'l' : 'u'} className={locked ? 'gc-pop' : undefined}>{locked ? `${label} ✓` : label}</span>
-                {next && <span style={{ position: 'absolute', bottom: -9, left: '50%', transform: 'translateX(-50%)', fontSize: 9, color: T.text }}>▲</span>}
+              <button key={label} className="gc-notation gc-no-bar" onClick={() => previewFret({ string: i, fret: 0 }, tuning.openFreqs)}
+                aria-label={`${he ? 'השמע' : 'Hear'} ${tuning.notes[i] ?? label}${locked ? (he ? ', מכוון' : ', in tune') : ''}`}
+                aria-pressed={active}
+                style={{
+                  ...keyStyle(active), minHeight: 64, flexDirection: 'column', gap: 2, letterSpacing: 'normal',
+                  outline: next && !active ? `2px solid ${T.text}` : undefined, outlineOffset: -2,
+                }}>
+                <span style={{ fontSize: 24, lineHeight: 1 }}>{label}</span>
+                <span key={locked ? 'l' : 'u'} className={locked ? 'gc-pop' : undefined}
+                  style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', fontWeight: 700, minHeight: 12, opacity: locked ? 1 : 0 }}>
+                  OK
+                </span>
               </button>
             );
           })}
         </div>
 
-        {/* Hint — the surrounding UI is English, so this stays English too;
-            it used to be a stray hard-coded Hebrew line (and misspelt מיתר). */}
-        <div style={{
-          marginTop: 14, textAlign: 'center',
-          fontFamily: 'var(--gc-mono)', fontSize: 11, color: T.textDim,
-          letterSpacing: '0.05em', position: 'relative',
-        }}>
+        <div style={{ marginTop: 14, textAlign: 'center', fontFamily: 'var(--gc-mono)', fontSize: 11, color: T.textMuted, letterSpacing: '0.08em', position: 'relative', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {tuned.size === 6
-            ? <button onClick={() => { tunedRef.current = new Set(); setTuned(new Set()); }} style={{ fontSize: 11, padding: '4px 10px', cursor: 'pointer', background: 'transparent', border: `1px solid ${T.border}`, color: T.text }}>Tune again</button>
-            : listening && nextString >= 0 ? `Next: play the open ${STRING_LABELS[nextString]} string` : 'Play the open string to tune it'}
+            ? <Pill size="sm" onClick={() => { tunedRef.current = new Set(); setTuned(new Set()); }}>{he ? 'כיוון מחדש' : 'Tune again'}</Pill>
+            : listening && nextString >= 0
+              ? (he ? `הבא: נגנו את מיתר ${STRING_LABELS[nextString]} הפתוח` : `Next: play the open ${STRING_LABELS[nextString]} string`)
+              : (he ? 'נגנו מיתר פתוח כדי לכוון אותו' : 'Play the open string to tune it')}
           {tuned.size === 6 && (
-            <div className="gc-stamp" style={{
-              position: 'absolute', left: '50%', top: -64, padding: '6px 16px', border: `3px solid ${T.text}`,
-              background: T.bgCard, color: T.text, fontWeight: 800, fontSize: 20, letterSpacing: '0.1em', whiteSpace: 'nowrap',
-            }}>TUNED</div>
+            <div className="gc-stamp su-poster" style={{
+              position: 'absolute', left: '50%', top: -70, padding: '10px 18px 6px', border: `var(--su-rule) solid ${T.text}`,
+              background: T.bgDeep, color: T.text, fontSize: 40, whiteSpace: 'nowrap',
+            }}>{he ? 'מכוון' : 'Tuned'}</div>
           )}
         </div>
       </div>
 
-      {/* Start / Stop */}
-      {error && <p style={{ color: T.coral, fontSize: 12, margin: 0 }}>{error}</p>}
-      <button data-active={!!listening}
-        onClick={listening ? stop : start}
-        className="gc-btn-heavy"
-        style={{
-          width: '100%', padding: '16px 0', borderRadius: 0,
-          background: listening ? T.coral : T.primary,
-          color: T.white, fontWeight: 800, fontSize: 16, cursor: 'pointer',
-          border: 'none',
-          letterSpacing: '0.06em',
-        }}
-      >
-        {listening ? '■  STOP' : <><IconMic size={14} />  START TUNING</>}
-      </button>
-    </div>
+      {error && <p role="alert" style={{ color: T.text, fontSize: 12, margin: 0 }}>{error}</p>}
+      <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'center' }}>
+        {listening
+          ? <Pill onClick={stop} style={{ width: '100%', height: 56 }}>{he ? 'עצירה' : 'Stop'}</Pill>
+          : <Cta onClick={start} style={{ width: '100%', height: 56 }}>{he ? 'התחלת כיוון' : 'Start tuning'}</Cta>}
+      </div>
+    </NightStage>
   );
 };

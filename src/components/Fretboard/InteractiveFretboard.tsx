@@ -11,6 +11,10 @@ interface Props {
   readonly?: boolean;
   tuning?: string[];
   capo?: number;
+  /** Label for a placed note (its degree in the chord); note name otherwise. */
+  labelFor?: (pos: FretPosition) => string | undefined;
+  /** The chord's root — drawn cobalt. */
+  isRoot?: (pos: FretPosition) => boolean;
 }
 
 const SVG_W  = 680;
@@ -28,7 +32,7 @@ const strY  = (s: number) => TOP_Y + (STRING_COUNT - 1 - s) * STR_SP;
 // String thickness: high-e thin → low-E thick
 const strW = (s: number) => 2.0 + s * 0.40;
 
-export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, readonly, tuning, capo = 0 }) => {
+export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, readonly, tuning, capo = 0, labelFor, isRoot }) => {
   const hasAnyDot = activeDots.length > 0;
   const sounding = useSounding();
 
@@ -77,9 +81,9 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
         {/* Fret number labels — all 1-12 */}
         {Array.from({ length: FRET_COUNT }, (_, i) => i + 1).map(f => (
           <text key={f} x={NUT_X + (f - 0.5) * FRET_SP} y={SVG_H - 3}
-            textAnchor="middle" fontSize={8}
+            textAnchor="middle" fontSize={9} fontFamily="var(--gc-mono)"
             fontWeight={[3,5,7,9,12].includes(f) ? '700' : '400'}
-            fill={[3,5,7,9,12].includes(f) ? T.textMuted : T.textDim}>{f}</text>
+            fill={T.textMuted} opacity={[3,5,7,9,12].includes(f) ? 1 : 0.6}>{f}</text>
         ))}
 
         {/* String labels (open note) + mute × */}
@@ -89,14 +93,14 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
           return (
             <g key={s}>
               <text x={NUT_X - 42} y={strY(s) + 4}
-                textAnchor="middle" fontSize={10}
-                fill={muted ? T.textDim : T.textMuted}>
+                textAnchor="middle" fontSize={11} fontWeight="700" fontFamily="var(--gc-mono)"
+                fill={T.textMuted} opacity={muted ? 0.5 : 1}>
                 {fretToNote(s, 0, tuning, capo)}
               </text>
               {muted && (
                 <text x={NUT_X - 14} y={strY(s) + 5}
                   textAnchor="middle" fontSize={14} fontWeight="700"
-                  fill="var(--gc-success)">
+                  fill={T.text}>
                   ×
                 </text>
               )}
@@ -108,11 +112,13 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
             note along its string; a note lights up while it sounds. */}
         {activeDots.map((d, i) => {
           const nth = activeDots.slice(0, i).filter(o => o.string === d.string).length;
+          const root = isRoot?.(d) ?? false;
+          const text = labelFor?.(d) ?? fretToNote(d.string, d.fret, tuning, capo);
           return (
             <g key={`dot-${d.string}-${nth}`} style={{ pointerEvents: 'none' }}>
               <Dot x={fretX(d.fret)} y={strY(d.string)} r={DOT_R} glow={sounding.pos(d.string, d.fret)}>
-                <circle r={DOT_R} fill={T.secondary} stroke={T.bgDeep} strokeWidth={1.9} />
-                <text y={4} textAnchor="middle" fontSize={9} fill={T.white} fontWeight="700">{fretToNote(d.string, d.fret, tuning, capo)}</text>
+                <circle r={DOT_R} fill={root ? T.primary : T.secondary} stroke={T.bgDeep} strokeWidth={1.9} />
+                <text y={3.5} textAnchor="middle" fontSize={text.length > 2 ? 8 : 10} fill={root ? T.onPrimary : T.white} fontWeight="700" fontFamily="var(--gc-mono)">{text}</text>
               </Dot>
             </g>
           );

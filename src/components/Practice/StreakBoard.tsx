@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
 import { getDaily, subscribeDaily, DAILY_GOAL } from '../../practice/daily';
 import { replayClass } from '../../motion';
 
@@ -60,15 +60,15 @@ export function StreakBoard({ streak, best, lang, flush }: Props) {
   const goalPct = Math.min(100, (daily.count / DAILY_GOAL) * 100);
 
   const LBL: React.CSSProperties = {
-    margin: '0 0 4px', fontSize: 10, color: T.textDim,
+    margin: '0 0 6px', fontSize: 10, color: T.textMuted,
     fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase',
   };
 
   return (
     <div style={{ position: 'relative', marginBottom: flush ? 0 : 16 }}>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <div ref={streakCard} style={{ ...card({ padding: 12 }), flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <div style={{ textAlign: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10 }}>
+        <div ref={streakCard} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+          <div>
             <p style={LBL}>{he ? 'רצף' : 'Streak'}</p>
             <RollingNumber value={streak} />
           </div>
@@ -76,12 +76,12 @@ export function StreakBoard({ streak, best, lang, flush }: Props) {
           <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
             {[0, 1, 2, 3].map(i => (
               <rect key={i} x={i * 6} y={22 - (7 + i * 5)} width="4" height={7 + i * 5}
-                fill={i < lit ? T.text : T.border}
+                fill={i < lit ? T.text : T.hairline}
                 style={{ transition: 'fill var(--gc-dur-base) var(--gc-ease-out)', transitionDelay: `${i * 40}ms` }} />
             ))}
           </svg>
         </div>
-        <div ref={bestCard} style={{ ...card({ padding: 12 }), flex: 1, textAlign: 'center' }}>
+        <div ref={bestCard}>
           <p style={LBL}>{he ? 'שיא' : 'Best'}</p>
           <RollingNumber value={best} />
         </div>
@@ -90,7 +90,7 @@ export function StreakBoard({ streak, best, lang, flush }: Props) {
       {/* Today's goal — every practice tab counts toward it */}
       <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ ...LBL, margin: 0, flexShrink: 0 }}>{he ? 'היום' : 'Today'}</span>
-        <div style={{ flex: 1, height: 6, background: T.bgInput, border: `1px solid ${T.border}`, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ flex: 1, height: 8, background: T.bgInput, position: 'relative', overflow: 'hidden' }}>
           <div style={{
             position: 'absolute', inset: 0, background: T.text, transformOrigin: 'left center',
             transform: `scaleX(${goalPct / 100})`, transition: 'transform var(--gc-dur-slow) var(--gc-ease-snap)',
@@ -104,10 +104,9 @@ export function StreakBoard({ streak, best, lang, flush }: Props) {
       {stamp && (
         <div key={stamp.n} className="gc-stamp" aria-live="polite" style={{
           position: 'absolute', left: '50%', top: 18, zIndex: 2, pointerEvents: 'none',
-          padding: '6px 14px', border: `3px solid ${T.text}`, background: T.bgCard, color: T.text,
-          fontFamily: 'var(--gc-mono)', fontWeight: 800, fontSize: 18, letterSpacing: '0.08em',
-          textTransform: 'uppercase', whiteSpace: 'nowrap',
-        }}>{stamp.text}</div>
+          padding: '10px 16px 6px', border: `var(--su-rule) solid ${T.text}`, background: T.bgDeep, color: T.text,
+          fontSize: 34, whiteSpace: 'nowrap',
+        }}><span className="su-poster">{stamp.text}</span></div>
       )}
     </div>
   );
@@ -120,7 +119,10 @@ export function StreakBoard({ streak, best, lang, flush }: Props) {
 function RollingNumber({ value }: { value: number }) {
   const digits = String(value).split('');
   return (
-    <span dir="ltr" aria-label={String(value)} style={{ display: 'inline-flex', fontSize: 26, fontWeight: 700, color: T.text, lineHeight: '1.1em', height: '1.1em', overflow: 'hidden' }}>
+    <span dir="ltr" aria-label={String(value)} style={{
+      display: 'inline-flex', fontFamily: 'var(--su-display)', fontStretch: 'var(--su-display-cond)', fontWeight: 900,
+      fontSize: 52, color: T.text, lineHeight: '1.1em', height: '1.1em', overflow: 'hidden',
+    }}>
       {digits.map((d, i) => (
         <span key={digits.length - i} aria-hidden style={{
           display: 'flex', flexDirection: 'column',

@@ -52,28 +52,28 @@ export function TabNoteCell({
         cursor: editable || onClick ? 'pointer' : 'default',
       }}
     >
-      {/* String line through vertical center */}
+      {/* String line through vertical center — an ink hairline */}
       <div style={{
         position: 'absolute', top: '50%', left: 0, right: 0, height: 0,
-        borderTop: `2px solid ${T.border}`, transform: 'translateY(-0.5px)',
+        borderTop: `1px solid ${T.text}`,
         pointerEvents: 'none',
       }} />
 
-      {/* Hover circle (light) */}
+      {/* Hover / playhead: a hairline square */}
       {isHov && !isSel && (
         <div style={{
-          position: 'absolute', width: circleD, height: circleD, borderRadius: 0,
-          background: 'var(--gc-error-soft)',
+          position: 'absolute', width: circleD, height: circleD,
+          background: T.hairline,
           top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
         }} />
       )}
 
-      {/* Selected circle (solid) */}
+      {/* The cursor — the one cobalt cell */}
       {isSel && (
         <div style={{
-          position: 'absolute', width: circleD, height: circleD, borderRadius: 0,
-          background: 'var(--gc-error-soft)',
+          position: 'absolute', width: circleD, height: circleD,
+          background: T.primary,
           top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
         }} />
@@ -99,9 +99,11 @@ export function TabNoteCell({
         <span style={{
           position: 'absolute', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          fontSize: fs, fontFamily: 'monospace',
-          fontWeight: emphasized ? 700 : 400,
-          color: fretColor ?? T.text,
+          fontSize: fs, fontFamily: 'var(--gc-mono)',
+          fontWeight: emphasized ? 700 : 600,
+          color: isSel ? T.onPrimary : fretColor ?? T.text,
+          // The number breaks the string line, as on a printed tab.
+          background: isSel || isHov || markColor ? 'transparent' : T.bgDeep, padding: '0 1px',
           lineHeight: 1, zIndex: 1,
         }}>
           {cell.fret}
@@ -113,8 +115,8 @@ export function TabNoteCell({
         <span style={{
           position: 'absolute', top: '50%', right: 0,
           transform: 'translate(50%, -50%)',
-          fontSize: Math.round(fs * 1.5), fontFamily: 'monospace',
-          fontWeight: 400, color: T.coral,
+          fontSize: Math.round(fs * 1.5), fontFamily: 'var(--gc-mono)',
+          fontWeight: 400, color: T.textMuted,
           lineHeight: 1, zIndex: 2, pointerEvents: 'none',
         }}>
           {cell.tech}
@@ -124,8 +126,8 @@ export function TabNoteCell({
         <span style={{
           position: 'absolute', top: -2, right: 0,
           transform: 'translateX(50%)',
-          fontSize: Math.round(fs * 1.1), fontFamily: 'monospace',
-          fontWeight: 400, fontStyle: 'italic', color: T.coral,
+          fontSize: Math.round(fs * 1.1), fontFamily: 'var(--gc-mono)',
+          fontWeight: 400, fontStyle: 'italic', color: T.textMuted,
           lineHeight: 1, zIndex: 2, pointerEvents: 'none',
         }}>
           {cell.tech}
@@ -142,15 +144,15 @@ export function TabNoteCell({
           }}>
           <path d="M 1 7 Q 10 -3 19 7" fill="none"
             stroke="currentColor" strokeWidth="1.6"
-            strokeLinecap="round" style={{ color: T.coral }} />
+            strokeLinecap="square" style={{ color: T.textMuted }} />
         </svg>
       )}
       {cell.tech === '~' && (
         <span style={{
           position: 'absolute', top: -1, left: '50%',
           transform: 'translateX(-50%)',
-          fontSize: Math.round(fs * 1.3), fontFamily: 'monospace',
-          fontWeight: 400, color: T.coral,
+          fontSize: Math.round(fs * 1.3), fontFamily: 'var(--gc-mono)',
+          fontWeight: 400, color: T.textMuted,
           lineHeight: 1, zIndex: 2, pointerEvents: 'none',
           letterSpacing: -1,
         }}>

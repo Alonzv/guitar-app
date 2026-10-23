@@ -22,6 +22,12 @@ import { useOptionalSong } from '../../song/SongContext';
 import { TUNINGS } from '../../utils/musicTheory';
 import { useFlash } from '../../motion/useFlash';
 import { RollLabel } from '../RollLabel';
+import { keyName } from '../../utils/harmonicAnalysis';
+import { Meta, Pill, Cta, Stepper } from '../Transit/parts';
+import { StopActions } from '../Transit/StopActions';
+import { Sheet } from '../Workspace/Sheet';
+import { PosterInput } from '../Tabs/PosterInput';
+import { TabKeypad } from '../Tabs/TabKeypad';
 
 type Lang = 'he' | 'en';
 type ErrKey = 'empty' | 'ai' | 'gen';
@@ -76,13 +82,6 @@ function normalizeTabContent(c: TabContent): TabState {
   };
 }
 
-const TECH_BTNS: { id: Tech; label: string; sym: string; key: string }[] = [
-  { id: 'h', label: 'Hammer/Pull', sym: 'h/p', key: 'H' },
-  { id: '/', label: 'Slide',       sym: '/',   key: '/' },
-  { id: 'b', label: 'Bend',        sym: 'b',   key: 'B' },
-  { id: '~', label: 'Vibrato',     sym: '~',   key: '~' },
-];
-
 // ── Backup helpers ────────────────────────────────────────────────────────────
 const BACKUP_KEY  = 'scaleup_tab_backups';
 const MAX_BACKUPS = 5;
@@ -112,11 +111,6 @@ function tabHasContent(tab: TabState) {
 export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const song = useOptionalSong();
   const [sent, flashSent] = useFlash();
-  const songBtn = (disabled: boolean): React.CSSProperties => ({
-    padding: '6px 12px', borderRadius: 0, fontSize: 11, cursor: disabled ? 'default' : 'pointer',
-    background: T.bgInput, color: disabled ? T.textDim : T.text, border: `1px solid ${T.border}`,
-    opacity: disabled ? 0.6 : 1,
-  });
   const [tab, setTab] = useState<TabState>(() => {
     // A pending "Open in Builder" handoff wins over the autosaved draft.
     const pending = consumePendingTab();
@@ -124,7 +118,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     try {
       const s = localStorage.getItem('scaleup_tab');
       if (s) return JSON.parse(s);
-    } catch {}
+    } catch { /* no saved draft */ }
     return { title: '', subtitle: '', grid: emptyGrid(COLS_PER_LINE * 3), bars: [] };
   });
 
@@ -336,9 +330,9 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   }, [handleEditKey]);
 
   // Tap a cell → select it and open the numeric keyboard on mobile
+  // Tap a cell → it becomes the cursor; the keypad enters frets.
   const selectCell = useCallback((s: number, c: number) => {
     setSel([s, c]);
-    fretInputRef.current?.focus();
   }, []);
 
 
@@ -459,12 +453,196 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
     }
   };
 
-  const selTech = sel ? grid[sel[0]][sel[1]].tech : undefined;
+  const he = lang === 'he';
+  const playing = playCol != null;
+
+  // ── Keypad ──────────────────────────────────────────────────────────────
+  // A fret goes into the cursor cell and the cursor moves on. A held 1 or 2
+  // arms a tens digit ("1_") so the next digit completes a two-digit fret.
+  const [prefix, setPrefix] = useState<string | null>(null);
+  const advance = (s: number, c: number) => { if (c + 1 < numCols) setSel([s, c + 1]); };
+  const keypadDigit = (d: string) => {
+    if (!sel) return;
+    const [s, c] = sel;
+    const two = prefix ? prefix + d : null;
+    const fret = two && parseInt(two, 10) <= 24 ? two : d;
+    setPrefix(null);
+    setCell(s, c, { fret });
+    advance(s, c);
+  };
+  // A technique belongs to the note it leaves from: after a fret is entered
+  // the cursor has moved on, so an empty cursor cell marks the note before it.
+  const techTarget = (): [number, number] | null => {
+    if (!sel) return null;
+    const [s, c] = sel;
+    if (grid[s][c].fret !== '' || c === 0 || grid[s][c - 1].fret === '') return [s, c];
+    return [s, c - 1];
+  };
+  const keypadTech = (tech: Tech) => {
+    const t0 = techTarget();
+    if (!t0) return;
+    const [s, c] = t0;
+    const toggled = grid[s][c].tech === tech ? undefined : tech;
+    withHistory(p => {
+      const g = p.grid.map(r => [...r]);
+      g[s][c] = { ...g[s][c], tech: toggled };
+      return { ...p, grid: g };
+    });
+  };
+  const keypadBack = () => {
+    if (!sel) return;
+    const [s, c] = sel;
+    setPrefix(null);
+    if (grid[s][c].fret === '' && !grid[s][c].tech && c > 0) { clearCell(s, c - 1); setSel([s, c - 1]); }
+    else clearCell(s, c);
+  };
+  const keypadString = (dir: -1 | 1) => {
+    if (!sel) return;
+    const [s, c] = sel;
+    const n = s + dir;
+    if (n >= 0 && n < STRS.length) setSel([n, c]);
+  };
+  const tt = techTarget();
+  const keypad = (onDone?: () => void) => (
+    <TabKeypad
+      where={sel ? `${STRS[sel[0]]} · ${sel[1] + 1}` : null}
+      prefix={prefix}
+      tech={tt ? grid[tt[0]][tt[1]].tech : undefined}
+      barOn={!!(sel && barsSet.has(sel[1]))}
+      onDigit={keypadDigit}
+      onPrefix={setPrefix}
+      onTech={keypadTech}
+      onBackspace={keypadBack}
+      onString={keypadString}
+      onBar={toggleBar}
+      onDone={onDone}
+      he={he}
+    />
+  );
+
+  const savePayload = () => tabHasContent(tab) ? ({ kind: 'tab' as const, name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null;
+  const tuningName = (TUNINGS.find(x => x.name === song?.song.tuningName) ?? TUNINGS[0]).label;
+
+  const header = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 4 }}>
+      <div>
+        <PosterInput value={title} onChange={v => setTab(p => ({ ...p, title: v }))}
+          placeholder={he ? 'טאב ללא שם' : 'Untitled tab'} label={he ? 'שם הטאב' : 'Tab title'}
+          max={desktop ? 150 : 76} min={34} />
+        <input
+          value={subtitle}
+          placeholder={he ? 'הערות · כיוון · סגנון' : 'Notes · feel · tuning'}
+          aria-label={he ? 'כותרת משנה' : 'Subtitle'}
+          dir="auto"
+          onChange={e => setTab(p => ({ ...p, subtitle: e.target.value }))}
+          style={{ display: 'block', width: '100%', marginTop: 8, border: 'none', background: 'transparent', padding: 0, outline: 'none', fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em', color: T.textMuted }}
+        />
+      </div>
+      <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10 }}>
+        <Meta cols={desktop ? 4 : 3} items={[
+          { label: 'BPM', value: song?.song.bpm ?? '—' },
+          { label: he ? 'משקל' : 'Time', value: song?.song.meter ?? '4/4' },
+          { label: he ? 'סולם' : 'Key', value: song?.key ? keyName(song.key, lang) : '—' },
+          ...(desktop ? [{ label: he ? 'כיוון' : 'Tuning', value: tuningName }] : []),
+        ]} />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <Pill onClick={playTab} active={playing} disabled={!tabHasContent(tab)} label={playing ? (he ? 'עצירה' : 'Stop') : (he ? 'נגינה' : 'Play')}
+          style={{ background: T.secondary, color: T.white }}>{playing ? (he ? '■ עצירה' : '■ Stop') : (he ? '▶ נגינה' : '▶ Play')}</Pill>
+        <Pill onClick={handleAnalyze} title="Detect the scale and suggest chord progressions">{he ? 'ניתוח' : 'Analyze'}</Pill>
+        <Pill onClick={handleExport} disabled={busy}>{busy ? '…' : 'PDF'}</Pill>
+        <Pill onClick={undo} disabled={!canUndo} title="Undo [Ctrl+Z]">{he ? 'ביטול' : 'Undo'}</Pill>
+        {backups.length > 0 && <Pill onClick={() => setRecoverOpen(true)} title="Recover a previous save">{he ? 'שחזור' : 'Recover'}</Pill>}
+        <Pill onClick={() => { if (!window.confirm('Clear all notes? This cannot be undone.')) return; clearGrid(); }} title="Clear all notes">{he ? 'ניקוי' : 'Clear'}</Pill>
+        <span style={{ flex: 1 }} />
+        <Stepper size="sm" label="Zoom" value={<span style={{ fontSize: 15 }}>{zoom}%</span>}
+          onPrev={() => setZoom(z => Math.max(60, z - 10))} onNext={() => setZoom(z => Math.min(150, z + 10))} />
+      </div>
+
+      {/* The song's melody: send this tab to it (Harmonize and the rest pick it
+          up), or pull in a melody another tool wrote. */}
+      {song && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span className="su-label" style={{ marginInlineEnd: 4 }}>{he ? 'מלודיית השיר' : 'Song melody'}</span>
+          <Pill size="sm" onClick={() => {
+            song.update({ melody: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars }, melodyFrom: 'tabbuilder' });
+            flashSent();
+          }} disabled={!tabHasContent(tab)}>
+            <RollLabel>{sent ? (he ? '✓ נשלח לשיר' : '✓ Sent to song') : (he ? 'השתמשו בטאב הזה' : 'Use this tab')}</RollLabel>
+          </Pill>
+          {song.song.melody && song.song.melodyFrom !== 'tabbuilder' && (
+            <Pill size="sm" onClick={() => {
+              const m = song.song.melody!;
+              const cols = Math.max(colsPerLine * 3, Math.ceil((m.grid[0]?.length ?? 0) / colsPerLine) * colsPerLine);
+              withHistory(p => {
+                const grid = emptyGrid(cols);
+                m.grid.forEach((row, r) => row.forEach((cell, c) => { if (grid[r]?.[c]) grid[r][c] = { fret: cell.fret ?? '', tech: cell.tech as Tech | undefined }; }));
+                return { ...p, grid, bars: m.bars ?? [] };
+              });
+              setSel(null);
+            }}>{he ? 'טעינת מלודיית השיר' : "Load the song's melody"}</Pill>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const ink = T.text;
+  const tabGrid = (
+    <div ref={wrapRef} style={{ paddingBottom: 8, minWidth: 0 }}>
+      {/* An empty tab offers a riff to start from. */}
+      {!tabHasContent(tab) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          <span className="su-label">{he ? 'הקישו על מיתר כדי להציב תו' : 'Tap a string to place a note'}</span>
+          <Pill size="sm" onClick={loadExample}>{he ? 'ריף לדוגמה' : 'Load an example riff'}</Pill>
+        </div>
+      )}
+      {Array.from({ length: numSys }, (_, sys) => {
+        const s0 = sys * colsPerLine;
+        const s1 = Math.min(s0 + colsPerLine, numCols);
+        return (
+          <div key={sys} dir="ltr" style={{ marginBottom: 26 }} onMouseLeave={() => setHov(null)}>
+            {STRS.map((lbl, si) => (
+              <div key={si} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
+                <span style={{
+                  width: 16, fontSize: Math.max(10, fs - 2), fontFamily: 'var(--gc-mono)', fontWeight: 700,
+                  color: T.textMuted, textAlign: 'right', paddingRight: 5, flexShrink: 0,
+                }}>{lbl}</span>
+                <div style={{ width: 2, height: ch, background: ink, flexShrink: 0 }} />
+                {Array.from({ length: s1 - s0 }, (_, ci) => {
+                  const c    = s0 + ci;
+                  const cell = grid[si][c];
+                  const isSel = sel?.[0] === si && sel?.[1] === c;
+                  const isHov = hov?.[0] === si && hov?.[1] === c;
+                  return (
+                    <React.Fragment key={c}>
+                      <TabNoteCell
+                        cell={cell}
+                        cw={cw} ch={ch} fs={fs} circleD={circleD}
+                        isSel={isSel} isHov={isHov || c === playCol} editable
+                        markColor={c === playCol ? T.hairline : undefined}
+                        onClick={() => selectCell(si, c)}
+                        onMouseEnter={() => setHov([si, c])}
+                      />
+                      {barsSet.has(c) && <div style={{ width: 2, height: ch, background: ink, flexShrink: 0 }} />}
+                    </React.Fragment>
+                  );
+                })}
+                <div style={{ width: 2, height: ch, background: ink, flexShrink: 0 }} />
+              </div>
+            ))}
+          </div>
+        );
+      })}
+      <Pill size="sm" onClick={addLine} style={{ borderStyle: 'dashed' }}>{he ? '+ שורה' : '+ Add line'}</Pill>
+    </div>
+  );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, fontFamily: 'inherit' }}>
 
-      {/* Hidden numeric input — drives the mobile soft keyboard for fret entry */}
+      {/* Hidden numeric input — kept for hardware keyboards that type into a
+          focused field; the keypad replaces the phone's soft keyboard. */}
       <input
         ref={fretInputRef}
         type="text"
@@ -485,617 +663,131 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         }}
       />
 
-      {/* ── Header ──────────────────────────────────────── */}
+      <StopActions>
+        <SaveToLibraryButton size="sm" label={he ? 'שמירה' : 'Save'} getPayload={savePayload} />
+      </StopActions>
+
+      {header}
+
       {desktop ? (
-        /* Desktop: masthead+toolbar left, techniques card right */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 36, alignItems: 'start', padding: '12px 0 20px' }}>
-
-          {/* ── Left column ── */}
-          <div>
-            {/* Masthead */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 16, borderBottom: `1px solid ${T.border}`, marginBottom: 16 }}>
-              <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textDim }}>Tools / Tab</span>
-              <input
-                value={title}
-                placeholder="Untitled Song"
-                onChange={e => setTab(p => ({ ...p, title: e.target.value }))}
-                style={{ border: 'none', background: 'transparent', padding: 0, outline: 'none', fontFamily: 'var(--gc-mono)', fontSize: 26, fontWeight: 600, letterSpacing: '-0.01em', color: T.text, width: '100%' }}
-              />
-              <input
-                value={subtitle}
-                placeholder="Tempo · tuning · notes"
-                onChange={e => setTab(p => ({ ...p, subtitle: e.target.value }))}
-                style={{ border: 'none', background: 'transparent', padding: 0, outline: 'none', fontFamily: 'var(--gc-font)', fontSize: 13, color: T.textMuted, width: '100%' }}
-              />
-            </div>
-
-            {/* Button row — one red, ghost for everything else, hairline dividers */}
-            {(() => {
-              const ghost: React.CSSProperties = { height: 34, padding: '0 13px', display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${T.border}`, background: 'transparent', color: T.textMuted, fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em', cursor: 'pointer', borderRadius: 0 };
-              const primary: React.CSSProperties = { ...ghost, border: 'none', background: T.primary, color: '#fff' };
-              const divider: React.CSSProperties = { width: 1, height: 20, background: T.border, margin: '0 4px', flexShrink: 0 };
-              return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  {/* Zoom stepper */}
-                  <div style={{ ...ghost, gap: 10, cursor: 'default', paddingLeft: 8, paddingRight: 8 }}>
-                    <button onClick={() => setZoom(z => Math.max(60, z - 10))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: 0 }}>−</button>
-                    <span style={{ color: T.text, minWidth: 30, textAlign: 'center' }}>{zoom}%</span>
-                    <button onClick={() => setZoom(z => Math.min(150, z + 10))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: 0 }}>+</button>
-                  </div>
-
-                  <span style={divider} />
-
-                  {/* Primary cluster */}
-                  <button onClick={playTab} data-active={playCol != null} disabled={!tabHasContent(tab)} style={{ ...ghost, color: playCol != null ? T.white : T.text, background: playCol != null ? T.primary : 'transparent' }}>{playCol != null ? '■ STOP' : '▶ PLAY'}</button>
-                  <button onClick={handleAnalyze} style={primary}>ANALYZE</button>
-                  <button onClick={handleExport} disabled={busy} style={{ ...ghost, cursor: busy ? 'wait' : 'pointer' }}>{busy ? '…' : 'PDF'}</button>
-                  <SaveToLibraryButton size="sm" label="SAVE" style={{ height: 34, borderRadius: 0, fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em' }} getPayload={() => tabHasContent(tab) ? ({ kind: 'tab', name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null} />
-
-                  <span style={divider} />
-
-                  {/* History cluster */}
-                  <button onClick={undo} disabled={!canUndo} style={{ ...ghost, color: T.textDim, opacity: canUndo ? 1 : 0.4, cursor: canUndo ? 'pointer' : 'default' }}>↶ UNDO</button>
-                  {backups.length > 0 && (
-                    <button onClick={() => setRecoverOpen(true)} style={{ ...ghost, color: T.textDim }}>↺ RECOVER</button>
-                  )}
-                  <button
-                    onClick={() => { if (!window.confirm('Clear all notes? This cannot be undone.')) return; clearGrid(); }}
-                    style={{ ...ghost, color: T.textDim }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = T.primary; (e.currentTarget as HTMLButtonElement).style.borderColor = T.primary; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = T.textDim; (e.currentTarget as HTMLButtonElement).style.borderColor = T.border; }}
-                  >CLEAR</button>
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* ── Techniques card ── */}
-          <div style={{ border: `1px solid ${T.border}`, borderRadius: 0, background: T.bgCard }}>
-            <div style={{ padding: '9px 14px', borderBottom: `1px solid ${T.border}`, fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textDim }}>Techniques</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-              {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, key }, i, arr) => {
-                const isArmed = id === '|' ? !!(sel && barsSet.has(sel[1])) : selTech === id;
-                return (
-                  <button data-active={!!isArmed}
-                    key={id}
-                    onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
-                    title={!sel ? 'Select a note first' : `${label} [${key}]`}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      gap: 10, padding: '10px 13px', cursor: sel ? 'pointer' : 'default',
-                      borderRadius: 0, textAlign: 'left',
-                      borderTop: 'none',
-                      borderRight: i % 2 === 0 ? `1px solid ${T.border}` : 'none',
-                      borderBottom: i < arr.length - 2 ? `1px solid ${T.border}` : 'none',
-                      borderLeft: isArmed ? `2px solid ${T.primary}` : '2px solid transparent',
-                      background: isArmed ? T.primarySoft : 'transparent',
-                      fontFamily: 'var(--gc-font)', fontSize: 12,
-                      color: isArmed ? T.text : T.textMuted,
-                      opacity: sel ? 1 : 0.6,
-                    }}
-                  >
-                    <span>{label}</span>
-                    <kbd style={{
-                      fontFamily: 'var(--gc-mono)', fontSize: 11, lineHeight: 1,
-                      minWidth: 18, textAlign: 'center', padding: '3px 6px', borderRadius: 0,
-                      border: `1px solid ${isArmed ? T.primary : T.border}`,
-                      background: isArmed ? T.primary : T.bgInput,
-                      color: isArmed ? '#fff' : T.text,
-                    }}>{key}</kbd>
-                  </button>
-                );
-              })}
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 32, alignItems: 'start' }}>
+          {tabGrid}
+          <div style={{ position: 'sticky', top: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {keypad()}
+            <span className="su-label" style={{ lineHeight: 1.7 }}>
+              {he ? 'מקלדת: 0–9 · חצים · h / b ~ | · ⌫ · Esc' : 'Keys: 0–9 · arrows · h / b ~ | · ⌫ · Esc'}
+            </span>
           </div>
         </div>
       ) : (
-        /* Mobile: original header */
-        <div style={{ padding: '12px 2px 16px' }}>
-          <div style={{ minWidth: 0, marginBottom: 10 }}>
-            <input
-              value={title}
-              placeholder="Song's title"
-              onChange={e => setTab(p => ({ ...p, title: e.target.value }))}
-              style={{
-                background: 'none', border: 'none', outline: 'none',
-                fontSize: 20, fontWeight: 400, width: '100%',
-                color: title ? T.text : T.textMuted, fontFamily: 'inherit',
-              }}
-            />
-            <input
-              value={subtitle}
-              placeholder="Extra info"
-              onChange={e => setTab(p => ({ ...p, subtitle: e.target.value }))}
-              style={{
-                background: 'none', border: 'none', outline: 'none',
-                fontSize: 12, width: '100%', marginTop: 2,
-                color: subtitle ? T.textMuted : T.border, fontFamily: 'inherit',
-              }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', rowGap: 5 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 3,
-              background: T.bgInput, borderRadius: 0, padding: '5px 7px', flexShrink: 0,
-            }}>
-              <button onClick={() => setZoom(z => Math.max(60, z - 10))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: '0 1px' }}>
-                −
-              </button>
-              <span style={{ fontSize: 11, color: T.textMuted, minWidth: 30, textAlign: 'center' }}>{zoom}%</span>
-              <button onClick={() => setZoom(z => Math.min(150, z + 10))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 15, lineHeight: 1, padding: '0 1px' }}>
-                +
-              </button>
-            </div>
-            <button onClick={handleAnalyze}
-              title="Analyze — detect scale & suggest chord progressions"
-              style={{
-                background: T.primary, color: '#fff', border: 'none',
-                borderRadius: 0, padding: '7px 10px', cursor: 'pointer',
-                fontSize: 12, fontWeight: 400, flexShrink: 0,
-              }}>
-              Analyze
-            </button>
-            <button onClick={playTab} disabled={!tabHasContent(tab)}
-              style={{
-                background: playCol != null ? T.primary : T.bgInput, color: playCol != null ? '#fff' : T.text, border: 'none',
-                borderRadius: 0, padding: '7px 10px', cursor: 'pointer',
-                fontSize: 12, fontWeight: 400, flexShrink: 0,
-              }}>
-              {playCol != null ? '■' : '▶'}
-            </button>
-            <button onClick={handleExport} disabled={busy}
-              style={{
-                background: T.secondary, color: '#fff', border: 'none',
-                borderRadius: 0, padding: '7px 10px', cursor: busy ? 'wait' : 'pointer',
-                fontSize: 12, fontWeight: 400, flexShrink: 0,
-              }}>
-              {busy ? '…' : 'PDF'}
-            </button>
-            <SaveToLibraryButton
-              size="sm"
-              label="Save"
-              style={{ flexShrink: 0 }}
-              getPayload={() => tabHasContent(tab) ? ({
-                kind: 'tab',
-                name: tab.title?.trim() || 'Untitled Tab',
-                content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars },
-              }) : null}
-            />
-            <button
-              onClick={() => {
-                if (!window.confirm('Clear all notes? This cannot be undone.')) return;
-                clearGrid();
-              }}
-              title="Clear all notes"
-              style={{
-                background: 'transparent', color: T.textMuted,
-                border: `1px solid ${T.border}`,
-                borderRadius: 0, padding: '7px 9px',
-                cursor: 'pointer', fontSize: 12, fontWeight: 400,
-                flexShrink: 0,
-              }}>
-              Clear
-            </button>
-            {backups.length > 0 && (
-              <button
-                onClick={() => setRecoverOpen(true)}
-                title="Recover a previous save"
-                style={{
-                  background: T.secondary, color: '#fff', border: 'none',
-                  borderRadius: 0, padding: '7px 9px',
-                  cursor: 'pointer', fontSize: 12, fontWeight: 400,
-                  flexShrink: 0,
-                }}>
-                ↺ Recover
-              </button>
-            )}
-            <button
-              onClick={undo}
-              disabled={!canUndo}
-              title="Undo (Ctrl+Z)"
-              style={{
-                background: 'var(--gc-error)',
-                border: 'none',
-                borderRadius: 0, padding: '7px 9px',
-                cursor: canUndo ? 'pointer' : 'default',
-                flexShrink: 0,
-                fontSize: 12, fontWeight: 400,
-                color: T.secondary,
-              }}>
-              undo
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Techniques card — mobile only ─────── */}
-      {!desktop && (
-        <div style={{ border: `1px solid ${T.border}`, background: T.bgCard, marginBottom: 18 }}>
-          <div style={{ padding: '9px 14px', borderBottom: `1px solid ${T.border}`, fontFamily: 'var(--gc-mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.textDim }}>Techniques</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-            {([...TECH_BTNS, { id: '|', label: 'Bar', sym: '|', key: '|' }, { id: 'x', label: 'Rest', sym: 'x', key: 'X' }] as { id: string; label: string; sym: string; key: string }[]).map(({ id, label, sym, key }, i, arr) => {
-              const isArmed = id === '|' ? !!(sel && barsSet.has(sel[1])) : selTech === id;
-              return (
-                <button data-active={!!isArmed}
-                  key={id}
-                  onClick={() => id === '|' ? toggleBar() : applyTech(id as Tech)}
-                  title={!sel ? 'Select a note first' : `${label} [${key}]`}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    gap: 10, padding: '10px 13px', cursor: sel ? 'pointer' : 'default',
-                    borderRadius: 0, textAlign: 'left',
-                    borderTop: 'none',
-                    borderRight: i % 2 === 0 ? `1px solid ${T.border}` : 'none',
-                    borderBottom: i < arr.length - 2 ? `1px solid ${T.border}` : 'none',
-                    borderLeft: isArmed ? `2px solid ${T.primary}` : '2px solid transparent',
-                    background: isArmed ? T.primarySoft : 'transparent',
-                    fontFamily: 'var(--gc-font)', fontSize: 12,
-                    color: isArmed ? T.text : T.textMuted,
-                    opacity: sel ? 1 : 0.6,
-                  }}
-                >
-                  <span>{label}</span>
-                  <kbd style={{
-                    fontFamily: 'var(--gc-mono)', fontSize: 11, lineHeight: 1,
-                    minWidth: 18, textAlign: 'center', padding: '3px 6px', borderRadius: 0,
-                    border: `1px solid ${isArmed ? T.primary : T.border}`,
-                    background: isArmed ? T.primary : T.bgInput,
-                    color: isArmed ? '#fff' : T.text,
-                  }}>{sym}</kbd>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* The song's melody: send this tab to it (Harmonize and the rest pick it
-          up), or pull in a melody another tool wrote. */}
-      {song && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-          <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Song melody</span>
-          <button onClick={() => {
-            song.update({ melody: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars }, melodyFrom: 'tabbuilder' });
-            flashSent();
-          }} disabled={!tabHasContent(tab)} style={songBtn(!tabHasContent(tab))}>
-            <RollLabel>{sent ? '✓ Sent to song' : 'Use this tab'}</RollLabel>
-          </button>
-          {song.song.melody && song.song.melodyFrom !== 'tabbuilder' && (
-            <button onClick={() => {
-              const m = song.song.melody!;
-              const cols = Math.max(colsPerLine * 3, Math.ceil((m.grid[0]?.length ?? 0) / colsPerLine) * colsPerLine);
-              withHistory(p => {
-                const grid = emptyGrid(cols);
-                m.grid.forEach((row, r) => row.forEach((cell, c) => { if (grid[r]?.[c]) grid[r][c] = { fret: cell.fret ?? '', tech: cell.tech as Tech | undefined }; }));
-                return { ...p, grid, bars: m.bars ?? [] };
-              });
-              setSel(null);
-            }} style={songBtn(false)}>Load the song's melody</button>
+        <>
+          {tabGrid}
+          {/* Docked keypad — over the song bar while a cell is being edited. */}
+          {sel && (
+            <>
+              <div aria-hidden style={{ height: 250 }} />
+              <div style={{ position: 'fixed', insetInline: 0, bottom: 0, zIndex: 60, paddingBottom: 'env(safe-area-inset-bottom)', background: T.secondary }}>
+                {keypad(() => { setSel(null); setPrefix(null); })}
+              </div>
+            </>
           )}
-        </div>
+        </>
       )}
 
-      {/* An empty tab offers a riff to start from. */}
-      {!tabHasContent(tab) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12, fontSize: 12, color: T.textMuted }}>
-          <span>Tap a string to place a note</span>
-          <button onClick={loadExample} style={{
-            padding: '6px 14px', borderRadius: 0, cursor: 'pointer', fontSize: 11,
-            background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, }}>Load an example riff</button>
-        </div>
-      )}
-
-      {/* ── Tab grid ────────────────────────────────────── */}
-      <div ref={wrapRef} style={{ paddingBottom: 8 }}>
-        {Array.from({ length: numSys }, (_, sys) => {
-          const s0 = sys * colsPerLine;
-          const s1 = Math.min(s0 + colsPerLine, numCols);
-
-          return (
-            <div key={sys} style={{ marginBottom: 28, background: 'var(--gc-fretboard-bg)', padding: '8px 4px', border: `1px solid ${T.border}` }}
-              onMouseLeave={() => setHov(null)}>
-              {STRS.map((lbl, si) => (
-                <div key={si} style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
-                  {/* String label */}
-                  <span style={{
-                    width: 14, fontSize: fs, fontFamily: 'monospace',
-                    color: T.textMuted, textAlign: 'right', paddingRight: 3, flexShrink: 0,
-                  }}>
-                    {lbl}
-                  </span>
-                  <span style={{ fontSize: fs, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
-
-                  {/* Cells */}
-                  {Array.from({ length: s1 - s0 }, (_, ci) => {
-                    const c    = s0 + ci;
-                    const cell = grid[si][c];
-                    const isSel = sel?.[0] === si && sel?.[1] === c;
-                    const isHov = hov?.[0] === si && hov?.[1] === c;
-                    const isBar = barsSet.has(c);
-
-                    return (
-                      <React.Fragment key={c}>
-                        <TabNoteCell
-                          cell={cell}
-                          cw={cw} ch={ch} fs={fs} circleD={circleD}
-                          isSel={isSel} isHov={isHov || c === playCol} editable
-                          markColor={c === playCol ? 'var(--gc-success-soft)' : undefined}
-                          onClick={() => selectCell(si, c)}
-                          onMouseEnter={() => setHov([si, c])}
-                        />
-
-                        {/* Bar line */}
-                        {isBar && (
-                          <div style={{
-                            width: 2, height: ch, background: T.border,
-                            flexShrink: 0,
-                          }} />
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-
-                  <span style={{ fontSize: fs, fontFamily: 'monospace', color: T.textMuted, flexShrink: 0 }}>|</span>
-                </div>
-              ))}
-            </div>
-          );
-        })}
-
-        {/* Add line */}
-        <div style={{ paddingLeft: 17, marginTop: 4 }}>
-          <button onClick={addLine}
-            style={{
-              background: T.bgInput, border: `1px dashed ${T.border}`,
-              borderRadius: 0, padding: '6px 22px', cursor: 'pointer',
-              color: T.textMuted, fontSize: 12, }}>
-            + Add line
-          </button>
-        </div>
-      </div>
-
-      {/* ── Recover modal ────────────────────────────────────── */}
+      {/* ── Recover ─────────────────────────────────────── */}
       {recoverOpen && (
-        <div
-          onClick={e => { if (e.target === e.currentTarget) setRecoverOpen(false); }}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 300, padding: 16,
-          }}>
-          <div style={{
-            background: T.bgCard, borderRadius: 0, border: `1px solid ${T.border}`,
-            width: '100%', maxWidth: 500, maxHeight: '80vh', overflowY: 'auto',
-            padding: '22px 20px', position: 'relative',
-            display: 'flex', flexDirection: 'column', gap: 10,
-          }}>
-            <button onClick={() => setRecoverOpen(false)} style={{
-              position: 'absolute', top: 12, right: 12,
-              background: T.bgInput, border: 'none', borderRadius: 0,
-              cursor: 'pointer', color: T.textMuted, fontSize: 16, padding: '3px 7px',
-              }}>✕</button>
-            <div style={{ fontSize: 17, fontWeight: 800, color: T.text, marginBottom: 4 }}>
-              ↺ Recover saved tab
-            </div>
-            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 8 }}>
-              Up to {MAX_BACKUPS} auto-saves are kept. Click one to restore it.
-            </div>
+        <Sheet onClose={() => setRecoverOpen(false)} kicker={he ? `עד ${MAX_BACKUPS} שמירות אוטומטיות` : `Up to ${MAX_BACKUPS} auto-saves`}
+          title={he ? 'שחזור' : 'Recover'} maxWidth={500} zIndex={300}>
+          <div>
             {[...backups].reverse().map((b, i) => {
               const d = new Date(b.ts);
               const noteCount = b.tab.grid.reduce((n, r) => n + r.filter(c => c.fret).length, 0);
               return (
-                <button key={i} onClick={() => {
+                <button key={i} type="button" onClick={() => {
                   if (!window.confirm('Restore this version? Your current tab will be replaced.')) return;
                   withHistory(() => b.tab);
                   setRecoverOpen(false);
-                }} style={{
-                  background: T.bgInput, border: `1px solid ${T.border}`,
-                  borderRadius: 0, padding: '10px 14px', cursor: 'pointer', textAlign: 'left',
-                  borderLeft: `4px solid ${T.secondary}`,
+                }} className="gc-no-bar" style={{
+                  display: 'block', width: '100%', minHeight: 56, padding: '10px 0', cursor: 'pointer', textAlign: 'start',
+                  background: 'transparent', color: T.text, border: 'none', borderTop: `1px solid ${T.hairline}`,
                 }}>
-                  <div style={{ fontSize: 13, fontWeight: 400, color: T.text }}>
-                    {b.tab.title || '(untitled)'}{' '}
-                    <span style={{ fontWeight: 400, color: T.textMuted, fontSize: 11 }}>
-                      — {noteCount} note{noteCount !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 10, color: T.textMuted, marginTop: 3 }}>
-                    {d.toLocaleDateString()} {d.toLocaleTimeString()}
-                  </div>
+                  <span className="su-semi" style={{ display: 'block', fontSize: 20, textTransform: 'uppercase' }}>{b.tab.title || (he ? 'ללא שם' : 'Untitled')}</span>
+                  <span className="su-label" style={{ display: 'block', marginTop: 4 }}>
+                    {noteCount} {he ? 'תווים' : noteCount === 1 ? 'note' : 'notes'} · {d.toLocaleDateString()} {d.toLocaleTimeString()}
+                  </span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </Sheet>
       )}
 
-      {/* ── Analyze modal ─────────────────────────────────── */}
+      {/* ── Analysis ───────────────────────────────────── */}
       {analyzeOpen && (
-        <div
-          onClick={e => { if (e.target === e.currentTarget) setAnalyzeOpen(false); }}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 200, padding: 16,
-          }}>
-          <div dir={t.dir} style={{
-            background: T.bgCard, borderRadius: 0, border: `1px solid ${T.border}`,
-            width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto',
-            padding: '26px 26px 22px', position: 'relative',
-            display: 'flex', flexDirection: 'column', gap: 16,
-            textAlign: t.dir === 'rtl' ? 'right' : 'left',
-          }}>
-            {/* Close (always top-right visually) */}
-            <button onClick={() => setAnalyzeOpen(false)} style={{
-              position: 'absolute', top: 12, insetInlineEnd: 12,
-              background: T.bgInput, border: 'none', borderRadius: 0,
-              cursor: 'pointer', color: T.textMuted, fontSize: 16, lineHeight: 1,
-              padding: '3px 7px', }}>✕</button>
-
-            {/* Heading + language toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingInlineEnd: 28 }}>
-              <span style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{t.heading}</span>
-            </div>
-
-            {/* Detected scale — clickable */}
-            {analyzeScale && (
-              <button
-                onClick={() => setScaleModal(true)}
-                style={{
-                  background: T.bgInput, borderRadius: 0, padding: '15px 18px',
-                  borderInlineStart: `3px solid ${T.primary}`, border: 'none',
-                  cursor: 'pointer', textAlign: 'inherit', width: '100%',
-                }}>
-                <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 4 }}>{t.bestScale}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                  <span style={{ fontSize: 25, fontWeight: 800, color: T.text, textDecoration: 'underline', textDecorationColor: T.primary }}>
-                    {analyzeScale.name}
-                  </span>
-                  <span style={{ fontSize: 14, fontWeight: 400, color: T.primary }}>
-                    {analyzeScale.fitPercent}% {t.match}
-                  </span>
-                </div>
-                <div style={{ fontSize: 12, color: T.textDim, marginTop: 4 }}>{t.scaleHint} ↗</div>
-              </button>
-            )}
-
-            {/* Error / empty */}
-            {analyzeErr && (
-              <div style={{ fontSize: 15, color: T.textMuted, textAlign: 'center', padding: '8px 0' }}>
-                {t[analyzeErr]}
-              </div>
-            )}
-
-            {/* Loading */}
-            {analyzing && (
-              <div style={{ fontSize: 15, color: T.textMuted, textAlign: 'center', padding: '12px 0' }}>
-                {t.loading}
-              </div>
-            )}
-
-            {/* Progression suggestions */}
-            {analyzeProgs && analyzeProgs.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 400, color: T.textMuted }}>{t.progTitle}</span>
-                  <span style={{ fontSize: 12, color: T.textDim }}>· {t.tapHint}</span>
-                </div>
-                {analyzeProgs.map((p, i) => (
-                  <div key={i} style={{ background: T.bgInput, borderRadius: 0, padding: '15px 18px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 16, fontWeight: 400, color: T.text }}>
-                        {lang === 'he' ? p.name_he : p.name_en}
-                      </span>
-                      <button onClick={() => playProgression(p.chords)}
-                        style={{
-                          background: T.secondary, color: '#fff', border: 'none',
-                          borderRadius: 0, padding: '5px 12px', cursor: 'pointer',
-                          fontSize: 13, fontWeight: 400, flexShrink: 0,
-                          }}>{t.play}</button>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '10px 0' }}>
-                      {p.chords.map((c, j) => (
-                        <button key={j} onClick={() => setChordModal(c)} style={{
-                          background: T.primaryBg, color: T.text, borderRadius: 0,
-                          padding: '6px 13px', fontSize: 16, fontWeight: 400,
-                          fontFamily: 'monospace', border: 'none', cursor: 'pointer',
-                          }}>{c}</button>
-                      ))}
-                    </div>
-                    <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.65 }}>
-                      {lang === 'he' ? p.why_he : p.why_en}
-                    </div>
+        <Sheet onClose={() => setAnalyzeOpen(false)} title={t.heading} maxWidth={600} zIndex={200} dir={t.dir}>
+          {analyzeScale && (
+            <button type="button" onClick={() => setScaleModal(true)} className="gc-no-bar" style={{
+              display: 'block', width: '100%', padding: '10px 0 0', cursor: 'pointer', textAlign: 'start', color: T.text,
+              background: 'transparent', border: 'none', borderTop: `var(--su-rule) solid ${T.border}`,
+            }}>
+              <span className="su-label" style={{ display: 'block' }}>{t.bestScale} · {analyzeScale.fitPercent}% {t.match}</span>
+              <span className="su-poster" style={{ display: 'block', fontSize: 40, marginTop: 10 }}>{analyzeScale.name}</span>
+              <span className="su-label" style={{ display: 'block', marginTop: 8, color: T.text }}>{t.scaleHint} ↗</span>
+            </button>
+          )}
+          {analyzeErr && <p style={{ margin: 0, fontSize: 14, color: T.textMuted, padding: '8px 0' }}>{t[analyzeErr]}</p>}
+          {analyzing && <p className="su-label" style={{ margin: 0, padding: '10px 0' }}>{t.loading}</p>}
+          {analyzeProgs && analyzeProgs.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <span className="su-label">{t.progTitle} · {t.tapHint}</span>
+              {analyzeProgs.map((p, i) => (
+                <div key={i} style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span className="su-semi" style={{ fontSize: 20, textTransform: 'uppercase' }}>{lang === 'he' ? p.name_he : p.name_en}</span>
+                    <Pill size="sm" onClick={() => playProgression(p.chords)}>▶ {t.play}</Pill>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Re-analyze */}
-            {!analyzing && (analyzeProgs || analyzeErr) && (
-              <button onClick={runAnalysis} style={{
-                background: 'transparent', border: `1px solid ${T.border}`,
-                borderRadius: 0, padding: '8px 0', cursor: 'pointer',
-                color: T.textMuted, fontSize: 14, fontWeight: 400,
-                }}>↻ {t.reanalyze}</button>
-            )}
-          </div>
-        </div>
+                  <div dir="ltr" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {p.chords.map((c, j) => (
+                      <Pill key={j} size="sm" onClick={() => setChordModal(c)} style={{ textTransform: 'none', letterSpacing: 'normal', fontSize: 14 }}>{c}</Pill>
+                    ))}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, color: T.textMuted, lineHeight: 1.65 }}>{lang === 'he' ? p.why_he : p.why_en}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {!analyzing && (analyzeProgs || analyzeErr) && (
+            <Pill onClick={runAnalysis} style={{ alignSelf: 'flex-start' }}>↻ {t.reanalyze}</Pill>
+          )}
+        </Sheet>
       )}
 
-      {/* ── Chord diagram modal ───────────────────────────── */}
+      {/* ── Chord diagram ─────────────────────────────── */}
       {chordModal && (() => {
         const voicing = findChordVoicings(chordModal, 1)[0] ?? [];
         return (
-          <div
-            onClick={e => { if (e.target === e.currentTarget) setChordModal(null); }}
-            style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 210, padding: 16,
-            }}>
-            <div style={{
-              background: T.bgCard, borderRadius: 0, border: `1px solid ${T.border}`,
-              width: '100%', maxWidth: 300, padding: '20px 20px 16px',
-              display: 'flex', flexDirection: 'column', gap: 12, position: 'relative',
-            }}>
-              <button onClick={() => setChordModal(null)} style={{
-                position: 'absolute', top: 12, right: 12, background: T.bgInput,
-                border: 'none', borderRadius: 0, cursor: 'pointer', color: T.textMuted,
-                fontSize: 16, lineHeight: 1, padding: '3px 7px',
-                }}>✕</button>
-              <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: T.text }}>
-                {chordModal}
-              </div>
-              <div style={{ padding: '0 12px' }}>
-                {voicing.length > 0
-                  ? <MiniFretboard voicing={voicing} showStringLabels showFretNumbers />
-                  : <div style={{ textAlign: 'center', color: T.textMuted, fontSize: 13, padding: '12px 0' }}>—</div>}
-              </div>
-              {voicing.length > 0 && (
-                <button onClick={() => { unlockAudio(); playChord(voicing.map(p => ({ string: p.string, fret: p.fret }))); }}
-                  style={{
-                    padding: '10px 0', borderRadius: 0, border: 'none', cursor: 'pointer',
-                    fontWeight: 400, fontSize: 14, background: T.secondary, color: '#fff',
-                    }}>▶ {t.play}</button>
-              )}
+          <Sheet onClose={() => setChordModal(null)} title={chordModal} maxWidth={320} zIndex={9100}>
+            <div style={{ padding: '0 12px' }}>
+              {voicing.length > 0
+                ? <MiniFretboard voicing={voicing} showStringLabels showFretNumbers />
+                : <div style={{ textAlign: 'center', color: T.textMuted, fontSize: 13, padding: '12px 0' }}>—</div>}
             </div>
-          </div>
+            {voicing.length > 0 && (
+              <Cta onClick={() => { unlockAudio(); playChord(voicing.map(p => ({ string: p.string, fret: p.fret }))); }}>▶ {t.play}</Cta>
+            )}
+          </Sheet>
         );
       })()}
 
-      {/* ── Scale on the neck (vertical) modal ────────────── */}
+      {/* ── The scale on the neck (vertical) ──────────── */}
       {scaleModal && analyzeScale && (
-        <div
-          onClick={e => { if (e.target === e.currentTarget) setScaleModal(false); }}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 210, padding: 16,
-          }}>
-          <div style={{
-            background: T.bgCard, borderRadius: 0, border: `1px solid ${T.border}`,
-            width: '100%', maxWidth: 340, maxHeight: '90vh', overflowY: 'auto',
-            padding: '20px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12,
-            position: 'relative',
-          }}>
-            <button onClick={() => setScaleModal(false)} style={{
-              position: 'absolute', top: 12, right: 12, background: T.bgInput,
-              border: 'none', borderRadius: 0, cursor: 'pointer', color: T.textMuted,
-              fontSize: 16, lineHeight: 1, padding: '3px 7px',
-              }}>✕</button>
-            <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, color: T.text }}>
-              {analyzeScale.name}
-            </div>
-            <VerticalScaleFretboard root={analyzeScale.root} type={analyzeScale.type} />
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 14, fontSize: 10, color: T.textDim }}>
-              <span><span style={{ color: T.primary, fontWeight: 400 }}>●</span> root</span>
-              <span><span style={{ color: T.secondary, fontWeight: 400 }}>●</span> scale</span>
-            </div>
+        <Sheet onClose={() => setScaleModal(false)} title={analyzeScale.name} titleSize={36} maxWidth={340} zIndex={9100}>
+          <VerticalScaleFretboard root={analyzeScale.root} type={analyzeScale.type} />
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+            <span className="su-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: T.primary }} />{he ? 'שורש' : 'root'}</span>
+            <span className="su-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: T.secondary }} />{he ? 'סולם' : 'scale'}</span>
           </div>
-        </div>
+        </Sheet>
       )}
 
     </div>

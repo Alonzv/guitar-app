@@ -23,7 +23,7 @@ interface Props {
 }
 
 export const MiniFretboard: React.FC<Props> = ({
-  voicing, dotColor = T.primary, dotColors, tuning,
+  voicing, dotColor = T.secondary, dotColors, tuning,
   dotLabels, hideFretLabel, showStringLabels, showFretNumbers,
 }) => {
   const sounding = useSounding();
@@ -39,7 +39,7 @@ export const MiniFretboard: React.FC<Props> = ({
 
   const W = 200, H = 90;
   const strLabelW = showStringLabels ? 14 : 0;
-  const NUT_W = 5;
+  const NUT_W = 6;
 
   const minLeftForOpen = displayMin === 0 && hasOpen
     ? Math.ceil((16 * fretCount + W - 8) / (2 * fretCount + 1))
@@ -110,7 +110,7 @@ export const MiniFretboard: React.FC<Props> = ({
       {/* Fret position label (top-left, when not hidden) */}
       {displayMin > 0 && !hideFretLabel && !showFretNumbers && (
         <text x={LEFT - strLabelW - 4} y={topY + (STRING_COUNT - 1) * strSp / 2 + 4}
-          textAnchor="end" fontSize={7} fill={T.textDim}>{displayMin + 1}fr</text>
+          textAnchor="end" fontSize={7} fill={T.textMuted} fontFamily="var(--gc-mono)">{displayMin + 1}fr</text>
       )}
 
       {/* String name labels on the left */}
@@ -119,7 +119,7 @@ export const MiniFretboard: React.FC<Props> = ({
           x={LEFT - strLabelW / 2 - 1}
           y={strY(s) + 2.5}
           textAnchor="middle" dominantBaseline="middle"
-          fontSize={6.5} fontWeight={600} fill={T.textMuted}
+          fontSize={6.5} fontWeight={700} fill={T.textMuted} fontFamily="var(--gc-mono)"
         >{STRING_NAMES[s]}</text>
       ))}
 
@@ -130,7 +130,7 @@ export const MiniFretboard: React.FC<Props> = ({
           <text key={`fn-${fretNum}`}
             x={LEFT + (i + 0.5) * fretSp}
             y={H - 3}
-            textAnchor="middle" fontSize={6.5} fill={T.textMuted}
+            textAnchor="middle" fontSize={6.5} fill={T.textMuted} fontFamily="var(--gc-mono)"
           >{fretNum}</text>
         );
       })}
@@ -144,7 +144,7 @@ export const MiniFretboard: React.FC<Props> = ({
           <Dot key={`${p.string}-${nth}`} x={fretX(p.fret)} y={strY(p.string)} r={7}
             glow={sounding.pos(p.string, p.fret, shape)}>
             <circle r={7} fill={dotColors?.[i] ?? dotColor} stroke={T.bgDeep} strokeWidth={1.25} />
-            <text y={3} textAnchor="middle" fontSize={6} fill={onFill(dotColors?.[i] ?? dotColor)} fontWeight="700">{label}</text>
+            <text y={2.4} textAnchor="middle" fontSize={label.length > 2 ? 5 : 6} fill={onFill(dotColors?.[i] ?? dotColor)} fontWeight="700" fontFamily="var(--gc-mono)">{label}</text>
           </Dot>
         );
       })}

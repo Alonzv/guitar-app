@@ -5,7 +5,10 @@ import { detectKey } from '../../utils/progressionHelper';
 import { playChord, shapeKey } from '../../utils/audioPlayback';
 import { useSounding } from '../../motion/useSounding';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
-import { T, card } from '../../theme';
+import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
+import { Rule } from '../Transit/parts';
+import { pillStyle } from '../Transit/styles';
 
 interface Props {
   progression: ChordInProgression[];
@@ -22,40 +25,20 @@ interface Props {
   capo: number;
 }
 
-const CHORD_ACCENTS = ['var(--gc-success)', '#1A1818', '#4A453E', '#6B655C', '#8A8378', '#9C958C'];
+// Toolbar buttons are outlined pills; Save (a shared component) is forced to match.
+const toolBtn = (opts?: { active?: boolean; disabled?: boolean }): React.CSSProperties => ({
+  ...pillStyle(!!opts?.active, 'sm'), opacity: opts?.disabled ? 0.35 : 1,
+  cursor: opts?.disabled ? 'not-allowed' : 'pointer',
+});
+const SAVE_BTN_STYLE: React.CSSProperties = { ...pillStyle(false, 'sm') };
 
-const LABEL_STYLE = {
-  margin: 0,
-  fontSize: 11,
-  fontWeight: 400,
-  color: T.textMuted,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '-0.02em',
-};
-
-// Shared compact toolbar-button style — every button in the row looks identical.
-const toolBtn = (opts?: {
-  active?: boolean; disabled?: boolean;
-}): React.CSSProperties => {
-  const { active, disabled } = opts ?? {};
-  return {
-    padding: '5px 10px', borderRadius: 0,
-    border: `1px solid ${T.border}`,
-    background: active ? T.secondaryBg : T.bgInput,
-    color: disabled ? T.textDim : active ? T.secondary : T.textMuted,
-    fontSize: 11, fontWeight: 400, fontFamily: 'inherit',
-    textTransform: 'uppercase', letterSpacing: '-0.02em',
-    cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-    display: 'inline-flex', alignItems: 'center', gap: 4,
-    transition: 'background 0.15s, color 0.15s',
-  };
-};
-
-// The Save button is a shared component; force it to match the toolbar buttons.
-const SAVE_BTN_STYLE: React.CSSProperties = {
-  padding: '5px 10px', fontSize: 11, fontWeight: 400,
-  background: T.bgInput, color: T.textMuted,
-  border: `1px solid ${T.border}`, };
+// A small round control inside a chord tile (reorder, remove).
+const tileBtn = (on: boolean, disabled?: boolean): React.CSSProperties => ({
+  width: 36, height: 36, borderRadius: '50%', border: `1.5px solid ${on ? T.onPrimary : T.text}`, padding: 0,
+  background: 'transparent', color: on ? T.onPrimary : T.text, fontSize: 14, lineHeight: 1,
+  cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.3 : 1,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+});
 
 export function ProgressionPanel({
   progression, onRemoveFromProgression, onClearProgression,
@@ -65,6 +48,8 @@ export function ProgressionPanel({
 }: Props) {
   // A tile lifts while its chord is the one sounding (Play, or played anywhere).
   const sounding = useSounding();
+  const { lang } = useLang();
+  const he = lang === 'he';
   const [progressionName, setProgressionName] = useState('');
   const [exporting, setExporting] = useState(false);
   const [playingAll, setPlayingAll] = useState(false);
@@ -123,47 +108,41 @@ export function ProgressionPanel({
 
   if (progression.length === 0) return null;
 
-  return (
-    <div style={card()}>
-      {/* ── Title + detected key + compact name ── */}
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-        <p style={LABEL_STYLE}>
-          Your Progression · {progression.length} chord{progression.length > 1 ? 's' : ''}
-        </p>
-        {detectedKey && (
-          <span style={{
-            padding: '2px 8px', borderRadius: 0, fontSize: 10, fontWeight: 400,
-            background: T.secondaryBg, color: T.secondary, border: `1px solid ${T.secondaryFaint}`,
-          }}>
-            Key: {detectedKey}
-          </span>
-        )}
-        <input
-          value={progressionName}
-          onChange={e => setProgressionName(e.target.value)}
-          placeholder="Name…"
-          aria-label="Progression name"
-          style={{
-            marginLeft: 'auto', width: 132, maxWidth: '100%', padding: '4px 8px', borderRadius: 0,
-            border: `1px solid ${T.border}`, background: T.bgInput,
-            color: T.text, fontSize: 12, fontFamily: 'inherit',
-            boxSizing: 'border-box', }}
-        />
-      </div>
+  const label = he
+    ? `המהלך · ${progression.length} אקורדים`
+    : `Your progression · ${progression.length} chord${progression.length > 1 ? 's' : ''}`;
 
-      {/* ── Unified action toolbar (one row) ── */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
-        <button onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={toolBtn({ disabled: !canUndo })}>Undo</button>
-        <button onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" style={toolBtn({ disabled: !canRedo })}>Redo</button>
-        <button onClick={handleExportPDF} disabled={exporting} title="Export as PDF" style={toolBtn({ disabled: exporting })}>
+  return (
+    <Rule label={label} right={detectedKey ? (
+      <span className="su-label" style={{ color: T.text }}>{he ? 'סולם' : 'Key'} · {detectedKey}</span>
+    ) : undefined}>
+      {/* ── Name ── */}
+      <input
+        value={progressionName}
+        onChange={e => setProgressionName(e.target.value)}
+        placeholder={he ? 'שם…' : 'Name…'}
+        aria-label={he ? 'שם המהלך' : 'Progression name'}
+        dir="auto"
+        style={{
+          width: '100%', maxWidth: 320, minHeight: 44, padding: '0 14px', borderRadius: 0,
+          border: `2px solid ${T.text}`, background: T.bgCard, outline: 'none',
+          color: T.text, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 10,
+        }}
+      />
+
+      {/* ── Actions ── */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+        <button onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="gc-no-bar" style={toolBtn({ disabled: !canUndo })}>{he ? 'בטל' : 'Undo'}</button>
+        <button onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" className="gc-no-bar" style={toolBtn({ disabled: !canRedo })}>{he ? 'שחזר' : 'Redo'}</button>
+        <button onClick={handleExportPDF} disabled={exporting} title="Export as PDF" className="gc-no-bar" style={toolBtn({ disabled: exporting })}>
           {exporting ? '…' : 'PDF'}
         </button>
-        <button onClick={handleShare} title="Copy a shareable link" style={toolBtn({ active: shared })}>
-          {shared ? '✓ Link' : 'Share'}
+        <button onClick={handleShare} title="Copy a shareable link" className="gc-no-bar" aria-pressed={shared} style={toolBtn({ active: shared })}>
+          {shared ? (he ? '✓ הועתק' : '✓ Link') : (he ? 'שיתוף' : 'Share')}
         </button>
         <SaveToLibraryButton
           size="sm"
-          label="Save"
+          label={he ? 'שמירה' : 'Save'}
           style={SAVE_BTN_STYLE}
           getPayload={() => progression.length === 0 ? null : ({
             kind: 'progression',
@@ -173,69 +152,58 @@ export function ProgressionPanel({
           })}
         />
         {canPlayAll && (
-          <button onClick={handlePlayAll} title="Play the whole progression" style={toolBtn({ active: playingAll })}>
-            {playingAll ? 'Stop' : 'Play'}
+          <button onClick={handlePlayAll} title="Play the whole progression" className="gc-no-bar" aria-pressed={playingAll} style={toolBtn({ active: playingAll })}>
+            {playingAll ? (he ? 'עצור' : 'Stop') : (he ? 'נגן' : 'Play')}
           </button>
         )}
-        <button onClick={handleClear} title="Remove every chord" style={toolBtn()}>Clear</button>
+        <button onClick={handleClear} title="Remove every chord" className="gc-no-bar" style={toolBtn()}>{he ? 'ניקוי' : 'Clear'}</button>
       </div>
 
-      {/* ── Chord cards — wrap so nothing is ever clipped ── */}
-      <div className="gc-chip-strip" style={{ paddingTop: 14, flexWrap: 'wrap', overflowX: 'visible' }}>
+      {/* ── Chord tiles — square; the one sounding is cobalt. Wrap, never clip. ── */}
+      <div dir="ltr" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {progression.map((item, i) => {
-          const accent = CHORD_ACCENTS[i % CHORD_ACCENTS.length];
+          const now = sounding.shape(shapeKey(item.fretPositions));
+          const fg = now ? T.onPrimary : T.text;
+          const first = i === 0, last = i === progression.length - 1;
           return (
-            <div key={item.id} className={sounding.shape(shapeKey(item.fretPositions)) ? 'gc-tile-now' : undefined} style={{
-              position: 'relative', minWidth: 80, flexShrink: 0,
-              padding: '10px 12px 10px', borderRadius: 0,
-              background: accent,
-              textAlign: 'center',
+            <div key={item.id} style={{
+              width: 128, flexShrink: 0, padding: '8px 8px 8px', borderRadius: 0,
+              background: now ? T.primary : T.bgInput, color: fg,
+              display: 'flex', flexDirection: 'column', gap: 6,
+              transition: 'background-color var(--gc-dur-base) var(--gc-ease-out)',
             }}>
-              <span style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,0.55)', marginBottom: 3, fontWeight: 400, letterSpacing: '0.08em' }}>{i + 1}</span>
-              <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>{formatChordName(item.chord.name)}</span>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 8 }}>
-                <button
-                  onClick={() => onReorderProgression(item.id, -1)}
-                  disabled={i === 0}
-                  style={{
-                    width: 24, height: 22, borderRadius: 0, border: 'none',
-                    background: 'rgba(0,0,0,0.25)', color: i === 0 ? 'rgba(255,255,255,0.25)' : '#fff',
-                    fontSize: 12, cursor: i === 0 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
-                  }}
-                >←</button>
-                <button
-                  onClick={() => onReorderProgression(item.id, 1)}
-                  disabled={i === progression.length - 1}
-                  style={{
-                    width: 24, height: 22, borderRadius: 0, border: 'none',
-                    background: 'rgba(0,0,0,0.25)', color: i === progression.length - 1 ? 'rgba(255,255,255,0.25)' : '#fff',
-                    fontSize: 12, cursor: i === progression.length - 1 ? 'default' : 'pointer', padding: 0, lineHeight: 1,
-                  }}
-                >→</button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10, letterSpacing: '0.14em', fontFamily: 'var(--gc-mono)', color: now ? fg : T.textMuted, paddingInlineStart: 2 }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <button onClick={() => onRemoveFromProgression(item.id)} className="gc-no-bar"
+                  aria-label={he ? `הסר ${formatChordName(item.chord.name)}` : `Remove ${formatChordName(item.chord.name)}`}
+                  style={tileBtn(now)}>×</button>
               </div>
-              {item.fretPositions.length > 0 && (
-                <button
-                  onClick={() => playChord(item.fretPositions, tuning.openFreqs, capo)}
-                  style={{
-                    display: 'block', width: '100%', marginTop: 6, padding: '7px 0',
-                    borderRadius: 0, background: 'rgba(0,0,0,0.22)', border: 'none',
-                    color: '#fff', fontSize: 16, fontWeight: 400, cursor: 'pointer',
-                    minHeight: 36,
-                  }}
-                >PLAY</button>
-              )}
+              {/* The name plays the chord (when it has a shape). */}
               <button
-                onClick={() => onRemoveFromProgression(item.id)}
+                onClick={item.fretPositions.length > 0 ? () => playChord(item.fretPositions, tuning.openFreqs, capo) : undefined}
+                disabled={item.fretPositions.length === 0}
+                className="gc-no-bar gc-notation"
+                aria-label={he ? `נגן ${formatChordName(item.chord.name)}` : `Play ${formatChordName(item.chord.name)}`}
                 style={{
-                  position: 'absolute', top: -7, right: -7, width: 20, height: 20,
-                  borderRadius: 0, background: 'rgba(0,0,0,0.55)', border: 'none',
-                  color: '#fff', fontSize: 13, cursor: 'pointer', lineHeight: '20px', padding: 0,
-                }}
-              >×</button>
+                  minHeight: 44, padding: '0 2px', background: 'transparent', border: 'none', color: fg,
+                  cursor: item.fretPositions.length ? 'pointer' : 'default', textAlign: 'start',
+                  fontFamily: 'var(--su-display)', fontStretch: 'var(--su-display-semi)', fontWeight: 800,
+                  fontSize: 26, lineHeight: 1, letterSpacing: 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                {formatChordName(item.chord.name)}
+              </button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => onReorderProgression(item.id, -1)} disabled={first} className="gc-no-bar"
+                  aria-label={he ? 'הזז שמאלה' : 'Move left'} style={tileBtn(now, first)}>‹</button>
+                <button onClick={() => onReorderProgression(item.id, 1)} disabled={last} className="gc-no-bar"
+                  aria-label={he ? 'הזז ימינה' : 'Move right'} style={tileBtn(now, last)}>›</button>
+              </div>
             </div>
           );
         })}
       </div>
-    </div>
+    </Rule>
   );
 }

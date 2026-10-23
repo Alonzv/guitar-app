@@ -13,7 +13,11 @@ import { reharmonize, type ReharmonizeResult } from '../../utils/reharmonize';
 import { exportMidi } from '../../utils/midiExport';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import type { ReharmData } from '../../services/types';
-import { T, card, alpha } from '../../theme';
+import { T, alpha } from '../../theme';
+import { Rule, Pill, PillRow, Cta, PosterTitle } from '../Transit/parts';
+import { pillStyle } from '../Transit/styles';
+import { Route } from './Route';
+import { pickTag, spinner } from './ui';
 import { useLang } from '../../contexts/LanguageContext';
 import { ExampleChips } from '../ExampleChips';
 import { useOptionalSong } from '../../song/SongContext';
@@ -55,29 +59,15 @@ interface Props {
   onLoadExample?: (chords: string[]) => void;
 }
 
-const LABEL_STYLE: React.CSSProperties = {
-  margin: 0,
-  fontSize: 11,
-  fontWeight: 400,
-  color: T.textMuted,
-  textTransform: 'uppercase',
-  letterSpacing: '-0.02em',
-};
+const WARN = '⚠\uFE0E';   // text presentation, never the emoji
 
-// Fret position badge
-function FretBadge({ voicing, color }: { voicing: FretPosition[]; color: string }) {
+// Where the shape sits on the neck, as a mono label.
+function FretBadge({ voicing }: { voicing: FretPosition[] }) {
   const nonOpen = voicing.filter(p => p.fret > 0);
   const hasOpen = voicing.some(p => p.fret === 0);
   const lowestFret = nonOpen.length ? Math.min(...nonOpen.map(p => p.fret)) : 0;
-
   return (
-    <span style={{
-      display: 'inline-block',
-      padding: '2px 7px', borderRadius: 0,
-      background: color + '22',
-      border: `1px solid ${color}55`,
-      fontSize: 10, fontWeight: 400, color,
-    }}>
+    <span className="su-label" style={{ color: T.textMuted }}>
       {nonOpen.length === 0
         ? 'open'
         : hasOpen
@@ -87,17 +77,20 @@ function FretBadge({ voicing, color }: { voicing: FretPosition[]; color: string 
   );
 }
 
-// ── Enlarged chord modal ──────────────────────────────────────────────────────
+// ── Enlarged chord sheet ──────────────────────────────────────────────────────
+// A paper sheet in a 2px ink frame: the chord as a poster, its diagram, and
+// ‹ › pills to step through the path.
 function ReharmModal({
-  voicings, chordNames, index: initial, color, tuning, onClose,
+  voicings, chordNames, index: initial, tuning, onClose,
 }: {
   voicings: FretPosition[][];
   chordNames: string[];
   index: number;
-  color: string;
   tuning: string[];
   onClose: () => void;
 }) {
+  const { lang } = useLang();
+  const he = lang === 'he';
   const [idx, setIdx] = useState(initial);
   const total = voicings.length;
 
@@ -111,52 +104,42 @@ function ReharmModal({
     return () => document.removeEventListener('keydown', handler);
   }, [onClose, total]);
 
-  const navStyle = (disabled: boolean): React.CSSProperties => ({
-    flex: 1, padding: '10px 16px', borderRadius: 0,
-    border: `1px solid ${T.border}`,
-    background: disabled ? T.bgDeep : T.bgInput,
-    color: disabled ? T.textDim : T.text,
-    cursor: disabled ? 'default' : 'pointer',
-    fontSize: 18, fontWeight: 400, opacity: disabled ? 0.35 : 1,
-    transition: 'opacity 0.15s', });
-
   return (
     <div
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.72)',
+        background: alpha(T.text, 55),
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
     >
       <div
+        role="dialog" aria-modal="true" aria-label={chordNames[idx]}
         onClick={e => e.stopPropagation()}
         style={{
-          background: T.bgCard, borderRadius: 0,
-          border: `1px solid ${T.border}`,
-          padding: 24, maxWidth: 340, width: '100%',
+          background: T.bgDeep, color: T.text, borderRadius: 0,
+          border: `var(--su-rule) solid ${T.border}`,
+          padding: '18px 20px 20px', maxWidth: 360, width: '100%', boxSizing: 'border-box',
           display: 'flex', flexDirection: 'column', gap: 14,
-          }}
+        }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 22, fontWeight: 800, color }}>{chordNames[idx]}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, color: T.textDim, fontWeight: 600 }}>{idx + 1} / {total}</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 22, cursor: 'pointer', lineHeight: 1, padding: '2px 6px' }}>×</button>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <span className="su-label" style={{ paddingTop: 14 }}>{idx + 1} / {total}</span>
+          <Pill onClick={onClose} label={he ? 'סגירה' : 'Close'} style={{ padding: 0, width: 44 }}>×</Pill>
         </div>
-        <div style={{ background: T.bgInput, borderRadius: 0, border: `1px solid ${color}44`, padding: '8px 8px 4px' }}>
-          <MiniFretboard voicing={voicings[idx]} dotColor={color} tuning={tuning} showStringLabels showFretNumbers hideFretLabel />
+        <PosterTitle head={chordNames[idx]} max={84} min={36} style={{ textTransform: 'none' }} />
+        <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10 }}>
+          <MiniFretboard voicing={voicings[idx]} dotColor={T.secondary} tuning={tuning} showStringLabels showFretNumbers hideFretLabel />
         </div>
-        <FretBadge voicing={voicings[idx]} color={color} />
+        <FretBadge voicing={voicings[idx]} />
         {total > 1 && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setIdx(i => Math.max(0, i - 1))}          disabled={idx === 0}          style={navStyle(idx === 0)}>‹</button>
-            <button onClick={() => setIdx(i => Math.min(total - 1, i + 1))}  disabled={idx === total - 1}  style={navStyle(idx === total - 1)}>›</button>
+            <Pill onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0} label={he ? 'הקודם' : 'Previous'} style={{ flex: 1 }}>‹</Pill>
+            <Pill onClick={() => setIdx(i => Math.min(total - 1, i + 1))} disabled={idx === total - 1} label={he ? 'הבא' : 'Next'} style={{ flex: 1 }}>›</Pill>
           </div>
         )}
-        <p style={{ margin: 0, fontSize: 10, color: T.textDim, textAlign: 'center' }}>← → keys to navigate · Esc to close</p>
+        <p className="su-label" style={{ margin: 0, textAlign: 'center' }}>{he ? '← → למעבר · Esc לסגירה' : '← → to step · Esc to close'}</p>
       </div>
     </div>
   );
@@ -317,7 +300,6 @@ export function ReharmonizeTab({
   };
 
   const currentPath: VoicingPath | undefined = reharmPaths[selectedPathIdx];
-  const currentColor = T.secondary;
 
   const handlePlay = () => {
     if (!currentPath) return;
@@ -370,191 +352,102 @@ export function ReharmonizeTab({
     unlockAudio().then(() => step(0));
   };
 
+  const he = lang === 'he';
   const leftCol = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
 
       {/* Empty state */}
       {chords.length === 0 && (
-        <div style={{ ...card(), textAlign: 'center', padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <Rule style={{ textAlign: 'center', padding: '24px 0 4px', display: 'flex', flexDirection: 'column', gap: 18 }}>
           <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
-            {lang === 'he' ? 'בנו את הפרוגרסיה שתרצו לשנות' : 'Build the progression you want to reharmonize'}
-            {desktop ? (lang === 'he' ? ' — בעמודה משמאל' : ' — on the left') : (lang === 'he' ? ' — למעלה' : ' — above')}
+            {he ? 'בנו את הפרוגרסיה שתרצו לשנות' : 'Build the progression you want to reharmonize'}
+            {desktop ? (he ? ' — בעמודה משמאל' : ' — on the left') : (he ? ' — למעלה' : ' — above')}
           </p>
           {onLoadExample && <ExampleChips onPick={onLoadExample} />}
-        </div>
+        </Rule>
       )}
 
       {chords.length > 0 && (
         <>
-          {/* Original Progression card */}
-          <div style={{ ...card({ padding: '12px 14px' }), display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <p style={LABEL_STYLE}>Progression{chords.length > 0 ? ` (${chords.length}/8)` : ''}</p>
-              <button data-active={!!showNashville}
-                onClick={() => setShowNashville(v => !v)}
-                style={{
-                  padding: '3px 10px', borderRadius: 0, border: 'none',
-                  cursor: 'pointer', fontSize: 11, fontWeight: 600,
-                  background: showNashville ? T.secondary : T.bgInput,
-                  color: showNashville ? '#fff' : T.textMuted,
-                  }}
-              >
-                Nashville
-              </button>
-            </div>
+          {/* The original progression — a route you can edit */}
+          <Rule
+            label={`${he ? 'המהלך' : 'Progression'} (${chords.length}/8)`}
+            right={<Pill size="sm" active={showNashville} onClick={() => setShowNashville(v => !v)}>Nashville</Pill>}
+          >
             {progressionEditor}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {showNashville && chords.map((c, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <span style={{
-                    padding: '5px 12px', borderRadius: 0,
-                    background: T.bgDeep, border: `1px solid ${T.border}`,
-                    fontSize: 13, fontWeight: 400, color: T.text,
-                  }}>
-                    {c}
+            {showNashville && (
+              <p dir="ltr" style={{ margin: '8px 0 0', fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.08em', color: T.textMuted }}>
+                {chords.map(c => toNashville(c, keyRoot)).join('  ·  ')}
+              </p>
+            )}
+          </Rule>
+
+          {/* Controls */}
+          <Rule label={he ? 'סגנון' : 'Genre'}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <PillRow label={he ? 'סגנון' : 'Genre'} items={GENRES.map(g => ({ id: g.id, label: g.label }))} value={genre} onChange={setGenre} />
+
+              {/* Tension slider */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="su-label">{he ? 'מתח' : 'Tension'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gc-mono)' }}>
+                    {tension} — {tensionLabel(tension)}{result && loading ? ' · …' : ''}
                   </span>
-                  {showNashville && (
-                    <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted }}>
-                      {toNashville(c, keyRoot)}
-                    </span>
-                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Controls card */}
-          <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {/* Genre pills */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <p style={LABEL_STYLE}>Genre</p>
-              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-                {GENRES.map(g => (
-                  <button data-active={genre === g.id}
-                    key={g.id}
-                    onClick={() => setGenre(g.id)}
-                    style={{
-                      flexShrink: 0,
-                      padding: '5px 14px', borderRadius: 0, border: 'none',
-                      cursor: 'pointer', fontSize: 12,
-                      fontWeight: genre === g.id ? 600 : 400,
-                      background: genre === g.id ? T.secondary : T.bgInput,
-                      color: genre === g.id ? '#fff' : T.textMuted,
-                      whiteSpace: 'nowrap', }}
-                  >
-                    {g.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tension slider */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <p style={LABEL_STYLE}>Tension</p>
-                <span style={{
-                  padding: '2px 8px', borderRadius: 0,
-                  background: T.secondaryBg, color: T.secondary,
-                  fontSize: 11, fontWeight: 400,
-                }}>
-                  {tension} — {tensionLabel(tension)}{result && loading ? ' · …' : ''}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={1}
-                max={5}
-                step={1}
-                value={tension}
-                onChange={e => {
-                  const v = Number(e.target.value);
-                  setTension(v);
-                  // With a result on screen the slider is live: settle on a level
-                  // and the reharm is redone at it.
-                  if (result) {
-                    if (liveTimer.current) clearTimeout(liveTimer.current);
-                    liveTimer.current = setTimeout(() => handleReharmonize(v, true), 700);
-                  }
-                }}
-                style={{ width: '100%', accentColor: T.primary, cursor: 'pointer' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 9, color: T.textDim }}>Simple</span>
-                <span style={{ fontSize: 9, color: T.textDim }}>Extended</span>
-                <span style={{ fontSize: 9, color: T.textDim }}>Altered</span>
-              </div>
-            </div>
-
-            {/* Mode + StringGroup */}
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 130 }}>
-                <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Mode</span>
-                <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
-                  {(['full', 'triads'] as VoicingMode[]).map(m => (
-                    <button data-active={mode === m} key={m} onClick={() => setMode(m)} style={{
-                      flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
-                      fontSize: 12, fontWeight: 400,
-                      background: mode === m ? T.secondary : T.bgInput,
-                      color: mode === m ? '#fff' : T.textMuted,
-                    }}>
-                      {m === 'full' ? 'Full' : 'Triads'}
-                    </button>
-                  ))}
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={tension}
+                  aria-label={he ? 'מתח' : 'Tension'}
+                  onChange={e => {
+                    const v = Number(e.target.value);
+                    setTension(v);
+                    // With a result on screen the slider is live: settle on a level
+                    // and the reharm is redone at it.
+                    if (result) {
+                      if (liveTimer.current) clearTimeout(liveTimer.current);
+                      liveTimer.current = setTimeout(() => handleReharmonize(v, true), 700);
+                    }
+                  }}
+                  style={{ width: '100%', height: 44, accentColor: T.text, cursor: 'pointer', margin: 0 }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="su-label">Simple</span>
+                  <span className="su-label">Extended</span>
+                  <span className="su-label">Altered</span>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 }}>
-                <span style={{ ...LABEL_STYLE, whiteSpace: 'nowrap' }}>Strings</span>
-                <div style={{ display: 'flex', borderRadius: 0, overflow: 'hidden', border: `1px solid ${T.border}`, flex: 1 }}>
-                  {([
+              {/* Mode + StringGroup */}
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="su-label">{he ? 'מצב' : 'Mode'}</span>
+                  <PillRow label={he ? 'מצב' : 'Mode'} items={[{ id: 'full' as VoicingMode, label: 'Full' }, { id: 'triads' as VoicingMode, label: 'Triads' }]}
+                    value={mode} onChange={setMode} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="su-label">{he ? 'מיתרים' : 'Strings'}</span>
+                  <PillRow label={he ? 'מיתרים' : 'Strings'} items={([
                     { id: 'all',    label: 'All'  },
                     { id: 'bass',   label: 'Low'  },
                     { id: 'treble', label: 'High' },
-                  ] as { id: StringGroup; label: string }[]).map(sg => (
-                    <button data-active={stringGroup === sg.id} key={sg.id} onClick={() => setStringGroup(sg.id)} style={{
-                      flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
-                      fontSize: 12, fontWeight: 400,
-                      background: stringGroup === sg.id ? T.secondary : T.bgInput,
-                      color: stringGroup === sg.id ? '#fff' : T.textMuted,
-                    }}>
-                      {sg.label}
-                    </button>
-                  ))}
+                  ] as { id: StringGroup; label: string }[])} value={stringGroup} onChange={setStringGroup} />
                 </div>
               </div>
             </div>
-          </div>
+          </Rule>
 
-          {/* Re-Harmonize button */}
-          <button
-            onClick={() => handleReharmonize()}
-            disabled={chords.length === 0 || loading}
-            style={{
-              width: '100%',
-              padding: '13px 0', borderRadius: 0, border: 'none',
-              cursor: (chords.length === 0 || loading) ? 'not-allowed' : 'pointer',
-              fontWeight: 400, fontSize: 15,
-              background: (chords.length === 0 || loading) ? T.border : T.secondary,
-              color: (chords.length === 0 || loading) ? T.textDim : '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}
-          >
+          {/* Re-Harmonize — the stop's one cobalt action */}
+          <Cta onClick={() => handleReharmonize()} disabled={chords.length === 0 || loading} style={{ width: '100%', height: 52 }}>
             {loading ? (
-              <>
-                <span style={{
-                  display: 'inline-block', width: 14, height: 14,
-                  border: `2px solid ${T.textDim}`,
-                  borderTopColor: T.text,
-                  borderRadius: 0,
-                  animation: 'spin 0.7s linear infinite',
-                }} />
-                Re-Harmonizing...
-              </>
+              <><span style={spinner(T.textMuted)} /> {he ? 'מרמן…' : 'Re-Harmonizing…'}</>
             ) : (
-              'Re-Harmonize'
+              he ? 'רה-הרמוניזציה' : 'Re-Harmonize'
             )}
-          </button>
+          </Cta>
 
           {/* Spinner animation */}
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -565,236 +458,146 @@ export function ReharmonizeTab({
   );
 
   const rightCol = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
 
       {error && !loading && (
-        <div style={{
-          ...card({ padding: '12px 16px' }),
-          borderLeft: `3px solid ${T.coral}`,
-          display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <span style={{ fontSize: 16 }}>⚠</span>
-          <p style={{ margin: 0, fontSize: 13, color: T.text }}>{error}</p>
-        </div>
+        <Rule>
+          <p role="alert" style={{ margin: 0, fontSize: 13, color: T.text }}><b>{WARN}</b> {error}</p>
+        </Rule>
       )}
 
       {result && (
         <>
-              {/* Re-Harmonized progression card */}
-              <div className="gc-result-card" style={{ gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                  <p style={LABEL_STYLE}>Re-Harmonized</p>
-                  <button data-active={!!isPlaying}
-                    onClick={handlePlay}
-                    className="gc-btn-heavy"
-                    style={{
-                      padding: '7px 16px', borderRadius: 0,
-                      cursor: 'pointer', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em',
-                      background: isPlaying ? T.coral : T.secondary,
-                      color: '#fff',
-                      border: 'none',
-                      borderLeft: `3px solid ${T.secondary}`,
-                    }}
-                  >
-                    {isPlaying ? 'STOP' : 'PLAY'}
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {result.chords.map((c, i) => {
-                    // A chord the reharm actually changed is marked; one it kept is plain.
-                    const changed = formatChordName(c) !== formatChordName(chords[i] ?? '');
-                    const now = ab != null && ab.side === 'after' && ab.step === i;
-                    return (
-                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <span className="gc-notation" style={{
-                          padding: '5px 12px', borderRadius: 0,
-                          background: now ? T.primary : changed ? T.secondaryBg : 'transparent',
-                          border: `1px solid ${changed ? T.text : alpha(T.secondary, 27)}`,
-                          fontSize: 13, fontWeight: changed ? 700 : 400, color: now ? T.white : T.text,
-                          transition: 'background-color var(--gc-dur-fast) var(--gc-ease-out), color var(--gc-dur-fast) var(--gc-ease-out)',
-                        }}>
-                          {c}
-                        </span>
-                        {showNashville && (
-                          <span style={{ fontSize: 10, fontWeight: 400, color: T.textMuted }}>
-                            {toNashville(c, keyRoot)}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* The reharm as a route: a changed chord is a filled station,
+                  a kept one an open ring, the one sounding now cobalt. */}
+              <Rule
+                label={he ? 'אחרי הרה-הרמוניזציה' : 'Re-Harmonized'}
+                right={<Pill size="sm" active={isPlaying} onClick={handlePlay}>{isPlaying ? 'STOP' : 'PLAY'}</Pill>}
+              >
+                <Route
+                  label={he ? 'אחרי הרה-הרמוניזציה' : 'Re-Harmonized'}
+                  stations={result.chords.map((c, i) => ({
+                    name: c,
+                    filled: formatChordName(c) !== formatChordName(chords[i] ?? ''),
+                    sub: showNashville ? toNashville(c, keyRoot) : undefined,
+                  }))}
+                  current={ab != null && ab.side === 'after' ? ab.step : null}
+                />
 
                 {/* Before / after — one loop, two progressions: flip sides while it
                     plays and the next chord comes from the other one, so the
                     difference is heard at the same spot in the bar. */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
-                  <span style={{ fontSize: 10, color: T.textDim, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-                    {lang === 'he' ? 'לפני / אחרי' : 'Before / after'}
-                  </span>
-                  <div style={{ display: 'flex', border: `1px solid ${T.border}` }}>
-                    {(['before', 'after'] as const).map(side => {
-                      const on = ab?.side === side;
-                      return (
-                        <button key={side} onClick={() => abPlay(side)} data-active={on} style={{
-                          padding: '6px 14px', fontSize: 11, cursor: 'pointer', borderRadius: 0,
-                          background: on ? T.primary : 'transparent', color: on ? T.white : T.text,
-                        }}>{side === 'before' ? (lang === 'he' ? '▶ המקור' : '▶ Original') : (lang === 'he' ? '▶ הרה-הרמוניזציה' : '▶ Reharm')}</button>
-                      );
-                    })}
-                  </div>
-                  {ab && <button onClick={abStop} style={{ padding: '6px 10px', fontSize: 11, cursor: 'pointer', background: 'transparent', border: `1px solid ${T.border}`, color: T.text }}>■</button>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
+                  <span className="su-label">{he ? 'לפני / אחרי' : 'Before / after'}</span>
+                  {(['before', 'after'] as const).map(side => (
+                    <Pill key={side} size="sm" active={ab?.side === side} onClick={() => abPlay(side)}>
+                      {side === 'before' ? (he ? '▶ המקור' : '▶ Original') : (he ? '▶ הרה-הרמוניזציה' : '▶ Reharm')}
+                    </Pill>
+                  ))}
+                  {ab && <Pill size="sm" onClick={abStop} label={he ? 'עצירה' : 'Stop'} style={{ padding: 0 }}>■</Pill>}
                   {ab && (
-                    <span dir="ltr" className="gc-notation" style={{ fontSize: 12, color: T.textMuted }}>
+                    <span dir="ltr" className="gc-notation" style={{ fontSize: 12, color: T.textMuted, flexBasis: '100%' }}>
                       {(ab.side === 'before' ? chords : result.chords).map((c, i) => (
                         <span key={i} style={i === ab.step ? { color: T.text, fontWeight: 700 } : undefined}>{i ? ' – ' : ''}{c}</span>
                       ))}
                     </span>
                   )}
                 </div>
-              </div>
+              </Rule>
 
-              {/* AI Analysis card */}
-              <div style={{
-                ...card({ padding: '14px 16px' }),
-                borderLeft: `3px solid ${T.secondary}`,
-                display: 'flex', flexDirection: 'column', gap: 8,
-              }}>
-                <span style={{ fontSize: 11, fontFamily: 'var(--gc-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9C958C' }}>
-                  AI Analysis
-                </span>
-                <p style={{
-                  margin: 0, fontSize: 12, color: T.text,
-                  lineHeight: 1.7,
-                }}>
+              {/* AI analysis */}
+              <Rule label={he ? 'ניתוח' : 'AI analysis'}>
+                <p style={{ margin: 0, fontSize: 13, color: T.text, lineHeight: 1.7 }}>
                   {result.analysis}
                 </p>
-                <div style={{ paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
-                  <p style={{
-                    margin: 0, fontSize: 11, color: T.textMuted,
-                    lineHeight: 1.6, fontStyle: 'italic',
-                  }}>
-                    {result.theory}
-                  </p>
-                </div>
-              </div>
+                <p style={{ margin: '10px 0 0', paddingTop: 10, borderTop: `1px solid ${T.hairline}`, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
+                  {result.theory}
+                </p>
+              </Rule>
 
               {/* Path selector + chord diagrams */}
               {reharmPaths.length > 0 && (
-                <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-                  {/* Path selector */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <p style={LABEL_STYLE}>Voicing Paths</p>
-                    <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                <Rule label={he ? 'מסלולי פוזיציה' : 'Voicing paths'}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* Paths as pills; the first is the smoothest — the pick */}
+                    <div role="group" aria-label={he ? 'מסלולי פוזיציה' : 'Voicing paths'} className="gc-no-scrollbar"
+                      style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 1 }}>
                       {reharmPaths.map((path, pi) => {
                         const active = pi === selectedPathIdx;
                         return (
-                          <button data-active={!!active}
-                            key={path.id}
-                            onClick={() => setSelectedPathIdx(pi)}
-                            style={{
-                              flexShrink: 0,
-                              display: 'flex', alignItems: 'center', gap: 6,
-                              padding: '6px 12px', borderRadius: 0,
-                              border: active ? 'none' : `1px solid ${T.border}`,
-                              background: active ? T.secondary : T.bgDeep,
-                              color: active ? '#fff' : T.textMuted,
-                              fontSize: 12, fontWeight: active ? 500 : 400,
-                              cursor: 'pointer', 
-                              whiteSpace: 'nowrap', }}
-                          >
-                            <span style={{
-                              width: 16, height: 16, borderRadius: 0,
-                              background: active ? 'rgba(255,255,255,0.3)' : T.secondary,
-                              color: '#fff',
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 9, fontWeight: 800, flexShrink: 0,
-                            }}>{pi + 1}</span>
+                          <Pill key={path.id} size="sm" active={active} onClick={() => setSelectedPathIdx(pi)} style={{ textTransform: 'none', letterSpacing: '0.02em' }}>
+                            <span style={{ fontFamily: 'var(--gc-mono)', opacity: 0.7 }}>{pi + 1}</span>
                             {path.label}
-                          </button>
+                            {pi === 0 && <span style={{ ...pickTag, ...(active ? { background: T.white, color: T.secondary } : {}) }}>PICK</span>}
+                          </Pill>
                         );
                       })}
                     </div>
+
+                    {/* Current path detail */}
+                    {currentPath && (
+                      <>
+                        <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.5 }}>
+                          {currentPath.description}
+                        </p>
+                        <span className="su-label">{he ? 'הקישו על דיאגרמה להגדלה' : 'Tap a diagram to enlarge'}</span>
+                        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, flexWrap: 'nowrap', minHeight: 148 }}>
+                          {currentPath.voicings.map((voicing, ci) => (
+                            <button
+                              type="button"
+                              key={ci}
+                              onClick={() => setModalIdx(ci)}
+                              aria-label={he ? `הגדלת ${result.chords[ci]}` : `Enlarge ${result.chords[ci]}`}
+                              className="gc-no-bar"
+                              style={{
+                                flexShrink: 0, width: 124, cursor: 'pointer', background: 'transparent', color: T.text,
+                                border: 'none', borderTop: `var(--su-rule) solid ${T.border}`, borderRadius: 0, padding: '8px 0 4px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                              }}
+                            >
+                              <span className="su-semi gc-notation" style={{ fontSize: 18 }}>{result.chords[ci]}</span>
+                              <div style={{ width: '100%' }}>
+                                <MiniFretboard voicing={voicing} dotColor={T.secondary} tuning={tuning.notes} />
+                              </div>
+                              <FretBadge voicing={voicing} />
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
-
-                  {/* Current path detail */}
-                  {currentPath && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <p style={{ margin: 0, fontSize: 12, color: T.textMuted, fontStyle: 'italic', lineHeight: 1.5 }}>
-                        {currentPath.description}
-                      </p>
-
-                      <p style={{ margin: 0, fontSize: 10, color: T.textDim, fontStyle: 'italic' }}>
-                        Tap a diagram to enlarge
-                      </p>
-
-                      <div style={{
-                        display: 'flex', gap: 8, overflowX: 'auto',
-                        paddingBottom: 4, flexWrap: 'nowrap',
-                        minHeight: 148,
-                      }}>
-                        {currentPath.voicings.map((voicing, ci) => (
-                          <div
-                            key={ci}
-                            onClick={() => setModalIdx(ci)}
-                            style={{
-                              flexShrink: 0, width: 120, cursor: 'pointer',
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                            }}
-                          >
-                            <span style={{ fontSize: 13, fontWeight: 800, color: currentColor }}>
-                              {result.chords[ci]}
-                            </span>
-                            <div style={{
-                              width: '100%', background: T.bgInput,
-                              borderRadius: 0, border: `1px solid ${currentColor}33`,
-                              padding: '4px 4px 2px', boxSizing: 'border-box',
-                            }}>
-                              <MiniFretboard
-                                voicing={voicing}
-                                dotColor={currentColor}
-                                tuning={tuning.notes}
-                              />
-                            </div>
-                            <FretBadge voicing={voicing} color={currentColor} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </Rule>
               )}
 
               {reharmPaths.length === 0 && (
-                <div style={{ ...card({ padding: '20px 16px' }), textAlign: 'center' }}>
+                <Rule>
                   <p style={{ margin: 0, fontSize: 13, color: T.textMuted }}>
-                    No voicing paths found — try Full mode or All strings.
+                    {he ? 'לא נמצאו מסלולים — נסו מצב Full או את כל המיתרים.' : 'No voicing paths found — try Full mode or All strings.'}
                   </p>
-                </div>
+                </Rule>
               )}
 
               {/* Back to the song: replace the section's chords with the reharm,
                   or keep it beside them as a variant to switch to later. */}
               {song && (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => { song.setChordNames(result.chords); flashUsed(); }} style={{
-                    flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 12.5,
-                    background: T.primary, color: T.white, }}><RollLabel>{used ? (lang === 'he' ? '✓ בשיר' : '✓ In the song') : (lang === 'he' ? 'השתמש בשיר' : 'Use in song')}</RollLabel></button>
-                  <button onClick={() => {
+                  <Pill active onClick={() => { song.setChordNames(result.chords); flashUsed(); }} style={{ flex: 1 }}>
+                    <RollLabel>{used ? (he ? '✓ בשיר' : '✓ In the song') : (he ? 'השתמש בשיר' : 'Use in song')}</RollLabel>
+                  </Pill>
+                  <Pill onClick={() => {
                     const t = TUNINGS.find(x => x.name === song.song.tuningName) ?? TUNINGS[0];
                     song.saveVariant(`Reharm · ${GENRES.find(g => g.id === genre)?.label ?? genre}`, namesToProgression(result.chords, t.notes));
                     flashKept();
-                  }} style={{
-                    flex: 1, padding: '11px 0', borderRadius: 0, cursor: 'pointer', fontSize: 12.5,
-                    background: T.bgInput, color: T.text, border: `1px solid ${T.border}`, }}><RollLabel>{kept ? (lang === 'he' ? '✓ נשמר כגרסה' : '✓ Kept as variant') : (lang === 'he' ? 'שמור כגרסה' : 'Keep as variant')}</RollLabel></button>
+                  }} style={{ flex: 1 }}>
+                    <RollLabel>{kept ? (he ? '✓ נשמר כגרסה' : '✓ Kept as variant') : (he ? 'שמור כגרסה' : 'Keep as variant')}</RollLabel>
+                  </Pill>
                 </div>
               )}
 
               {/* Actions: save + MIDI */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <SaveToLibraryButton
-                  label="Save to Library"
+                  label={he ? 'שמירה לספרייה' : 'Save to Library'}
                   getPayload={() => ({
                     kind: 'reharm',
                     name: `Reharm — ${GENRES.find(g => g.id === genre)?.label ?? genre} (${chords.length} chords)`,
@@ -803,31 +606,21 @@ export function ReharmonizeTab({
                     genre,
                     tension,
                   })}
-                  style={{ flex: 1, justifyContent: 'center', padding: '11px 0' }}
+                  style={{ ...pillStyle(false), flex: 1 }}
                 />
-                <button
-                  onClick={() => exportMidi(result.chords)}
-                  style={{
-                    flex: 1,
-                    padding: '11px 0', borderRadius: 0,
-                    border: `1.5px solid ${T.secondary}`,
-                    cursor: 'pointer', fontWeight: 400, fontSize: 14,
-                    background: 'transparent', color: T.secondary,
-                    }}
-                >
-                  Export MIDI
-                </button>
+                <Pill onClick={() => exportMidi(result.chords)} style={{ flex: 1 }}>
+                  {he ? 'ייצוא MIDI' : 'Export MIDI'}
+                </Pill>
               </div>
         </>
       )}
 
-      {/* Enlarged diagram modal */}
+      {/* Enlarged diagram sheet */}
       {modalIdx !== null && currentPath && result && (
         <ReharmModal
           voicings={currentPath.voicings}
           chordNames={result.chords}
           index={modalIdx}
-          color={currentColor}
           tuning={tuning.notes}
           onClose={() => setModalIdx(null)}
         />
@@ -837,7 +630,7 @@ export function ReharmonizeTab({
 
   if (desktop && chords.length > 0) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 36, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '340px minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
         {leftCol}
         <div style={{ position: 'sticky', top: 24 }}>{rightCol}</div>
       </div>
@@ -845,7 +638,7 @@ export function ReharmonizeTab({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {leftCol}
       {rightCol}
     </div>

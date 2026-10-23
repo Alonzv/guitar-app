@@ -1,10 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Chord as TonalChord } from '@tonaljs/tonal';
 import type { ChordInProgression, Tuning } from '../../types/music';
 import type { VoicingMode, StringGroup } from '../../utils/voicingPaths';
 import { TUNINGS } from '../../utils/musicTheory';
 import { formatChordName } from '../../utils/chordIdentifier';
-import { T, card, alpha } from '../../theme';
+import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
+import { Rule, Pill, PillRow, KeyGrid } from '../Transit/parts';
+import { Route } from './Route';
 import { ReharmonizeTab } from './ReharmonizeTab';
 import { MelodyHarmonizerTab } from './MelodyHarmonizerTab';
 import { consumePendingVoicings, subscribeVoicingsHandoff, type VoicingsHandoff } from '../../services/handoff';
@@ -71,14 +74,16 @@ const SUFFIX_MAP: Record<string, Record<string, string>> = {
 
 // ── Interval display (chord spelling chips) ────────────────────────────────
 
+// Monochrome: the chord's frame (root, 3rd, altered 5th, 7th) in ink,
+// colour tones in grey.
 const INTERVAL_COLOR: Record<string, string> = {
-  '1P': 'var(--gc-success)',               // Root — blue
+  '1P': T.text,
   '3m': T.text, '3M': T.text,
-  '5P': '#5C5650', '5A': '#5C5650', '5d': '#5C5650',
-  '7m': '#8A8378', '7M': '#8A8378', '7d': '#8A8378',
-  '9M': '#9C958C', '9m': '#9C958C', '9A': '#9C958C',
-  '11P': '#9C958C', '11A': '#9C958C',
-  '13M': '#9C958C', '13m': '#9C958C',
+  '5P': T.textMuted, '5A': T.text, '5d': T.text,
+  '7m': T.text, '7M': T.text, '7d': T.text,
+  '9M': T.textMuted, '9m': T.textMuted, '9A': T.textMuted,
+  '11P': T.textMuted, '11A': T.textMuted,
+  '13M': T.textMuted, '13m': T.textMuted,
 };
 
 const INTERVAL_SHORT: Record<string, string> = {
@@ -96,26 +101,22 @@ const INTERVAL_NAME: Record<string, string> = {
   '11P': '11th', '11A': 'Sharp 11th', '13M': '13th', '13m': 'Flat 13th',
 };
 
+// The chord's formula as columns on a 4px top rule: degree, note, name.
 function ChordSpelling({ chordName }: { chordName: string }) {
   const info = TonalChord.get(chordName);
   if (info.notes.length < 2) return null;
   return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+    <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(info.notes.length, 3)}, minmax(0, 1fr))`, gap: 8 }}>
       {info.notes.map((note, i) => {
         const iv    = info.intervals[i] ?? '';
         const color = INTERVAL_COLOR[iv] ?? T.textMuted;
-        const short = INTERVAL_SHORT[iv] ?? iv;
+        const short = (INTERVAL_SHORT[iv] ?? iv).replace(/^b/, '♭').replace(/^#/, '♯');
         const name  = INTERVAL_NAME[iv]  ?? iv;
         return (
-          <div key={i} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            padding: '5px 10px',
-            background: alpha(color, 13), borderRight: `3px solid ${color}`,
-            minWidth: 34,
-          }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1.1 }}>{note}</span>
-            <span style={{ fontSize: 10, fontWeight: 400, color, lineHeight: 1.3 }}>{short}</span>
-            <span style={{ fontSize: 8, color: alpha(color, 73), lineHeight: 1.2, whiteSpace: 'nowrap' }}>{name}</span>
+          <div key={i} style={{ borderTop: `4px solid ${color}`, paddingTop: 6, minWidth: 0, color }}>
+            <span className="su-poster" style={{ display: 'block', fontSize: 30 }}>{short}</span>
+            <span style={{ display: 'block', marginTop: 5, fontSize: 13, fontWeight: 700, fontFamily: 'var(--gc-mono)' }}>{note}</span>
+            <span className="su-label" style={{ display: 'block', marginTop: 2, color: T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
           </div>
         );
       })}
@@ -123,17 +124,10 @@ function ChordSpelling({ chordName }: { chordName: string }) {
   );
 }
 
-const LABEL_STYLE: React.CSSProperties = {
-  margin: 0,
-  fontSize: 10,
-  fontWeight: 400,
-  color: T.textDim,
-  textTransform: 'uppercase',
-  letterSpacing: '0.14em',
-};
-
 // ════════════════════════════════════════════════════════════════════════════
 export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNINGS[0], activeSub, desktop }: Props) {
+  const { lang } = useLang();
+  const he = lang === 'he';
   // Chord builder
   const [root,  setRoot]  = useState('');
   const [triad, setTriad] = useState('');
@@ -196,20 +190,13 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
     setChords(prev => [...prev, chordName]);
   };
 
-  const dragIndex = useRef<number | null>(null);
-
-  const onDragStart = (i: number) => { dragIndex.current = i; };
-
-  const onDrop = (i: number) => {
-    const from = dragIndex.current;
-    if (from == null || from === i) return;
+  const reorder = (from: number, to: number) => {
     setChords(prev => {
       const next = [...prev];
       const [item] = next.splice(from, 1);
-      next.splice(i, 0, item);
+      next.splice(to, 0, item);
       return next;
     });
-    dragIndex.current = null;
   };
 
 
@@ -221,119 +208,51 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
   // accidental chord looked unfixable. Chips carry a grip and an ×, and the row
   // says so, because drag-to-reorder has no affordance of its own.
   const progressionEditor = (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-      {chords.map((c, i) => (
-        <span
-          key={i}
-          draggable
-          onDragStart={() => onDragStart(i)}
-          onDragOver={e => e.preventDefault()}
-          onDrop={() => onDrop(i)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '5px 11px', borderRadius: 0,
-            background: T.bgDeep, border: `1px solid ${T.border}`,
-            fontSize: 13, fontWeight: 400, color: T.text,
-            cursor: 'grab', userSelect: 'none',
-          }}
-        >
-          <span aria-hidden="true" style={{ color: T.textDim, fontSize: 11, letterSpacing: '-1px', lineHeight: 1 }}>⠿</span>
-          {formatChordName(c)}
-          <button
-            onClick={() => setChords(prev => prev.filter((_, j) => j !== i))}
-            title={`Remove ${formatChordName(c)}`}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: T.textMuted, fontSize: 15, lineHeight: 1 }}
-          >×</button>
-        </span>
-      ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <Route
+        label={he ? 'המהלך' : 'Progression'}
+        stations={chords.map(c => ({ name: formatChordName(c) }))}
+        onRemove={i => setChords(prev => prev.filter((_, j) => j !== i))}
+        onReorder={reorder}
+      />
       {chords.length > 0 && (
-        <button
-          onClick={() => setChords([])}
-          style={{ padding: '4px 10px', borderRadius: 0, background: 'none', border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, cursor: 'pointer', fontWeight: 400 }}
-        >Clear</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <span className="su-label">{he ? 'גררו לשינוי הסדר · × להסרה' : 'Drag to reorder · × to remove'}</span>
+          <Pill size="sm" onClick={() => setChords([])}>{he ? 'ניקוי' : 'Clear'}</Pill>
+        </div>
       )}
-      <span style={{ width: '100%', fontSize: 10, color: '#9C958C', fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>
-        Drag to reorder · × to remove
-      </span>
     </div>
   );
 
+  const canAdd = !!root && !!triad && chords.length < 8;
   const reharmLeft = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-      {/* ── Chord builder ──────────────────────────────────────────── */}
-      <div style={{ ...card(), display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <p style={LABEL_STYLE}>Build Chord</p>
-
-        {/* Root note grid */}
+    <Rule label={he ? 'בניית אקורד' : 'Build a chord'}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div>
-          <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Root Note</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
-            {ROOTS.map(r => (
-              <button data-active={root === r} key={r} onClick={() => { setRoot(r); hear(r, triad, ext); }} style={{
-                padding: '7px 0', borderRadius: 0,
-                background: root === r ? T.primary : T.bgDeep,
-                color: root === r ? '#fff' : T.textMuted,
-                fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                }}>{r}</button>
-            ))}
-          </div>
+          <p className="su-label" style={{ margin: '0 0 6px' }}>{he ? 'תו שורש' : 'Root note'}</p>
+          <KeyGrid label={he ? 'תו שורש' : 'Root note'} items={ROOTS.map(r => ({ id: r, label: r }))} value={root || null}
+            onChange={r => { setRoot(r); hear(r, triad, ext); }} />
         </div>
-
-        {/* Triad quality */}
         <div>
-          <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Quality</p>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {TRIADS.map(t => (
-              <button data-active={triad === t.key} key={t.key} onClick={() => { setTriad(t.key); setExt(''); hear(root, t.key, ''); }} style={{
-                padding: '7px 12px', borderRadius: 0,
-                background: triad === t.key ? T.secondary : T.bgDeep,
-                color: triad === t.key ? '#fff' : T.textMuted,
-                fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                }}>{t.display}</button>
-            ))}
-          </div>
+          <p className="su-label" style={{ margin: '0 0 6px' }}>{he ? 'סוג' : 'Quality'}</p>
+          <PillRow wrap label={he ? 'סוג' : 'Quality'} items={TRIADS.map(t => ({ id: t.key, label: t.display }))} value={triad || null}
+            onChange={k => { setTriad(k); setExt(''); hear(root, k, ''); }} />
         </div>
-
-        {/* Extension */}
         <div>
-          <p style={{ ...LABEL_STYLE, fontSize: 10, marginBottom: 6 }}>Extension</p>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {EXTENSIONS.filter(e => validExts.includes(e.key)).map(e => (
-              <button data-active={activeExt === e.key} key={e.key} onClick={() => { setExt(e.key); hear(root, triad, e.key); }} style={{
-                padding: '6px 11px', borderRadius: 0,
-                background: activeExt === e.key ? T.secondary : T.bgDeep,
-                color: activeExt === e.key ? '#fff' : T.textMuted,
-                fontSize: 12, fontWeight: 400, cursor: 'pointer',
-                }}>{e.display}</button>
-            ))}
-          </div>
+          <p className="su-label" style={{ margin: '0 0 6px' }}>{he ? 'הרחבה' : 'Extension'}</p>
+          <PillRow wrap label={he ? 'הרחבה' : 'Extension'}
+            items={EXTENSIONS.filter(e => validExts.includes(e.key)).map(e => ({ id: e.key || 'none', label: e.display }))}
+            value={activeExt || 'none'} onChange={k => { const x = k === 'none' ? '' : k; setExt(x); hear(root, triad, x); }} />
         </div>
-
-        {/* Add row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span dir="ltr" style={{ fontSize: 18, fontWeight: 800, color: T.text, flex: 1 }}>
-            {formatChordName(chordName)}
+          <span dir="ltr" className="su-semi gc-notation" style={{ fontSize: 30, flex: 1, minWidth: 0, lineHeight: 1 }}>
+            {formatChordName(chordName) || '—'}
           </span>
-          <button
-            onClick={addChord}
-            disabled={!root || !triad || chords.length >= 8}
-            style={{
-              padding: '9px 20px', borderRadius: 0,
-              background: (root && triad && chords.length < 8) ? T.secondary : T.border,
-              color: '#fff', fontWeight: 400, fontSize: 14,
-              cursor: (root && triad && chords.length < 8) ? 'pointer' : 'not-allowed',
-              }}
-          >
-            + Add
-          </button>
+          <Pill active={canAdd} disabled={!canAdd} onClick={addChord}>+ {he ? 'הוספה' : 'Add'}</Pill>
         </div>
-
-        {/* Chord spelling */}
         <ChordSpelling chordName={chordName} />
       </div>
-
-    </div>
+    </Rule>
   );
 
   return (
@@ -345,7 +264,7 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
 
       {subTab === 'reharmonize' && (
         desktop ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 36, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
             {reharmLeft}
             <ReharmonizeTab
               progressionEditor={progressionEditor}

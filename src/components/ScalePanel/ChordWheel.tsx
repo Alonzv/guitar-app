@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Key, Note } from '@tonaljs/tonal';
 import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
+import { Rule, Pill, PillRow, KeyGrid } from '../Transit/parts';
+import { pillStyle } from '../Transit/styles';
 import { playChord } from '../../utils/audioPlayback';
 import type { ChordInProgression } from '../../types/music';
 import { findChordVoicings } from '../../utils/chordVoicings';
@@ -24,11 +27,16 @@ const MINOR_ROMANS = ['i','ii°','III','iv','v','VI','VII'] as const;
 const MAJOR_FUNCS: Func[] = ['tonic','subdominant','tonic','subdominant','dominant','tonic','dominant'];
 const MINOR_FUNCS: Func[] = ['tonic','subdominant','tonic','subdominant','dominant','subdominant','dominant'];
 
-const FUNC_COLOR: Record<Func, string> = {
-  tonic:       T.primary,
-  subdominant: '#5C5650',
-  dominant:    T.secondary,
+// Harmonic function, in ink only: tonic a filled square, subdominant a
+// grey one, dominant an outlined one.
+const FUNC_MARK: Record<Func, React.CSSProperties> = {
+  tonic:       { background: T.text, border: `1.5px solid ${T.text}` },
+  subdominant: { background: T.textMuted, border: `1.5px solid ${T.textMuted}` },
+  dominant:    { background: 'transparent', border: `1.5px solid ${T.text}` },
 };
+const FuncMark = ({ f }: { f: Func }) => (
+  <span aria-hidden style={{ width: 10, height: 10, display: 'inline-block', flex: 'none', boxSizing: 'border-box', ...FUNC_MARK[f] }} />
+);
 
 interface HLInfo { chord: string; roman: string; func: Func }
 
@@ -99,10 +107,6 @@ function midPt(startAngle: number, r: number) {
 
 const OPEN_FREQS = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
 
-const MONO_LBL: React.CSSProperties = {
-  fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em',
-  textTransform: 'uppercase', color: '#9C958C', margin: '0 0 8px',
-};
 
 // Conversion maps
 const SHARP_TO_COF:   Record<string, string> = { 'C#':'Db', 'D#':'Eb', 'G#':'Ab', 'A#':'Bb' };
@@ -129,6 +133,8 @@ interface Props {
 }
 
 export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => {
+  const { lang } = useLang();
+  const he = lang === 'he';
   const [root, setRoot] = useState<string>('C');
   const [mode, setMode] = useState<Mode>('major');
 
@@ -214,7 +220,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
 
   const roll = () => {
     const r = pickOne(ALL_ROOTS);
-    const m: Mode = Math.random() < 0.5 ? 'major' : 'minor';
+    const m = pickOne<Mode>(['major', 'minor']);
     setRoot(r); setMode(m); hearKey(r, m);
   };
 
@@ -226,8 +232,11 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
 
   const startAngle = (i: number) => -Math.PI / 2 - SLICE / 2 + i * SLICE;
 
+  // ── The wheel: an ink line drawing. The key you are in is the one cobalt
+  // slice; its other chords are drawn in ink; the rest of the circle is grey.
   const wheelSvg = (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ display: 'block', width: '100%', maxWidth: SIZE }}>
+    <svg viewBox={`-10 -10 ${SIZE + 20} ${SIZE + 20}`} role="group" aria-label={he ? 'מעגל החמישיות' : 'Circle of fifths'}
+      style={{ display: 'block', width: '100%', maxWidth: SIZE + 20 }}>
       <g style={{
         transform: `rotate(${rotationDeg}deg)`,
         transformOrigin: `${CX}px ${CY}px`,
@@ -239,10 +248,8 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
           const sa        = startAngle(i);
           const outerInfo = outerMap.get(i);
           const innerInfo = innerMap.get(i);
-          const oFill     = outerInfo ? FUNC_COLOR[outerInfo.func] : '#E4E0D8';
-          const iFill     = innerInfo ? FUNC_COLOR[innerInfo.func] : '#EAE7E2';
-          const oOpacity  = outerInfo ? 1 : 0.35;
-          const iOpacity  = innerInfo ? 1 : 0.25;
+          const oKey      = mode === 'major' && i === cofIdx;
+          const iKey      = mode === 'minor' && i === cofIdx;
           const mp_o      = midPt(sa, (R_O_O + R_O_I) / 2);
           const mp_i      = midPt(sa, (R_I_O + R_I_I) / 2);
           const textRot   = -rotationDeg;
@@ -253,24 +260,30 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
           const minorName     = COF_MINOR[i];
           const minorRootCof  = minorName.slice(0, -1); // strip 'm'
           const minorSelectRoot = ALL_ROOTS.includes(minorRootCof) ? minorRootCof : (FLAT_TO_SHARP[minorRootCof] ?? minorRootCof);
+          const pickMajor = () => { setMode('major'); setRoot(selectRoot); hearKey(selectRoot, 'major'); };
+          const pickMinor = () => { setMode('minor'); setRoot(minorSelectRoot); hearKey(minorSelectRoot, 'minor'); };
+          const keyDown = (fn: () => void) => (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
+          const ink = (info: HLInfo | undefined, key: boolean) => key ? T.onPrimary : info ? T.text : T.textMuted;
 
           return (
             <g key={i}>
               {/* Outer arc — tap to set major key */}
               <path
-                d={arcPath(sa, R_O_O, R_O_I)} fill={oFill} opacity={oOpacity}
-                stroke={mode === 'major' && i === cofIdx ? '#fff' : 'none'}
-                strokeWidth={mode === 'major' && i === cofIdx ? 1.5 : 0}
+                d={arcPath(sa, R_O_O, R_O_I)} role="button" tabIndex={0} aria-pressed={oKey}
+                aria-label={`${cofNote} ${he ? 'מז׳ור' : 'major'}`}
+                fill={oKey ? T.primary : 'transparent'}
+                stroke={oKey ? T.primary : outerInfo ? T.text : T.hairline} strokeWidth={outerInfo || oKey ? 2 : 1.5}
                 style={{ cursor: 'pointer' }}
-                onClick={() => { setMode('major'); setRoot(selectRoot); hearKey(selectRoot, 'major'); }}
+                onClick={pickMajor} onKeyDown={keyDown(pickMajor)}
               />
               {/* Inner arc — tap to set minor key */}
               <path
-                d={arcPath(sa, R_I_O, R_I_I)} fill={iFill} opacity={iOpacity}
-                stroke={mode === 'minor' && i === cofIdx ? '#fff' : 'none'}
-                strokeWidth={mode === 'minor' && i === cofIdx ? 1.5 : 0}
+                d={arcPath(sa, R_I_O, R_I_I)} role="button" tabIndex={0} aria-pressed={iKey}
+                aria-label={`${minorName.slice(0, -1)} ${he ? 'מינור' : 'minor'}`}
+                fill={iKey ? T.primary : 'transparent'}
+                stroke={iKey ? T.primary : innerInfo ? T.text : T.hairline} strokeWidth={innerInfo || iKey ? 2 : 1.5}
                 style={{ cursor: 'pointer' }}
-                onClick={() => { setMode('minor'); setRoot(minorSelectRoot); hearKey(minorSelectRoot, 'minor'); }}
+                onClick={pickMinor} onKeyDown={keyDown(pickMinor)}
               />
 
               {/* Outer text group — counter-rotated to stay upright */}
@@ -282,17 +295,18 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                 <text
                   x={mp_o.x} y={outerInfo ? mp_o.y - 5 : mp_o.y}
                   textAnchor="middle" dominantBaseline="middle"
-                  fontSize={outerInfo ? 14 : 12} fontWeight={outerInfo ? 700 : 500}
-                  fill={outerInfo ? '#fff' : '#9C958C'}
+                  fontSize={outerInfo ? 17 : 13} fontWeight={outerInfo ? 800 : 600}
+                  fontFamily="var(--su-display)" style={{ fontStretch: '75%' }}
+                  fill={ink(outerInfo, oKey)}
                 >
                   {cofNote}
                 </text>
                 {outerInfo && (
                   <text
-                    x={mp_o.x} y={mp_o.y + 8}
+                    x={mp_o.x} y={mp_o.y + 10}
                     textAnchor="middle" dominantBaseline="middle"
-                    fontSize={9} fontWeight={500}
-                    fill="rgba(255,255,255,0.75)"
+                    fontSize={9} fontWeight={600} fontFamily="var(--gc-mono)"
+                    fill={ink(outerInfo, oKey)}
                   >
                     {outerInfo.roman}
                   </text>
@@ -308,17 +322,18 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                 <text
                   x={mp_i.x} y={innerInfo ? mp_i.y - 5 : mp_i.y}
                   textAnchor="middle" dominantBaseline="middle"
-                  fontSize={innerInfo ? 12 : 11} fontWeight={innerInfo ? 600 : 500}
-                  fill={innerInfo ? '#fff' : '#9C958C'}
+                  fontSize={innerInfo ? 14 : 11} fontWeight={innerInfo ? 800 : 600}
+                  fontFamily="var(--su-display)" style={{ fontStretch: '75%' }}
+                  fill={ink(innerInfo, iKey)}
                 >
                   {minorName}
                 </text>
                 {innerInfo && (
                   <text
-                    x={mp_i.x} y={mp_i.y + 8}
+                    x={mp_i.x} y={mp_i.y + 9}
                     textAnchor="middle" dominantBaseline="middle"
-                    fontSize={8} fontWeight={500}
-                    fill="rgba(255,255,255,0.75)"
+                    fontSize={8} fontWeight={600} fontFamily="var(--gc-mono)"
+                    fill={ink(innerInfo, iKey)}
                   >
                     {innerInfo.roman}
                   </text>
@@ -328,7 +343,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
           );
         })}
 
-        {/* Progression tour — the path so far and the chord sounding now */}
+        {/* Progression tour — the path so far in ink, the chord sounding now ringed */}
         {tour && (() => {
           const pts = tour.slots.slice(0, tour.step + 1).filter((sl): sl is NonNullable<Slot> => !!sl)
             .map(sl => midPt(startAngle(sl.i), sl.ring === 'outer' ? (R_O_O + R_O_I) / 2 : (R_I_O + R_I_I) / 2));
@@ -338,274 +353,139 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
             <g style={{ pointerEvents: 'none' }}>
               {pts.length > 1 && (
                 <polyline points={pts.map(p => `${p.x},${p.y}`).join(' ')} fill="none"
-                  stroke="var(--gc-success)" strokeWidth={3} strokeLinejoin="round" opacity={0.9} />
+                  stroke={T.text} strokeWidth={3} strokeLinejoin="round" />
               )}
-              <circle key={tour.step} className="gc-dot-ring" cx={last.x} cy={last.y} r={16} fill="none" stroke="var(--gc-success)" strokeWidth={3} />
-              <circle cx={last.x} cy={last.y} r={6} fill="var(--gc-success)" />
+              <circle key={tour.step} className="gc-dot-ring" cx={last.x} cy={last.y} r={18} fill="none" stroke={T.text} strokeWidth={3} />
+              <circle cx={last.x} cy={last.y} r={6} fill={T.text} />
             </g>
           );
         })()}
       </g>
 
-      {/* Dashed arc indicator — fixed at top, outer ring for major / inner for minor */}
+      {/* The key's marker — fixed at the top, outside the outer ring for major,
+          inside the inner ring for minor */}
       {cofIdx >= 0 && (() => {
-        const arcR = mode === 'major' ? R_O_O + 8 : R_I_I - 8;
-        const sa   = -Math.PI / 2 - SLICE / 2 - 0.04;
-        const ea   = -Math.PI / 2 + SLICE / 2 + 0.04;
+        const arcR = mode === 'major' ? R_O_O + 7 : R_I_I - 7;
+        const sa   = -Math.PI / 2 - SLICE / 2 + GAP;
+        const ea   = -Math.PI / 2 + SLICE / 2 - GAP;
         const p1   = polar(sa, arcR);
         const p2   = polar(ea, arcR);
         return (
-          <path
-            d={`M${p1.x} ${p1.y} A${arcR} ${arcR} 0 0 1 ${p2.x} ${p2.y}`}
-            fill="none" stroke={T.primary} strokeWidth={2} strokeDasharray="5 3" opacity={0.8}
-          />
+          <path d={`M${p1.x} ${p1.y} A${arcR} ${arcR} 0 0 1 ${p2.x} ${p2.y}`} fill="none" stroke={T.text} strokeWidth={3} />
         );
       })()}
 
       {/* Center label */}
-      <text x={CX} y={CY - 8} textAnchor="middle" fontSize={22} fontWeight={900}
-        fill={T.text} fontFamily="inherit">{root}</text>
-      <text x={CX} y={CY + 10} textAnchor="middle" fontSize={9}
-        fill={T.textDim} fontFamily="var(--gc-mono)" letterSpacing="0.1em">
-        {mode === 'major' ? 'MAJOR' : 'minor'}
+      <text x={CX} y={CY + 4} textAnchor="middle" fontSize={44} fontWeight={900}
+        fontFamily="var(--su-display)" style={{ fontStretch: '62%', textTransform: 'uppercase' }} fill={T.text}>{root}</text>
+      <text x={CX} y={CY + 22} textAnchor="middle" fontSize={9}
+        fill={T.textMuted} fontFamily="var(--gc-mono)" letterSpacing="0.14em">
+        {mode === 'major' ? 'MAJOR' : 'MINOR'}
       </text>
     </svg>
   );
 
+  const playLbl = he ? 'נגן' : 'Play';
+  const addLbl = he ? 'הוסף למהלך' : 'Add to progression';
   const CHORD_ROW = (c: typeof diatonic[0]) => (
     <div key={c.chord} style={{
-      display: 'flex', alignItems: 'center',
-      padding: '6px 12px', marginBottom: 4,
-      background: T.bgCard, border: `1px solid ${T.border}`,
-      borderLeft: `3px solid ${FUNC_COLOR[c.func]}`,
+      display: 'flex', alignItems: 'center', gap: 10, minHeight: 56,
+      borderBottom: `1px solid ${T.hairline}`,
     }}>
-      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 9, color: T.textDim, width: 28, letterSpacing: '0.06em' }}>
+      <FuncMark f={c.func} />
+      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.textMuted, width: 30, letterSpacing: '0.06em' }}>
         {c.roman}
       </span>
-      <span style={{ fontSize: 14, fontWeight: 700, color: T.text, flex: 1 }}>
+      <span className="su-semi gc-notation" style={{ fontSize: 24, color: T.text, flex: 1, minWidth: 0 }}>
         {c.chord}
       </span>
-      <button
-        onClick={() => handlePlayChord(c.chord)}
-        style={{
-          padding: '3px 8px', border: `1px solid ${T.border}`, background: 'transparent',
-          color: T.textMuted, fontSize: 10, cursor: 'pointer', marginRight: 4,
-        }}
-      >
-        PLAY
-      </button>
+      <Pill onClick={() => handlePlayChord(c.chord)} label={`${playLbl} ${c.chord}`} style={{ padding: 0 }}>▶</Pill>
       {onAddToProgression && (
-        <button
-          onClick={() => handleAddChord(c.chord)}
-          style={{
-            padding: '3px 8px', border: `1px solid ${T.primary}`, background: 'transparent',
-            color: T.primary, fontSize: 10, cursor: 'pointer',
-          }}
-        >
-          ADD
-        </button>
-      )}
-    </div>
-  );
-
-  const COMPACT_CHORD = (c: typeof diatonic[0]) => (
-    <div key={c.chord} style={{
-      display: 'flex', alignItems: 'center', padding: '8px 10px',
-      background: T.bgCard, border: `1px solid ${T.border}`,
-      borderLeft: `3px solid ${FUNC_COLOR[c.func]}`, gap: 6,
-    }}>
-      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 8, color: T.textDim, minWidth: 20, letterSpacing: '0.06em' }}>
-        {c.roman}
-      </span>
-      <span style={{ fontSize: 13, fontWeight: 700, color: T.text, flex: 1 }}>
-        {c.chord}
-      </span>
-      <button
-        onClick={() => handlePlayChord(c.chord)}
-        style={{ padding: '2px 6px', border: `1px solid ${T.border}`, background: 'transparent',
-          color: T.textMuted, fontSize: 9, cursor: 'pointer' }}
-      >
-        &#9654;
-      </button>
-      {onAddToProgression && (
-        <button
-          onClick={() => handleAddChord(c.chord)}
-          style={{ padding: '2px 6px', border: `1px solid ${T.primary}`, background: 'transparent',
-            color: T.primary, fontSize: 9, cursor: 'pointer' }}
-        >
-          +
-        </button>
+        <Pill onClick={() => handleAddChord(c.chord)} label={`${addLbl}: ${c.chord}`} style={{ padding: 0 }}>+</Pill>
       )}
     </div>
   );
 
   // Chord data panel (shared between mobile/desktop)
+  const FUNC_NAME: Record<Func, string> = he
+    ? { tonic: 'טוניקה', subdominant: 'סאבדומיננטה', dominant: 'דומיננטה' }
+    : { tonic: 'Tonic', subdominant: 'Subdominant', dominant: 'Dominant' };
   const chordDataPanel = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Function legend */}
-      <div style={{ display: 'flex', gap: 12, fontSize: 10, fontFamily: 'var(--gc-mono)', letterSpacing: '0.06em' }}>
-        {(['tonic', 'subdominant', 'dominant'] as Func[]).map(f => (
-          <span key={f} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 8, height: 8, background: FUNC_COLOR[f], display: 'inline-block' }} />
-            <span style={{ color: T.textMuted, textTransform: 'uppercase' }}>{f.slice(0, 4)}</span>
-          </span>
-        ))}
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {(['tonic', 'subdominant', 'dominant'] as Func[]).map(f => (
+        <Rule key={f} label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><FuncMark f={f} />{FUNC_NAME[f]}</span>}>
+          <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(2, minmax(0, 1fr))' : '1fr', columnGap: 24 }}>
+            {byFunc[f].map(CHORD_ROW)}
+          </div>
+        </Rule>
+      ))}
 
-      <div>
-        <p style={MONO_LBL}>Tonic</p>
-        {byFunc.tonic.map(CHORD_ROW)}
-      </div>
-      <div>
-        <p style={MONO_LBL}>Subdominant</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
-          {byFunc.subdominant.map(COMPACT_CHORD)}
-        </div>
-      </div>
-      <div>
-        <p style={MONO_LBL}>Dominant</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
-          {byFunc.dominant.map(COMPACT_CHORD)}
-        </div>
-      </div>
-
-      <div>
-        <p style={MONO_LBL}>Common Progressions</p>
+      <Rule label={he ? 'מהלכים נפוצים' : 'Common progressions'}>
         {PROG_TEMPLATES.map(pt => {
           const chords = pt.indices.map(i => diatonic[i]?.chord ?? '?');
           const isPlaying = tour?.label === pt.label;
           return (
-            <div key={pt.label} style={{ display: 'flex', marginBottom: 6, alignItems: 'stretch' }}>
-              <button
-                onClick={() => playTour(pt.label, chords)}
-                aria-label={`Play ${chords.join(' ')}`}
-                data-active={isPlaying}
-                style={{
-                  width: 40, flexShrink: 0, border: `1px solid ${T.border}`, borderRight: 'none',
-                  background: isPlaying ? T.primary : T.bgCard, color: isPlaying ? T.white : T.text,
-                  cursor: 'pointer', fontSize: 11,
-                }}
-              >{isPlaying ? '■' : '▶'}</button>
-              <button
-                // gc-notation: without it the global uppercase button rule turns
-                // "vi" into "VI" and "Am" into "AM" — different chords entirely.
-                className="gc-notation"
-                onClick={() => {
-                  if (!onAddToProgression) return;
-                  chords.forEach(chordName => handleAddChord(chordName));
-                }}
-                title="Add to progression"
-                style={{
-                  display: 'block', flex: 1, textAlign: 'left',
-                  padding: '10px 12px',
-                  border: `1px solid ${T.border}`, borderLeft: `3px solid ${T.primary}`,
-                  background: T.bgCard, cursor: 'pointer',
-                }}
-              >
-                <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.primary, letterSpacing: '0.06em', marginRight: 10 }}>
+            <div key={pt.label} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 56, borderBottom: `1px solid ${T.hairline}` }}>
+              <Pill active={isPlaying} onClick={() => playTour(pt.label, chords)}
+                label={`${playLbl} ${chords.join(' ')}`} style={{ padding: 0 }}>{isPlaying ? '■' : '▶'}</Pill>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontFamily: 'var(--gc-mono)', fontSize: 10, color: T.textMuted, letterSpacing: '0.08em' }}>
                   {pt.label}
                 </span>
-                <span style={{ fontSize: 11, color: T.textMuted }}>
+                <span className="su-semi gc-notation" dir="ltr" style={{ display: 'block', fontSize: 19, marginTop: 2 }}>
                   {chords.map((c, ci) => (
                     <span key={ci}>
-                      {ci > 0 && ' – '}
-                      <span style={isPlaying && tour!.step === ci ? { color: T.text, fontWeight: 700 } : undefined}>{c}</span>
+                      {ci > 0 && <span style={{ color: T.textMuted }}> – </span>}
+                      <span style={isPlaying && tour!.step === ci ? { textDecoration: 'underline', textDecorationThickness: 3, textUnderlineOffset: 4 } : undefined}>{c}</span>
                     </span>
                   ))}
                 </span>
-              </button>
+              </div>
+              {onAddToProgression && (
+                // gc-notation keeps "vi" and "Am" from the global uppercase button rule.
+                <Pill onClick={() => chords.forEach(chordName => handleAddChord(chordName))}
+                  label={`${addLbl}: ${chords.join(' ')}`} style={{ padding: 0 }}>+</Pill>
+              )}
             </div>
           );
         })}
-      </div>
+      </Rule>
     </div>
   );
 
   // Wheel + controls panel
   const wheelPanel = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {/* Key picker — compact on mobile */}
-      <div>
-<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <p style={MONO_LBL}>Key</p>
-          <DiceButton onRoll={roll} style={{ marginTop: -4 }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: desktop ? 4 : 3 }}>
-          {ALL_ROOTS.map(n => {
-            const sharp = n.includes('#');
-            const sel   = n === root;
-            return (
-              <button data-active={!!sel} key={n} onClick={() => { setRoot(n); hearKey(n, mode); }} style={{
-                padding: desktop ? '9px 2px' : '6px 2px', borderRadius: 0, cursor: 'pointer',
-                fontSize: sharp ? (desktop ? 10 : 9) : (desktop ? 12 : 11), fontWeight: sel ? 700 : 400,
-                border: `1px solid ${sel ? T.primary : T.border}`,
-                background: sel ? T.primary : sharp ? T.bgInput : T.bgCard,
-                color: sel ? '#fff' : sharp ? T.textMuted : T.text,
-                borderTop: `3px solid ${sel ? T.primary : 'transparent'}`,
-              }}>{n}</button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Mode toggle. Buttons, not spans: this was the one control in the app
-          that a keyboard could not reach. `gc-notation` keeps the lower-case
-          "minor" lower-case against the global uppercase button rule. */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} role="group" aria-label="Key quality">
-        {([
-          { id: 'major' as Mode, label: 'MAJOR', on: T.primary },
-          { id: 'minor' as Mode, label: 'minor', on: T.secondary },
-        ]).map(m => {
-          const active = mode === m.id;
-          return (
-            <button data-active={!!active}
-              key={m.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() => { setMode(m.id); hearKey(root, m.id); }}
-              className="gc-notation"
-              style={{
-                padding: '4px 10px', fontSize: 10, borderRadius: 0,
-                fontFamily: 'var(--gc-mono)', letterSpacing: '0.08em',
-                background: active ? m.on : 'transparent',
-                color: active ? '#fff' : T.textMuted,
-                border: `1px solid ${active ? m.on : T.border}`,
-                cursor: 'pointer',
-              }}
-            >
-              {m.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Wheel */}
-      <div style={{ width: '100%' }}>
-        <p style={{ ...MONO_LBL, marginBottom: 6 }}>
-          Chord Wheel · {root} {mode === 'major' ? 'Major' : 'minor'}
-        </p>
-        <div style={{ width: '100%', maxWidth: desktop ? SIZE : 300, margin: desktop ? undefined : '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ width: '100%', maxWidth: desktop ? SIZE + 20 : 340 }}>
           {wheelSvg}
         </div>
-        {!desktop && (
-          <p style={{ fontSize: 9, color: T.textDim, fontFamily: 'var(--gc-mono)', marginTop: 6, letterSpacing: '0.06em' }}>
-            TAP OUTER RING FOR MAJOR · INNER FOR MINOR
-          </p>
-        )}
       </div>
+      {!desktop && (
+        <p className="su-label" style={{ margin: 0, textAlign: 'center' }}>
+          {he ? 'טבעת חיצונית למז׳ור · פנימית למינור' : 'Outer ring for major · inner for minor'}
+        </p>
+      )}
+
+      {/* Mode toggle — buttons, so a keyboard reaches it. */}
+      <Rule label={he ? 'סולם' : 'Key'} right={<DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <PillRow label="Key quality"
+            items={[{ id: 'major' as Mode, label: he ? 'מז׳ור' : 'Major' }, { id: 'minor' as Mode, label: he ? 'מינור' : 'Minor' }]}
+            value={mode} onChange={m => { setMode(m); hearKey(root, m); }} />
+          <KeyGrid items={ALL_ROOTS.map(n => ({ id: n, label: n }))} value={root}
+            onChange={n => { setRoot(n); hearKey(n, mode); }} label={he ? 'טוניקה' : 'Key'} />
+        </div>
+      </Rule>
     </div>
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {desktop ? (
-        <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
-          <div style={{ flexShrink: 0, width: SIZE + 20 }}>
-            {wheelPanel}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {chordDataPanel}
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: `${SIZE + 20}px minmax(0, 1fr)`, gap: 40, alignItems: 'start' }}>
+          {wheelPanel}
+          {chordDataPanel}
         </div>
       ) : (
         <>
@@ -613,7 +493,6 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
           {chordDataPanel}
         </>
       )}
-
     </div>
   );
 };
