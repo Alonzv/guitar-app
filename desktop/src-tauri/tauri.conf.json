@@ -1,17 +1,17 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ScaleUp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "app.scaleup.desktop",
   "build": {
-    "frontendDist": "https://guitar-app.vercel.app"
+    "frontendDist": "https://guitar-app-zeta.vercel.app"
   },
   "app": {
     "windows": [
       {
         "label": "main",
         "title": "ScaleUp",
-        "url": "https://guitar-app.vercel.app",
+        "url": "https://guitar-app-zeta.vercel.app",
         "width": 1360,
         "height": 880,
         "minWidth": 960,
