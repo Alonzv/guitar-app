@@ -6,15 +6,13 @@ import { NetworkMap } from './NetworkMap';
 import { StopSearch } from './StopSearch';
 import { setActionsSlot } from './actionsSlot';
 import { Wordmark } from '../Wordmark';
-import { slideIn } from '../../utils/motion';
 import { HelpButton } from '../HelpButton';
 import { SoundToggle } from '../SoundToggle';
 import { LangToggle } from '../LangToggle';
 
 // ── Transit shell ────────────────────────────────────────────────────────────
 // Mobile: the network map is home; a stop opens full screen under a
-// "[L#] ← STOP" header, with a floating "Next stop" pill on the map that
-// resumes the last tool. Desktop: the map is a permanent 300px left rail and
+// "[L#] ← STOP" header; the map marks the last tool used. Desktop: the map is a permanent 300px left rail and
 // the stop fills the rest under a 64px top bar with the breadcrumb.
 
 interface Props {
@@ -25,7 +23,7 @@ interface Props {
   onGo: (stopId: string) => void;
   onSub: (sub: string) => void;
   onHome: () => void;
-  /** The last stop used — the Next-stop pill on the mobile map. */
+  /** The last stop used — marked on the mobile map. */
   lastStop: string;
   darkMode: boolean;
   onToggleDark: () => void;
@@ -133,17 +131,8 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
   const [q, setQ] = useState('');
   const results = searchStops(q);
   const stop = stopById(stopId);
-  const last = stopById(lastStop);
 
-  // Coming back to the map with a different last stop: its name slides in.
-  const nextRef = useRef<HTMLSpanElement>(null);
-  const shownNext = useRef(lastStop);
   const home = stopId === 'home' || !stop;
-  useEffect(() => {
-    if (!home || shownNext.current === lastStop) return;
-    shownNext.current = lastStop;
-    slideIn(nextRef.current);
-  }, [home, lastStop]);
 
   if (home) {
     return (
@@ -158,30 +147,10 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
         <div style={{ margin: '0 20px' }}>
           <StopSearch value={q} onChange={setQ} onSubmit={() => { if (results[0]) onGo(results[0].id); }} />
         </div>
-        <div style={{ padding: '14px 20px 120px' }}>
+        <div style={{ padding: '14px 20px calc(32px + env(safe-area-inset-bottom))' }}>
           <NetworkMap stops={results} current={lastStop} onGo={onGo} />
         </div>
 
-        {/* Next stop — the last tool used, one tap away. */}
-        {last && (
-          <div style={{
-            position: 'fixed', insetInline: 14, bottom: 'calc(18px + env(safe-area-inset-bottom))', height: 66, zIndex: 50,
-            borderRadius: 'var(--su-pill)', background: T.secondary, color: T.white,
-            display: 'flex', alignItems: 'center', gap: 14, padding: '0 10px 0 22px',
-          }}>
-            <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--gc-primary)', flex: 'none' }} />
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 9, letterSpacing: '0.16em', opacity: 0.7 }}>{he ? 'התחנה הבאה' : 'NEXT STOP'}</span>
-              <span ref={nextRef} style={{ fontFamily: 'var(--su-display)', fontStretch: '75%', fontWeight: 700, fontSize: 18, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {last.name[lang]}
-              </span>
-            </div>
-            <button onClick={() => onGo(last.id)} aria-label={he ? `אל ${last.name.he}` : `Go to ${last.name.en}`} className="gc-no-bar"
-              style={{ width: 46, height: 46, borderRadius: '50%', border: 'none', background: T.bgDeep, color: T.text, fontSize: 18, fontWeight: 700, cursor: 'pointer', flex: 'none' }}>
-              {rtl ? '←' : '→'}
-            </button>
-          </div>
-        )}
       </div>
     );
   }
