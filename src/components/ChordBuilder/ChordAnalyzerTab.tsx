@@ -4,7 +4,7 @@ import { detectKey } from '../../utils/progressionHelper';
 import type { ChordInProgression } from '../../types/music';
 import { IconSearch } from '../Icons';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
-import { T, card, alpha } from '../../theme';
+import { T, card } from '../../theme';
 
 interface Props {
   progression: ChordInProgression[];

@@ -17,7 +17,7 @@ export function ChordPoster({ name, empty, aside, max }: { name: string | null; 
   const [root, suffix] = name ? splitName(name) : [empty ?? '—', ''];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-      <PosterTitle head={root} tail={suffix || undefined} max={max ?? 200} min={44} as="h2"
+      <PosterTitle head={root} tail={suffix || undefined} max={max ?? 200} min={44} as="h2" keepCase
         style={name ? undefined : { color: T.textMuted }} />
       {aside && <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minHeight: 20 }}>{aside}</div>}
     </div>

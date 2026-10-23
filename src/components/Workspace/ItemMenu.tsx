@@ -52,11 +52,13 @@ export const ItemMenu: React.FC<Props> = ({ items, label = 'Actions' }) => {
         ref={btnRef}
         aria-label={label}
         onClick={toggle}
+        aria-expanded={open}
+        className="gc-no-bar"
         style={{
-          width: 30, height: 30, borderRadius: 0, cursor: 'pointer',
-          background: open ? T.bgInput : 'transparent',
-          border: `1px solid ${open ? T.border : 'transparent'}`,
-          color: T.textMuted, fontSize: 17, lineHeight: 1, padding: 0,
+          width: 44, height: 44, borderRadius: '50%', cursor: 'pointer',
+          background: open ? T.secondary : 'transparent',
+          border: `1.5px solid ${T.text}`,
+          color: open ? T.white : T.text, fontSize: 17, lineHeight: 1, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >⋮</button>
@@ -65,11 +67,11 @@ export const ItemMenu: React.FC<Props> = ({ items, label = 'Actions' }) => {
         <div
           role="menu"
           style={{
-            position: 'absolute', right: 0,
-            ...(flip ? { bottom: 34 } : { top: 34 }),
-            minWidth: 168, zIndex: 50,
-            background: T.bgCard, border: `1px solid ${T.border}`,
-            display: 'flex', flexDirection: 'column', padding: 4,
+            position: 'absolute', insetInlineEnd: 0,
+            ...(flip ? { bottom: 50 } : { top: 50 }),
+            minWidth: 190, zIndex: 50,
+            background: T.bgDeep, border: `var(--su-rule) solid ${T.text}`,
+            display: 'flex', flexDirection: 'column', padding: 6,
           }}
         >
           {items.map((it, i) => (
@@ -77,21 +79,21 @@ export const ItemMenu: React.FC<Props> = ({ items, label = 'Actions' }) => {
               key={i}
               role="menuitem"
               onClick={() => { setOpen(false); it.onClick(); }}
+              className="gc-no-bar"
               style={{
-                display: 'flex', alignItems: 'center', gap: 9,
-                padding: '8px 10px', borderRadius: 0, cursor: 'pointer',
-                background: 'transparent', border: 'none', textAlign: 'left',
-                color: it.danger ? T.primary : T.text,
-                fontSize: 12.5, fontWeight: 400,
-                textTransform: 'uppercase', letterSpacing: '-0.02em',
+                display: 'flex', alignItems: 'center', minHeight: 44,
+                padding: '0 10px', borderRadius: 0, cursor: 'pointer',
+                background: 'transparent', border: 'none', textAlign: 'start',
+                color: it.danger ? T.textMuted : T.text,
+                fontSize: 12, fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.1em',
                 fontFamily: 'inherit',
+                borderTop: it.danger ? `1px solid ${T.hairline}` : 'none',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = T.bgInput; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
-              {/* Always reserve the icon column so a label with no icon
-                  (e.g. Delete) stays aligned with the rest. */}
-              <span style={{ width: 16, textAlign: 'center', fontSize: 13, flexShrink: 0 }}>{it.icon ?? ''}</span>
+              {/* Labels only: the icons were decoration. */}
               {it.label}
             </button>
           ))}

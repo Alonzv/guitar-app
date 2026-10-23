@@ -79,7 +79,7 @@ export function VoicingViewer({ voicings, index, chordName, tuning, onNav, onAdd
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <PosterTitle head={root} tail={suffix || undefined} max={88} min={36} />
+            <PosterTitle head={root} tail={suffix || undefined} max={88} min={36} keepCase />
             <div className="su-label" style={{ marginTop: 10 }}>
               {he ? 'צורה' : 'Voicing'} {index + 1} / {total} · {shapeMeta(voicing, tuning.notes).shape}
             </div>
