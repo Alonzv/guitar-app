@@ -230,8 +230,10 @@ export function VoicingsTab({ globalProgression, onChordsChange, tuning = TUNING
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div>
           <p className="su-label" style={{ margin: '0 0 6px' }}>{he ? 'תו שורש' : 'Root note'}</p>
-          <KeyGrid label={he ? 'תו שורש' : 'Root note'} items={ROOTS.map(r => ({ id: r, label: r }))} value={root || null}
-            onChange={r => { setRoot(r); hear(r, triad, ext); }} />
+          <div dir="ltr">
+            <KeyGrid label={he ? 'תו שורש' : 'Root note'} items={ROOTS.map(r => ({ id: r, label: r }))} value={root || null}
+              onChange={r => { setRoot(r); hear(r, triad, ext); }} />
+          </div>
         </div>
         <div>
           <p className="su-label" style={{ margin: '0 0 6px' }}>{he ? 'סוג' : 'Quality'}</p>

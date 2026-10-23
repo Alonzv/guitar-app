@@ -128,7 +128,8 @@ function ReharmModal({
           <span className="su-label" style={{ paddingTop: 14 }}>{idx + 1} / {total}</span>
           <Pill onClick={onClose} label={he ? 'סגירה' : 'Close'} style={{ padding: 0, width: 44 }}>×</Pill>
         </div>
-        <PosterTitle head={chordNames[idx]} max={84} min={36} style={{ textTransform: 'none' }} />
+        {/* Chord names keep their case (Cmaj9, not CMAJ9). */}
+        <PosterTitle head={<span style={{ textTransform: 'none' }}>{chordNames[idx]}</span>} max={84} min={36} />
         <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10 }}>
           <MiniFretboard voicing={voicings[idx]} dotColor={T.secondary} tuning={tuning} showStringLabels showFretNumbers hideFretLabel />
         </div>
