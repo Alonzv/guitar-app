@@ -119,7 +119,7 @@ export function KeyGrid<V extends string | number>({ items, value, onChange, col
   mark?: boolean; gap?: number;
 }) {
   return (
-    <div role="group" aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap }}>
+    <div role="group" aria-label={label} dir="ltr" style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap }}>
       {items.map(it => {
         const on = it.id === value;
         return (

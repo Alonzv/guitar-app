@@ -5,7 +5,7 @@ import { T } from '../../theme';
 // can't be one of those components (a <select>, a link, a label).
 
 export const pillStyle = (active = false, size: 'sm' | 'md' = 'md'): CSSProperties => ({
-  height: size === 'sm' ? 36 : 44, minWidth: size === 'sm' ? 36 : 44, padding: '0 16px', flexShrink: 0,
+  height: 44, minWidth: 44, padding: size === 'sm' ? '0 13px' : '0 16px', flexShrink: 0,
   borderRadius: 'var(--su-pill)', border: `1.5px solid ${T.text}`, cursor: 'pointer',
   background: active ? T.secondary : 'transparent', color: active ? T.white : T.text,
   fontFamily: 'var(--gc-font)', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',

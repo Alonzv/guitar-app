@@ -256,11 +256,6 @@ export default function App() {
     canUndo: songApi.canUndo, canRedo: songApi.canRedo, onUndo: handleUndo, onRedo: handleRedo,
     tuning, onTuningChange: setTuning, capo,
   };
-  // Tuner and metronome are narrow instruments; on desktop they read better
-  // centred in a single column than stretched across the stop.
-  const narrow = (node: ReactNode) => isDesktop
-    ? <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}>{node}</div> : node;
-
   const renderStop = (id: string): ReactNode => {
     switch (id) {
       case 'chord-builder': return chordView === 'ear'
@@ -279,8 +274,8 @@ export default function App() {
       case 'tab-writer':    return <TabBuilder desktop={d} />;
       case 'audio-tab':     return <AudioToTab desktop={d} />;
       case 'library':       return <WorkspacePanel desktop={d} onOpenTabInBuilder={handleOpenTab} onOpenProgressionInBuilder={handleOpenProgression} />;
-      case 'tuner':         return narrow(<Tuner tuning={tuning} />);
-      case 'metronome':     return narrow(<Metronome />);
+      case 'tuner':         return <Tuner tuning={tuning} />;
+      case 'metronome':     return <Metronome />;
       case 'chord-practice': return <ChordsPracticeTab desktop={d} />;
       case 'scale-practice': return <ScalesPracticeTab desktop={d} />;
       case 'ear-training':  return <IntervalsTab desktop={d} sub="practice" />;

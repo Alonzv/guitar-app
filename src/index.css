@@ -193,6 +193,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
    toward the right when it turns on (fill sweeps out of the bar), toward the
    left when it turns off (fill retreats into the bar). */
 :is(button, [role="button"], .gc-pressable)[data-active] { position: relative; }
+/* Pills and round buttons clip the selection fill to their shape. */
+:is(button, [role="button"])[style*="--su-pill"], :is(button, [role="button"])[style*="border-radius: 50%"], .su-pill { overflow: hidden; }
 :is(button, [role="button"], .gc-pressable):is(.gc-fill-in, .gc-fill-out) {
   transition:
     transform  var(--gc-dur-base) var(--gc-ease-spring),
@@ -261,7 +263,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 @keyframes gc-ring { from { transform: scale(1); opacity: 0.9; } to { transform: scale(2.1); opacity: 0; } }
 
 /* A progression tile while its chord sounds — lifts on its bar. */
-.gc-tile-now { animation: gc-tile-now var(--gc-dur-slow) var(--gc-ease-out); box-shadow: inset 6px 0 0 0 var(--gc-success); }
+.gc-tile-now { animation: gc-tile-now var(--gc-dur-slow) var(--gc-ease-out); }
 @keyframes gc-tile-now { 0% { transform: translateY(0); } 35% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
 
 /* Practice: a milestone stamp slams down slightly askew (the brand stamp's
@@ -429,7 +431,7 @@ body.dark, .su-night {
 /* Display type helpers */
 .su-poster  { font-family: var(--su-display); font-stretch: var(--su-display-cond); font-weight: 900; line-height: 0.8; letter-spacing: -0.02em; text-transform: uppercase; }
 .su-semi    { font-family: var(--su-display); font-stretch: var(--su-display-semi); font-weight: 800; }
-.su-outline { color: transparent; -webkit-text-stroke: 3px currentColor; }
+.su-outline { color: transparent !important; -webkit-text-stroke: 3px var(--gc-text); }
 .su-label   { font-family: var(--gc-font); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gc-text-muted); }
 
 /* Shape vocabulary: pills for buttons/chips, square keys/tiles. */
@@ -711,11 +713,10 @@ select {
   color: var(--gc-text-dim);
 }
 
-/* Result card — hairline border + 3px red left stripe */
+/* Result card — a 2px ink rule on top, no box */
 .gc-result-card {
-  border: 1px solid var(--gc-border);
-  border-left: 3px solid var(--gc-primary);
-  padding: 16px;
+  border-top: var(--su-rule) solid var(--gc-border);
+  padding: 14px 0 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
