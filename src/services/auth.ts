@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { oauthRedirect } from './desktopAuth';
 import type { Profile } from './types';
 
 function client() {
@@ -29,7 +30,8 @@ export async function signInWithEmail(email: string, password: string) {
 async function signInWithOAuth(provider: 'google' | 'apple') {
   const { data, error } = await client().auth.signInWithOAuth({
     provider,
-    options: { redirectTo: window.location.origin },
+    // In the Mac app the browser signs in and returns via /desktop-auth.html.
+    options: { redirectTo: oauthRedirect() },
   });
   if (error) throw error;
   return data;

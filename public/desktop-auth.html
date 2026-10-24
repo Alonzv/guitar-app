@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Back to ScaleUp</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #ECEAE3; color: #141414; font: 15px/1.5 ui-monospace, Menlo, monospace; text-align: center; }
+    @media (prefers-color-scheme: dark) { body { background: #111110; color: #F0EAD8; } a { color: #111110; background: #F0EAD8; } }
+    h1 { font: 900 44px/0.9 system-ui, sans-serif; text-transform: uppercase; letter-spacing: -0.02em; margin: 0 0 18px; }
+    p { margin: 0 0 22px; opacity: 0.75; }
+    a { display: inline-block; padding: 12px 22px; border-radius: 999px; background: #141414; color: #ECEAE3;
+      text-decoration: none; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Back to ScaleUp</h1>
+    <p id="msg">Signing you in to the Mac app… you can close this tab.</p>
+    <a id="open" href="scaleup://auth">Open ScaleUp</a>
+  </main>
+  <script src="/desktop-auth.js"></script>
+</body>
+</html>

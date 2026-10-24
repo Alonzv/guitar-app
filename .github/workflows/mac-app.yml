@@ -8,6 +8,9 @@ on:
   push:
     branches: [main]
     paths: ['desktop/**', '.github/workflows/mac-app.yml']
+  # Pull requests only check that the app builds; releases come from main.
+  pull_request:
+    paths: ['desktop/**', '.github/workflows/mac-app.yml']
 
 permissions:
   contents: write
@@ -34,7 +37,13 @@ jobs:
         working-directory: desktop
         run: npm ci
 
+      - name: Build (pull request check, no release)
+        if: github.event_name == 'pull_request'
+        working-directory: desktop
+        run: npx tauri build --target universal-apple-darwin
+
       - name: Build the universal app and publish the release
+        if: github.event_name != 'pull_request'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,6 +7,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { unlockAudio } from './utils/audioPlayback'
 import { installMotion } from './motion'
+import { installDesktopAuth } from './services/desktopAuth'
 
 // Press, selection and enable feedback for every button in the app.
 installMotion()
@@ -45,6 +46,8 @@ if ('serviceWorker' in navigator) {
     if (document.visibilityState === 'visible') checkForUpdate();
   });
 }
+
+installDesktopAuth()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
