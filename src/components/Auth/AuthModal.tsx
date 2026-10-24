@@ -7,6 +7,9 @@ import { Sheet } from '../Workspace/Sheet';
 import { Pill, PillRow, Cta } from '../Transit/parts';
 import { ctaStyle } from '../Transit/styles';
 
+// Sign-in providers enabled in the Supabase project. Email always works.
+const SOCIAL: ('google' | 'apple')[] = [];
+
 interface Props { onClose: () => void }
 
 type Mode = 'signin' | 'signup';
@@ -138,21 +141,30 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
           </p>
         )}
 
-        {/* Social */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Pill disabled={off} onClick={() => social('google')} style={{ width: '100%' }}>
-            {he ? 'המשך עם Google' : 'Continue with Google'}
-          </Pill>
-          <Pill disabled={off} onClick={() => social('apple')} style={{ width: '100%' }}>
-            {he ? 'המשך עם Apple' : 'Continue with Apple'}
-          </Pill>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, height: 1, background: T.hairline }} />
-          <span className="su-label">{he ? 'או' : 'or'}</span>
-          <div style={{ flex: 1, height: 1, background: T.hairline }} />
-        </div>
+        {/* Social — only providers switched on in Supabase (Authentication →
+            Providers). Neither is set up yet; add 'google' / 'apple' here once
+            they are, and their buttons and the "or" divider come back. */}
+        {SOCIAL.length > 0 && (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {SOCIAL.includes('google') && (
+                <Pill disabled={off} onClick={() => social('google')} style={{ width: '100%' }}>
+                  {he ? 'המשך עם Google' : 'Continue with Google'}
+                </Pill>
+              )}
+              {SOCIAL.includes('apple') && (
+                <Pill disabled={off} onClick={() => social('apple')} style={{ width: '100%' }}>
+                  {he ? 'המשך עם Apple' : 'Continue with Apple'}
+                </Pill>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, height: 1, background: T.hairline }} />
+              <span className="su-label">{he ? 'או' : 'or'}</span>
+              <div style={{ flex: 1, height: 1, background: T.hairline }} />
+            </div>
+          </>
+        )}
 
         {/* Email form */}
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
