@@ -1,7 +1,7 @@
 {
   "name": "scaleup-desktop",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "ScaleUp for macOS: a native window around the live web app",
   "scripts": {
     "tauri": "tauri",

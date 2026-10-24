@@ -38,6 +38,8 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
+        // The Mac app's sign-in bridge is a page of its own, never the SPA shell.
+        navigateFallbackDenylist: [/^\/desktop-auth/],
       },
     }),
   ],

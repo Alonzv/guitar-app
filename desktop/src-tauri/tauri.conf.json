@@ -1,32 +1,23 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ScaleUp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "identifier": "app.scaleup.desktop",
   "build": {
     "frontendDist": "https://guitar-app-zeta.vercel.app"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "ScaleUp",
-        "url": "https://guitar-app-zeta.vercel.app",
-        "width": 1360,
-        "height": 880,
-        "minWidth": 960,
-        "minHeight": 640,
-        "center": true,
-        "backgroundColor": "#ECEAE3"
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "category": "Music",
     "shortDescription": "Chords, scales, voicings and tab for guitar",
     "icon": [
@@ -39,6 +30,15 @@
     "macOS": {
       "minimumSystemVersion": "12.0",
       "signingIdentity": "-"
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "scaleup"
+        ]
+      }
     }
   }
 }
