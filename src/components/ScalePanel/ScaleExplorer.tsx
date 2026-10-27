@@ -4,20 +4,18 @@ import type { Note } from '../../types/music';
 import { Neck, type NeckDot } from '../Fretboard/Neck';
 import { getScalePositions } from '../../utils/scaleUtils';
 import { fretToNote, STRING_COUNT } from '../../utils/musicTheory';
-import { playScale, playChord, unlockAudio } from '../../utils/audioPlayback';
+import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { formatChordName } from '../../utils/chordIdentifier';
 import { T } from '../../theme';
 import { previewNote, previewMidi, previewRun } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
-import { DiceButton } from '../DiceButton';
-import { pickOne } from '../../utils/random';
 import { useLang } from '../../contexts/LanguageContext';
 import { STOPS } from '../../data/tools';
 import { requestNavigate } from '../../services/navigate';
 import { blurIn, dotsIn, useOnChange } from '../../utils/motion';
-import { PosterTitle, Rule, Pill, PillRow, Cta, KeyPicker, PickerPill } from '../Transit/parts';
-import { pillStyle, keyStyle } from '../Transit/styles';
+import { PosterTitle, Rule, Pill, PillRow, KeyPicker, PickerPill } from '../Transit/parts';
+import { keyStyle } from '../Transit/styles';
 import { StopActions } from '../Transit/StopActions';
 
 const ALL_NOTES: Note[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -195,13 +193,6 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     [displayPos, root, dotIds, scale, jamTones, isolate]
   );
 
-  const roll = () => {
-    const r = pickOne(ALL_NOTES) as Note;
-    const type = pickOne(SCALE_GROUPS.flatMap(g => g.scales)).id;
-    setRoot(r); setScaleType(type); setPos(null); setIsolate(null);
-    previewRun(scaleMidis(r, type));
-  };
-
   const scaleMidis = (r: Note, type: string) => {
     const sc = Scale.get(`${r} ${type}`);
     return [...sc.notes.map(n => TonalNote.midi(`${n}4`) ?? 60), TonalNote.midi(`${r}5`) ?? 72]
@@ -231,13 +222,6 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   useOnChange(`${root}-${scaleType}`, () => { blurIn(titleRef.current, 0); dotsIn(neckRef.current); });
 
   const scaleLabel = scaleType ? (SCALE_GROUPS.flatMap(g => g.scales).find(sc => sc.id === scaleType)?.label ?? scaleType) : '—';
-  const playWholeScale = () => {
-    const midiNotes = [
-      ...scale.notes.map(n => TonalNote.midi(`${n}4`) ?? 60),
-      TonalNote.midi(`${root}5`) ?? 72,
-    ];
-    playScale(midiNotes);
-  };
 
   // What sits next to this scale, where the theory says so. A cell with no
   // answer is left out rather than guessed.
@@ -292,12 +276,12 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     </div>
   );
 
-  // The key and the scale are chosen at the top, each from a pill that opens
-  // its list; Surprise me sits beside them.
+  // The key and the scale, side by side, each a pill that opens its list.
+  // The key is the view's one cobalt control.
   const pickers = (align: 'start' | 'end') => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: align === 'end' ? 'flex-end' : 'flex-start' }}>
       <KeyPicker value={root} options={ALL_NOTES as readonly Note[]} onChange={n => { setRoot(n); previewNote(n); }}
-        label={he ? 'טוניקה' : 'Key'} align={align} />
+        label={he ? 'טוניקה' : 'Key'} align={align} accent />
       <PickerPill label={he ? 'סולם' : 'Scale'} value={scaleLabel} align={align} width={520} valueCase>
         {close => (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -311,7 +295,6 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
           </div>
         )}
       </PickerPill>
-      <DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />
     </div>
   );
 
@@ -376,10 +359,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
         {jamPill}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
           <div ref={titleRef} style={{ flex: 1, minWidth: 0 }}><PosterTitle head={`${root} `} tail={scaleLabel} max={200} min={56} /></div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flex: 'none', paddingBottom: 6 }}>
-            {pickers('end')}
-            <Cta onClick={playWholeScale}>{he ? 'נגן סולם' : 'Play scale'} ▶</Cta>
-          </div>
+          <div style={{ flex: 'none', paddingBottom: 8 }}>{pickers('end')}</div>
         </div>
         <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו דרגה לבידוד' : 'notes · tap a degree to isolate it'}`}>{legend}</Rule>
         {jamRow}
@@ -427,7 +407,6 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
         </div>
       )}
       <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו לבידוד' : 'notes · tap to isolate'}`}>{legend}</Rule>
-      <Cta onClick={playWholeScale} style={{ width: '100%' }}>{he ? 'נגן סולם' : 'Play scale'} ▶</Cta>
       {jamRow}
       {positionRow}
     </div>
