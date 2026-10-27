@@ -16,7 +16,7 @@ import { useLang } from '../../contexts/LanguageContext';
 import { STOPS } from '../../data/tools';
 import { requestNavigate } from '../../services/navigate';
 import { blurIn, dotsIn, useOnChange } from '../../utils/motion';
-import { PosterTitle, Rule, Pill, PillRow, Cta, KeyGrid, KeyPicker } from '../Transit/parts';
+import { PosterTitle, Rule, Pill, PillRow, Cta, KeyPicker, PickerPill } from '../Transit/parts';
 import { pillStyle, keyStyle } from '../Transit/styles';
 import { StopActions } from '../Transit/StopActions';
 
@@ -82,7 +82,6 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   // itself. Both stay fully changeable.
   const [root, setRoot]             = useState<Note>('C');
   const [scaleType, setScaleType]   = useState<string | null>('major');
-  const [scaleMenuOpen, setScaleMenuOpen] = useState(false);
 
   // Opens on the song's key (its major or natural-minor scale) and follows it
   // when the song's key changes; any other choice here stands until then.
@@ -293,33 +292,27 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     </div>
   );
 
-  const rootGrid = (
-    <Rule label={he ? 'טוניקה' : 'Root'} right={<DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />}>
-      <div dir="ltr">
-        <KeyGrid items={ALL_NOTES.map(n => ({ id: n, label: n }))} value={root}
-          onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Root'} />
-      </div>
-    </Rule>
-  );
-
-  const scaleMenu = (
-    <Rule label={he ? 'סולם' : 'Scale'} right={
-      <Pill size="sm" active={scaleMenuOpen} onClick={() => setScaleMenuOpen(o => !o)}>
-        {scaleLabel} {scaleMenuOpen ? '▴' : '▾'}
-      </Pill>
-    }>
-      {(scaleMenuOpen || desktop) && (
-        <div className="gc-drop-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {SCALE_GROUPS.map(g => (
-            <div key={g.label}>
-              <p className="su-label" style={{ margin: '0 0 6px' }}>{g.label}</p>
-              <PillRow wrap items={g.scales.map(sc => ({ id: sc.id, label: sc.label }))} value={scaleType}
-                onChange={id => { setScaleType(id); setIsolate(null); if (!desktop) setScaleMenuOpen(false); previewRun(scaleMidis(root, id)); }} />
-            </div>
-          ))}
-        </div>
-      )}
-    </Rule>
+  // The key and the scale are chosen at the top, each from a pill that opens
+  // its list; Surprise me sits beside them.
+  const pickers = (align: 'start' | 'end') => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: align === 'end' ? 'flex-end' : 'flex-start' }}>
+      <KeyPicker value={root} options={ALL_NOTES as readonly Note[]} onChange={n => { setRoot(n); previewNote(n); }}
+        label={he ? 'טוניקה' : 'Key'} align={align} />
+      <PickerPill label={he ? 'סולם' : 'Scale'} value={scaleLabel} align={align} width={520} valueCase>
+        {close => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {SCALE_GROUPS.map(g => (
+              <div key={g.label}>
+                <p className="su-label" style={{ margin: '0 0 6px' }}>{g.label}</p>
+                <PillRow wrap items={g.scales.map(sc => ({ id: sc.id, label: sc.label }))} value={scaleType}
+                  onChange={id => { setScaleType(id); setIsolate(null); close(); previewRun(scaleMidis(root, id)); }} />
+              </div>
+            ))}
+          </div>
+        )}
+      </PickerPill>
+      <DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />
+    </div>
   );
 
   const positionRow = (
@@ -384,7 +377,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
           <div ref={titleRef} style={{ flex: 1, minWidth: 0 }}><PosterTitle head={`${root} `} tail={scaleLabel} max={200} min={56} /></div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flex: 'none', paddingBottom: 6 }}>
-            <KeyPicker value={root} options={ALL_NOTES as readonly Note[]} onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Key'} align={desktop ? 'end' : 'start'} />
+            {pickers('end')}
             <Cta onClick={playWholeScale}>{he ? 'נגן סולם' : 'Play scale'} ▶</Cta>
           </div>
         </div>
@@ -405,10 +398,6 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
             )}
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 32, alignItems: 'start' }}>
-          {rootGrid}
-          {scaleMenu}
-        </div>
       </div>
     );
   }
@@ -418,21 +407,7 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {jamPill}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <KeyPicker value={root} options={ALL_NOTES as readonly Note[]} onChange={n => { setRoot(n); previewNote(n); }} label={he ? 'טוניקה' : 'Key'} align={desktop ? 'end' : 'start'} />
-        <Pill size="sm" active={scaleMenuOpen} onClick={() => setScaleMenuOpen(o => !o)}>{scaleLabel} {scaleMenuOpen ? '▴' : '▾'}</Pill>
-      </div>
-      {scaleMenuOpen && (
-        <div className="gc-drop-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {SCALE_GROUPS.map(g => (
-            <div key={g.label}>
-              <p className="su-label" style={{ margin: '0 0 6px' }}>{g.label}</p>
-              <PillRow wrap items={g.scales.map(sc => ({ id: sc.id, label: sc.label }))} value={scaleType}
-                onChange={id => { setScaleType(id); setIsolate(null); setScaleMenuOpen(false); previewRun(scaleMidis(root, id)); }} />
-            </div>
-          ))}
-        </div>
-      )}
+      {pickers('start')}
       {viewMode === 'tab' ? tabView : (
         <div dir="ltr" style={{ display: 'flex', gap: 8, alignItems: 'stretch', borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 12 }}>
           {/* the wrapper animates; the h2 keeps its rotation */}
@@ -455,7 +430,6 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
       <Cta onClick={playWholeScale} style={{ width: '100%' }}>{he ? 'נגן סולם' : 'Play scale'} ▶</Cta>
       {jamRow}
       {positionRow}
-      {rootGrid}
     </div>
   );
 }
