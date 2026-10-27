@@ -174,6 +174,10 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
     return ids;
   }, [allPos, scale]);
 
+  // Tapping a dot on the neck flips every label between the scale degree
+  // (1, ♭3, 5…) and the note's name, spelled as the scale spells it.
+  const [names, setNames] = useState(false);
+
   const degreeOf = (i: number) => INTERVAL_DEGREE[scale.intervals[i] ?? ''] ?? { num: String(i + 1), name: '' };
   const neckDots: NeckDot[] = useMemo(() =>
     displayPos.map(p => {
@@ -184,14 +188,17 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
       const kind: NeckDot['kind'] = iso !== null && deg !== iso ? 'faded' : isRoot ? 'root' : 'tone';
       return {
         string: p.string, fret: p.fret, id: dotIds.get(`${p.string}-${p.fret}`) ?? `${p.string}-${p.fret}`,
-        // Each dot names its degree (1, ♭3, 5…).
-        label: INTERVAL_DEGREE[scale.intervals[deg] ?? '']?.num ?? (deg >= 0 ? String(deg + 1) : note),
+        // Each dot names its degree (1, ♭3, 5…), or its note when flipped.
+        label: names
+          ? (deg >= 0 ? scale.notes[deg] : note)
+          : INTERVAL_DEGREE[scale.intervals[deg] ?? '']?.num ?? (deg >= 0 ? String(deg + 1) : note),
         kind,
         target: !!jamTones?.has(TonalNote.chroma(note)),
       };
     }),
-    [displayPos, root, dotIds, scale, jamTones, isolate]
+    [displayPos, root, dotIds, scale, jamTones, isolate, names]
   );
+  const flipNames = () => setNames(n => !n);
 
   const scaleMidis = (r: Note, type: string) => {
     const sc = Scale.get(`${r} ${type}`);
@@ -361,10 +368,10 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
           <div ref={titleRef} style={{ flex: 1, minWidth: 0 }}><PosterTitle head={`${root} `} tail={scaleLabel} max={200} min={56} /></div>
           <div style={{ flex: 'none', paddingBottom: 8 }}>{pickers('end')}</div>
         </div>
-        <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו דרגה לבידוד' : 'notes · tap a degree to isolate it'}`}>{legend}</Rule>
+        <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו דרגה לבידוד · נקודה בצוואר מחליפה לשמות התווים' : 'notes · tap a degree to isolate it · a dot on the neck switches to note names'}`}>{legend}</Rule>
         {jamRow}
         <div ref={neckRef} style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 16 }}>
-          {viewMode === 'tab' ? tabView : neckDots.length ? <Neck dots={neckDots} from={0} to={15} label={neckLabel} /> : empty}
+          {viewMode === 'tab' ? tabView : neckDots.length ? <Neck dots={neckDots} from={0} to={15} label={neckLabel} onDot={flipNames} /> : empty}
         </div>
         {positionRow}
         {(related.length > 0 || nextStop) && (
@@ -401,12 +408,12 @@ export function ScaleExplorer({ desktop }: { desktop?: boolean } = {}) {
           </div>
           <div ref={neckRef} style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: '100%', maxWidth: 210 }}>
-              {neckDots.length ? <Neck dots={neckDots} from={0} to={12} vertical label={neckLabel} /> : empty}
+              {neckDots.length ? <Neck dots={neckDots} from={0} to={12} vertical label={neckLabel} onDot={flipNames} /> : empty}
             </div>
           </div>
         </div>
       )}
-      <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו לבידוד' : 'notes · tap to isolate'}`}>{legend}</Rule>
+      <Rule label={`${scale.notes.length} ${he ? 'תווים · הקישו לבידוד · נקודה בצוואר = שמות התווים' : 'notes · tap to isolate · tap the neck for note names'}`}>{legend}</Rule>
       {jamRow}
       {positionRow}
     </div>
