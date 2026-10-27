@@ -142,8 +142,10 @@ export function KeyGrid<V extends string | number>({ items, value, onChange, col
 // ── Picker pill ──────────────────────────────────────────────────────────────
 /** "LABEL  value ▾": a pill that opens a panel under it (the key's twelve
  *  notes, the scale list…). Closes on a pick, outside tap or Escape. */
-export function PickerPill({ label, value, align = 'start', width = 312, valueCase, children }: {
+export function PickerPill({ label, value, align = 'start', width = 312, valueCase, accent, children }: {
   label: string; value: ReactNode; align?: 'start' | 'end'; width?: number;
+  /** The view's one cobalt control. */
+  accent?: boolean;
   /** Keep the value's case (Am, Dorian) instead of the pill's uppercase. */
   valueCase?: boolean;
   children: (close: () => void) => ReactNode;
@@ -173,7 +175,10 @@ export function PickerPill({ label, value, align = 'start', width = 312, valueCa
   return (
     <div ref={wrap} style={{ position: 'relative', flex: 'none' }}>
       <Pill active={open} onClick={() => setOpen(o => !o)} label={`${label}: ${typeof value === 'string' ? value : ''}`}
-        style={{ gap: 10, paddingInline: '18px 16px' }}>
+        style={{
+          gap: 10, paddingInline: '18px 16px',
+          ...(accent ? { background: T.primary, color: T.onPrimary, borderColor: T.primary } : {}),
+        }}>
         <span style={{ opacity: 0.7 }}>{label}</span>
         <span className="su-semi" style={{ fontSize: 20, letterSpacing: 0, textTransform: valueCase ? 'none' : undefined }}>{value}</span>
         <span aria-hidden>{open ? '▴' : '▾'}</span>
@@ -193,11 +198,11 @@ export function PickerPill({ label, value, align = 'start', width = 312, valueCa
 // ── Key picker ───────────────────────────────────────────────────────────────
 /** "KEY  C ▾": all twelve notes at once as a 6×2 key grid — pick any key in
  *  one tap instead of stepping through them. */
-export function KeyPicker<V extends string>({ value, options, onChange, label, align = 'start' }: {
-  value: V; options: readonly V[]; onChange: (v: V) => void; label: string; align?: 'start' | 'end';
+export function KeyPicker<V extends string>({ value, options, onChange, label, align = 'start', accent }: {
+  value: V; options: readonly V[]; onChange: (v: V) => void; label: string; align?: 'start' | 'end'; accent?: boolean;
 }) {
   return (
-    <PickerPill label={label} value={value} align={align} valueCase>
+    <PickerPill label={label} value={value} align={align} valueCase accent={accent}>
       {close => (
         <KeyGrid items={options.map(o => ({ id: o, label: o }))} value={value} cols={6}
           onChange={v => { onChange(v); close(); }} label={label} />
