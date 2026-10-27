@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { T } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { pillStyle, ctaStyle, keyStyle } from './styles';
@@ -139,14 +139,18 @@ export function KeyGrid<V extends string | number>({ items, value, onChange, col
   );
 }
 
-// ── Key picker ───────────────────────────────────────────────────────────────
-/** "KEY  C ▾": a pill that opens every note at once as a 6×2 key grid —
- *  pick any key in one tap instead of stepping through them. */
-export function KeyPicker<V extends string>({ value, options, onChange, label, align = 'start' }: {
-  value: V; options: readonly V[]; onChange: (v: V) => void; label: string; align?: 'start' | 'end';
+// ── Picker pill ──────────────────────────────────────────────────────────────
+/** "LABEL  value ▾": a pill that opens a panel under it (the key's twelve
+ *  notes, the scale list…). Closes on a pick, outside tap or Escape. */
+export function PickerPill({ label, value, align = 'start', width = 312, valueCase, children }: {
+  label: string; value: ReactNode; align?: 'start' | 'end'; width?: number;
+  /** Keep the value's case (Am, Dorian) instead of the pill's uppercase. */
+  valueCase?: boolean;
+  children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
@@ -155,23 +159,50 @@ export function KeyPicker<V extends string>({ value, options, onChange, label, a
     window.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('pointerdown', onDoc); window.removeEventListener('keydown', onKey); };
   }, [open]);
+  // A panel wider than the room beside its pill slides back inside the screen.
+  useLayoutEffect(() => {
+    const el = panel.current;
+    if (!open || !el) return;
+    el.style.translate = '0 0';
+    const r = el.getBoundingClientRect(), edge = 16, W = window.innerWidth;
+    let dx = 0;
+    if (r.right > W - edge) dx = W - edge - r.right;
+    if (r.left + dx < edge) dx = edge - r.left;
+    el.style.translate = `${dx}px 0`;
+  }, [open]);
   return (
     <div ref={wrap} style={{ position: 'relative', flex: 'none' }}>
-      <Pill active={open} onClick={() => setOpen(o => !o)} label={`${label}: ${value}`} style={{ gap: 10, paddingInline: '18px 16px' }}>
+      <Pill active={open} onClick={() => setOpen(o => !o)} label={`${label}: ${typeof value === 'string' ? value : ''}`}
+        style={{ gap: 10, paddingInline: '18px 16px' }}>
         <span style={{ opacity: 0.7 }}>{label}</span>
-        <span className="su-semi" style={{ fontSize: 20, textTransform: 'none', letterSpacing: 0 }}>{value}</span>
+        <span className="su-semi" style={{ fontSize: 20, letterSpacing: 0, textTransform: valueCase ? 'none' : undefined }}>{value}</span>
         <span aria-hidden>{open ? '▴' : '▾'}</span>
       </Pill>
       {open && (
-        <div className="gc-drop-in" role="dialog" aria-label={label} style={{
+        <div ref={panel} className="gc-drop-in" role="dialog" aria-label={label} style={{
           position: 'absolute', top: 52, zIndex: 60, [align === 'end' ? 'insetInlineEnd' : 'insetInlineStart']: 0,
-          width: 'min(312px, calc(100vw - 40px))', padding: 10, background: T.bgDeep, border: `var(--su-rule) solid ${T.border}`,
+          width: `min(${width}px, calc(100vw - 32px))`, padding: 12, background: T.bgDeep, border: `var(--su-rule) solid ${T.border}`,
         }}>
-          <KeyGrid items={options.map(o => ({ id: o, label: o }))} value={value} cols={6}
-            onChange={v => { onChange(v); setOpen(false); }} label={label} />
+          {children(() => setOpen(false))}
         </div>
       )}
     </div>
+  );
+}
+
+// ── Key picker ───────────────────────────────────────────────────────────────
+/** "KEY  C ▾": all twelve notes at once as a 6×2 key grid — pick any key in
+ *  one tap instead of stepping through them. */
+export function KeyPicker<V extends string>({ value, options, onChange, label, align = 'start' }: {
+  value: V; options: readonly V[]; onChange: (v: V) => void; label: string; align?: 'start' | 'end';
+}) {
+  return (
+    <PickerPill label={label} value={value} align={align} valueCase>
+      {close => (
+        <KeyGrid items={options.map(o => ({ id: o, label: o }))} value={value} cols={6}
+          onChange={v => { onChange(v); close(); }} label={label} />
+      )}
+    </PickerPill>
   );
 }
 
