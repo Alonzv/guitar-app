@@ -10,6 +10,7 @@ import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { rootColors } from '../ChordBuilder/chordColors';
 import { degreeLabels } from '../ChordBuilder/chordFormula';
 import { StopActions } from '../Transit/StopActions';
+import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 
 // ── Progression ──────────────────────────────────────────────────────────────
 // The song's chords, at a glance and one at a time. A row of chords on top;
@@ -94,6 +95,16 @@ export function ProgressionView({ onGo }: { onGo: (stopId: string) => void }) {
     const after = next[Math.min(selIdx, next.length - 1)];
     song.selectChord(after ? after.id : null);
   };
+
+  const [exporting, setExporting] = useState(false);
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      const { exportProgressionPDF } = await import('../../utils/pdfExport');
+      await exportProgressionPDF(he ? 'המהלך שלי' : 'Chord Progression', progression);
+    } finally { setExporting(false); }
+  };
+  const clearAll = () => { if (confirm(he ? 'להסיר את כל האקורדים?' : 'Remove every chord?')) { song.setProgression([]); song.selectChord(null); } };
 
   const [copied, setCopied] = useState(false);
   const share = () => {
@@ -226,6 +237,15 @@ export function ProgressionView({ onGo }: { onGo: (stopId: string) => void }) {
         <TextBtn onClick={() => move(-1)} disabled={selIdx === 0}>{he ? 'הזזה שמאלה' : 'Move left'}</TextBtn>
         <TextBtn onClick={remove}>{he ? 'הסרה' : 'Remove'}</TextBtn>
         <TextBtn onClick={() => move(1)} disabled={selIdx === progression.length - 1}>{he ? 'הזזה ימינה' : 'Move right'}</TextBtn>
+      </div>
+
+      {/* The whole song: keep it, print it, or start over */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap', marginTop: -14 }}>
+        <SaveToLibraryButton size="sm" label={he ? 'שמירה לספרייה' : 'Save to Library'}
+          style={{ height: 40, padding: '0 14px', borderRadius: 20, fontSize: 15, fontWeight: 500, color: T.tintLabel, background: 'transparent', border: 'none' }}
+          getPayload={() => ({ kind: 'progression', name: names.map(formatChordName).join(' '), chords: progression, detected_key: analysis ? keyName(analysis.key, 'en') : null })} />
+        <TextBtn onClick={exportPdf} disabled={exporting}>{exporting ? '…' : (he ? 'ייצוא ל־PDF' : 'Export PDF')}</TextBtn>
+        <TextBtn onClick={clearAll}>{he ? 'ניקוי הכול' : 'Clear all'}</TextBtn>
       </div>
     </div>
   );

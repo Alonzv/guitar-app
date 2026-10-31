@@ -94,7 +94,9 @@ const LAST_STOP_KEY = 'scaleup_last_stop';
 const INTERVAL_VIEWS = ['explore', 'measure', 'inchord'];
 // Stops whose tool draws its own poster title (the chord name, the scale, the
 // tuner's note, the tempo, the song title) — the shell skips the stop name.
-const OWN_POSTER = new Set(['chord-builder', 'scales', 'tuner', 'metronome', 'tab-writer', 'learn-scale']);
+const OWN_POSTER = new Set(['scales', 'tuner', 'metronome', 'tab-writer', 'learn-scale']);
+// Stops where the song player would only get in the way.
+const NO_DOCK = new Set(['learn-scale', 'tuner']);
 
 // ════════════════════════════════════════════════════════════════════════════
 export default function App() {
@@ -179,10 +181,12 @@ export default function App() {
     else setStop('home');
   };
   useEffect(() => {
-    const onPop = () => { if (history.state?.suStop == null) setStop('home'); };
+    // Only the phone keeps stops in history; on the Mac a pop is a step
+    // inside a stop (Learn a scale), never a trip Home.
+    const onPop = () => { if (!isDesktop && history.state?.suStop == null) setStop('home'); };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [isDesktop]);
 
   // ── Shared progression banner ─────────────────────────────────────────────
   const [sharedProgression] = useState<ChordInProgression[] | null>(decodeSharedProgression);
@@ -264,8 +268,8 @@ export default function App() {
   const renderStop = (id: string): ReactNode => {
     switch (id) {
       case 'chord-builder': return chordView === 'ear'
-        ? <ChordBuilderTab desktop={d} {...progressionProps} onCapoChange={setCapo} />
-        : <ChordPickerTab desktop={d} {...progressionProps} />;
+        ? <ChordBuilderTab desktop={d} {...progressionProps} onCapoChange={setCapo} onGo={sid => go(sid)} />
+        : <ChordPickerTab desktop={d} {...progressionProps} onGo={sid => go(sid)} />;
       case 'triads':        return <TriadsGenerator desktop={d} globalProgression={progression} />;
       case 'target-note':   return <TargetNoteTab desktop={d} tuning={tuning} capo={capo} onAddToProgression={handleAddToProgression} />;
       case 'voice-leading': return <VoiceLeadingStudio desktop={d} globalProgression={progression} tuning={tuning} onChordsChange={handleChordNamesChange} />;
@@ -308,7 +312,7 @@ export default function App() {
         onToggleDark={() => setDarkMode(m => !m)}
         userMenu={<UserMenu compact={!isDesktop} up={isDesktop} onOpenWorkspace={() => go('library')} />}
         sharedBanner={sharedBanner}
-        dock={<SongDock compact={!isDesktop} onOpenMap={() => setSongMapOpen(true)} />}
+        dock={NO_DOCK.has(shown) ? undefined : <SongDock compact={!isDesktop} onOpenMap={() => setSongMapOpen(true)} />}
         ownPoster={OWN_POSTER.has(shown)}
       >
         <ErrorBoundary key={shown} label={stopName}>

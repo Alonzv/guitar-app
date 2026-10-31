@@ -1,21 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
+import { Chord } from '@tonaljs/tonal';
 import type { ChordInProgression, FretPosition, Tuning } from '../../types/music';
-import { VoicingVariations } from '../ChordBuilder/VoicingVariations';
-import { VoicingViewer } from './VoicingViewer';
 import { ChordStructure } from '../ChordBuilder/ChordStructure';
-import { ChordPoster, ChordDiagram, PillSelect, StrumButton } from '../ChordBuilder/ChordParts';
-import { Rule, PillRow, KeyGrid } from '../Transit/parts';
+import { ChordStage, BigShape, PlayButton, SoftButton, Chips, ShapeStrip, GlassSelect, SongStrip, Fold, icon } from '../ChordBuilder/Stage';
+import { StopActions } from '../Transit/StopActions';
 import { useLang } from '../../contexts/LanguageContext';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
-import { ProgressionPanel } from '../ChordBuilder/ProgressionPanel';
 import { findChordVoicings } from '../../utils/chordVoicings';
-import { identifyChord, formatChordName } from '../../utils/chordIdentifier';
-import { btn } from '../../theme';
+import { identifyChord } from '../../utils/chordIdentifier';
+import { T } from '../../theme';
 import { TUNINGS } from '../../utils/musicTheory';
-import { RollLabel } from '../RollLabel';
 import { useFlash } from '../../motion/useFlash';
 import { previewNote, previewVoicing } from '../../utils/previewSound';
-import { DiceButton } from '../DiceButton';
 import { pickOne } from '../../utils/random';
 
 interface Props {
@@ -34,6 +30,8 @@ interface Props {
   onTuningChange?: (t: Tuning) => void;
   capo: number;
   desktop?: boolean;
+  /** Opens another stop (the song strip opens Progression). */
+  onGo?: (stopId: string) => void;
 }
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -46,6 +44,8 @@ const TRIADS: { display: string; key: string }[] = [
   { display: 'sus2',   key: 'sus2' },
   { display: 'sus4',   key: 'sus4' },
 ];
+
+const TRIAD_HE: Record<string, string> = { M: 'מז׳ור', m: 'מינור', dim: 'מוקטן', aug: 'מוגדל', sus2: 'sus2', sus4: 'sus4' };
 
 const EXTENSIONS: { display: string; key: string }[] = [
   { display: '—',     key: ''     },
@@ -89,9 +89,7 @@ function readPick(): { root: string | null; triad: string | null; ext: string } 
 
 export function ChordPickerTab({
   onAddToProgression, progression,
-  onRemoveFromProgression, onClearProgression, onReorderProgression, onTransposeProgression,
-  canUndo, canRedo, onUndo, onRedo,
-  tuning: tuningProp, onTuningChange, capo, desktop,
+  tuning: tuningProp, onTuningChange, desktop, onGo,
 }: Props) {
   // Opens on the last chord picked (C major the first time), so the tool shows
   // its voicings straight away instead of waiting for two choices.
@@ -101,10 +99,10 @@ export function ChordPickerTab({
   useEffect(() => {
     try { localStorage.setItem(PICK_KEY, JSON.stringify({ root: selectedRoot, triad: selectedTriad, ext: selectedExtension })); } catch { /* private mode */ }
   }, [selectedRoot, selectedTriad, selectedExtension]);
-  // Index of the variation shown enlarged in the VoicingViewer popover, or null.
-  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   // The shape drawn large (and strummed / added): the last one viewed.
   const [shown, setShown] = useState(0);
+  // The choices fold away once picked; first-timers see them open.
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem(PICK_KEY) == null; } catch { return true; } });
   const { lang } = useLang();
   const he = lang === 'he';
   // One tuning for the whole app — this selector and By Ear's change the same one.
@@ -128,7 +126,7 @@ export function ChordPickerTab({
   const handleTuningChange = (name: string) => {
     const t = TUNINGS.find(x => x.name === name);
     if (t) onTuningChange?.(t);
-    setViewerIndex(null); setShown(0);
+    setShown(0);
   };
   // Each choice is heard as it is made: the root alone until there is a chord,
   // then the chord's first shape.
@@ -144,170 +142,131 @@ export function ChordPickerTab({
     const triad = pickOne(TRIADS).key;
     const exts = VALID_EXTENSIONS[triad] ?? [''];
     const ext = Math.random() < 0.5 ? '' : pickOne(exts);
-    setSelectedRoot(root); setSelectedTriad(triad); setSelectedExtension(ext); setViewerIndex(null); setShown(0);
+    setSelectedRoot(root); setSelectedTriad(triad); setSelectedExtension(ext); setShown(0);
     hear(root, triad, ext);
   };
   const handleRootSelect = (root: string) => {
-    setSelectedRoot(root); setViewerIndex(null); setShown(0);
+    setSelectedRoot(root); setShown(0);
     hear(root, selectedTriad, selectedExtension);
   };
   const handleTriadSelect = (key: string) => {
     setSelectedTriad(key);
     setSelectedExtension(''); // reset extension when triad changes
-    setViewerIndex(null); setShown(0);
+    setShown(0);
     hear(selectedRoot, key, '');
   };
   const handleExtensionSelect = (key: string) => {
-    setSelectedExtension(key); setViewerIndex(null); setShown(0);
+    setSelectedExtension(key); setShown(0);
     hear(selectedRoot, selectedTriad, key);
   };
 
-  // Add a specific voicing (from the enlarged viewer) straight to the progression.
+  // Adds the shape drawn large to the song.
   const [added, flashAdded] = useFlash();
   const addVoicing = (voicing: FretPosition[]) => {
     const found = identifyChord(voicing, tuning);
     const chord = found.length > 0 ? found[0] : { name: chordName ?? 'Unknown', notes: [], aliases: [] };
     onAddToProgression({ id: `chord-${Date.now()}`, chord, fretPositions: [...voicing] });
-    setViewerIndex(null);
     flashAdded();
   };
 
-  const displayName = chordName ? formatChordName(chordName) : null;
   const validExt = selectedTriad ? (VALID_EXTENSIONS[selectedTriad] ?? ['']) : [];
-
-  const progressionPanel = (
-    <ProgressionPanel
-      progression={progression}
-      onAddToProgression={onAddToProgression}
-      onRemoveFromProgression={onRemoveFromProgression}
-      onClearProgression={onClearProgression}
-      onReorderProgression={onReorderProgression}
-      onTransposeProgression={onTransposeProgression}
-      canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}
-      tuning={tuningObj} capo={capo}
-    />
-  );
-
   const current = voicings[shown] ?? voicings[0];
-  // STRUM — the one cobalt action: plays the shape drawn large.
-  const strum = () => { if (current) unlockAudio().then(() => playChord(current, tuningObj.openFreqs)); };
+  const play = () => { if (current) unlockAudio().then(() => playChord(current, tuningObj.openFreqs)); };
+  const notes = chordName ? Chord.get(chordName).notes : [];
 
-  const poster = (
-    <ChordPoster name={chordName} max={desktop ? 210 : 150} aside={chordName && (
-      <span className="su-label">
-        {voicings.length > 0
-          ? (he ? `${voicings.length} צורות` : `${voicings.length} voicing${voicings.length > 1 ? 's' : ''}`)
-          : (he ? 'לא נמצאו צורות' : 'No voicings found')}
-        {' · '}{tuningObj.label}
-      </span>
-    )} />
+  const toolbar = (
+    <StopActions>
+      {onTuningChange && (
+        <GlassSelect label={he ? 'כיוון' : 'Tuning'} text={tuningObj.label ?? tuningObj.name} value={tuningName} onChange={handleTuningChange}>
+          {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label ?? t.name}</option>)}
+        </GlassSelect>
+      )}
+      <button onClick={roll} className="lg lg-circle gc-no-bar" aria-label={he ? 'אקורד אקראי' : 'Random chord'} style={{ color: T.text }}>
+        {icon(<><rect x="4" y="4" width="16" height="16" rx="4" /><circle cx="9" cy="9" r="0.6" fill="currentColor" /><circle cx="15" cy="15" r="0.6" fill="currentColor" /><circle cx="15" cy="9" r="0.6" fill="currentColor" /><circle cx="9" cy="15" r="0.6" fill="currentColor" /></>)}
+      </button>
+    </StopActions>
   );
 
-  const formula = chordName ? <ChordStructure chordName={chordName} /> : null;
-
-  const diagram = chordName && current ? (
-    <Rule>
-      <ChordDiagram voicing={current} name={chordName} tuning={tuning} side={desktop} />
-    </Rule>
-  ) : null;
-
-  // ── The dock: quality, extension, root, then STRUM / Add / tuning ──
-  const controls = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
-      <Rule label={he ? 'איכות' : 'Quality'} right={<DiceButton onRoll={roll} />}>
-        <div dir="ltr"><PillRow label={he ? 'איכות' : 'Quality'}
-          items={TRIADS.map(t => ({ id: t.key, label: t.display }))}
-          value={selectedTriad} onChange={handleTriadSelect} /></div>
-        {selectedTriad && validExt.length > 1 && (
-          <div dir="ltr" style={{ marginTop: 8 }}>
-            <PillRow label={he ? 'הרחבה' : 'Extension'}
-              items={EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => ({ id: e.key, label: e.display }))}
-              value={selectedExtension} onChange={handleExtensionSelect} />
-          </div>
-        )}
-      </Rule>
-
-      <Rule label={he ? 'שורש' : 'Root'}>
-        <div dir="ltr"><KeyGrid label={he ? 'שורש' : 'Root'} cols={6}
-          items={ROOTS.map(r => ({ id: r, label: r }))}
-          value={selectedRoot} onChange={handleRootSelect} /></div>
-      </Rule>
-
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-        <StrumButton onStrum={strum} disabled={!current} label={he ? 'פריטה' : 'Strum'}>
-          {he ? 'פריטה' : 'STRUM'}
-        </StrumButton>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {/* Adds the shape drawn large, matching the action in By Ear. A
-              specific variation can also be added from the enlarged viewer. */}
-          <button onClick={() => current && addVoicing(current)} disabled={!current} className="gc-no-bar"
-            style={{ ...btn.primary(!current), width: '100%', whiteSpace: 'nowrap' }}>
-            <RollLabel>{added ? (he ? '✓ נוסף' : '✓ Added') : (he ? '+ למהלך' : '+ Add to song')}</RollLabel>
-          </button>
-          <PillSelect label={he ? 'כיוון' : 'Tuning'} value={tuningName} onChange={handleTuningChange}>
-            {TUNINGS.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
-          </PillSelect>
-        </div>
+  const stage = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
+      <ChordStage desktop={desktop} name={chordName}
+        empty={he ? 'בחרו שורש ואיכות' : 'Pick a root and a quality'}
+        line={chordName && <span dir="ltr" className="gc-notation">{notes.join(' · ')}</span>} />
+      {current && <BigShape voicing={current} name={chordName} tuning={tuning} />}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <PlayButton onPlay={play} disabled={!current} label={he ? 'נגנו' : 'Play'} />
+        <SoftButton onClick={() => current && addVoicing(current)} disabled={!current}>
+          {added ? icon(<path d="m5 12 5 5 9-10" />, 17) : icon(<path d="M12 5v14M5 12h14" />, 17)}
+          {added ? (he ? 'נוסף לשיר' : 'Added') : (he ? 'הוספה לשיר' : 'Add to song')}
+        </SoftButton>
       </div>
+      {chordName && voicings.length > 1 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>
+            {he ? `${voicings.length} צורות לנגן אותו` : `${voicings.length} ways to play it`}
+          </span>
+          <ShapeStrip voicings={voicings} selected={shown} chordName={chordName} tuning={tuning}
+            onSelect={(v, i) => { setShown(i); previewVoicing(v, tuningObj.openFreqs); }} />
+        </div>
+      )}
+      {chordName && voicings.length === 0 && (
+        <p className="su-sub" style={{ textAlign: 'center', margin: 0 }}>{he ? 'לא נמצאו צורות בכיוון הזה' : 'No shapes found in this tuning'}</p>
+      )}
     </div>
   );
 
-  const voicingsPane = chordName && voicings.length > 0 ? (
-    <VoicingVariations
-      voicings={voicings}
-      chordName={chordName ?? undefined}
-      tuning={tuning}
-      selectedIndex={shown}
-      onSelect={(v, i) => { setViewerIndex(i); setShown(i); previewVoicing(v, tuningObj.openFreqs); }}
-      gridColumns={desktop ? 4 : undefined}
-    />
-  ) : !chordName ? (
-    <Rule>
-      <p className="su-label" style={{ margin: 0 }}>
-        {he ? 'בחרו שורש, איכות והרחבה כדי לראות צורות' : 'Pick a root, quality and extension to see voicings'}
-      </p>
-    </Rule>
+  const pickers = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+      <Chips label={he ? 'שורש' : 'Root'} cols={6} value={selectedRoot} onChange={handleRootSelect}
+        items={ROOTS.map(r => ({ id: r, label: r.replace('#', '♯') }))} />
+      <Chips label={he ? 'איכות' : 'Quality'} value={selectedTriad} onChange={handleTriadSelect}
+        items={TRIADS.map(t => ({ id: t.key, label: he ? (TRIAD_HE[t.key] ?? t.display) : t.display }))} />
+      {selectedTriad && validExt.length > 1 && (
+        <Chips label={he ? 'צבע נוסף' : 'Add a colour'} value={selectedExtension} onChange={handleExtensionSelect}
+          items={EXTENSIONS.filter(e => validExt.includes(e.key)).map(e => ({ id: e.key, label: e.key === '' ? (he ? 'בלי' : 'None') : e.display.replace('+', '') }))} />
+      )}
+    </div>
+  );
+
+  const triadLabel = (k: string | null) => { const t = TRIADS.find(x => x.key === k); return t ? (he ? (TRIAD_HE[t.key] ?? t.display) : t.display) : ''; };
+  const extLabel = selectedExtension ? EXTENSIONS.find(e => e.key === selectedExtension)?.display.replace('+', '') : null;
+  const fold = (
+    <Fold title={he ? 'בניית האקורד' : 'Build the chord'} open={open} onToggle={() => setOpen(o => !o)}
+      summary={<span dir="ltr">{[selectedRoot?.replace('#', '♯'), triadLabel(selectedTriad), extLabel].filter(Boolean).join(' · ')}</span>}>
+      {pickers}
+    </Fold>
+  );
+
+  const formula = chordName ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>{he ? 'ממה הוא בנוי' : 'What it is made of'}</span>
+      <ChordStructure chordName={chordName} />
+    </div>
   ) : null;
 
-  const viewer = viewerIndex != null && chordName && voicings[viewerIndex] ? (
-    <VoicingViewer
-      voicings={voicings}
-      index={viewerIndex}
-      chordName={displayName ?? chordName}
-      tuning={tuningObj}
-      onNav={i => { setViewerIndex(i); setShown(i); }}
-      onAdd={addVoicing}
-      onClose={() => setViewerIndex(null)}
-    />
-  ) : null;
+  const song = onGo ? <SongStrip progression={progression} onOpen={() => onGo('progression')} /> : null;
 
   if (desktop) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {poster}
-        <div style={{ display: 'grid', gridTemplateColumns: '340px minmax(0, 1fr)', gap: 40, alignItems: 'start' }}>
-          <div style={{ position: 'sticky', top: 0 }}>{controls}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0 }}>
-            {formula}
-            {diagram}
-            {voicingsPane}
-          </div>
+      <div className="su-in" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 400px)', gap: '24px 48px', alignItems: 'start' }}>
+        {toolbar}
+        <div style={{ gridColumn: '1 / -1' }}>{fold}</div>
+        {stage}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
+          {formula}
+          {song}
         </div>
-        {progressionPanel}
-        {viewer}
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {poster}
+    <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      {toolbar}
+      {fold}
+      {stage}
       {formula}
-      {diagram}
-      {controls}
-      {voicingsPane}
-      {progressionPanel}
-      {viewer}
+      {song}
     </div>
   );
 }

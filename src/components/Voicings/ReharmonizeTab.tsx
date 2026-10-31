@@ -27,6 +27,7 @@ import { useFlash } from '../../motion/useFlash';
 import { RollLabel } from '../RollLabel';
 import { namesToProgression } from '../../utils/progressionBridge';
 import { TUNINGS } from '../../utils/musicTheory';
+import { Fold } from '../ChordBuilder/Stage';
 
 // Reharmonisation is the one tool that can fail for reasons outside the app,
 // so it is the one tool with error copy. Written for a guitarist: the old text
@@ -211,6 +212,62 @@ function toNashville(chordName: string, keyRoot: string): string {
   return degree + suffix;
 }
 
+// ── Plain-words guide ────────────────────────────────────────────────────────
+// Reharmonizing is a big idea for a player who has never heard the word, so
+// the tool says what it does before asking for anything, and each control
+// says in one line what it changes.
+const HOW = {
+  en: {
+    title: 'What is this?',
+    summary: 'Same song, new chord colours',
+    lead: 'Reharmonizing keeps your song and its melody, and swaps some chords for richer ones that still fit. Like repainting a room without moving the walls.',
+    steps: [
+      'Your song\'s chords are already here. Add or change them with the chord picker.',
+      'Pick a style and how adventurous to get, then tap Re-Harmonize.',
+      'Compare Original and Reharm by ear. If you like it, tap Use in song.',
+    ],
+  },
+  he: {
+    title: 'מה זה הכלי הזה?',
+    summary: 'אותו שיר, צבעים חדשים לאקורדים',
+    lead: 'רה-הרמוניזציה שומרת על השיר ועל המנגינה שלו, ומחליפה חלק מהאקורדים באקורדים עשירים יותר שעדיין מתאימים. כמו לצבוע חדר מחדש בלי להזיז קירות.',
+    steps: [
+      'האקורדים של השיר שלכם כבר כאן. אפשר להוסיף או לשנות בבוחר האקורדים.',
+      'בוחרים סגנון וכמה להעז, ולוחצים על רה-הרמוניזציה.',
+      'משווים באוזן בין המקור לגרסה החדשה. אם אהבתם, לוחצים "השתמש בשיר".',
+    ],
+  },
+} as const;
+const HINT = {
+  tension: { en: 'How far to stray: 1–2 gentle, 3 colourful, 4–5 bold and surprising.', he: 'כמה להתרחק מהמקור: 1–2 עדין, 3 צבעוני, 4–5 נועז ומפתיע.' },
+  shapes: { en: 'How the new chords are played. Full uses every string; Triads are three-note shapes, lighter and easier to move. Low and High keep them on the thick or thin strings.', he: 'איך מנגנים את האקורדים החדשים. Full על כל המיתרים; Triads הן צורות של שלושה תווים, קלילות וקלות להזזה. Low ו-High משאירים אותן על המיתרים העבים או הדקים.' },
+  why: { en: 'Why these chords work.', he: 'למה האקורדים האלה עובדים.' },
+  paths: { en: 'Ways to play the new chords on the neck, picked so your hand moves as little as possible. The first is the smoothest.', he: 'דרכים לנגן את האקורדים החדשים על הצוואר, כך שהיד זזה כמה שפחות. הראשונה היא החלקה ביותר.' },
+} as const;
+const HOW_KEY = 'scaleup_reharm_how';
+
+function HowItWorks() {
+  const { lang } = useLang();
+  const t = HOW[lang];
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem(HOW_KEY) !== 'closed'; } catch { return true; } });
+  const toggle = () => setOpen(o => { try { localStorage.setItem(HOW_KEY, o ? 'closed' : 'open'); } catch { /* private mode */ } return !o; });
+  return (
+    <Fold title={t.title} summary={t.summary} open={open} onToggle={toggle}>
+      <p style={{ margin: '0 0 14px', fontSize: 15, lineHeight: 1.55, color: T.text }}>{t.lead}</p>
+      <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {t.steps.map((s, i) => (
+          <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontSize: 15, lineHeight: 1.45, color: T.textMuted }}>
+            <span aria-hidden style={{ flex: 'none', width: 24, height: 24, borderRadius: 12, background: T.primaryBg, color: T.tintLabel, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+            <span>{s}</span>
+          </li>
+        ))}
+      </ol>
+    </Fold>
+  );
+}
+
+const hint = (text: string) => <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: T.textMuted }}>{text}</p>;
+
 export function ReharmonizeTab({
   chords,
   progressionEditor,
@@ -356,6 +413,7 @@ export function ReharmonizeTab({
   const he = lang === 'he';
   const leftCol = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+      <HowItWorks />
 
       {/* Empty state */}
       {chords.length === 0 && (
@@ -420,6 +478,7 @@ export function ReharmonizeTab({
                   <span className="su-label">Extended</span>
                   <span className="su-label">Altered</span>
                 </div>
+                {hint(HINT.tension[lang])}
               </div>
 
               {/* Mode + StringGroup */}
@@ -438,6 +497,7 @@ export function ReharmonizeTab({
                   ] as { id: StringGroup; label: string }[])} value={stringGroup} onChange={setStringGroup} />
                 </div>
               </div>
+              {hint(HINT.shapes[lang])}
             </div>
           </Rule>
 
@@ -508,6 +568,7 @@ export function ReharmonizeTab({
 
               {/* AI analysis */}
               <Rule label={he ? 'ניתוח' : 'AI analysis'}>
+                <div style={{ marginBottom: 8 }}>{hint(HINT.why[lang])}</div>
                 <p style={{ margin: 0, fontSize: 13, color: T.text, lineHeight: 1.7 }}>
                   {result.analysis}
                 </p>
@@ -520,6 +581,7 @@ export function ReharmonizeTab({
               {reharmPaths.length > 0 && (
                 <Rule label={he ? 'מסלולי פוזיציה' : 'Voicing paths'}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {hint(HINT.paths[lang])}
                     {/* Paths as pills; the first is the smoothest — the pick */}
                     <div role="group" aria-label={he ? 'מסלולי פוזיציה' : 'Voicing paths'} className="gc-no-scrollbar"
                       style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingBottom: 1 }}>

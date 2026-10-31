@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { T } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { stopById, searchStops, type Stop } from '../../data/tools';
@@ -51,9 +51,28 @@ export function TransitShell(p: Props) {
 
 function SubPills({ stop, sub, onSub }: { stop: Stop; sub?: string; onSub: (s: string) => void }) {
   const { lang } = useLang();
+  // A glass bubble slides under the chosen tab and stretches as it travels.
+  const barRef = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState<{ x: number; w: number } | null>(null);
+  const [moving, setMoving] = useState(false);
+  const lastX = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const on = barRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!on) { setThumb(null); return; }
+    const next = { x: on.offsetLeft, w: on.offsetWidth };
+    if (lastX.current != null && lastX.current !== next.x) {
+      setMoving(true);
+      const t = setTimeout(() => setMoving(false), 260);
+      lastX.current = next.x; setThumb(next);
+      return () => clearTimeout(t);
+    }
+    lastX.current = next.x; setThumb(next);
+  }, [sub, lang]);
   if (!stop.subs) return null;
   return (
-    <div role="tablist" className="su-seg">
+    <div role="tablist" className="su-seg" ref={barRef}>
+      {thumb && <span aria-hidden className="su-seg-thumb" data-moving={moving || undefined}
+        style={{ width: thumb.w, transform: `translateX(${thumb.x}px)` }} />}
       {stop.subs.map(s => (
         <button key={s.id} role="tab" aria-selected={s.id === sub} data-active={s.id === sub} onClick={() => onSub(s.id)} className="gc-no-bar">
           {s.label[lang]}

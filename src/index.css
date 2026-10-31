@@ -291,7 +291,7 @@ svg [role="button"] { transform-box: fill-box; transform-origin: center; }
   --su-display-semi: 100%;
 
   --gc-bg-deep:      #000000;   /* page */
-  --gc-bg-card:      #1C1C1E;   /* grouped surfaces, fields */
+  --gc-bg-card:      rgba(255,255,255,0.10);   /* grouped surfaces, fields: clear, so the light behind shows */
   --gc-bg-input:     #2C2C2E;   /* chips, inactive keys */
   --gc-border:       rgba(255,255,255,0.12);
   --su-hairline:     rgba(255,255,255,0.08);
@@ -709,17 +709,19 @@ input, textarea { color: var(--gc-text); }
   isolation: isolate;
   border: none;
   color: var(--gc-text);
-  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-  -webkit-backdrop-filter: blur(5px) saturate(180%) brightness(1.1);
-  backdrop-filter: blur(5px) saturate(180%) brightness(1.1);
+  /* Clear, not grey: a whisper of white over whatever is behind, blurred
+     and saturated so colour passing under it blooms. */
+  background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.04));
+  -webkit-backdrop-filter: blur(8px) saturate(190%) brightness(1.12);
+  backdrop-filter: blur(8px) saturate(190%) brightness(1.12);
   box-shadow:
-    inset 0 1px 0.5px rgba(255,255,255,0.6),
-    inset 0 -1px 0.5px rgba(255,255,255,0.18),
-    inset 1px 0 0.5px rgba(255,255,255,0.12),
-    inset -1px 0 0.5px rgba(255,255,255,0.12),
-    inset 0 0 22px rgba(255,255,255,0.05),
-    0 12px 32px rgba(0,0,0,0.5);
+    inset 0 10px 18px -12px rgba(255,255,255,0.40),   /* light pooled in the top lip */
+    inset 0 -10px 18px -12px rgba(255,255,255,0.18),  /* and caught in the bottom one */
+    inset 0 0 24px rgba(255,255,255,0.05),
+    0 10px 30px rgba(0,0,0,0.45);
+  transition: transform 420ms cubic-bezier(.3,1.5,.5,1), background 200ms ease, box-shadow 200ms ease;
 }
+/* The sheen across the face. */
 .lg::before {
   content: "";
   position: absolute;
@@ -727,15 +729,40 @@ input, textarea { color: var(--gc-text); }
   border-radius: inherit;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 36%, rgba(255,255,255,0) 72%, rgba(255,255,255,0.07) 100%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.08) 100%);
 }
+/* The rim: a 1px edge that catches light hardest at the top-left and
+   bottom-right corners and goes almost clear along the sides — the
+   curved-glass edge in Apple's Liquid Glass. */
+.lg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.16) 20%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.12) 80%, rgba(255,255,255,0.50) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+/* Pressed glass swells like a drop, then settles back. */
+.lg:is(button, label):not(:disabled):active,
+.lg-circle:not(:disabled):active { transform: scale(1.08); }
+.lg > button { transition: transform 380ms cubic-bezier(.3,1.5,.5,1), background-color 200ms ease; }
+.lg > button:not(:disabled):active { transform: scale(1.1); }
 .lg-bar {
-  background: linear-gradient(180deg, rgba(38,38,42,0.28), rgba(14,14,16,0.40));
-  -webkit-backdrop-filter: blur(24px) saturate(180%) brightness(1.05);
-  backdrop-filter: url(#lgRefract) blur(10px) saturate(180%) brightness(1.05);
+  background: linear-gradient(180deg, rgba(58,58,64,0.30), rgba(28,28,32,0.38));
+  -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(1.08);
+  backdrop-filter: url(#lgRefract) blur(10px) saturate(190%) brightness(1.08);
 }
+.lg-bar:active { transform: none; }
 @supports not (backdrop-filter: url(#lgRefract)) {
-  .lg-bar { backdrop-filter: blur(24px) saturate(180%) brightness(1.05); }
+  .lg-bar { backdrop-filter: blur(24px) saturate(190%) brightness(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lg, .lg > button { transition: none; }
+  .lg:is(button, label):active, .lg-circle:active, .lg > button:active { transform: none; }
 }
 .lg-on { background: rgba(255,255,255,0.12); box-shadow: inset 0 1px 0.5px rgba(255,255,255,0.3); }
 .lg-circle {
@@ -749,11 +776,22 @@ input, textarea { color: var(--gc-text); }
   background: rgba(255,255,255,0.08); overflow-x: auto; scrollbar-width: none; align-self: flex-start; max-width: 100%;
 }
 .su-seg::-webkit-scrollbar { display: none; }
+.su-seg { position: relative; isolation: isolate; }
+.su-seg-thumb {
+  position: absolute; left: 0; top: 3px; bottom: 3px; z-index: -1; border-radius: 11px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.14));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(255,255,255,0.10), 0 4px 12px rgba(0,0,0,0.28);
+  -webkit-backdrop-filter: blur(6px) saturate(160%); backdrop-filter: blur(6px) saturate(160%);
+  transition: transform 420ms cubic-bezier(.3,1.35,.5,1), width 420ms cubic-bezier(.3,1.35,.5,1), scale 260ms ease;
+}
+.su-seg-thumb[data-moving] { scale: 1.06 1.14; }
+@media (prefers-reduced-motion: reduce) { .su-seg-thumb { transition: none; } }
 .su-seg > button {
   flex: 1 1 auto; min-height: 34px; padding: 0 16px; border-radius: 11px; white-space: nowrap;
   font-size: 14px; font-weight: 500; color: var(--gc-text-muted);
 }
-.su-seg > button[aria-selected="true"] { background: #636366; color: #fff; font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
+.su-seg > button { transition: color 240ms ease; }
+.su-seg > button[aria-selected="true"] { color: #fff; font-weight: 600; }
 
 /* Type */
 .su-title { margin: 0; font-family: var(--su-display); font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: -0.03em; color: var(--gc-text); }
@@ -762,6 +800,10 @@ input, textarea { color: var(--gc-text); }
 
 /* Grouped list (inset, rounded) */
 .su-group { border-radius: 26px; background: var(--gc-bg-card); overflow: hidden; }
+/* Cards are panes of frosted glass too: a faint light along the top edge. */
+.su-group, :is(div, button, section)[style*="background: var(--gc-bg-card)"] {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), inset 0 0 0 0.5px rgba(255,255,255,0.05);
+}
 .su-row {
   width: 100%; min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 18px;
   text-align: start; color: var(--gc-text); background: transparent;
@@ -813,3 +855,9 @@ input, textarea { color: var(--gc-text); }
     radial-gradient(70% 30% at 0% 0%, rgba(94,92,230,0.32), rgba(94,92,230,0) 70%),
     radial-gradient(70% 22% at 100% 100%, rgba(165,164,255,0.16), rgba(165,164,255,0) 70%);
 }
+
+/* ── Fold-out glass panel (Chord Builder choices) ── */
+.su-fold-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 380ms cubic-bezier(.2,.8,.2,1), opacity 260ms ease; }
+.su-fold[data-open] .su-fold-body { grid-template-rows: 1fr; opacity: 1; }
+.su-fold-chev { transition: transform 300ms cubic-bezier(.2,.8,.2,1); }
+.su-fold[data-open] .su-fold-chev { transform: rotate(180deg); }

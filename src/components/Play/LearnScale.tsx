@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLang } from '../../contexts/LanguageContext';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 import {
   FIFTHS, FEELS, DEGREES, keyName, feelById, scaleBox, hearKey, hearNote, hearScale, hearBox,
   loadSession, saveSession, type FeelId, type Box, type ScaleSession,
@@ -24,7 +25,23 @@ export function LearnScale({ resume }: { resume?: boolean }) {
   const [feel, setFeel] = useState<FeelId>(last?.feel ?? 'pmin');
   const [pos, setPos] = useState(resume && last ? last.pos : 0);
 
-  const go = (s: Step) => { setStep(s); window.scrollTo?.(0, 0); };
+  // Each step is a page in the browser history, so the header's back
+  // button, the swipe and the in-page Back all step back one screen
+  // instead of throwing the player out to Home.
+  const first = useRef(step);
+  useEffect(() => {
+    const onPop = () => { setStep((history.state?.learnStep as Step | undefined) ?? first.current); window.scrollTo?.(0, 0); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const go = (s: Step) => {
+    setStep(s); window.scrollTo?.(0, 0);
+    try { history.pushState({ ...(history.state ?? {}), learnStep: s }, ''); } catch { /* sandboxed */ }
+  };
+  const back = (to: Step) => {
+    if (history.state?.learnStep) history.back();
+    else { setStep(to); window.scrollTo?.(0, 0); }
+  };
   const remember = (s: ScaleSession) => saveSession(s);
 
   return (
@@ -33,12 +50,13 @@ export function LearnScale({ resume }: { resume?: boolean }) {
         <KeyStep he={he} value={key} onChange={setKey} onNext={() => go('feel')} />
       )}
       {step === 'feel' && (
-        <FeelStep he={he} keyPc={key} value={feel} onChange={setFeel} onBack={() => go('key')}
+        <FeelStep he={he} keyPc={key} value={feel} onChange={setFeel} onBack={() => back('key')}
           onNext={() => { setPos(0); remember({ key, feel, pos: 0 }); go('scale'); }} />
       )}
       {step === 'scale' && (
         <ScaleStep key={`${key}-${feel}-${pos}`} he={he} keyPc={key} feel={feel} pos={pos}
           onPos={p => { setPos(p); remember({ key, feel, pos: p }); }}
+          onBack={() => back('feel')}
           onChange={() => go('key')} />
       )}
     </div>
@@ -63,6 +81,20 @@ function Heading({ title, sub }: { title: string; sub: string }) {
       <h1 className="su-title">{title}</h1>
       <p className="su-sub">{sub}</p>
     </div>
+  );
+}
+
+/** Back one screen: a small glass pill above the step (Mac). */
+function BackLink({ he, label, onClick }: { he: boolean; label: string; onClick: () => void }) {
+  // On the phone the header's round back button already steps back.
+  if (!useIsDesktop()) return null;
+  return (
+    <button onClick={onClick} className="lg gc-no-bar"
+      style={{ alignSelf: 'flex-start', height: 36, borderRadius: 18, padding: '0 14px 0 10px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 15, fontWeight: 600, marginBottom: 18 }}>
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+        aria-hidden style={he ? { transform: 'scaleX(-1)' } : undefined}><path d="M12.5 4 L6.5 10 L12.5 16" /></svg>
+      {label}
+    </button>
   );
 }
 
@@ -129,6 +161,7 @@ function FeelStep({ he, keyPc, value, onChange, onBack, onNext }: {
   const cur = feelById(value);
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <BackLink he={he} label={he ? 'בחירת סולם' : 'Key'} onClick={onBack} />
       <Steps at={2} he={he} />
       <Heading title={he ? 'איזו תחושה?' : 'How should it feel?'}
         sub={he ? 'לכל סולם יש מצב רוח. קודם תקשיבו.' : 'Every scale has a mood. Listen first.'} />
@@ -169,8 +202,8 @@ function FeelStep({ he, keyPc, value, onChange, onBack, onNext }: {
 
 // ── 3 · Play ─────────────────────────────────────────────────────────────────
 
-function ScaleStep({ he, keyPc, feel, pos, onPos, onChange }: {
-  he: boolean; keyPc: number; feel: FeelId; pos: number; onPos: (p: number) => void; onChange: () => void;
+function ScaleStep({ he, keyPc, feel, pos, onPos, onBack, onChange }: {
+  he: boolean; keyPc: number; feel: FeelId; pos: number; onPos: (p: number) => void; onBack: () => void; onChange: () => void;
 }) {
   const lang = he ? 'he' : 'en';
   const f = feelById(feel);
@@ -190,6 +223,7 @@ function ScaleStep({ he, keyPc, feel, pos, onPos, onChange }: {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <BackLink he={he} label={he ? 'תחושה' : 'Feel'} onClick={onBack} />
       <Heading title={he ? `${keyName(keyPc)} ${f.name.he}` : `${keyName(keyPc)} ${f.name.en.toLowerCase()}`}
         sub={he ? `שריגים ${box.lo}–${box.hi} · הקישו על תו כדי לשמוע` : `Frets ${box.lo}–${box.hi} · tap any note to hear it`} />
 
