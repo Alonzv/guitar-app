@@ -225,7 +225,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0], onTuningChange }) 
       : cents > 0 ? (he ? 'קצת גבוה. משחררים מעט.' : 'A little sharp. Loosen slightly.')
       : (he ? 'קצת נמוך. מותחים מעט.' : 'A little flat. Tighten slightly.');
 
-  const GREEN = '#30D158';
+  const IN_TUNE = '#30D158';
   // The pitch track: −50…+50 cents across the width, the bead rides on it.
   const beadPct = 50 + Math.max(-50, Math.min(50, cents));
 
@@ -258,7 +258,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0], onTuningChange }) 
         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: desktop ? 8 : 0 }}>
         <span className="gc-notation" dir="ltr" style={{
           fontFamily: 'var(--su-display)', fontSize: desktop ? 200 : 168, lineHeight: desktop ? '206px' : '176px', fontWeight: 700, letterSpacing: '-0.05em',
-          color: inTune ? GREEN : display ? T.text : T.textMuted, transition: 'color .3s var(--ease)',
+          color: inTune ? IN_TUNE : display ? T.text : T.textMuted, transition: 'color .3s var(--ease)',
         }}>
           {letter}<span style={{ fontSize: 36, fontWeight: 600, color: T.textDim, letterSpacing: 0 }}>{display ? '' : octave}</span>
         </span>
@@ -274,11 +274,11 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0], onTuningChange }) 
           const major = Math.abs(c) === 50;
           return <span key={c} style={{ position: 'absolute', left: `calc(${50 + c}% - 1px)`, top: major ? 20 : 24, width: 2, height: major ? 20 : 12, borderRadius: 1, background: major ? 'rgba(235,235,245,0.3)' : 'rgba(255,255,255,0.12)' }} />;
         })}
-        <span style={{ position: 'absolute', left: 'calc(50% - 24px)', top: 6, width: 48, height: 48, borderRadius: 24, boxShadow: `inset 0 0 0 2px ${inTune ? GREEN : 'rgba(255,255,255,0.25)'}`, transition: 'box-shadow .3s' }} />
+        <span style={{ position: 'absolute', left: 'calc(50% - 24px)', top: 6, width: 48, height: 48, borderRadius: 24, boxShadow: `inset 0 0 0 2px ${inTune ? IN_TUNE : 'rgba(255,255,255,0.25)'}`, transition: 'box-shadow .3s' }} />
         {display && (
           <span style={{
             position: 'absolute', left: `calc(${beadPct}% - 18px)`, top: 12, width: 36, height: 36, borderRadius: 18,
-            background: inTune ? GREEN : T.text, boxShadow: 'inset 0 1px 0.5px rgba(255,255,255,0.6)',
+            background: inTune ? IN_TUNE : T.text, boxShadow: 'inset 0 1px 0.5px rgba(255,255,255,0.6)',
             transition: 'left .35s cubic-bezier(.2,.8,.2,1), background .3s',
           }} />
         )}
@@ -287,7 +287,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0], onTuningChange }) 
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, textAlign: 'center', marginTop: -8 }}>
-        <span style={{ fontSize: 20, fontWeight: 700, color: inTune ? GREEN : T.text }}>{status}</span>
+        <span style={{ fontSize: 20, fontWeight: 700, color: inTune ? IN_TUNE : T.text }}>{status}</span>
         <span style={{ fontSize: 15, color: T.textMuted }}>{advice}</span>
       </div>
 
@@ -308,7 +308,7 @@ export const Tuner: React.FC<Props> = ({ tuning = TUNINGS[0], onTuningChange }) 
               {noteName(tuning.notes[i] ?? label)}
               {done && !on && (
                 <span aria-hidden className="gc-pop" style={{
-                  position: 'absolute', right: -3, top: -3, width: 18, height: 18, borderRadius: 9, background: GREEN,
+                  position: 'absolute', right: -3, top: -3, width: 18, height: 18, borderRadius: 9, background: IN_TUNE,
                   boxShadow: `0 0 0 2px ${T.bgDeep}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5 9-10" /></svg>
