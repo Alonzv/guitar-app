@@ -56,7 +56,7 @@ export function SongDock({ compact, onOpenMap }: { compact?: boolean; onOpenMap?
 
   // The dock is the ink bar under every stop: paper text on ink, pills
   // outlined in paper. Cobalt marks only the chord that is sounding.
-  const fg = T.white, bar = T.secondary;
+  const fg = T.text, bar = T.bgCard;
   const ghost: React.CSSProperties = {
     height: 32, minWidth: 32, padding: '0 10px', border: `1.5px solid ${fg}`, borderRadius: 'var(--su-pill)', background: 'transparent',
     color: fg, cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -100,7 +100,7 @@ export function SongDock({ compact, onOpenMap }: { compact?: boolean; onOpenMap?
 
   return (
     <div data-gc-dock dir={rtl ? 'rtl' : 'ltr'} style={{
-      background: bar, color: fg, padding: compact ? '8px 14px calc(8px + env(safe-area-inset-bottom))' : '10px 32px',
+      background: 'transparent', color: fg, padding: compact ? '8px 14px calc(8px + env(safe-area-inset-bottom))' : '10px 32px',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* The song's controls — fold open above the line (0fr → 1fr rows). */}

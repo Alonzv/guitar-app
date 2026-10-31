@@ -11,7 +11,7 @@ function createWindow() {
     minHeight: 600,
     title: 'ScaleUp',
     icon: path.join(__dirname, '../public/icons/icon-512.png'),
-    backgroundColor: '#F7F0DC',
+    backgroundColor: '#000000',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

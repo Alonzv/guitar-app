@@ -1,17 +1,17 @@
 import { T } from '../theme';
 
 // ── Wordmark ─────────────────────────────────────────────────────────────────
-// SCALEUP in the display face — condensed, black, uppercase — with "Up" in the
-// one colour. Rendered as text so it follows the theme and the page language.
+// "ScaleUp" in the system display face, with "Up" in the tint. Rendered as
+// text so it follows the page language and the theme.
 
-export function Wordmark({ size = 64 }: { size?: number | string }) {
+export function Wordmark({ size = 34 }: { size?: number | string }) {
   return (
     <span aria-label="ScaleUp" style={{
-      fontFamily: 'var(--su-display)', fontStretch: '62%', fontWeight: 900, fontSize: size,
-      lineHeight: 0.8, letterSpacing: '-0.01em', textTransform: 'uppercase', color: T.text,
-      display: 'inline-block', whiteSpace: 'nowrap',
+      fontFamily: 'var(--su-display)', fontWeight: 700, fontSize: size,
+      lineHeight: 1.1, letterSpacing: '-0.03em', color: T.text,
+      display: 'inline-block', whiteSpace: 'nowrap', direction: 'ltr',
     }}>
-      Scale<span style={{ color: T.brandAccent }}>Up</span>
+      Scale<span style={{ color: T.tintLabel }}>Up</span>
     </span>
   );
 }

@@ -23,11 +23,10 @@ export function HelpButton({ topic }: { topic: string }) {
       <button
         onClick={() => setOpen(true)}
         aria-label={lang === 'he' ? 'מה זה?' : 'What is this?'}
-        className="gc-no-bar"
+        className="lg gc-no-bar"
         style={{
           width: 44, height: 44, flexShrink: 0, borderRadius: '50%',
-          border: `1.5px solid ${T.text}`, background: 'transparent',
-          color: T.text, fontSize: 15, fontWeight: 700, lineHeight: 1,
+          color: T.text, fontSize: 16, fontWeight: 600, lineHeight: 1,
           cursor: 'pointer', fontFamily: 'var(--gc-font)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
@@ -38,7 +37,7 @@ export function HelpButton({ topic }: { topic: string }) {
           onClick={() => setOpen(false)}
           style={{
             position: 'fixed', inset: 0, zIndex: 9000,
-            background: 'color-mix(in srgb, var(--gc-text) 55%, transparent)', display: 'flex',
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex',
             alignItems: 'center', justifyContent: 'center', padding: 16,
             animation: 'gcHelpFade 0.16s ease',
           }}
@@ -48,9 +47,9 @@ export function HelpButton({ topic }: { topic: string }) {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 440, background: T.bgDeep, color: T.text,
-              border: `var(--su-rule) solid ${T.border}`,
-              padding: '18px 20px 22px', boxSizing: 'border-box',
+              width: '100%', maxWidth: 440, background: T.bgCard, color: T.text,
+              borderRadius: 28,
+              padding: '18px 24px 26px', boxSizing: 'border-box',
               maxHeight: '86vh', overflowY: 'auto', fontFamily: 'var(--gc-font)',
               animation: 'gcHelpPop 0.2s cubic-bezier(0.34, 1.4, 0.5, 1)',
             }}

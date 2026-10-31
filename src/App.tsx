@@ -24,6 +24,7 @@ import { formatChordName } from './utils/chordIdentifier';
 import { DiatonicExtensions } from './components/Chords/DiatonicExtensions';
 
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
+import { LearnScale }        from './components/Play/LearnScale';
 import { TriadsGenerator }   from './components/Triads/TriadsGenerator';
 import { IntervalsTab }      from './components/Intervals/IntervalsTab';
 import { ChordWheel }        from './components/ScalePanel/ChordWheel';
@@ -92,7 +93,7 @@ const LAST_STOP_KEY = 'scaleup_last_stop';
 const INTERVAL_VIEWS = ['explore', 'measure', 'inchord'];
 // Stops whose tool draws its own poster title (the chord name, the scale, the
 // tuner's note, the tempo, the song title) — the shell skips the stop name.
-const OWN_POSTER = new Set(['chord-builder', 'scales', 'tuner', 'metronome', 'tab-writer']);
+const OWN_POSTER = new Set(['chord-builder', 'scales', 'tuner', 'metronome', 'tab-writer', 'learn-scale']);
 
 // ════════════════════════════════════════════════════════════════════════════
 export default function App() {
@@ -152,8 +153,11 @@ export default function App() {
     if (v === 'identify') return 'measure';
     return INTERVAL_VIEWS.includes(v) ? v : 'explore';
   });
+  // Learn a Scale opens at the start, or ('resume') where the player left off.
+  const [learnView, setLearnView] = useState('start');
   const subOf = (id: string) => id === 'chord-builder' ? chordView : id === 'intervals' ? intervalView : undefined;
   const setSub = (id: string, s: string) => {
+    if (id === 'learn-scale') setLearnView(s);
     if (id === 'chord-builder') setChordView(s);
     if (id === 'intervals' && INTERVAL_VIEWS.includes(s)) { setIntervalView(s); writeLS('scaleup_seg_intervals', s); }
   };
@@ -267,6 +271,7 @@ export default function App() {
       case 'harmonize':
       case 'reharmonize':   return <VoicingsTab desktop={d} globalProgression={progression} onChordsChange={handleChordNamesChange} tuning={tuning}
                                      activeSub={id === 'harmonize' ? 'harmonizer' : 'reharmonize'} />;
+      case 'learn-scale':   return <LearnScale key={learnView} resume={learnView === 'resume'} />;
       case 'scales':        return <ScaleExplorer desktop={d} />;
       case 'intervals':     return <IntervalsTab desktop={d} sub={intervalView} />;
       case 'chord-wheel':   return <ChordWheel desktop={d} onAddToProgression={handleAddToProgression} />;

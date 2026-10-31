@@ -39,6 +39,8 @@ const PALETTE = new Set([
   // Transit — paper, ink, cobalt, night
   'eceae3', 'f6f4ee', 'e0ddd5', '141414', 'd3cfc5', '77736b', '110cf0', '0b08c4',
   '4f7bff', '6b91ff', '2a2826',
+  // Liquid Glass — indigo tint and its label, Apple greys
+  '5e5ce6', '7270f0', 'a5a4ff', '1c1c1e', '2c2c2e', 'f5f5f7', '636366',
   // short forms of black/white
   'fff', '000',
 ]);

@@ -21,28 +21,30 @@ export const StopSearch = forwardRef<HTMLInputElement, Props>(function StopSearc
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
   return (
     <div style={{
-      height: shortcut ? 44 : 50, border: `2px solid ${T.text}`, borderRadius: 'var(--su-pill)',
-      display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px 0 18px', background: T.bgCard,
+      height: 44, borderRadius: 14,
+      display: 'flex', alignItems: 'center', gap: 8, paddingInline: '12px 6px', background: 'rgba(118,118,128,0.24)',
     }}>
-      <span aria-hidden style={{ fontSize: 15, fontWeight: 700 }}>⌕</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden style={{ color: T.textMuted, flex: 'none' }}>
+        <circle cx="10.5" cy="10.5" r="6.5" /><path d="m20 20-4.8-4.8" />
+      </svg>
       <input
         ref={ref}
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') onSubmit?.(); if (e.key === 'Escape') onChange(''); }}
         aria-label={he ? 'חיפוש כלי' : 'Search tools'}
-        placeholder={shortcut ? (he ? 'לאן?' : 'Where to?') : (he ? 'לאן? אקורד, סולם, טיונר…' : 'Where to? chord, scale, tuner…')}
+        placeholder={he ? 'חיפוש: אקורד, סולם, טיונר' : 'Search: chord, scale, tuner'}
         dir="auto"
         style={{
           flex: 1, minWidth: 0, height: 40, border: 'none', background: 'transparent', outline: 'none',
-          fontFamily: 'var(--gc-font)', fontSize: 13, color: T.text,
+          fontFamily: 'var(--gc-font)', fontSize: 17, color: T.text,
         }}
       />
       {value ? (
         <button onClick={() => onChange('')} aria-label={he ? 'ניקוי החיפוש' : 'Clear search'} className="gc-no-bar"
-          style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: T.text, color: T.bgDeep, fontSize: 14, cursor: 'pointer', flex: 'none' }}>×</button>
+          style={{ width: 22, height: 22, marginInlineEnd: 6, borderRadius: '50%', border: 'none', background: T.textMuted, color: T.bgDeep, fontSize: 14, lineHeight: 1, cursor: 'pointer', flex: 'none', padding: 0 }}>×</button>
       ) : shortcut && (
-        <span style={{ fontSize: 10, border: `1px solid ${T.textMuted}`, color: T.textMuted, padding: '1px 5px', marginInlineEnd: 8 }}>
+        <span style={{ fontSize: 13, color: T.textDim, marginInlineEnd: 8 }}>
           {isMac ? '⌘K' : 'Ctrl K'}
         </span>
       )}

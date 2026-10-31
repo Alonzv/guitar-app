@@ -9,17 +9,17 @@ import { soundEnabled, setSoundEnabled, subscribeSound } from '../utils/previewS
 export function SoundToggle({ compact }: { compact?: boolean } = {}) {
   const [on, setOn] = useState(soundEnabled);
   useEffect(() => subscribeSound(setOn), []);
-  const size = compact ? 40 : 44;
+  const size = 44;
   return (
     <button
       onClick={() => setSoundEnabled(!on)}
       title={on ? 'Mute tap sounds' : 'Unmute tap sounds'}
       aria-label={on ? 'Mute tap sounds' : 'Unmute tap sounds'}
       aria-pressed={on}
-      className="gc-icon-btn gc-no-bar"
+      className="lg gc-icon-btn gc-no-bar"
       style={{
         width: size, height: size, borderRadius: '50%', flex: 'none',
-        border: `1.5px solid ${T.text}`, background: 'transparent', color: T.text,
+        color: T.text,
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >

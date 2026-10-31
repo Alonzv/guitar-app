@@ -36,6 +36,7 @@ export const T = {
   // Transit
   hairline:        'var(--su-hairline)',
   onPrimary:       'var(--su-on-primary)',
+  tintLabel:       'var(--su-tint-label)',
 } as const;
 
 export type Theme = typeof T;
@@ -61,17 +62,14 @@ export const card = (extra?: React.CSSProperties): React.CSSProperties => {
 // Display type — Archivo condensed for posters and big numbers, semi-condensed
 // for keys and list items. Spread into a style.
 export const display = (size: number, weight = 900): React.CSSProperties => ({
-  fontFamily: 'var(--su-display)', fontStretch: 'var(--su-display-cond)' as React.CSSProperties['fontStretch'],
-  fontWeight: weight, fontSize: size, lineHeight: 0.8, letterSpacing: '-0.02em',
+  fontFamily: 'var(--su-display)', fontWeight: Math.min(weight, 700), fontSize: size * 0.8, lineHeight: 1.05, letterSpacing: '-0.03em',
 });
 export const semi = (size: number, weight = 800): React.CSSProperties => ({
-  fontFamily: 'var(--su-display)', fontStretch: 'var(--su-display-semi)' as React.CSSProperties['fontStretch'],
-  fontWeight: weight, fontSize: size, lineHeight: 1,
+  fontFamily: 'var(--su-display)', fontWeight: Math.min(weight, 600), fontSize: size, lineHeight: 1.1,
 });
 // The small mono label above a group: 10px, wide tracking, muted.
 export const label: React.CSSProperties = {
-  margin: 0, fontFamily: 'var(--gc-font)', fontSize: 10, letterSpacing: '0.14em',
-  textTransform: 'uppercase', color: T.textMuted,
+  margin: 0, fontFamily: 'var(--gc-font)', fontSize: 13, fontWeight: 500, color: T.textMuted,
 };
 
 // Buttons are pills (1.5px ink outline; selected = filled ink). Keys and tiles
@@ -84,34 +82,34 @@ export const btn = {
     padding: '12px 18px', minHeight: 44,
     borderRadius: 'var(--su-pill)',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    fontWeight: 700, fontSize: 13, letterSpacing: '0.1em',
+    fontWeight: 600, fontSize: 15,
     background: disabled ? T.bgInput : T.secondary,
     color: disabled ? T.textDim : T.white,
-    border: `1.5px solid ${disabled ? T.bgInput : T.secondary}`,
+    border: 'none',
   }),
   secondary: (): React.CSSProperties => ({
     padding: '12px 18px', minHeight: 44,
     borderRadius: 'var(--su-pill)',
-    border: `1.5px solid ${T.text}`,
+    border: 'none',
     cursor: 'pointer',
-    fontWeight: 700, fontSize: 13, letterSpacing: '0.1em',
-    background: 'transparent',
+    fontWeight: 600, fontSize: 15,
+    background: 'rgba(255,255,255,0.08)',
     color: T.text,
   }),
   pill: (active: boolean): React.CSSProperties => ({
     padding: '0 14px', minHeight: 36,
     borderRadius: 'var(--su-pill)',
-    border: `1.5px solid ${T.text}`,
+    border: 'none',
     cursor: 'pointer',
-    fontSize: 12, fontWeight: 700,
-    background: active ? T.secondary : 'transparent',
+    fontSize: 14, fontWeight: active ? 600 : 500,
+    background: active ? T.secondary : 'rgba(255,255,255,0.08)',
     color: active ? T.white : T.text,
   }),
   cta: (disabled?: boolean): React.CSSProperties => ({
     padding: '12px 22px', minHeight: 44,
     borderRadius: 'var(--su-pill)', border: 'none',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    fontWeight: 700, fontSize: 13, letterSpacing: '0.14em',
+    fontWeight: 600, fontSize: 15,
     background: disabled ? T.bgInput : T.primary,
     color: disabled ? T.textDim : 'var(--su-on-primary)',
   }),
@@ -119,7 +117,7 @@ export const btn = {
 
 // A square key (roots, notes, degrees): chip grey, or ink when selected.
 export const key = (active: boolean): React.CSSProperties => ({
-  minHeight: 44, borderRadius: 0, border: 'none', cursor: 'pointer',
+  minHeight: 44, borderRadius: 'var(--su-key)', border: 'none', cursor: 'pointer',
   background: active ? T.secondary : T.bgInput,
   color: active ? T.white : T.text,
   ...semi(17),

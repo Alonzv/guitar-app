@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { T } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
-import { stopById, lineOf, searchStops, type Stop } from '../../data/tools';
-import { NetworkMap } from './NetworkMap';
+import { stopById, searchStops, type Stop } from '../../data/tools';
+import { StopList } from './StopList';
+import { GlassDefs } from './GlassDefs';
+import { HomeHero } from './HomeHero';
 import { StopSearch } from './StopSearch';
 import { setActionsSlot } from './actionsSlot';
 import { Wordmark } from '../Wordmark';
@@ -10,17 +12,20 @@ import { HelpButton } from '../HelpButton';
 import { SoundToggle } from '../SoundToggle';
 import { LangToggle } from '../LangToggle';
 
-// ── Transit shell ────────────────────────────────────────────────────────────
-// Mobile: the network map is home; a stop opens full screen under a
-// "[L#] ← STOP" header; the map marks the last tool used. Desktop: the map is a permanent 300px left rail and
-// the stop fills the rest under a 64px top bar with the breadcrumb.
+// ── Shell (Liquid Glass) ─────────────────────────────────────────────────────
+// Glass is the navigation layer only; the tools underneath stay flat.
+// Mobile: Home is one "Continue" card, three ways to start, then every tool
+// in grouped lists. A tool opens full screen under a floating glass back
+// button, with a large title and the song bar floating in glass at the
+// bottom. Desktop: a floating glass sidebar with search and the grouped
+// tools; the tool fills the rest.
 
 interface Props {
   desktop: boolean;
   /** Current stop id, or 'home' (mobile only). */
   stop: string;
   sub?: string;
-  onGo: (stopId: string) => void;
+  onGo: (stopId: string, sub?: string) => void;
   onSub: (sub: string) => void;
   onHome: () => void;
   /** The last stop used — marked on the mobile map. */
@@ -42,45 +47,18 @@ export function TransitShell(p: Props) {
 
 // ── Small parts ──────────────────────────────────────────────────────────────
 
-function LineBadge({ stop, size = 'sm' }: { stop: Stop; size?: 'sm' | 'md' }) {
-  const line = lineOf(stop);
-  return (
-    <span style={{
-      background: line.color, color: line.onColor, padding: size === 'md' ? '3px 7px' : '3px 6px',
-      fontWeight: 700, fontSize: 11, letterSpacing: '0.1em', flex: 'none',
-    }}>{line.id}</span>
-  );
-}
 
-function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
-  const { lang } = useLang();
-  return (
-    <button onClick={onToggle} aria-pressed={dark} className="gc-no-bar"
-      aria-label={lang === 'he' ? (dark ? 'מצב בהיר' : 'מצב לילה') : (dark ? 'Light mode' : 'Night mode')}
-      style={{
-        width: 40, height: 40, padding: 0, flex: 'none', borderRadius: '50%', cursor: 'pointer', fontWeight: 700, fontSize: 14,
-        border: `1.5px solid ${T.text}`, background: dark ? T.secondary : 'transparent', color: dark ? T.white : T.text,
-      }}>{dark ? '☀' : '☾'}</button>
-  );
-}
 
 function SubPills({ stop, sub, onSub }: { stop: Stop; sub?: string; onSub: (s: string) => void }) {
   const { lang } = useLang();
   if (!stop.subs) return null;
   return (
-    <div role="tablist" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-      {stop.subs.map(s => {
-        const on = s.id === sub;
-        return (
-          <button key={s.id} role="tab" aria-selected={on} data-active={on} onClick={() => onSub(s.id)}
-            className="gc-no-bar"
-            style={{
-              height: 40, padding: '0 16px', borderRadius: 'var(--su-pill)', cursor: 'pointer',
-              border: `1.5px solid ${T.text}`, background: on ? T.secondary : 'transparent', color: on ? T.white : T.text,
-              fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
-            }}>{s.label[lang]}</button>
-        );
-      })}
+    <div role="tablist" className="su-seg">
+      {stop.subs.map(s => (
+        <button key={s.id} role="tab" aria-selected={s.id === sub} data-active={s.id === sub} onClick={() => onSub(s.id)} className="gc-no-bar">
+          {s.label[lang]}
+        </button>
+      ))}
     </div>
   );
 }
@@ -91,7 +69,7 @@ function SubPills({ stop, sub, onSub }: { stop: Stop; sub?: string; onSub: (s: s
 function BackChevron({ rtl }: { rtl: boolean }) {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.4"
-      strokeLinecap="square" strokeLinejoin="miter" style={rtl ? { transform: 'scaleX(-1)' } : undefined}>
+      strokeLinecap="round" strokeLinejoin="round" style={rtl ? { transform: 'scaleX(-1)' } : undefined}>
       <path d="M12.5 4 L6.5 10 L12.5 16" />
     </svg>
   );
@@ -99,33 +77,14 @@ function BackChevron({ rtl }: { rtl: boolean }) {
 
 const helpTopic = (stop: Stop, sub?: string) => stop.subs?.find(s => s.id === sub)?.help ?? stop.help;
 
-/** The stop's name as a poster, sized down until it fits its width. */
-function StopPoster({ text, max }: { text: string; max: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [size, setSize] = useState(max);
-  useEffect(() => {
-    const el = ref.current; const box = el?.parentElement;
-    if (!el || !box) return;
-    const fit = () => {
-      el.style.fontSize = `${max}px`;
-      const w = el.getBoundingClientRect().width, avail = box.clientWidth;
-      setSize(w > avail && w > 0 ? Math.max(28, Math.floor(max * avail / w)) : max);
-    };
-    fit();
-    document.fonts?.ready.then(fit);
-    const ro = new ResizeObserver(fit); ro.observe(box);
-    return () => ro.disconnect();
-  }, [text, max]);
-  return (
-    <div style={{ overflowX: 'clip', whiteSpace: 'nowrap' }}>
-      <span ref={ref} className="su-poster" style={{ display: 'inline-block', fontSize: size, paddingBottom: '0.12em' }}>{text}</span>
-    </div>
-  );
+/** The stop's name as a large title. */
+function StopTitle({ text }: { text: string }) {
+  return <h1 className="su-title gc-notation">{text}</h1>;
 }
 
 // ── Mobile ───────────────────────────────────────────────────────────────────
 
-function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkMode, onToggleDark, userMenu, sharedBanner, dock, children }: Props) {
+function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, userMenu, sharedBanner, dock, ownPoster, children }: Props) {
   const { lang, rtl } = useLang();
   const he = lang === 'he';
   const [q, setQ] = useState('');
@@ -137,20 +96,26 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
   if (home) {
     return (
       <div dir={rtl ? 'rtl' : 'ltr'} style={{ minHeight: '100dvh', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)' }}>
+        <GlassDefs />
         {sharedBanner}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, padding: '12px 20px 0' }}>
-          <SoundToggle compact /><LangToggle compact /><ThemeToggle dark={darkMode} onToggle={onToggleDark} />{userMenu}
-        </div>
-        <div style={{ padding: '14px 20px 16px' }}>
-          <Wordmark size="min(72px, 19vw)" />
-        </div>
-        <div style={{ margin: '0 20px' }}>
-          <StopSearch value={q} onChange={setQ} onSubmit={() => { if (results[0]) onGo(results[0].id); }} />
-        </div>
-        <div style={{ padding: '14px 20px calc(32px + env(safe-area-inset-bottom))' }}>
-          <NetworkMap stops={results} current={lastStop} onGo={onGo} />
-        </div>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: 'calc(12px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 4 }}>
+            <Wordmark size={34} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <SoundToggle compact /><LangToggle compact />{userMenu}
+            </div>
+          </div>
 
+          <HomeHero lastStop={lastStop} onGo={onGo} />
+
+          <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <h2 className="su-h2">{he ? 'כל הכלים' : 'All tools'}</h2>
+            <StopSearch value={q} onChange={setQ} onSubmit={() => { if (results[0]) onGo(results[0].id); }} />
+            <div style={{ marginTop: 14 }}>
+              <StopList stops={results} current={lastStop} onGo={onGo} />
+            </div>
+          </section>
+        </div>
       </div>
     );
   }
@@ -158,53 +123,48 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, darkM
   const topic = helpTopic(stop, sub);
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} style={{ minHeight: '100dvh', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', display: 'flex', flexDirection: 'column' }}>
+      <GlassDefs />
       {sharedBanner}
+      {/* Floating glass controls; no bar behind them, the content scrolls under. */}
       <header style={{
-        position: 'sticky', top: 0, zIndex: 40, background: T.bgDeep,
-        padding: 'calc(10px + env(safe-area-inset-top)) 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-        borderBottom: `var(--su-rule) solid ${T.border}`,
+        position: 'sticky', top: 0, zIndex: 40, pointerEvents: 'none',
+        padding: 'calc(10px + env(safe-area-inset-top)) 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <button onClick={onHome} className="gc-no-bar" aria-label={he ? 'חזרה למפה' : 'Back to the map'} title={he ? 'למפה' : 'Map'}
-            style={{
-              width: 44, height: 44, flex: 'none', borderRadius: '50%', border: `1.5px solid ${T.text}`, background: 'transparent',
-              color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-            }}>
-            <BackChevron rtl={rtl} />
-          </button>
-          <button onClick={onHome} tabIndex={-1} aria-hidden className="gc-no-bar"
-            style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, minWidth: 0, background: 'transparent', border: 'none', cursor: 'pointer', color: T.text, fontSize: 11, letterSpacing: '0.1em', padding: 0 }}>
-            <LineBadge stop={stop} />
-            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stop.name[lang].toUpperCase()}</span>
-          </button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
-          <div ref={setActionsSlot} style={{ display: 'flex', alignItems: 'center', gap: 6 }} />
+        <button onClick={onHome} className="lg lg-circle gc-no-bar" aria-label={he ? 'חזרה לבית' : 'Back to Home'}
+          style={{ pointerEvents: 'auto', color: T.text }}>
+          <BackChevron rtl={rtl} />
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none', pointerEvents: 'auto' }}>
+          <div ref={setActionsSlot} style={{ display: 'flex', alignItems: 'center', gap: 8 }} />
           {topic && <HelpButton topic={topic} />}
         </div>
       </header>
-      <main style={{ flex: 1, padding: '14px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+      <main style={{ flex: 1, padding: '4px 16px 32px', display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+        {!ownPoster && <StopTitle text={stop.name[lang]} />}
         <SubPills stop={stop} sub={sub} onSub={onSub} />
         {children}
       </main>
-      {dock && <div style={{ position: 'sticky', bottom: 0, zIndex: 40 }}>{dock}</div>}
+      {dock && (
+        <div style={{ position: 'sticky', bottom: 0, zIndex: 40, padding: '0 10px calc(10px + env(safe-area-inset-bottom))' }}>
+          <div className="lg lg-bar" style={{ borderRadius: 28, overflow: 'hidden' }}>{dock}</div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Desktop ──────────────────────────────────────────────────────────────────
 
-function DesktopTransit({ stop: stopId, sub, onGo, onSub, darkMode, onToggleDark, userMenu, sharedBanner, dock, ownPoster, children }: Props) {
+function DesktopTransit({ stop: stopId, sub, onGo, onSub, userMenu, sharedBanner, dock, ownPoster, children }: Props) {
   const { lang, rtl } = useLang();
-  const he = lang === 'he';
   const [q, setQ] = useState('');
   const results = searchStops(q);
   const searchRef = useRef<HTMLInputElement>(null);
   const stop = stopById(stopId) ?? stopById('chord-builder')!;
-  const line = lineOf(stop);
   const topic = helpTopic(stop, sub);
+  const isElectron = typeof navigator !== 'undefined' && /Electron|Tauri/.test(navigator.userAgent);
 
-  // ⌘K / Ctrl+K (or "/") focuses the map's search from anywhere.
+  // ⌘K / Ctrl+K (or "/") focuses the search from anywhere.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
@@ -217,56 +177,54 @@ function DesktopTransit({ stop: stopId, sub, onGo, onSub, darkMode, onToggleDark
   }, []);
 
   return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{
-      height: '100vh', display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gridTemplateRows: 'auto 1fr',
-      background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)',
-    }}>
-      <div style={{ gridColumn: '1 / -1' }}>{sharedBanner}</div>
+    <div dir={rtl ? 'rtl' : 'ltr'} style={{ height: '100vh', position: 'relative', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', overflow: 'hidden' }}>
+      <GlassDefs />
 
-      {/* The map rail */}
-      <aside style={{ borderInlineEnd: `var(--su-rule) solid ${T.border}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <button onClick={() => onGo('chord-builder')} className="gc-no-bar" aria-label="ScaleUp"
-          style={{ padding: '26px 24px 18px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: rtl ? 'right' : 'left', color: T.text }}>
-          <Wordmark size={64} />
+      {/* The floating glass sidebar */}
+      <aside className="lg lg-bar" style={{
+        position: 'absolute', insetInlineStart: 10, top: 10, bottom: 10, width: 260, zIndex: 30,
+        borderRadius: 26, display: 'flex', flexDirection: 'column', minHeight: 0,
+        padding: `${isElectron ? 46 : 18}px 12px 12px`,
+      }}>
+        <div style={{ position: 'absolute', insetInline: 0, top: 0, height: 40, WebkitAppRegion: 'drag' } as React.CSSProperties} />
+        <button onClick={() => onGo('learn-scale')} className="gc-no-bar" aria-label="ScaleUp"
+          style={{ padding: '4px 12px 14px', textAlign: 'start', color: T.text, alignSelf: 'stretch' }}>
+          <Wordmark size={26} />
         </button>
-        <div style={{ margin: '0 20px 14px' }}>
+        <div style={{ margin: '0 4px 16px' }}>
           <StopSearch ref={searchRef} value={q} onChange={setQ} shortcut
             onSubmit={() => { if (results[0]) { onGo(results[0].id); setQ(''); } }} />
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 8px', scrollbarWidth: 'thin' }}>
-          <NetworkMap stops={results} current={stop.id} onGo={id => { onGo(id); setQ(''); }} dense />
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 8px', scrollbarWidth: 'none' }}>
+          <StopList stops={results} current={stop.id} onGo={id => { onGo(id); setQ(''); }} dense />
         </div>
-        <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ paddingTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>{userMenu}</div>
-          <SoundToggle compact /><LangToggle compact /><ThemeToggle dark={darkMode} onToggle={onToggleDark} />
+          <SoundToggle compact /><LangToggle compact />
         </div>
       </aside>
 
-      {/* The stop */}
-      <main style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
-        <div style={{
-          height: 64, flex: 'none', borderBottom: `var(--su-rule) solid ${T.border}`, display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: 16, padding: '0 32px', fontSize: 11, letterSpacing: '0.1em',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-            <LineBadge stop={stop} size="md" />
-            <span>{line.name[lang].toUpperCase()}</span>
-            <span style={{ color: T.textMuted }}>/</span>
-            <b style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stop.name[lang].toUpperCase()}</b>
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 'none' }}>
+      {/* The tool */}
+      <main style={{ position: 'absolute', inset: 0, paddingInlineStart: 280, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ height: 64, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '0 28px', WebkitAppRegion: 'drag' } as React.CSSProperties}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
             <div ref={setActionsSlot} style={{ display: 'flex', alignItems: 'center', gap: 8 }} />
             {topic && <HelpButton topic={topic} />}
           </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-          <div style={{ padding: '28px 32px 40px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 1240 }}>
-            {!ownPoster && <StopPoster text={stop.name[lang]} max={he ? 110 : 132} />}
+          {sharedBanner}
+          <div style={{ padding: '4px 40px 48px', display: 'flex', flexDirection: 'column', gap: 22, maxWidth: 1080, margin: '0 auto' }}>
+            {!ownPoster && <StopTitle text={stop.name[lang]} />}
             <SubPills stop={stop} sub={sub} onSub={onSub} />
             {children}
           </div>
         </div>
-        {dock && <div style={{ flex: 'none' }}>{dock}</div>}
+        {dock && (
+          <div style={{ flex: 'none', padding: '0 20px 14px' }}>
+            <div className="lg lg-bar" style={{ borderRadius: 26, overflow: 'hidden' }}>{dock}</div>
+          </div>
+        )}
       </main>
     </div>
   );

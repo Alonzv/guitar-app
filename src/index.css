@@ -118,16 +118,16 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: var(--gc-font);
-  font-weight: 300;
-  letter-spacing: 0.04em;
-  text-rendering: geometricPrecision;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-rendering: optimizeLegibility;
   background-color: var(--gc-bg-deep);
   color: var(--gc-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-button { border: none; background: none; cursor: pointer; font-family: inherit; text-rendering: inherit; letter-spacing: -0.02em; text-transform: uppercase; }
+button { border: none; background: none; cursor: pointer; font-family: inherit; color: inherit; text-rendering: inherit; letter-spacing: -0.01em; }
 
 /* Music notation is case-sensitive: m2 is a minor 2nd, M2 a major 2nd; Cm and
    CM are different chords. The blanket uppercase above erases that distinction,
@@ -276,100 +276,72 @@ svg [role="button"] { transform-box: fill-box; transform-origin: center; }
    at these, so components recolour from here.
 ───────────────────────────────────────────────────────────── */
 :root {
-  /* Type */
-  --gc-font:         'Azeret Mono', 'Miriam Libre', ui-monospace, monospace;   /* body, data, labels */
-  --gc-mono:         'Azeret Mono', 'Miriam Libre', ui-monospace, monospace;
-  --su-display:      'Archivo', 'Heebo', sans-serif;                          /* posters, names, numbers */
-  --su-display-cond: 62%;   /* font-stretch for headlines */
-  --su-display-semi: 75%;   /* font-stretch for list items / keys */
+  /* ── ScaleUp · Liquid Glass ──────────────────────────────────────────────
+     One dark palette, one accent (indigo). Content is flat; glass belongs to
+     the navigation layer only (.lg below). The old Transit names are kept so
+     every component recolours from here. */
+  color-scheme: dark;
 
-  /* Light — concrete paper */
-  --gc-bg-deep:      #ECEAE3;   /* page */
-  --gc-bg-card:      #F6F4EE;   /* inputs, raised fields */
-  --gc-bg-input:     #E0DDD5;   /* chips, inactive keys */
-  --gc-border:       #141414;   /* structural rules are INK, 2px */
-  --su-hairline:     #D3CFC5;   /* secondary separators, playhead column */
-  --gc-text:         #141414;
-  --gc-text-muted:   #77736B;   /* labels, meta (AA on paper) */
-  --gc-text-dim:     #77736B;
-  --gc-secondary:    #141414;   /* filled/active = ink */
-  --gc-white:        #ECEAE3;   /* text on ink */
-  --gc-coral:        #77736B;   /* the grey "line" colour (L2) */
+  /* Type: the system face (SF on Apple devices), Heebo for Hebrew elsewhere */
+  --gc-font:         -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Heebo', system-ui, sans-serif;
+  --gc-mono:         ui-monospace, 'SF Mono', 'Azeret Mono', monospace;
+  --su-display:      -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Heebo', system-ui, sans-serif;
+  --su-display-cond: 100%;
+  --su-display-semi: 100%;
+
+  --gc-bg-deep:      #000000;   /* page */
+  --gc-bg-card:      #1C1C1E;   /* grouped surfaces, fields */
+  --gc-bg-input:     #2C2C2E;   /* chips, inactive keys */
+  --gc-border:       rgba(255,255,255,0.12);
+  --su-hairline:     rgba(255,255,255,0.08);
+  --gc-text:         #F5F5F7;
+  --gc-text-muted:   rgba(235,235,245,0.60);
+  --gc-text-dim:     rgba(235,235,245,0.30);
+  --gc-secondary:    #F5F5F7;   /* selected = white, like an Apple segmented thumb */
+  --gc-white:        #000000;   /* text on white */
+  --gc-coral:        rgba(235,235,245,0.60);
 
   /* The one colour */
-  --gc-primary:      #110CF0;
-  --gc-primary-hov:  #0B08C4;
-  --gc-primary-bg:   rgba(17,12,240,0.08);
-  --gc-primary-soft: rgba(17,12,240,0.10);
-  --gc-primary-glow: rgba(17,12,240,0.30);
-  --gc-brand-accent: #110CF0;
-  --su-on-primary:   #FFFFFF;   /* text on cobalt */
+  --gc-primary:      #5E5CE6;
+  --gc-primary-hov:  #7270F0;
+  --gc-primary-bg:   rgba(94,92,230,0.16);
+  --gc-primary-soft: rgba(94,92,230,0.18);
+  --gc-primary-glow: rgba(94,92,230,0.40);
+  --gc-brand-accent: #A5A4FF;
+  --su-on-primary:   #FFFFFF;
+  --su-tint-label:   #A5A4FF;   /* tint on dark text sizes (60% tint + 40% white) */
 
-  /* Derived — ink tints, feedback (cobalt = right / in tune, ink = wrong) */
-  --gc-secondary-bg:    rgba(20,20,20,0.06);
-  --gc-secondary-faint: rgba(20,20,20,0.08);
-  --gc-coral-faint:     rgba(20,20,20,0.06);
-  --gc-coral-faint2:    rgba(20,20,20,0.10);
-  --gc-white-soft:      rgba(236,234,227,0.80);
-  --gc-peek:            #77736B;
-  --gc-success:         #110CF0;
-  --gc-success-soft:    rgba(17,12,240,0.12);
-  --gc-error:           #141414;
-  --gc-error-soft:      rgba(20,20,20,0.10);
+  --gc-secondary-bg:    rgba(255,255,255,0.06);
+  --gc-secondary-faint: rgba(255,255,255,0.08);
+  --gc-coral-faint:     rgba(255,255,255,0.06);
+  --gc-coral-faint2:    rgba(255,255,255,0.10);
+  --gc-white-soft:      rgba(0,0,0,0.70);
+  --gc-peek:            rgba(235,235,245,0.30);
+  --gc-success:         #5E5CE6;
+  --gc-success-soft:    rgba(94,92,230,0.20);
+  --gc-error:           #F5F5F7;
+  --gc-error-soft:      rgba(255,255,255,0.12);
   --gc-offset:          none;
   --gc-offset-sm:       none;
-  --gc-bar-color:       transparent;   /* the old left accent bars are gone */
+  --gc-bar-color:       transparent;
 
   /* Fretboard */
   --gc-fretboard-bg:   transparent;
-  --gc-fretboard-nut:  #141414;
-  --gc-fretboard-str:  #141414;
-  --gc-fretboard-fret: #141414;
-  --gc-fretboard-pos:  rgba(20,20,20,0.06);
+  --gc-fretboard-nut:  #F5F5F7;
+  --gc-fretboard-str:  rgba(255,255,255,0.30);
+  --gc-fretboard-fret: rgba(255,255,255,0.14);
+  --gc-fretboard-pos:  rgba(255,255,255,0.06);
 
-  /* Shape */
-  --su-rule:     2px;     /* structural lines */
-  --su-pill:     999px;   /* buttons/chips are pills */
-  --su-key:      0;       /* keys, tiles, cards: square */
-  --su-hit:      44px;    /* minimum tap target */
-  --su-grain:    0.22;    /* paper texture opacity (0 to disable) */
+  /* Shape: soft, concentric corners */
+  --su-rule:     1px;
+  --su-pill:     999px;
+  --su-key:      12px;
+  --su-hit:      44px;
+  --su-grain:    0;
 }
 
-body.dark, .su-night {
-  --gc-bg-deep:      #111110;
-  --gc-bg-card:      #1A1918;
-  --gc-bg-input:     #242220;
-  --gc-border:       #383530;
-  --su-hairline:     #2A2826;
-  --gc-text:         #F0EAD8;
-  --gc-text-muted:   #9A938A;
-  --gc-text-dim:     #9A938A;
-  --gc-secondary:    #F0EAD8;   /* filled/active = sand */
-  --gc-white:        #111110;   /* text on sand */
-  --gc-coral:        #9A938A;
-  --gc-primary:      #4F7BFF;   /* lifted cobalt for contrast on black */
-  --gc-primary-hov:  #6B91FF;
-  --gc-primary-bg:   rgba(79,123,255,0.14);
-  --gc-primary-soft: rgba(79,123,255,0.16);
-  --gc-primary-glow: rgba(79,123,255,0.40);
-  --gc-brand-accent: #4F7BFF;
-  --su-on-primary:   #FFFFFF;
-  --gc-secondary-bg:    rgba(240,234,216,0.06);
-  --gc-secondary-faint: rgba(240,234,216,0.08);
-  --gc-coral-faint:     rgba(240,234,216,0.06);
-  --gc-coral-faint2:    rgba(240,234,216,0.10);
-  --gc-white-soft:      rgba(17,17,16,0.80);
-  --gc-peek:            #6B655C;
-  --gc-success:         #4F7BFF;
-  --gc-success-soft:    rgba(79,123,255,0.18);
-  --gc-error:           #F0EAD8;
-  --gc-error-soft:      rgba(240,234,216,0.12);
-  --gc-fretboard-nut:  #F0EAD8;
-  --gc-fretboard-str:  #6B655C;
-  --gc-fretboard-fret: #383530;
-  --gc-fretboard-pos:  rgba(240,234,216,0.08);
-  --su-grain:    0;     /* no grain at night */
-}
+/* Night is the only mode now; the old switch keeps working and changes nothing. */
+body.dark, .su-night { color-scheme: dark; }
 
 /* Night surface for a single stop (the tuner, the metronome) in light mode */
 .su-night { background: var(--gc-bg-deep); color: var(--gc-text); }
@@ -388,14 +360,14 @@ svg path[role="button"]:focus-visible { stroke: var(--gc-primary); stroke-width:
 }
 
 /* Display type helpers */
-.su-poster  { font-family: var(--su-display); font-stretch: var(--su-display-cond); font-weight: 900; line-height: 0.8; letter-spacing: -0.02em; text-transform: uppercase; }
-.su-semi    { font-family: var(--su-display); font-stretch: var(--su-display-semi); font-weight: 800; }
+.su-poster  { font-family: var(--su-display); font-weight: 700; line-height: 1.1; letter-spacing: -0.03em; }
+.su-semi    { font-family: var(--su-display); font-weight: 600; }
 .su-outline { color: transparent !important; -webkit-text-stroke: 3px var(--gc-text); }
-.su-label   { font-family: var(--gc-font); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gc-text-muted); }
+.su-label   { font-family: var(--gc-font); font-size: 13px; letter-spacing: 0; color: var(--gc-text-muted); }
 
 /* Shape vocabulary: pills for buttons/chips, square keys/tiles. */
 .su-pill { border-radius: var(--su-pill) !important; }
-.su-key  { border-radius: 0 !important; }
+.su-key  { border-radius: var(--su-key) !important; }
 
 button:focus-visible, input:focus-visible, select:focus-visible, [role="button"]:focus-visible {
   outline: 3px solid var(--gc-primary); outline-offset: 2px;
@@ -496,8 +468,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [role="button"]
   white-space: nowrap;
   font-size: 14px;
   font-family: inherit;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
 }
 @media (min-width: 480px) {
   .gc-tab {
@@ -619,8 +590,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [role="button"]
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -658,17 +628,16 @@ select {
 ───────────────────────────────────────────────────────────── */
 .gc-tuner-note {
   font-size: clamp(64px, 22vw, 96px);
-  font-family: var(--gc-font);
-  font-weight: 600;
+  font-family: var(--su-display);
+  font-weight: 700;
   line-height: 0.9;
 }
 
 /* Section labels — mono uppercase 10px */
 .gc-sec-label {
   font-family: var(--gc-font);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0;
   color: var(--gc-text-dim);
 }
 
@@ -709,3 +678,100 @@ select {
   transform: none;
   line-height: 1;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Liquid Glass pass. The tools below were drawn in the Transit
+   vocabulary (mono caps, wide tracking, condensed posters, ink
+   outlines, square keys). These rules translate that vocabulary
+   in one place instead of in every tool.
+───────────────────────────────────────────────────────────── */
+[style*="text-transform: uppercase"] { text-transform: none !important; }
+[style*="letter-spacing: 0.1"], [style*="letter-spacing: 0.08"], [style*="letter-spacing: 0.06"],
+[style*="letter-spacing: 0.04"] { letter-spacing: 0 !important; }
+[style*="font-stretch"] { font-stretch: normal !important; }
+[style*="font-weight: 900"] { font-weight: 700 !important; }
+/* Outlined pills become quiet, hairline-ringed fills. */
+:is(button, select, a, [role="button"], label)[style*="1.5px solid"] {
+  border-color: rgba(255,255,255,0.14) !important;
+}
+:is(button, [role="button"])[style*="border-radius: 0px"] { border-radius: var(--su-key) !important; }
+/* Structural rules: hairlines, never ink. */
+[style*="border-top: 2px solid"], [style*="border-bottom: 2px solid"] { border-color: var(--gc-border) !important; }
+select { background-color: var(--gc-bg-card); color: var(--gc-text); border-radius: 12px; }
+input, textarea { color: var(--gc-text); }
+
+/* ── Glass: navigation layer only ── */
+.lg {
+  position: relative;
+  isolation: isolate;
+  border: none;
+  color: var(--gc-text);
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+  -webkit-backdrop-filter: blur(5px) saturate(180%) brightness(1.1);
+  backdrop-filter: blur(5px) saturate(180%) brightness(1.1);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255,255,255,0.6),
+    inset 0 -1px 0.5px rgba(255,255,255,0.18),
+    inset 1px 0 0.5px rgba(255,255,255,0.12),
+    inset -1px 0 0.5px rgba(255,255,255,0.12),
+    inset 0 0 22px rgba(255,255,255,0.05),
+    0 12px 32px rgba(0,0,0,0.5);
+}
+.lg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 36%, rgba(255,255,255,0) 72%, rgba(255,255,255,0.07) 100%);
+}
+.lg-bar {
+  background: linear-gradient(180deg, rgba(38,38,42,0.55), rgba(14,14,16,0.68));
+  -webkit-backdrop-filter: blur(16px) saturate(160%) brightness(0.9);
+  backdrop-filter: url(#lgRefract) blur(6px) saturate(160%) brightness(0.9);
+}
+@supports not (backdrop-filter: url(#lgRefract)) {
+  .lg-bar { backdrop-filter: blur(16px) saturate(160%) brightness(0.9); }
+}
+.lg-on { background: rgba(255,255,255,0.12); box-shadow: inset 0 1px 0.5px rgba(255,255,255,0.3); }
+.lg-circle {
+  width: 44px; height: 44px; border-radius: 22px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0;
+}
+
+/* Segmented control */
+.su-seg {
+  display: flex; gap: 2px; padding: 3px; border-radius: 14px;
+  background: rgba(255,255,255,0.08); overflow-x: auto; scrollbar-width: none; align-self: flex-start; max-width: 100%;
+}
+.su-seg::-webkit-scrollbar { display: none; }
+.su-seg > button {
+  flex: 1 1 auto; min-height: 34px; padding: 0 16px; border-radius: 11px; white-space: nowrap;
+  font-size: 14px; font-weight: 500; color: var(--gc-text-muted);
+}
+.su-seg > button[aria-selected="true"] { background: #636366; color: #fff; font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
+
+/* Type */
+.su-title { margin: 0; font-family: var(--su-display); font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: -0.03em; color: var(--gc-text); }
+.su-sub   { margin: 0; font-size: 17px; line-height: 23px; color: var(--gc-text-muted); }
+.su-h2    { margin: 0 4px; font-family: var(--su-display); font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+
+/* Grouped list (inset, rounded) */
+.su-group { border-radius: 26px; background: var(--gc-bg-card); overflow: hidden; }
+.su-row {
+  width: 100%; min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 18px;
+  text-align: start; color: var(--gc-text); background: transparent;
+}
+.su-row + .su-row { box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.1); }
+.su-row[aria-current="page"] { background: rgba(255,255,255,0.08); }
+
+/* One primary action per screen: the white pill */
+.su-primary {
+  height: 56px; width: 100%; border-radius: 28px; background: #F5F5F7; color: #000;
+  font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+}
+
+@keyframes su-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.su-in { animation: su-in 0.35s cubic-bezier(.2,.8,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .su-in { animation: none; } }

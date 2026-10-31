@@ -72,6 +72,11 @@ export const STOPS: Stop[] = [
     ask: ['reharm', 'substitute', 'jazzier', 'richer', 'tritone', 'החלפה', 'ג׳אזי'], help: 'voicings:reharmonize' },
 
   // ── L2 Theory ─────────────────────────────────────────────────────────────
+  { id: 'learn-scale', line: 'L2',
+    name: { en: 'Learn a Scale', he: 'ללמוד סולם' },
+    meta: { en: 'key · feel · play', he: 'סולם · תחושה · נגינה' },
+    ask: ['learn', 'beginner', 'first scale', 'where to start', 'teach me', 'ללמוד', 'מתחיל', 'סולם ראשון', 'מאיפה להתחיל'],
+    help: 'scales:explorer' },
   { id: 'scales', line: 'L2',
     name: { en: 'Scales', he: 'סולמות' },
     meta: { en: 'modes · positions', he: 'מודוסים · פוזיציות' },

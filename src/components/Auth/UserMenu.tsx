@@ -19,7 +19,7 @@ function initials(name: string | null, email: string | null): string {
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
 
-export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact, up }) => {
+export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, up }) => {
   const { lang } = useLang();
   const he = lang === 'he';
   const { user, profile, signOut, deleteAccount } = useAuth();
@@ -40,17 +40,15 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact, up }) => {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
-  const sz = compact ? 40 : 44;
+  const sz = 44;
 
   // ── Logged out ──
   if (!user) {
     return (
       <>
-        <button onClick={() => setAuthOpen(true)} className="gc-no-bar" style={{
-          height: sz, padding: '0 16px', borderRadius: 'var(--su-pill)', cursor: 'pointer', whiteSpace: 'nowrap',
-          border: `1.5px solid ${T.text}`, background: T.secondary, color: T.white,
-          fontSize: 11, fontFamily: 'inherit', fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.1em',
+        <button onClick={() => setAuthOpen(true)} className="lg gc-no-bar" style={{
+          height: sz, padding: '0 18px', borderRadius: 'var(--su-pill)', cursor: 'pointer', whiteSpace: 'nowrap',
+          color: T.text, fontSize: 15, fontFamily: 'inherit', fontWeight: 600,
         }}>{he ? 'כניסה' : 'Sign in'}</button>
         {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
       </>
@@ -67,10 +65,10 @@ export const UserMenu: React.FC<Props> = ({ onOpenWorkspace, compact, up }) => {
   // ── Logged in ──
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(o => !o)} aria-label={he ? 'תפריט החשבון' : 'Account menu'} aria-expanded={open} className="gc-no-bar" style={{
+      <button onClick={() => setOpen(o => !o)} aria-label={he ? 'תפריט החשבון' : 'Account menu'} aria-expanded={open} className="lg gc-no-bar" style={{
         width: sz, height: sz, borderRadius: '50%', cursor: 'pointer',
-        border: `1.5px solid ${T.text}`, background: T.secondary, color: T.white,
-        fontSize: compact ? 10 : 11, fontWeight: 700, fontFamily: 'inherit',
+        color: T.text,
+        fontSize: 14, fontWeight: 600, fontFamily: 'inherit',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
         overflow: 'hidden',
       }}>

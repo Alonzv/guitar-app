@@ -18,8 +18,8 @@ export default defineConfig({
         description: 'ScaleUp — chord builder, progressions, and scale visualizer',
         // Paper chrome — cobalt is reserved for the mark itself, never the
         // PWA splash / address bar.
-        theme_color: '#ECEAE3',
-        background_color: '#ECEAE3',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
