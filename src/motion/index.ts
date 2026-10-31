@@ -76,12 +76,25 @@ function installStateObserver() {
   });
 }
 
+// ── Tooltips ─────────────────────────────────────────────────────────────────
+// Icon buttons carry an aria-label but no visible text. On a Mac pointer,
+// hovering one should name it, like a Finder toolbar item: mirror the label
+// into a native tooltip the first time the pointer arrives.
+function installTooltips() {
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  document.addEventListener('pointerover', e => {
+    const el = (e.target as Element | null)?.closest?.('button[aria-label], [role="button"][aria-label]');
+    if (el && !el.hasAttribute('title')) el.setAttribute('title', el.getAttribute('aria-label')!);
+  }, { passive: true });
+}
+
 let installed = false;
 export function installMotion() {
   if (installed) return;
   installed = true;
   installPress();
   installStateObserver();
+  installTooltips();
 }
 
 // ── Fly to the session bar ───────────────────────────────────────────────────
@@ -109,8 +122,8 @@ export function flyToDock(label: string, origin: Element | null = getLastPressed
       position: 'fixed', zIndex: '9500', pointerEvents: 'none',
       left: `${from.left + from.width / 2}px`, top: `${from.top + from.height / 2}px`,
       transform: 'translate(-50%, -50%)',
-      padding: '6px 12px', background: 'var(--gc-primary)', color: 'var(--gc-white)',
-      borderLeft: '3px solid var(--gc-bar-color)',
+      padding: '6px 12px', background: 'var(--gc-primary)', color: 'var(--su-on-primary)',
+      borderRadius: '999px',
       fontFamily: 'var(--gc-font)', fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap',
     });
     document.body.appendChild(chip);

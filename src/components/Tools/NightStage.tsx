@@ -9,8 +9,12 @@ import { Pill } from '../Transit/parts';
 // fills the stop area edge to edge; a pill in the tool turns it off, and
 // that choice is kept per tool.
 
+const HIDE_NIGHT = true;
+
 export function NightToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   const { lang } = useLang();
+  // The whole app is dark now, so the per-tool night switch has nothing to do.
+  if (HIDE_NIGHT) return null;
   return (
     <Pill size="sm" active={on} onClick={onToggle} title={lang === 'he' ? 'מצב לילה לכלי הזה' : 'Night mode for this tool'}>
       {lang === 'he' ? 'לילה' : 'Night'}

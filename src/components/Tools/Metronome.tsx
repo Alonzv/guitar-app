@@ -233,9 +233,8 @@ export const Metronome: React.FC = () => {
           const on = beatDotActive(i);
           return (
             <div key={i} style={{
-              height: desktop ? 72 : 56,
-              background: on ? (i === 0 ? T.primary : T.secondary) : T.bgInput,
-              outline: i === 0 && !on ? `2px solid ${T.text}` : undefined, outlineOffset: -2,
+              height: desktop ? 72 : 56, borderRadius: 16,
+              background: on ? (i === 0 ? T.primary : T.secondary) : i === 0 ? T.primaryBg : T.bgInput,
               transition: reduceMotion ? undefined : 'background 50ms, transform 50ms',
               transform: on && !reduceMotion ? 'scale(1.06)' : 'none',
             }} />
@@ -245,7 +244,7 @@ export const Metronome: React.FC = () => {
       {/* A flash per click — full on the downbeat, half on the others —
           draining over one beat, so subdivisions are seen as well as heard. */}
       {!reduceMotion && (
-        <div style={{ height: 4, background: T.bgInput, overflow: 'hidden', marginTop: -10 }}>
+        <div style={{ height: 4, borderRadius: 2, background: T.bgInput, overflow: 'hidden', marginTop: -10 }}>
           {playing && pulse > 0 && (
             <div key={pulse} className="gc-beat-drain" style={{
               height: '100%', background: T.text,

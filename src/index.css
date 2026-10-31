@@ -120,6 +120,7 @@ body {
   font-family: var(--gc-font);
   font-weight: 400;
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
   text-rendering: optimizeLegibility;
   background-color: var(--gc-bg-deep);
   color: var(--gc-text);
@@ -284,7 +285,7 @@ svg [role="button"] { transform-box: fill-box; transform-origin: center; }
 
   /* Type: the system face (SF on Apple devices), Heebo for Hebrew elsewhere */
   --gc-font:         -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Heebo', system-ui, sans-serif;
-  --gc-mono:         ui-monospace, 'SF Mono', 'Azeret Mono', monospace;
+  --gc-mono:         var(--gc-font);   /* metadata reads in the system face; numbers stay tabular */
   --su-display:      -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Heebo', system-ui, sans-serif;
   --su-display-cond: 100%;
   --su-display-semi: 100%;
@@ -327,7 +328,7 @@ svg [role="button"] { transform-box: fill-box; transform-origin: center; }
 
   /* Fretboard */
   --gc-fretboard-bg:   transparent;
-  --gc-fretboard-nut:  #F5F5F7;
+  --gc-fretboard-nut:  rgba(255,255,255,0.55);
   --gc-fretboard-str:  rgba(255,255,255,0.30);
   --gc-fretboard-fret: rgba(255,255,255,0.14);
   --gc-fretboard-pos:  rgba(255,255,255,0.06);
@@ -362,7 +363,7 @@ svg path[role="button"]:focus-visible { stroke: var(--gc-primary); stroke-width:
 /* Display type helpers */
 .su-poster  { font-family: var(--su-display); font-weight: 700; line-height: 1.1; letter-spacing: -0.03em; }
 .su-semi    { font-family: var(--su-display); font-weight: 600; }
-.su-outline { color: transparent !important; -webkit-text-stroke: 3px var(--gc-text); }
+.su-outline { color: var(--gc-text-muted) !important; -webkit-text-stroke: 0 !important; }
 .su-label   { font-family: var(--gc-font); font-size: 13px; letter-spacing: 0; color: var(--gc-text-muted); }
 
 /* Shape vocabulary: pills for buttons/chips, square keys/tiles. */
@@ -469,6 +470,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [role="button"]
   font-size: 14px;
   font-family: inherit;
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 @media (min-width: 480px) {
   .gc-tab {
@@ -591,6 +593,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [role="button"]
   justify-content: center;
   font-family: inherit;
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -775,3 +778,16 @@ input, textarea { color: var(--gc-text); }
 @keyframes su-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .su-in { animation: su-in 0.35s cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .su-in { animation: none; } }
+
+/* ── Hover: the macOS toolbar response ──
+   Pointer devices only. Quiet icon buttons get a soft rounded fill (like a
+   Finder toolbar item), glass brightens, filled buttons lift a touch. */
+@media (hover: hover) and (pointer: fine) {
+  .lg:is(button):not(:disabled):hover { background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08)); }
+  :is(.lg, .gc-icon-btn) button:not(:disabled):not([style*="background"]):hover,
+  .lg-bar nav button:not(.lg-on):hover,
+  .su-seg > button:not([aria-selected="true"]):hover { background-color: rgba(255,255,255,0.10); border-radius: 12px; }
+  .lg:not(.lg-bar) > button:not(:disabled):not([style*="background"]):hover { border-radius: 999px; }
+  .su-row:not(:disabled):hover { background-color: rgba(255,255,255,0.06); }
+  button[style*="background"]:not(.lg):not(:disabled):hover { filter: brightness(1.12); }
+}

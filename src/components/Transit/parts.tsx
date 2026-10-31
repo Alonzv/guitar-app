@@ -11,13 +11,17 @@ import { pillStyle, ctaStyle, keyStyle } from './styles';
 // parts use it unless asked (`cta`).
 
 // ── Poster title ─────────────────────────────────────────────────────────────
-/** A big Archivo name sized to its width (never cut). `tail` is drawn
- *  outlined when the title is 60px or larger (C<outline>maj7</outline>). */
+/** A large name sized to its width (never cut). `max` is the old poster
+ *  size; it is eased down to a calmer display size. `tail` is drawn in the
+ *  secondary colour (C<muted>maj7</muted>). */
 export function PosterTitle({ head, tail, max = 200, min = 40, as: Tag = 'h2', style, keepCase }: {
   head: ReactNode; tail?: ReactNode; max?: number; min?: number; as?: 'h1' | 'h2' | 'div'; style?: CSSProperties;
   /** Keep the text's case — chord and key names (Cm is not CM). */
   keepCase?: boolean;
 }) {
+  // Above 64px, keep only a quarter of the extra: 200 → 98, 120 → 78.
+  if (max > 64) max = Math.round(64 + (max - 64) / 4);
+  min = Math.min(min, max);
   const box = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLSpanElement>(null);
   const [size, setSize] = useState(max);
@@ -42,7 +46,7 @@ export function PosterTitle({ head, tail, max = 200, min = 40, as: Tag = 'h2', s
           hangs below the line box and must not be cut. */}
       <div ref={box} style={{ overflowX: 'clip', whiteSpace: 'nowrap' }}>
         <span ref={text} className="su-poster" style={{ display: 'inline-block', fontSize: size, paddingBottom: '0.18em', textTransform: keepCase ? 'none' : undefined }}>
-          {head}{tail != null && <span className={size >= 60 ? 'su-outline' : undefined}>{tail}</span>}
+          {head}{tail != null && <span className="su-outline">{tail}</span>}
         </span>
       </div>
     </Tag>
@@ -244,8 +248,8 @@ export function Meta({ items, cols }: { items: { label: ReactNode; value: ReactN
 }
 
 // ── Formula columns ──────────────────────────────────────────────────────────
-/** Chord/scale formula as columns on a 4px top rule: degree over note.
- *  `mark` is the defining tone (the ♭3 of a minor chord…), drawn cobalt. */
+/** Chord/scale formula as rounded tiles: degree over note.
+ *  `mark` is the defining tone (the ♭3 of a minor chord…), tinted. */
 export function Formula({ tones, mark, onTone }: {
   tones: { degree: string; note: string; name?: string }[]; mark?: number; onTone?: (i: number) => void;
 }) {
@@ -253,14 +257,14 @@ export function Formula({ tones, mark, onTone }: {
     <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(tones.length, 3)}, minmax(0, 1fr))`, gap: 10 }}>
       {tones.map((t, i) => {
         const on = i === mark;
-        const c = on ? T.primary : T.text;
+        const c = on ? T.tintLabel : T.text;
         return (
           <button key={i} type="button" onClick={onTone ? () => onTone(i) : undefined} className="gc-no-bar gc-notation"
             style={{
-              borderWidth: '4px 0 0 0', borderStyle: 'solid', borderColor: c, padding: '8px 0 0', background: 'transparent',
+              border: 'none', borderRadius: 18, padding: '12px 14px', background: on ? T.primaryBg : T.bgCard,
               textAlign: 'start', cursor: onTone ? 'pointer' : 'default', color: c, minWidth: 0, letterSpacing: 'normal',
             }}>
-            <span className="su-poster" style={{ display: 'block', fontSize: 40, color: c }}>{t.degree}</span>
+            <span className="su-poster" style={{ display: 'block', fontSize: 30, color: c }}>{t.degree}</span>
             <span style={{ display: 'block', marginTop: 6, fontSize: 13, fontWeight: 700, fontFamily: 'var(--gc-mono)', color: on ? c : T.text }}>{t.note}</span>
             {t.name && <span className="su-label" style={{ display: 'block', marginTop: 2, color: on ? c : T.textMuted }}>{t.name}</span>}
           </button>

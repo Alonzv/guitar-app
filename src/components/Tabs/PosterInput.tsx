@@ -16,6 +16,9 @@ interface Props {
 }
 
 export function PosterInput({ value, onChange, placeholder, max = 120, min = 32, label }: Props) {
+  // Ease the old poster sizes down to a calm large title (as PosterTitle does).
+  if (max > 48) max = Math.round(48 + (max - 48) / 4);
+  min = Math.min(min, max);
   const box = useRef<HTMLDivElement>(null);
   const twin = useRef<HTMLSpanElement>(null);
   const [size, setSize] = useState(max);
@@ -51,7 +54,7 @@ export function PosterInput({ value, onChange, placeholder, max = 120, min = 32,
         dir="auto"
         className="su-poster"
         style={{
-          display: 'block', width: '100%', fontSize: size, height: Math.round(size * 0.86) + 6, padding: 0,
+          display: 'block', width: '100%', fontSize: size, height: Math.round(size * 1.2), padding: 0,
           border: 'none', outline: 'none', background: 'transparent', color: T.text,
         }}
       />

@@ -16,7 +16,8 @@ button, a, [role="button"] {
     background-color var(--dur-color) var(--ease),
     color var(--dur-color) var(--ease),
     border-color var(--dur-color) var(--ease),
-    opacity var(--dur-color) var(--ease);
+    opacity var(--dur-color) var(--ease),
+    filter var(--dur-color) var(--ease);
 }
 button:active, a:active, [role="button"]:active { scale: .94; transition-duration: var(--dur-press); }
 /* Full-width rows and large surfaces: barely move */

@@ -604,7 +604,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       aria-label={recording ? 'Stop recording' : 'Record'}
       style={{
         width: 92, height: 92, borderRadius: '50%', flexShrink: 0, cursor: 'pointer', padding: 0,
-        border: `var(--su-rule) solid ${recording ? T.primary : T.text}`, background: recording ? T.primary : 'transparent',
+        border: 'none', background: recording ? T.primary : T.bgCard,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
       {recording
@@ -650,7 +650,7 @@ export const AudioToTab: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         onClick={() => fileInputRef.current?.click()}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
         style={{
-          border: `var(--su-rule) dashed ${T.text}`, padding: '22px 18px', cursor: 'pointer',
+          border: `1px dashed ${T.border}`, borderRadius: 22, background: T.bgCard, padding: '22px 18px', cursor: 'pointer',
           display: 'flex', flexDirection: 'column', gap: 8, minHeight: 44,
         }}
       >
