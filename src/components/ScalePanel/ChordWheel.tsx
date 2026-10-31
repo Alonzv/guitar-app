@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Key } from '@tonaljs/tonal';
-import { T, btn } from '../../theme';
+import { T } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
-import { Rule, PillRow, KeyGrid } from '../Transit/parts';
-import { pillStyle } from '../Transit/styles';
+import { Fold, Chips, icon } from '../ChordBuilder/Stage';
+import { StopActions } from '../Transit/StopActions';
+import { formatChordName } from '../../utils/chordIdentifier';
 import { playChord } from '../../utils/audioPlayback';
 import type { ChordInProgression } from '../../types/music';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { previewVoicing } from '../../utils/previewSound';
-import { DiceButton } from '../DiceButton';
 import { pickOne } from '../../utils/random';
 import { useOptionalSong } from '../../song/SongContext';
 import { keyName } from '../../utils/harmonicAnalysis';
@@ -205,7 +205,9 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
           const oPicked = picked?.ring === 'outer' && picked.i === i;
           const iPicked = picked?.ring === 'inner' && picked.i === i;
           const keyDown = (fn: () => void) => (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
-          const ink = (info: HLInfo | undefined, key: boolean, on: boolean) => key ? T.onPrimary : on ? T.white : info ? T.text : T.textMuted;
+          const ink = (info: HLInfo | undefined, key: boolean, on: boolean) => on ? '#000' : key ? T.onPrimary : info ? T.text : T.textMuted;
+          // Slices are soft tiles: the key purple, its chords lit, the rest faint; the tapped one white.
+          const fillOf = (info: HLInfo | undefined, key: boolean, on: boolean) => on ? T.text : key ? T.primary : info ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.04)';
 
           return (
             <g key={i}>
@@ -213,18 +215,16 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
               <path
                 d={arcPath(sa, R_O_O, R_O_I)} role="button" tabIndex={0} aria-pressed={oPicked}
                 aria-label={`${he ? 'נגן' : 'Play'} ${outerChord}`}
-                fill={oKey ? T.primary : oPicked ? T.secondary : 'transparent'}
-                stroke={oKey ? T.primary : oPicked || outerInfo ? T.text : T.hairline} strokeWidth={outerInfo || oKey || oPicked ? 2 : 1.5}
-                style={{ cursor: 'pointer' }}
+                fill={fillOf(outerInfo, oKey, oPicked)} stroke="#000" strokeWidth={3} strokeLinejoin="round"
+                style={{ cursor: 'pointer', transition: 'fill 220ms ease' }}
                 onClick={pickMajor} onKeyDown={keyDown(pickMajor)}
               />
               {/* Inner arc — tap to set minor key */}
               <path
                 d={arcPath(sa, R_I_O, R_I_I)} role="button" tabIndex={0} aria-pressed={iPicked}
                 aria-label={`${he ? 'נגן' : 'Play'} ${innerChord}`}
-                fill={iKey ? T.primary : iPicked ? T.secondary : 'transparent'}
-                stroke={iKey ? T.primary : iPicked || innerInfo ? T.text : T.hairline} strokeWidth={innerInfo || iKey || iPicked ? 2 : 1.5}
-                style={{ cursor: 'pointer' }}
+                fill={fillOf(innerInfo, iKey, iPicked)} stroke="#000" strokeWidth={3} strokeLinejoin="round"
+                style={{ cursor: 'pointer', transition: 'fill 220ms ease' }}
                 onClick={pickMinor} onKeyDown={keyDown(pickMinor)}
               />
 
@@ -237,8 +237,8 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                 <text
                   x={mp_o.x} y={outerInfo ? mp_o.y - 5 : mp_o.y}
                   textAnchor="middle" dominantBaseline="middle"
-                  fontSize={outerInfo ? 17 : 13} fontWeight={outerInfo ? 800 : 600}
-                  fontFamily="var(--su-display)" style={{ fontStretch: '75%' }}
+                  fontSize={outerInfo ? 17 : 13} fontWeight={outerInfo ? 700 : 500}
+                  fontFamily="var(--su-display)"
                   fill={ink(outerInfo, oKey, oPicked)}
                 >
                   {cofNote}
@@ -247,7 +247,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                   <text
                     x={mp_o.x} y={mp_o.y + 10}
                     textAnchor="middle" dominantBaseline="middle"
-                    fontSize={9} fontWeight={600} fontFamily="var(--gc-mono)"
+                    fontSize={10} fontWeight={500} fontStyle="italic" fontFamily="'New York', ui-serif, Georgia, serif"
                     fill={ink(outerInfo, oKey, oPicked)}
                   >
                     {outerInfo.roman}
@@ -264,8 +264,8 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                 <text
                   x={mp_i.x} y={innerInfo ? mp_i.y - 5 : mp_i.y}
                   textAnchor="middle" dominantBaseline="middle"
-                  fontSize={innerInfo ? 14 : 11} fontWeight={innerInfo ? 800 : 600}
-                  fontFamily="var(--su-display)" style={{ fontStretch: '75%' }}
+                  fontSize={innerInfo ? 14 : 11} fontWeight={innerInfo ? 700 : 500}
+                  fontFamily="var(--su-display)"
                   fill={ink(innerInfo, iKey, iPicked)}
                 >
                   {minorName}
@@ -274,7 +274,7 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
                   <text
                     x={mp_i.x} y={mp_i.y + 9}
                     textAnchor="middle" dominantBaseline="middle"
-                    fontSize={8} fontWeight={600} fontFamily="var(--gc-mono)"
+                    fontSize={9} fontWeight={500} fontStyle="italic" fontFamily="'New York', ui-serif, Georgia, serif"
                     fill={ink(innerInfo, iKey, iPicked)}
                   >
                     {innerInfo.roman}
@@ -296,46 +296,63 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
         const p1   = polar(sa, arcR);
         const p2   = polar(ea, arcR);
         return (
-          <path d={`M${p1.x} ${p1.y} A${arcR} ${arcR} 0 0 1 ${p2.x} ${p2.y}`} fill="none" stroke={T.text} strokeWidth={3} />
+          <path d={`M${p1.x} ${p1.y} A${arcR} ${arcR} 0 0 1 ${p2.x} ${p2.y}`} fill="none" stroke={T.text} strokeWidth={3} strokeLinecap="round" />
         );
       })()}
 
       {/* Center label */}
-      <text x={CX} y={CY + 4} textAnchor="middle" fontSize={44} fontWeight={900}
-        fontFamily="var(--su-display)" style={{ fontStretch: '62%', textTransform: 'uppercase' }} fill={T.text}>{root}</text>
-      <text x={CX} y={CY + 22} textAnchor="middle" fontSize={9}
-        fill={T.textMuted} fontFamily="var(--gc-mono)" letterSpacing="0.14em">
-        {mode === 'major' ? 'MAJOR' : 'MINOR'}
+      <text x={CX} y={CY + 6} textAnchor="middle" fontSize={46} fontWeight={700} letterSpacing="-1.5"
+        fontFamily="var(--su-display)" fill={T.text}>{root}</text>
+      <text x={CX} y={CY + 28} textAnchor="middle" fontSize={13} fontWeight={500}
+        fill={T.textMuted} fontFamily="var(--gc-font)">
+        {mode === 'major' ? (he ? 'מז׳ור' : 'Major') : (he ? 'מינור' : 'Minor')}
       </text>
     </svg>
   );
 
   // Under the wheel: the chord you tapped and the one action on it.
   const pickedRow = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, minHeight: 56, borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 12 }}>
-      <span className="su-semi gc-notation" dir="ltr" aria-live="polite" style={{ fontSize: 30, flex: 1, minWidth: 0, color: picked ? T.text : T.textMuted }}>
-        {picked ? picked.chord : <span className="su-label" style={{ fontSize: 10 }}>{he ? 'הקישו על אקורד בגלגל כדי לשמוע אותו' : 'Tap a chord on the wheel to hear it'}</span>}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, minHeight: 76, borderRadius: 26, background: T.bgCard, padding: '12px 14px 12px 20px' }}>
+      <span aria-live="polite" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {picked ? (
+          <>
+            <span className="gc-notation" dir="ltr" style={{ fontFamily: 'var(--su-display)', fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.1, alignSelf: 'flex-start' }}>{formatChordName(picked.chord)}</span>
+            <span style={{ fontSize: 13, color: T.textMuted }}>{he ? 'הקישו שוב כדי לשמוע' : 'Tap it again to hear it'}</span>
+          </>
+        ) : (
+          <span style={{ fontSize: 15, color: T.textMuted }}>{he ? 'הקישו על אקורד בגלגל כדי לשמוע אותו' : 'Tap a chord on the wheel to hear it'}</span>
+        )}
       </span>
       {onAddToProgression && (
         <button onClick={() => picked && handleAddChord(picked.chord)} disabled={!picked} className="gc-no-bar"
-          style={{ ...btn.primary(!picked), flex: 'none' }}>
-          {he ? '+ הוסף לשיר' : '+ Add to song'}
+          style={{ flex: 'none', height: 46, padding: '0 20px', borderRadius: 23, background: T.text, color: '#000', fontSize: 16, fontWeight: 600, opacity: picked ? 1 : 0.35 }}>
+          {he ? '+ הוספה לשיר' : '+ Add to song'}
         </button>
       )}
     </div>
   );
 
+  const [open, setOpen] = useState(false);
   const keyControls = (
-    <Rule label={he ? 'סולם' : 'Key'} right={<DiceButton onRoll={roll} style={pillStyle(false, 'sm')} />}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <PillRow label="Key quality"
-          items={[{ id: 'major' as Mode, label: he ? 'מז׳ור' : 'Major' }, { id: 'minor' as Mode, label: he ? 'מינור' : 'Minor' }]}
-          value={mode} onChange={m => { setMode(m); hearKey(root, m); }} />
-        <KeyGrid items={ALL_ROOTS.map(n => ({ id: n, label: n }))} value={root}
-          onChange={n => { setRoot(n); hearKey(n, mode); }} label={he ? 'טוניקה' : 'Key'} />
+    <Fold title={he ? 'בחירת סולם' : 'Choose a key'} open={open} onToggle={() => setOpen(o => !o)}
+      summary={<span dir="ltr">{root.replace('#', '♯')} {mode === 'major' ? (he ? 'מז׳ור' : 'major') : (he ? 'מינור' : 'minor')}</span>}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Chips label={he ? 'סוג' : 'Quality'} value={mode} onChange={m => { setMode(m); hearKey(root, m); }}
+          items={[{ id: 'major' as Mode, label: he ? 'מז׳ור' : 'Major' }, { id: 'minor' as Mode, label: he ? 'מינור' : 'Minor' }]} />
+        <Chips label={he ? 'טוניקה' : 'Key'} cols={6} value={root} onChange={n => { setRoot(n); hearKey(n, mode); }}
+          items={ALL_ROOTS.map(n => ({ id: n, label: n.replace('#', '♯') }))} />
       </div>
-    </Rule>
+    </Fold>
   );
+
+  const toolbar = (
+    <StopActions>
+      <button onClick={roll} className="lg lg-circle gc-no-bar" aria-label={he ? 'סולם אקראי' : 'Random key'} style={{ color: T.text }}>
+        {icon(<><rect x="4" y="4" width="16" height="16" rx="4" /><circle cx="9" cy="9" r="0.6" fill="currentColor" /><circle cx="15" cy="15" r="0.6" fill="currentColor" /><circle cx="15" cy="9" r="0.6" fill="currentColor" /><circle cx="9" cy="15" r="0.6" fill="currentColor" /></>)}
+      </button>
+    </StopActions>
+  );
+  const hint = <span style={{ fontSize: 13, color: T.textMuted, textAlign: 'center' }}>{he ? 'האקורדים המוארים שייכים לסולם. המספרים מראים את התפקיד של כל אחד.' : 'The lit chords belong to the key. The numbers show each one\'s role.'}</span>;
 
   const wheel = (
     <div dir="ltr" style={{ width: '100%', maxWidth: desktop ? 520 : 360, margin: '0 auto' }}>
@@ -345,20 +362,26 @@ export const ChordWheel: React.FC<Props> = ({ onAddToProgression, desktop }) => 
 
   if (desktop) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 520px) minmax(280px, 380px)', gap: 48, alignItems: 'start' }}>
-        {wheel}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {pickedRow}
-          {keyControls}
+      <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {toolbar}
+        {keyControls}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 520px) minmax(280px, 1fr)', gap: 40, alignItems: 'center' }}>
+          {wheel}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {pickedRow}
+            {hint}
+          </div>
         </div>
       </div>
     );
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {wheel}
-      {pickedRow}
+    <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {toolbar}
       {keyControls}
+      {wheel}
+      {hint}
+      {pickedRow}
     </div>
   );
 };
