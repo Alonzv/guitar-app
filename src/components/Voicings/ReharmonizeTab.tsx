@@ -13,21 +13,20 @@ import { reharmonize, type ReharmonizeResult } from '../../utils/reharmonize';
 import { exportMidi } from '../../utils/midiExport';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import type { ReharmData } from '../../services/types';
-import { T, alpha } from '../../theme';
-import { Rule, Pill, PillRow, Cta, PosterTitle } from '../Transit/parts';
-import { pillStyle } from '../Transit/styles';
-import { Route } from './Route';
-import { pickTag, spinner } from './ui';
+import { T } from '../../theme';
+import { Pill, PosterTitle } from '../Transit/parts';
+import { spinner } from './ui';
 import { useLang } from '../../contexts/LanguageContext';
 import { ExampleChips } from '../ExampleChips';
 import { useOptionalSong } from '../../song/SongContext';
 import { formatChordName } from '../../utils/chordIdentifier';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { useFlash } from '../../motion/useFlash';
-import { RollLabel } from '../RollLabel';
 import { namesToProgression } from '../../utils/progressionBridge';
 import { TUNINGS } from '../../utils/musicTheory';
-import { Fold } from '../ChordBuilder/Stage';
+import { Fold, Chips, icon } from '../ChordBuilder/Stage';
+import { StopActions } from '../Transit/StopActions';
+import { previewChordName } from '../../utils/previewSound';
 
 // Reharmonisation is the one tool that can fail for reasons outside the app,
 // so it is the one tool with error copy. Written for a guitarist: the old text
@@ -51,13 +50,11 @@ interface Props {
   setStringGroup: (sg: StringGroup) => void;
   tuning: Tuning;
   desktop?: boolean;
-  /** Editable chips for the progression being reharmonised, shown in this card. */
-  progressionEditor?: React.ReactNode;
+  /** Replaces the chords being reharmonised (the song's own list). */
+  onChordsChange: (chords: string[]) => void;
   /** Library handoff: a saved reharm to restore without an API call. */
   restored?: { result: ReharmData; genre?: string | null; tension?: number | null } | null;
   onRestoredConsumed?: () => void;
-  /** Fills an empty progression with an example to try. */
-  onLoadExample?: (chords: string[]) => void;
 }
 
 const WARN = '⚠\uFE0E';   // text presentation, never the emoji
@@ -110,7 +107,7 @@ function ReharmModal({
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: alpha(T.text, 55),
+        background: 'rgba(0,0,0,0.55)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
@@ -118,9 +115,9 @@ function ReharmModal({
       <div
         role="dialog" aria-modal="true" aria-label={chordNames[idx]}
         onClick={e => e.stopPropagation()}
+        className="lg"
         style={{
-          background: T.bgDeep, color: T.text, borderRadius: 0,
-          border: `var(--su-rule) solid ${T.border}`,
+          color: T.text, borderRadius: 32, background: 'rgba(36,36,40,0.72)',
           padding: '18px 20px 20px', maxWidth: 360, width: '100%', boxSizing: 'border-box',
           display: 'flex', flexDirection: 'column', gap: 14,
         }}
@@ -131,7 +128,7 @@ function ReharmModal({
         </div>
         {/* Chord names keep their case (Cmaj9, not CMAJ9). */}
         <PosterTitle head={<span style={{ textTransform: 'none' }}>{chordNames[idx]}</span>} max={84} min={36} />
-        <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10 }}>
+        <div>
           <MiniFretboard voicing={voicings[idx]} dotColor={T.secondary} tuning={tuning} showStringLabels showFretNumbers hideFretLabel />
         </div>
         <FretBadge voicing={voicings[idx]} />
@@ -155,11 +152,38 @@ const GENRES: { id: string; label: string }[] = [
   { id: 'country', label: 'Country' },
 ];
 
-function tensionLabel(t: number): string {
-  if (t <= 2) return 'Simple';
-  if (t === 3) return 'Extended';
-  return 'Altered';
-}
+// Tension, said as a feeling rather than a number.
+const LEVELS = [
+  { en: 'Gentle', he: 'עדין' }, { en: 'Soft', he: 'רך' }, { en: 'Colourful', he: 'צבעוני' },
+  { en: 'Bold', he: 'נועז' }, { en: 'Wild', he: 'פרוע' },
+] as const;
+const STRINGS: { id: StringGroup; en: string; he: string }[] = [
+  { id: 'all', en: 'All strings', he: 'כל המיתרים' },
+  { id: 'bass', en: 'Low strings', he: 'מיתרים עבים' },
+  { id: 'treble', en: 'High strings', he: 'מיתרים דקים' },
+];
+const GENRE_HE: Record<string, string> = { jazz: 'ג׳אז / ניאו-סול', blues: 'בלוז', rock: 'רוק', desert: 'Desert Noir', country: 'קאנטרי' };
+
+// The chord menu for adding a chord.
+const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const TRIADS = [
+  { display: 'Major', key: 'M' }, { display: 'Minor', key: 'm' }, { display: 'dim', key: 'dim' },
+  { display: 'aug', key: 'aug' }, { display: 'sus2', key: 'sus2' }, { display: 'sus4', key: 'sus4' },
+];
+const TRIAD_HE: Record<string, string> = { M: 'מז׳ור', m: 'מינור', dim: 'מוקטן', aug: 'מוגדל', sus2: 'sus2', sus4: 'sus4' };
+const EXTENSIONS = [
+  { display: '—', key: '' }, { display: '7', key: '7' }, { display: 'maj7', key: 'maj7' }, { display: '9', key: '9' },
+  { display: 'add9', key: 'add9' }, { display: '6', key: '6' }, { display: '11', key: '11' }, { display: '13', key: '13' },
+];
+const VALID_EXTENSIONS: Record<string, string[]> = {
+  M: ['', '7', 'maj7', '9', 'add9', '6', '11', '13'], m: ['', '7', 'maj7', '9', 'add9', '6', '11', '13'],
+  dim: ['', '7'], aug: ['', '7'], sus2: [''], sus4: [''],
+};
+const SUFFIX_MAP: Record<string, Record<string, string>> = {
+  M: { '': 'M', '7': '7', 'maj7': 'maj7', '9': '9', 'add9': 'add9', '6': '6', '11': '11', '13': '13' },
+  m: { '': 'm', '7': 'm7', 'maj7': 'mMaj7', '9': 'm9', 'add9': 'madd9', '6': 'm6', '11': 'm11', '13': 'm13' },
+  dim: { '': 'dim', '7': 'dim7' }, aug: { '': 'aug', '7': 'aug7' }, sus2: { '': 'sus2' }, sus4: { '': 'sus4' },
+};
 
 // Nashville Number System helper
 function toNashville(chordName: string, keyRoot: string): string {
@@ -270,7 +294,7 @@ const hint = (text: string) => <p style={{ margin: 0, fontSize: 13, lineHeight: 
 
 export function ReharmonizeTab({
   chords,
-  progressionEditor,
+  onChordsChange,
   mode,
   setMode,
   stringGroup,
@@ -279,7 +303,6 @@ export function ReharmonizeTab({
   desktop,
   restored,
   onRestoredConsumed,
-  onLoadExample,
 }: Props) {
   const { lang } = useLang();
   const song = useOptionalSong();
@@ -291,6 +314,7 @@ export function ReharmonizeTab({
   const busy = useRef(false);   // a request in flight (the live timer's closure can't see `loading`)
   useEffect(() => () => { if (liveTimer.current) clearTimeout(liveTimer.current); }, []);
   const [showNashville, setShowNashville] = useState(false);
+  const [showPlay, setShowPlay] = useState(false);
   const [result, setResult] = useState<ReharmonizeResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -411,299 +435,309 @@ export function ReharmonizeTab({
   };
 
   const he = lang === 'he';
-  const leftCol = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
-      <HowItWorks />
 
-      {/* Empty state */}
-      {chords.length === 0 && (
-        <Rule style={{ textAlign: 'center', padding: '24px 0 4px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>
-            {he ? 'בנו את הפרוגרסיה שתרצו לשנות' : 'Build the progression you want to reharmonize'}
-            {desktop ? (he ? ' — בעמודה משמאל' : ' — on the left') : (he ? ' — למעלה' : ' — above')}
-          </p>
-          {onLoadExample && <ExampleChips onPick={onLoadExample} />}
-        </Rule>
-      )}
+  // ── Editing the chords ────────────────────────────────────────────────────
+  const drag = useRef<number | null>(null);
+  const removeAt = (i: number) => onChordsChange(chords.filter((_, j) => j !== i));
+  const moveTo = (from: number, to: number) => {
+    const next = [...chords];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    onChordsChange(next);
+  };
+  const [adding, setAdding] = useState(false);
+  const [aRoot, setARoot] = useState('C');
+  const [aTriad, setATriad] = useState('M');
+  const [aExt, setAExt] = useState('');
+  const aName = aRoot + ((SUFFIX_MAP[aTriad]?.[aExt] ?? '') === 'M' ? '' : (SUFFIX_MAP[aTriad]?.[aExt] ?? ''));
+  const aValid = VALID_EXTENSIONS[aTriad] ?? [''];
+  const hearAdd = (r: string, t: string, x: string) => previewChordName(r + (SUFFIX_MAP[t]?.[x] ?? ''));
+  const full = chords.length >= 8;
 
-      {chords.length > 0 && (
-        <>
-          {/* The original progression — a route you can edit */}
-          <Rule
-            label={`${he ? 'המהלך' : 'Progression'} (${chords.length}/8)`}
-            right={<Pill size="sm" active={showNashville} onClick={() => setShowNashville(v => !v)}>Nashville</Pill>}
-          >
-            {progressionEditor}
-            {showNashville && (
-              <p dir="ltr" style={{ margin: '8px 0 0', fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.08em', color: T.textMuted }}>
-                {chords.map(c => toNashville(c, keyRoot)).join('  ·  ')}
-              </p>
-            )}
-          </Rule>
+  // A changed level (or style) re-runs a reharm already on screen.
+  const rerun = (t: number) => {
+    if (!result) return;
+    if (liveTimer.current) clearTimeout(liveTimer.current);
+    liveTimer.current = setTimeout(() => handleReharmonize(t, true), 700);
+  };
 
-          {/* Controls */}
-          <Rule label={he ? 'סגנון' : 'Genre'}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <PillRow label={he ? 'סגנון' : 'Genre'} items={GENRES.map(g => ({ id: g.id, label: g.label }))} value={genre} onChange={setGenre} />
-
-              {/* Tension slider */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span className="su-label">{he ? 'מתח' : 'Tension'}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--gc-mono)' }}>
-                    {tension} — {tensionLabel(tension)}{result && loading ? ' · …' : ''}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={1}
-                  max={5}
-                  step={1}
-                  value={tension}
-                  aria-label={he ? 'מתח' : 'Tension'}
-                  onChange={e => {
-                    const v = Number(e.target.value);
-                    setTension(v);
-                    // With a result on screen the slider is live: settle on a level
-                    // and the reharm is redone at it.
-                    if (result) {
-                      if (liveTimer.current) clearTimeout(liveTimer.current);
-                      liveTimer.current = setTimeout(() => handleReharmonize(v, true), 700);
-                    }
-                  }}
-                  style={{ width: '100%', height: 44, accentColor: T.text, cursor: 'pointer', margin: 0 }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="su-label">Simple</span>
-                  <span className="su-label">Extended</span>
-                  <span className="su-label">Altered</span>
-                </div>
-                {hint(HINT.tension[lang])}
-              </div>
-
-              {/* Mode + StringGroup */}
-              <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="su-label">{he ? 'מצב' : 'Mode'}</span>
-                  <PillRow label={he ? 'מצב' : 'Mode'} items={[{ id: 'full' as VoicingMode, label: 'Full' }, { id: 'triads' as VoicingMode, label: 'Triads' }]}
-                    value={mode} onChange={setMode} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="su-label">{he ? 'מיתרים' : 'Strings'}</span>
-                  <PillRow label={he ? 'מיתרים' : 'Strings'} items={([
-                    { id: 'all',    label: 'All'  },
-                    { id: 'bass',   label: 'Low'  },
-                    { id: 'treble', label: 'High' },
-                  ] as { id: StringGroup; label: string }[])} value={stringGroup} onChange={setStringGroup} />
-                </div>
-              </div>
-              {hint(HINT.shapes[lang])}
-            </div>
-          </Rule>
-
-          {/* Re-Harmonize — the stop's one cobalt action */}
-          <Cta onClick={() => handleReharmonize()} disabled={chords.length === 0 || loading} style={{ width: '100%', height: 52 }}>
-            {loading ? (
-              <><span style={spinner(T.textMuted)} /> {he ? 'מרמן…' : 'Re-Harmonizing…'}</>
-            ) : (
-              he ? 'רה-הרמוניזציה' : 'Re-Harmonize'
-            )}
-          </Cta>
-
-          {/* Spinner animation */}
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-
-        </>
-      )}
+  const label = (text: string, right?: React.ReactNode) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>{text}</span>
+      {right}
     </div>
   );
 
-  const rightCol = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+  const toolbar = (
+    <StopActions>
+      <button onClick={() => setShowNashville(v => !v)} aria-pressed={showNashville} className="lg gc-no-bar" dir="ltr"
+        title={he ? 'מספרי נאשוויל: כל אקורד כמספר בסולם' : 'Nashville numbers: each chord as a number in the key'}
+        style={{ height: 44, borderRadius: 22, padding: '0 16px', fontSize: 14, fontWeight: 600, color: showNashville ? '#000' : T.text, background: showNashville ? T.text : undefined }}>
+        1 · 4 · 5
+      </button>
+    </StopActions>
+  );
 
-      {error && !loading && (
-        <Rule>
-          <p role="alert" style={{ margin: 0, fontSize: 13, color: T.text }}><b>{WARN}</b> {error}</p>
-        </Rule>
-      )}
-
-      {result && (
-        <>
-              {/* The reharm as a route: a changed chord is a filled station,
-                  a kept one an open ring, the one sounding now cobalt. */}
-              <Rule
-                label={he ? 'אחרי הרה-הרמוניזציה' : 'Re-Harmonized'}
-                right={<Pill size="sm" active={isPlaying} onClick={handlePlay}>{isPlaying ? 'STOP' : 'PLAY'}</Pill>}
-              >
-                <Route
-                  label={he ? 'אחרי הרה-הרמוניזציה' : 'Re-Harmonized'}
-                  stations={result.chords.map((c, i) => ({
-                    name: c,
-                    filled: formatChordName(c) !== formatChordName(chords[i] ?? ''),
-                    sub: showNashville ? toNashville(c, keyRoot) : undefined,
-                  }))}
-                  current={ab != null && ab.side === 'after' ? ab.step : null}
-                />
-
-                {/* Before / after — one loop, two progressions: flip sides while it
-                    plays and the next chord comes from the other one, so the
-                    difference is heard at the same spot in the bar. */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
-                  <span className="su-label">{he ? 'לפני / אחרי' : 'Before / after'}</span>
-                  {(['before', 'after'] as const).map(side => (
-                    <Pill key={side} size="sm" active={ab?.side === side} onClick={() => abPlay(side)}>
-                      {side === 'before' ? (he ? '▶ המקור' : '▶ Original') : (he ? '▶ הרה-הרמוניזציה' : '▶ Reharm')}
-                    </Pill>
-                  ))}
-                  {ab && <Pill size="sm" onClick={abStop} label={he ? 'עצירה' : 'Stop'} style={{ padding: 0 }}>■</Pill>}
-                  {ab && (
-                    <span dir="ltr" className="gc-notation" style={{ fontSize: 12, color: T.textMuted, flexBasis: '100%' }}>
-                      {(ab.side === 'before' ? chords : result.chords).map((c, i) => (
-                        <span key={i} style={i === ab.step ? { color: T.text, fontWeight: 700 } : undefined}>{i ? ' – ' : ''}{c}</span>
-                      ))}
-                    </span>
-                  )}
-                </div>
-              </Rule>
-
-              {/* AI analysis */}
-              <Rule label={he ? 'ניתוח' : 'AI analysis'}>
-                <div style={{ marginBottom: 8 }}>{hint(HINT.why[lang])}</div>
-                <p style={{ margin: 0, fontSize: 13, color: T.text, lineHeight: 1.7 }}>
-                  {result.analysis}
-                </p>
-                <p style={{ margin: '10px 0 0', paddingTop: 10, borderTop: `1px solid ${T.hairline}`, fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
-                  {result.theory}
-                </p>
-              </Rule>
-
-              {/* Path selector + chord diagrams */}
-              {reharmPaths.length > 0 && (
-                <Rule label={he ? 'מסלולי פוזיציה' : 'Voicing paths'}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {hint(HINT.paths[lang])}
-                    {/* Paths as pills; the first is the smoothest — the pick */}
-                    <div role="group" aria-label={he ? 'מסלולי פוזיציה' : 'Voicing paths'} className="gc-no-scrollbar"
-                      style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingBottom: 1 }}>
-                      {reharmPaths.map((path, pi) => {
-                        const active = pi === selectedPathIdx;
-                        return (
-                          <Pill key={path.id} size="sm" active={active} onClick={() => setSelectedPathIdx(pi)} style={{ textTransform: 'none', letterSpacing: '0.02em' }}>
-                            <span style={{ fontFamily: 'var(--gc-mono)', opacity: 0.7 }}>{pi + 1}</span>
-                            {path.label}
-                            {pi === 0 && <span style={{ ...pickTag, ...(active ? { background: T.white, color: T.secondary } : {}) }}>PICK</span>}
-                          </Pill>
-                        );
-                      })}
-                    </div>
-
-                    {/* Current path detail */}
-                    {currentPath && (
-                      <>
-                        <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.5 }}>
-                          {currentPath.description}
-                        </p>
-                        <span className="su-label">{he ? 'הקישו על דיאגרמה להגדלה' : 'Tap a diagram to enlarge'}</span>
-                        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, flexWrap: 'nowrap', minHeight: 148 }}>
-                          {currentPath.voicings.map((voicing, ci) => (
-                            <button
-                              type="button"
-                              key={ci}
-                              onClick={() => setModalIdx(ci)}
-                              aria-label={he ? `הגדלת ${result.chords[ci]}` : `Enlarge ${result.chords[ci]}`}
-                              className="gc-no-bar"
-                              style={{
-                                flexShrink: 0, width: 124, cursor: 'pointer', background: 'transparent', color: T.text,
-                                border: 'none', borderTop: `var(--su-rule) solid ${T.border}`, borderRadius: 0, padding: '8px 0 4px',
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                              }}
-                            >
-                              <span className="su-semi gc-notation" style={{ fontSize: 18 }}>{result.chords[ci]}</span>
-                              <div style={{ width: '100%' }}>
-                                <MiniFretboard voicing={voicing} dotColor={T.secondary} tuning={tuning.notes} />
-                              </div>
-                              <FretBadge voicing={voicing} />
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </Rule>
-              )}
-
-              {reharmPaths.length === 0 && (
-                <Rule>
-                  <p style={{ margin: 0, fontSize: 13, color: T.textMuted }}>
-                    {he ? 'לא נמצאו מסלולים — נסו מצב Full או את כל המיתרים.' : 'No voicing paths found — try Full mode or All strings.'}
-                  </p>
-                </Rule>
-              )}
-
-              {/* Back to the song: replace the section's chords with the reharm,
-                  or keep it beside them as a variant to switch to later. */}
-              {song && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Pill active onClick={() => { song.setChordNames(result.chords); flashUsed(); }} style={{ flex: 1 }}>
-                    <RollLabel>{used ? (he ? '✓ בשיר' : '✓ In the song') : (he ? 'השתמש בשיר' : 'Use in song')}</RollLabel>
-                  </Pill>
-                  <Pill onClick={() => {
-                    const t = TUNINGS.find(x => x.name === song.song.tuningName) ?? TUNINGS[0];
-                    song.saveVariant(`Reharm · ${GENRES.find(g => g.id === genre)?.label ?? genre}`, namesToProgression(result.chords, t.notes));
-                    flashKept();
-                  }} style={{ flex: 1 }}>
-                    <RollLabel>{kept ? (he ? '✓ נשמר כגרסה' : '✓ Kept as variant') : (he ? 'שמור כגרסה' : 'Keep as variant')}</RollLabel>
-                  </Pill>
-                </div>
-              )}
-
-              {/* Actions: save + MIDI */}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <SaveToLibraryButton
-                  label={he ? 'שמירה לספרייה' : 'Save to Library'}
-                  getPayload={() => ({
-                    kind: 'reharm',
-                    name: `Reharm — ${GENRES.find(g => g.id === genre)?.label ?? genre} (${chords.length} chords)`,
-                    original: chords,
-                    result: { chords: result.chords, analysis: result.analysis, theory: result.theory },
-                    genre,
-                    tension,
-                  })}
-                  style={{ ...pillStyle(false), flex: 1 }}
-                />
-                <Pill onClick={() => exportMidi(result.chords)} style={{ flex: 1 }}>
-                  {he ? 'ייצוא MIDI' : 'Export MIDI'}
-                </Pill>
+  // ── Your chords ───────────────────────────────────────────────────────────
+  const yourChords = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+      {label(he ? `האקורדים שלכם · ${chords.length}/8` : `Your chords · ${chords.length}/8`,
+        chords.length > 0 && <button onClick={() => onChordsChange([])} className="gc-no-bar" style={{ fontSize: 14, color: T.tintLabel }}>{he ? 'ניקוי' : 'Clear'}</button>)}
+      {chords.length === 0 ? (
+        <div style={{ borderRadius: 26, background: T.bgCard, padding: '26px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
+          <span style={{ fontSize: 17, fontWeight: 600 }}>{he ? 'עדיין אין אקורדים' : 'No chords yet'}</span>
+          <span className="su-sub" style={{ fontSize: 15 }}>{he ? 'הוסיפו אקורדים, או התחילו מדוגמה.' : 'Add some chords, or start from an example.'}</span>
+          <ExampleChips onPick={onChordsChange} title={he ? 'דוגמאות' : 'Examples'} />
+        </div>
+      ) : (
+        <div role="list" dir="ltr" className="gc-no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', padding: 2, margin: -2 }}>
+          {chords.map((c, i) => {
+            const now = ab?.side === 'before' && ab.step === i;
+            return (
+              <div key={i} role="listitem" draggable
+                onDragStart={() => { drag.current = i; }} onDragOver={e => e.preventDefault()}
+                onDrop={() => { const f = drag.current; drag.current = null; if (f != null && f !== i) moveTo(f, i); }}
+                style={{
+                  position: 'relative', flex: chords.length <= 5 ? '1 1 0' : '0 0 78px', minWidth: 64, height: 64, borderRadius: 22, cursor: 'grab',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                  background: now ? T.text : 'rgba(255,255,255,0.08)', color: now ? '#000' : T.text,
+                }}>
+                <button onClick={() => previewChordName(c)} className="gc-no-bar gc-notation" aria-label={he ? `השמעת ${c}` : `Play ${c}`}
+                  style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', color: 'inherit' }}>{formatChordName(c)}</button>
+                {showNashville && <span style={{ fontSize: 11, opacity: 0.6 }}>{toNashville(c, keyRoot)}</span>}
+                <button onClick={() => removeAt(i)} aria-label={he ? `הסרת ${c}` : `Remove ${c}`} className="gc-no-bar"
+                  style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'inherit', opacity: 0.45 }}>
+                  {icon(<path d="M6 6l12 12M18 6 6 18" />, 11)}
+                </button>
               </div>
-        </>
+            );
+          })}
+        </div>
       )}
-
-      {/* Enlarged diagram sheet */}
-      {modalIdx !== null && currentPath && result && (
-        <ReharmModal
-          voicings={currentPath.voicings}
-          chordNames={result.chords}
-          index={modalIdx}
-          tuning={tuning.notes}
-          onClose={() => setModalIdx(null)}
-        />
-      )}
+      <Fold title={he ? 'הוספת אקורד' : 'Add a chord'} open={adding} onToggle={() => setAdding(o => !o)}
+        summary={<span dir="ltr">{formatChordName(aName)}</span>}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Chips label={he ? 'שורש' : 'Root'} cols={6} value={aRoot} onChange={r => { setARoot(r); hearAdd(r, aTriad, aExt); }}
+            items={ROOTS.map(r => ({ id: r, label: r.replace('#', '♯') }))} />
+          <Chips label={he ? 'איכות' : 'Quality'} value={aTriad} onChange={t => { setATriad(t); setAExt(''); hearAdd(aRoot, t, ''); }}
+            items={TRIADS.map(t => ({ id: t.key, label: he ? (TRIAD_HE[t.key] ?? t.display) : t.display }))} />
+          {aValid.length > 1 && (
+            <Chips label={he ? 'צבע נוסף' : 'Add a colour'} value={aExt} onChange={x => { setAExt(x); hearAdd(aRoot, aTriad, x); }}
+              items={EXTENSIONS.filter(e => aValid.includes(e.key)).map(e => ({ id: e.key, label: e.key === '' ? (he ? 'בלי' : 'None') : e.display }))} />
+          )}
+          <button onClick={() => onChordsChange([...chords, aName])} disabled={full} className="su-primary gc-no-bar"
+            style={{ height: 48, opacity: full ? 0.35 : 1 }}>
+            {full ? (he ? 'עד 8 אקורדים' : 'Up to 8 chords') : <>{he ? 'הוספת ' : 'Add '}<span dir="ltr" className="gc-notation">{formatChordName(aName)}</span></>}
+          </button>
+        </div>
+      </Fold>
     </div>
   );
 
-  if (desktop && chords.length > 0) {
+  // ── How to change them ────────────────────────────────────────────────────
+  const options = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+      <Chips label={he ? 'סגנון' : 'Style'} value={genre} onChange={g => { setGenre(g); }}
+        items={GENRES.map(g => ({ id: g.id, label: he ? (GENRE_HE[g.id] ?? g.label) : g.label }))} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Chips label={he ? 'כמה להעז' : 'How adventurous'} cols={5} value={String(tension)}
+          onChange={v => { const t = Number(v); setTension(t); rerun(t); }}
+          items={LEVELS.map((l, i) => ({ id: String(i + 1), label: l[lang] }))} />
+        {hint(HINT.tension[lang])}
+      </div>
+      <Fold title={he ? 'אפשרויות נגינה' : 'Playing options'} open={showPlay} onToggle={() => setShowPlay(o => !o)}
+        summary={`${mode === 'full' ? (he ? 'אקורד מלא' : 'Full chords') : (he ? 'טריאדות' : 'Triads')} · ${STRINGS.find(x => x.id === stringGroup)?.[lang]}`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Chips label={he ? 'צורה' : 'Shape'} value={mode} onChange={setMode}
+            items={[{ id: 'full' as VoicingMode, label: he ? 'אקורד מלא' : 'Full' }, { id: 'triads' as VoicingMode, label: he ? 'טריאדות' : 'Triads' }]} />
+          <Chips label={he ? 'מיתרים' : 'Strings'} value={stringGroup} onChange={setStringGroup}
+            items={STRINGS.map(x => ({ id: x.id, label: x[lang] }))} />
+          {hint(HINT.shapes[lang])}
+        </div>
+      </Fold>
+      <button onClick={() => handleReharmonize()} disabled={chords.length === 0 || loading} className="gc-no-bar"
+        style={{ height: 52, borderRadius: 26, background: T.text, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 17, fontWeight: 600, opacity: chords.length === 0 ? 0.35 : 1 }}>
+        {loading
+          ? <><span style={spinner('#000')} /> {he ? 'מחפשים אקורדים חדשים…' : 'Finding new chords…'}</>
+          : <><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2l2 6.5L20.5 11 14 13.5 12 20l-2-6.5L3.5 11 10 8.5z" /></svg>{he ? 'רה-הרמוניזציה' : 'Re-Harmonize'}</>}
+      </button>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  // ── The result ────────────────────────────────────────────────────────────
+  const card = (children: React.ReactNode) => (
+    <div style={{ borderRadius: 26, background: T.bgCard, padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>{children}</div>
+  );
+  const sideBtn = (side: 'before' | 'after', text: string) => {
+    const on = ab?.side === side;
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '340px minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
-        {leftCol}
-        <div style={{ position: 'sticky', top: 24 }}>{rightCol}</div>
+      <button key={side} onClick={() => abPlay(side)} aria-pressed={on} className="gc-no-bar"
+        style={{ flex: 1, height: 40, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 15, fontWeight: 600,
+          background: on ? T.text : 'transparent', color: on ? '#000' : T.text, transition: 'background 240ms ease, color 240ms ease' }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden><path d="M6 3.5v17l15-8.5z" fill="currentColor" /></svg>{text}
+      </button>
+    );
+  };
+
+  const resultView = result && (
+    <>
+      {card(<>
+        {label(he ? 'לפני ואחרי' : 'Before and after')}
+        <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(chords.length, result.chords.length)}, minmax(0, 1fr))`, gap: 6 }}>
+          {chords.map((c, i) => (
+            <span key={`o${i}`} className="gc-notation" style={{ textAlign: 'center', fontSize: 14, color: ab?.side === 'before' && ab.step === i ? T.text : T.textMuted, fontWeight: ab?.side === 'before' && ab.step === i ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {formatChordName(c)}
+            </span>
+          ))}
+          {result.chords.map((c, i) => {
+            const changed = formatChordName(c) !== formatChordName(chords[i] ?? '');
+            const now = ab?.side === 'after' && ab.step === i;
+            return (
+              <button key={`n${i}`} onClick={() => previewChordName(c)} className="gc-no-bar gc-notation"
+                style={{ height: 52, borderRadius: 18, minWidth: 0, padding: '0 4px', fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  background: now ? T.text : changed ? T.primaryBg : 'rgba(255,255,255,0.06)', color: now ? '#000' : changed ? T.tintLabel : T.text,
+                  boxShadow: changed && !now ? `inset 0 0 0 1px ${T.primary}` : undefined }}>
+                {formatChordName(c)}
+                {showNashville && <span style={{ display: 'block', fontSize: 10, opacity: 0.6, fontWeight: 500 }}>{toNashville(c, keyRoot)}</span>}
+              </button>
+            );
+          })}
+        </div>
+        <span style={{ fontSize: 13, color: T.textMuted }}>{he ? 'האקורדים הצבעוניים הם אלה שהשתנו. הקישו על אקורד כדי לשמוע אותו.' : 'The coloured chords are the ones that changed. Tap one to hear it.'}</span>
+        <div className="lg" style={{ display: 'flex', gap: 2, padding: 3, borderRadius: 23 }}>
+          {sideBtn('before', he ? 'המקור' : 'Original')}
+          {sideBtn('after', he ? 'החדש' : 'New')}
+          {ab && (
+            <button onClick={abStop} aria-label={he ? 'עצירה' : 'Stop'} className="gc-no-bar" style={{ width: 40, height: 40, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.text }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" /></svg>
+            </button>
+          )}
+        </div>
+      </>)}
+
+      {card(<>
+        {label(he ? 'למה זה עובד' : 'Why it works')}
+        <p dir="auto" style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: T.text }}>{result.analysis}</p>
+        <p dir="auto" style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: T.textMuted }}>{result.theory}</p>
+      </>)}
+
+      {reharmPaths.length > 0 ? card(<>
+        {label(he ? 'איך לנגן את זה' : 'How to play it',
+          currentPath && (
+            <button onClick={handlePlay} className="gc-no-bar" style={{ fontSize: 14, fontWeight: 600, color: T.tintLabel, display: 'flex', alignItems: 'center', gap: 5 }}>
+              {isPlaying ? (he ? 'עצירה' : 'Stop') : (he ? 'נגנו את הדרך הזו' : 'Play this way')}
+            </button>
+          ))}
+        {hint(HINT.paths[lang])}
+        <div role="radiogroup" aria-label={he ? 'דרכים לנגן' : 'Ways to play'} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {reharmPaths.map((path, pi) => {
+            const on = pi === selectedPathIdx;
+            return (
+              <button key={path.id} role="radio" aria-checked={on} onClick={() => setSelectedPathIdx(pi)} className="gc-no-bar"
+                style={{ height: 36, padding: '0 14px', borderRadius: 18, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
+                  background: on ? T.text : 'rgba(255,255,255,0.08)', color: on ? '#000' : T.text }}>
+                {path.label}
+                {pi === 0 && <span style={{ fontSize: 11, fontWeight: 700, color: on ? T.primary : T.tintLabel }}>{he ? 'הכי חלק' : 'Smoothest'}</span>}
+              </button>
+            );
+          })}
+        </div>
+        {currentPath && <span dir="auto" style={{ fontSize: 13, color: T.textMuted }}>{currentPath.description}</span>}
+        {currentPath && (
+          <div dir="ltr" className="gc-no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {currentPath.voicings.map((voicing, ci) => (
+              <button key={ci} type="button" onClick={() => setModalIdx(ci)} className="gc-no-bar"
+                aria-label={he ? `הגדלת ${result.chords[ci]}` : `Enlarge ${result.chords[ci]}`}
+                style={{ flex: '0 0 116px', borderRadius: 18, padding: '10px 6px 8px', background: 'rgba(255,255,255,0.06)', color: T.text, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <span className="gc-notation" style={{ fontSize: 16, fontWeight: 700 }}>{formatChordName(result.chords[ci])}</span>
+                <div style={{ width: '100%' }}><MiniFretboard voicing={voicing} dotColor={T.secondary} tuning={tuning.notes} /></div>
+                <FretBadge voicing={voicing} />
+              </button>
+            ))}
+          </div>
+        )}
+      </>) : card(
+        <span style={{ fontSize: 14, color: T.textMuted }}>{he ? 'לא מצאנו דרך נוחה לנגן את זה. נסו "אקורד מלא" או "כל המיתרים" באפשרויות הנגינה.' : 'No comfortable way to play this found. Try Full or All strings in Playing options.'}</span>
+      )}
+
+      {/* Back to the song: replace its chords, or keep the reharm beside them. */}
+      {song && (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button onClick={() => { song.setChordNames(result.chords); flashUsed(); }} className="gc-no-bar"
+            style={{ height: 50, padding: '0 24px', borderRadius: 25, background: T.text, color: '#000', fontSize: 17, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 7 }}>
+            {used ? icon(<path d="m5 12 5 5 9-10" />, 17) : null}
+            {used ? (he ? 'בשיר שלכם' : 'In your song') : (he ? 'השתמשו בשיר' : 'Use in song')}
+          </button>
+          <button onClick={() => {
+            const t = TUNINGS.find(x => x.name === song.song.tuningName) ?? TUNINGS[0];
+            song.saveVariant(`Reharm · ${GENRES.find(g => g.id === genre)?.label ?? genre}`, namesToProgression(result.chords, t.notes));
+            flashKept();
+          }} className="gc-no-bar"
+            style={{ height: 50, padding: '0 22px', borderRadius: 25, background: 'rgba(255,255,255,0.08)', color: T.text, fontSize: 17, fontWeight: 600 }}>
+            {kept ? (he ? 'נשמר כגרסה' : 'Kept as variant') : (he ? 'שמירה כגרסה' : 'Keep as variant')}
+          </button>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap', marginTop: -6 }}>
+        <SaveToLibraryButton size="sm" label={he ? 'שמירה לספרייה' : 'Save to Library'}
+          style={{ height: 40, padding: '0 14px', borderRadius: 20, fontSize: 15, fontWeight: 500, color: T.tintLabel, background: 'transparent', border: 'none' }}
+          getPayload={() => ({
+            kind: 'reharm',
+            name: `Reharm — ${GENRES.find(g => g.id === genre)?.label ?? genre} (${chords.length} chords)`,
+            original: chords,
+            result: { chords: result.chords, analysis: result.analysis, theory: result.theory },
+            genre, tension,
+          })} />
+        <button onClick={() => exportMidi(result.chords)} className="gc-no-bar"
+          style={{ height: 40, padding: '0 14px', borderRadius: 20, fontSize: 15, fontWeight: 500, color: T.tintLabel }}>
+          {he ? 'ייצוא MIDI' : 'Export MIDI'}
+        </button>
+      </div>
+    </>
+  );
+
+  const right = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+      {error && !loading && (
+        <div role="alert" style={{ borderRadius: 22, background: T.bgCard, padding: '14px 18px', fontSize: 15 }}><b>{WARN}</b> {error}</div>
+      )}
+      {resultView}
+      {!result && !error && desktop && (
+        <div style={{ borderRadius: 26, boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.10)', padding: '48px 28px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 17, fontWeight: 600 }}>{loading ? (he ? 'מחפשים אקורדים חדשים…' : 'Finding new chords…') : (he ? 'האקורדים החדשים יופיעו כאן' : 'Your new chords will appear here')}</span>
+          <span className="su-sub" style={{ fontSize: 15, maxWidth: 340 }}>{he ? 'לצד המקור, כדי שתוכלו להשוות באוזן.' : 'Next to the originals, so you can compare them by ear.'}</span>
+        </div>
+      )}
+      {modalIdx !== null && currentPath && result && (
+        <ReharmModal voicings={currentPath.voicings} chordNames={result.chords} index={modalIdx} tuning={tuning.notes} onClose={() => setModalIdx(null)} />
+      )}
+    </div>
+  );
+
+  const left = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0 }}>
+      <HowItWorks />
+      {yourChords}
+      {options}
+    </div>
+  );
+
+  if (desktop) {
+    return (
+      <div className="su-in" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 400px) minmax(0, 1fr)', gap: 40, alignItems: 'start' }}>
+        {toolbar}
+        {left}
+        <div style={{ position: 'sticky', top: 24 }}>{right}</div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {leftCol}
-      {rightCol}
+    <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {toolbar}
+      {left}
+      {right}
     </div>
   );
 }

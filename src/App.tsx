@@ -13,7 +13,6 @@ import { ChordPickerTab }    from './components/ChordPicker/ChordPickerTab';
 import { ChordBuilderTab }   from './components/ChordBuilder/ChordBuilderTab';
 import { TargetNoteTab }     from './components/Chords/TargetNoteTab';
 import { ChordsPracticeTab } from './components/ChordPractice/ChordsPracticeTab';
-import { SongDock } from './components/Song/SongDock';
 import { SongMap } from './components/Song/SongMap';
 import { useSongSync } from './song/useSongSync';
 import { useAuth } from './contexts/AuthContext';
@@ -95,8 +94,6 @@ const INTERVAL_VIEWS = ['explore', 'measure', 'inchord'];
 // Stops whose tool draws its own poster title (the chord name, the scale, the
 // tuner's note, the tempo, the song title) — the shell skips the stop name.
 const OWN_POSTER = new Set(['scales', 'tuner', 'metronome', 'tab-writer', 'learn-scale']);
-// Stops where the song player would only get in the way.
-const NO_DOCK = new Set(['learn-scale', 'tuner']);
 
 // ════════════════════════════════════════════════════════════════════════════
 export default function App() {
@@ -312,7 +309,6 @@ export default function App() {
         onToggleDark={() => setDarkMode(m => !m)}
         userMenu={<UserMenu compact={!isDesktop} up={isDesktop} onOpenWorkspace={() => go('library')} />}
         sharedBanner={sharedBanner}
-        dock={NO_DOCK.has(shown) ? undefined : <SongDock compact={!isDesktop} onOpenMap={() => setSongMapOpen(true)} />}
         ownPoster={OWN_POSTER.has(shown)}
       >
         <ErrorBoundary key={shown} label={stopName}>
