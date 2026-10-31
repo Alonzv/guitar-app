@@ -34,7 +34,7 @@ export function HomeHero({ lastStop, onGo }: Props) {
   const starts = [
     { id: 'learn-scale', sub: 'start', title: he ? 'ללמוד סולם' : 'Learn a scale', note: he ? 'בוחרים סולם, ואז תחושה.' : 'Pick a key, then a feel.',
       icon: icon(<path d="M4 18h4v-4h4v-4h4V6h4" />) },
-    { id: 'chord-builder', title: he ? 'לכתוב מהלך' : 'Write a progression', note: he ? 'אקורדים שנשמעים טוב יחד.' : 'Chords that fit together.',
+    { id: 'progression', title: he ? 'לכתוב מהלך' : 'Write a progression', note: he ? 'אקורדים שנשמעים טוב יחד.' : 'Chords that fit together.',
       icon: icon(<><rect x="3" y="5" width="5" height="14" rx="1.5" /><rect x="10" y="5" width="5" height="14" rx="1.5" /><rect x="17" y="5" width="4" height="14" rx="1.5" /></>) },
     { id: 'tuner', title: he ? 'לכוון את הגיטרה' : 'Tune up', note: he ? 'לפני שמתחילים לנגן.' : 'Get in tune before you play.',
       icon: icon(<><path d="M12 20V10" /><path d="M5.6 7.6a9 9 0 0 1 12.8 0" /><path d="M8.5 10.5a5 5 0 0 1 7 0" /></>) },

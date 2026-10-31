@@ -24,6 +24,7 @@ import { formatChordName } from './utils/chordIdentifier';
 import { DiatonicExtensions } from './components/Chords/DiatonicExtensions';
 
 import { ScaleExplorer }     from './components/ScalePanel/ScaleExplorer';
+import { ProgressionView } from './components/Song/ProgressionView';
 import { LearnScale }        from './components/Play/LearnScale';
 import { TriadsGenerator }   from './components/Triads/TriadsGenerator';
 import { IntervalsTab }      from './components/Intervals/IntervalsTab';
@@ -188,7 +189,7 @@ export default function App() {
   const [showSharedBanner, setShowSharedBanner] = useState(() => !!decodeSharedProgression());
   const dismissShared = () => { setShowSharedBanner(false); history.replaceState(history.state, '', window.location.pathname); };
   const handleLoadShared = () => {
-    if (sharedProgression) { pushHistory(sharedProgression); go('chord-builder', 'ear'); }
+    if (sharedProgression) { pushHistory(sharedProgression); go('progression'); }
     dismissShared();
   };
 
@@ -271,6 +272,7 @@ export default function App() {
       case 'harmonize':
       case 'reharmonize':   return <VoicingsTab desktop={d} globalProgression={progression} onChordsChange={handleChordNamesChange} tuning={tuning}
                                      activeSub={id === 'harmonize' ? 'harmonizer' : 'reharmonize'} />;
+      case 'progression':   return <ProgressionView onGo={id => go(id)} />;
       case 'learn-scale':   return <LearnScale key={learnView} resume={learnView === 'resume'} />;
       case 'scales':        return <ScaleExplorer desktop={d} />;
       case 'intervals':     return <IntervalsTab desktop={d} sub={intervalView} />;
@@ -279,7 +281,7 @@ export default function App() {
       case 'tab-writer':    return <TabBuilder desktop={d} />;
       case 'audio-tab':     return <AudioToTab desktop={d} />;
       case 'library':       return <WorkspacePanel desktop={d} onOpenTabInBuilder={handleOpenTab} onOpenProgressionInBuilder={handleOpenProgression} />;
-      case 'tuner':         return <Tuner tuning={tuning} />;
+      case 'tuner':         return <Tuner tuning={tuning} onTuningChange={setTuning} />;
       case 'metronome':     return <Metronome />;
       case 'chord-practice': return <ChordsPracticeTab desktop={d} />;
       case 'scale-practice': return <ScalesPracticeTab desktop={d} />;

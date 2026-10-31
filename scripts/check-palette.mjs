@@ -41,6 +41,7 @@ const PALETTE = new Set([
   '4f7bff', '6b91ff', '2a2826',
   // Liquid Glass — indigo tint and its label, Apple greys
   '5e5ce6', '7270f0', 'a5a4ff', '1c1c1e', '2c2c2e', 'f5f5f7', '636366',
+  '30d158',   // Apple system green: the tuner's in-tune state only
   // short forms of black/white
   'fff', '000',
 ]);

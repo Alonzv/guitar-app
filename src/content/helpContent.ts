@@ -9,6 +9,16 @@ export interface HelpEntry {
 
 export const HELP: Record<string, HelpEntry> = {
   // ── CHORDS ────────────────────────────────────────────────────────────────
+  'chords:progression': {
+    en: {
+      title: 'Progression',
+      body: 'Your song\'s chords, one at a time. Tap a chord to hear it and see its shape and its job in the key. Play loop repeats the whole progression at the song\'s tempo. Add chords from the Chord Builder, the Circle of Fifths or Extensions; move or remove them here.',
+    },
+    he: {
+      title: 'המהלך',
+      body: 'האקורדים של השיר, אחד בכל פעם. לחיצה על אקורד משמיעה אותו ומראה את הצורה שלו ואת התפקיד שלו בסולם. "נגנו בלופ" חוזר על כל המהלך בקצב של השיר. מוסיפים אקורדים מבונה האקורדים, ממעגל הקווינטות או מההרחבות, ומזיזים או מוחקים אותם כאן.',
+    },
+  },
   'chords:finder': {
     en: {
       title: 'By Name',

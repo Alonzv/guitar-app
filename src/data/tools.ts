@@ -103,6 +103,10 @@ export const STOPS: Stop[] = [
     help: 'chords:extensions' },
 
   // ── L3 Write ──────────────────────────────────────────────────────────────
+  { id: 'progression', line: 'L3',
+    name: { en: 'Progression', he: 'המהלך' },
+    meta: { en: 'your chords · loop', he: 'האקורדים שלכם · לופ' },
+    ask: ['progression', 'my chords', 'song chords', 'loop', 'מהלך', 'פרוגרסיה', 'האקורדים שלי'], help: 'chords:progression' },
   { id: 'tab-writer', line: 'L3',
     name: { en: 'Tab Writer', he: 'כתיבת טאבים' },
     meta: { en: 'write · play · export', he: 'כתיבה · נגינה · ייצוא' },
