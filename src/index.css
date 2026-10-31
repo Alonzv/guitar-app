@@ -798,7 +798,7 @@ input, textarea { color: var(--gc-text); }
    Strongest behind the sidebar's corner; faint under the tools' content. */
 .su-ambient {
   position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  opacity: 0.7;   /* 30% softer than first drawn */
+  opacity: 0.2;   /* 80% softer than first drawn */
   background:
     radial-gradient(60% 70% at 0% 0%, rgba(94,92,230,0.78), rgba(94,92,230,0) 70%),
     radial-gradient(45% 50% at 6% 100%, rgba(165,164,255,0.40), rgba(165,164,255,0) 70%),
