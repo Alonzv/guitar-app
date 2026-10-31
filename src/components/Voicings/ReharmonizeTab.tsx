@@ -360,7 +360,7 @@ export function ReharmonizeTab({
 
     const genreLabel = GENRES.find(g => g.id === genre)?.label ?? genre;
 
-    reharmonize(chords, genreLabel, t).then(r => {
+    reharmonize(chords, genreLabel, t, lang).then(r => {
       setLoading(false); busy.current = false;
       if (r) {
         setResult(r);

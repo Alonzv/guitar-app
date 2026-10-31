@@ -24,10 +24,9 @@ import { TUNINGS } from '../../utils/musicTheory';
 import { useFlash } from '../../motion/useFlash';
 import { RollLabel } from '../RollLabel';
 import { keyName } from '../../utils/harmonicAnalysis';
-import { Meta, Pill, Cta, Stepper } from '../Transit/parts';
+import { Pill, Cta } from '../Transit/parts';
 import { StopActions } from '../Transit/StopActions';
 import { Sheet } from '../Workspace/Sheet';
-import { PosterInput } from '../Tabs/PosterInput';
 import { TabKeypad } from '../Tabs/TabKeypad';
 
 type Lang = 'he' | 'en';
@@ -534,47 +533,56 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
   const savePayload = () => tabHasContent(tab) ? ({ kind: 'tab' as const, name: tab.title?.trim() || 'Untitled Tab', content: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars } }) : null;
   const tuningName = (TUNINGS.find(x => x.name === song?.song.tuningName) ?? TUNINGS[0]).label;
 
+  const meta = [
+    `${song?.song.bpm ?? 90} BPM`, song?.song.meter ?? '4/4',
+    song?.key ? keyName(song.key, lang) : null, tuningName,
+  ].filter(Boolean).join(' · ');
+  const quiet: React.CSSProperties = { height: 40, padding: '0 14px', borderRadius: 20, fontSize: 15, fontWeight: 500, color: T.tintLabel };
   const header = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 4 }}>
-      <div>
-        <PosterInput value={title} onChange={v => setTab(p => ({ ...p, title: v }))}
-          placeholder={he ? 'טאב ללא שם' : 'Untitled tab'} label={he ? 'שם הטאב' : 'Tab title'}
-          max={desktop ? 150 : 76} min={34} />
-        <input
-          value={subtitle}
-          placeholder={he ? 'הערות · כיוון · סגנון' : 'Notes · feel · tuning'}
-          aria-label={he ? 'כותרת משנה' : 'Subtitle'}
-          dir="auto"
-          onChange={e => setTab(p => ({ ...p, subtitle: e.target.value }))}
-          style={{ display: 'block', width: '100%', marginTop: 8, border: 'none', background: 'transparent', padding: 0, outline: 'none', fontFamily: 'var(--gc-mono)', fontSize: 12, letterSpacing: '0.04em', color: T.textMuted }}
-        />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingBottom: 4 }}>
+      {/* The tab's name is the page title; tap it to rename. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <input value={title} onChange={e => setTab(p => ({ ...p, title: e.target.value }))}
+          placeholder={he ? 'טאב ללא שם' : 'Untitled tab'} aria-label={he ? 'שם הטאב' : 'Tab title'}
+          className="su-title" style={{ width: '100%', border: 'none', background: 'transparent', padding: 0, outline: 'none' }} />
+        <input value={subtitle} onChange={e => setTab(p => ({ ...p, subtitle: e.target.value }))}
+          placeholder={he ? 'הוסיפו הערה: סגנון, השראה…' : 'Add a note: feel, inspiration…'} aria-label={he ? 'כותרת משנה' : 'Subtitle'}
+          className="su-sub" style={{ width: '100%', border: 'none', background: 'transparent', padding: 0, outline: 'none' }} />
+        <span className="gc-notation" dir="ltr" style={{ fontSize: 13, fontWeight: 600, color: T.textMuted, alignSelf: 'flex-start' }}>{meta}</span>
       </div>
-      <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10 }}>
-        <Meta cols={desktop ? 4 : 3} items={[
-          { label: 'BPM', value: song?.song.bpm ?? '—' },
-          { label: he ? 'משקל' : 'Time', value: song?.song.meter ?? '4/4' },
-          { label: he ? 'סולם' : 'Key', value: song?.key ? keyName(song.key, lang) : '—' },
-          ...(desktop ? [{ label: he ? 'כיוון' : 'Tuning', value: tuningName }] : []),
-        ]} />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <Pill onClick={playTab} active={playing} disabled={!tabHasContent(tab)} label={playing ? (he ? 'עצירה' : 'Stop') : (he ? 'נגינה' : 'Play')}
-          style={{ background: T.secondary, color: T.white }}>{playing ? (he ? '■ עצירה' : '■ Stop') : (he ? '▶ נגינה' : '▶ Play')}</Pill>
-        <Pill onClick={handleAnalyze} title="Detect the scale and suggest chord progressions">{he ? 'ניתוח' : 'Analyze'}</Pill>
-        <Pill onClick={handleExport} disabled={busy}>{busy ? '…' : 'PDF'}</Pill>
-        <Pill onClick={undo} disabled={!canUndo} title="Undo [Ctrl+Z]">{he ? 'ביטול' : 'Undo'}</Pill>
-        {backups.length > 0 && <Pill onClick={() => setRecoverOpen(true)} title="Recover a previous save">{he ? 'שחזור' : 'Recover'}</Pill>}
-        <Pill onClick={() => { if (!window.confirm('Clear all notes? This cannot be undone.')) return; clearGrid(); }} title="Clear all notes">{he ? 'ניקוי' : 'Clear'}</Pill>
+
+      {/* One white action, one glass one; the rest stay quiet. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <button onClick={playTab} disabled={!tabHasContent(tab)} className="gc-no-bar"
+          style={{ height: 50, padding: '0 24px 0 20px', borderRadius: 25, background: T.text, color: '#000', display: 'flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 600, opacity: tabHasContent(tab) ? 1 : 0.35 }}>
+          {playing
+            ? <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" /></svg>
+            : <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden><path d="M7 4.5v15l13-7.5z" fill="currentColor" /></svg>}
+          {playing ? (he ? 'עצירה' : 'Stop') : (he ? 'נגנו' : 'Play')}
+        </button>
+        <button onClick={handleAnalyze} className="gc-no-bar" title={he ? 'מזהה את הסולם ומציע אקורדים שמתאימים למנגינה' : 'Finds the scale and suggests chords that fit the melody'}
+          style={{ height: 50, padding: '0 20px', borderRadius: 25, background: 'rgba(255,255,255,0.08)', color: T.text, display: 'flex', alignItems: 'center', gap: 7, fontSize: 17, fontWeight: 600 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2l2 6.5L20.5 11 14 13.5 12 20l-2-6.5L3.5 11 10 8.5z" /></svg>
+          {he ? 'אילו אקורדים מתאימים?' : 'Which chords fit?'}
+        </button>
         <span style={{ flex: 1 }} />
-        <Stepper size="sm" label="Zoom" value={<span style={{ fontSize: 15 }}>{zoom}%</span>}
-          onPrev={() => setZoom(z => Math.max(60, z - 10))} onNext={() => setZoom(z => Math.min(150, z + 10))} />
+        <div className="lg" dir="ltr" role="group" aria-label={he ? 'גודל' : 'Zoom'} style={{ height: 40, borderRadius: 20, display: 'flex', alignItems: 'center', padding: '0 2px' }}>
+          <button onClick={() => setZoom(z => Math.max(60, z - 10))} aria-label={he ? 'הקטנה' : 'Zoom out'} className="gc-no-bar" style={{ width: 36, height: 36, fontSize: 18, color: T.text }}>−</button>
+          <span style={{ minWidth: 48, textAlign: 'center', fontSize: 14, fontWeight: 600 }}>{zoom}%</span>
+          <button onClick={() => setZoom(z => Math.min(150, z + 10))} aria-label={he ? 'הגדלה' : 'Zoom in'} className="gc-no-bar" style={{ width: 36, height: 36, fontSize: 18, color: T.text }}>+</button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', margin: '-8px -14px 0' }}>
+        <button onClick={handleExport} disabled={busy} className="gc-no-bar" style={quiet}>{busy ? '…' : (he ? 'ייצוא ל־PDF' : 'Export PDF')}</button>
+        {backups.length > 0 && <button onClick={() => setRecoverOpen(true)} className="gc-no-bar" style={quiet}>{he ? 'שחזור גרסה קודמת' : 'Recover a save'}</button>}
+        <button onClick={() => { if (!window.confirm(he ? 'למחוק את כל התווים?' : 'Clear all notes? This cannot be undone.')) return; clearGrid(); }} disabled={!tabHasContent(tab)} className="gc-no-bar" style={{ ...quiet, opacity: tabHasContent(tab) ? 1 : 0.35 }}>{he ? 'ניקוי' : 'Clear'}</button>
       </div>
 
       {/* The song's melody: send this tab to it (Harmonize and the rest pick it
           up), or pull in a melody another tool wrote. */}
       {song && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span className="su-label" style={{ marginInlineEnd: 4 }}>{he ? 'מלודיית השיר' : 'Song melody'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', borderRadius: 22, background: T.bgCard, padding: '10px 12px 10px 18px' }}>
+          <span style={{ fontSize: 15, fontWeight: 600, marginInlineEnd: 'auto' }}>{he ? 'המנגינה של השיר' : 'Song melody'}</span>
           <Pill size="sm" onClick={() => {
             song.update({ melody: { title: tab.title, subtitle: tab.subtitle, grid: tab.grid, bars: tab.bars }, melodyFrom: 'tabbuilder' });
             flashSent();
@@ -600,7 +608,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
 
   const ink = T.text;
   const tabGrid = (
-    <div ref={wrapRef} style={{ paddingBottom: 8, minWidth: 0 }}>
+    <div ref={wrapRef} style={{ padding: '18px 14px 14px', minWidth: 0, borderRadius: 26, background: T.bgCard }}>
       {/* An empty tab offers a riff to start from. */}
       {!tabHasContent(tab) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -646,7 +654,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
           </div>
         );
       })}
-      <Pill size="sm" onClick={addLine} style={{ borderStyle: 'dashed' }}>{he ? '+ שורה' : '+ Add line'}</Pill>
+      <button onClick={addLine} className="gc-no-bar" style={{ height: 40, padding: '0 16px', borderRadius: 20, background: 'rgba(255,255,255,0.08)', color: T.text, fontSize: 15, fontWeight: 600 }}>{he ? '+ שורה' : '+ Add line'}</button>
     </div>
   );
 
@@ -676,7 +684,11 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       />
 
       <StopActions>
-        <SaveToLibraryButton size="sm" label={he ? 'שמירה' : 'Save'} getPayload={savePayload} />
+        <button onClick={undo} disabled={!canUndo} aria-label={he ? 'ביטול' : 'Undo'} title="Undo [Ctrl+Z]" className="lg lg-circle gc-no-bar" style={{ color: canUndo ? T.text : T.textDim }}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 14 4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
+        </button>
+        <SaveToLibraryButton size="sm" label={he ? 'שמירה' : 'Save'} getPayload={savePayload}
+          style={{ height: 44, borderRadius: 22, padding: '0 18px', fontSize: 14, fontWeight: 600 }} />
       </StopActions>
 
       {header}
@@ -694,11 +706,11 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       ) : (
         <>
           {tabGrid}
-          {/* Docked keypad — over the song bar while a cell is being edited. */}
+          {/* Docked keypad, floating at the bottom while a cell is being edited. */}
           {sel && (
             <>
               <div aria-hidden style={{ height: 250 }} />
-              <div style={{ position: 'fixed', insetInline: 0, bottom: 0, zIndex: 60, paddingBottom: 'env(safe-area-inset-bottom)', background: T.secondary }}>
+              <div style={{ position: 'fixed', insetInline: 0, bottom: 0, zIndex: 60, padding: '0 8px calc(8px + env(safe-area-inset-bottom))' }}>
                 {keypad(() => { setSel(null); setPrefix(null); })}
               </div>
             </>

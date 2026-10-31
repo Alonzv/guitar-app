@@ -11,7 +11,13 @@ export async function reharmonize(
   chords: string[],
   genre: string,
   tension: number, // 1–5
+  lang: 'en' | 'he' = 'en',
 ): Promise<ReharmonizeResult | null> {
+  // The explanation is read by a guitarist, not a theory student: plain words,
+  // in the language the app is showing. Chord names stay in letters.
+  const language = lang === 'he'
+    ? 'Hebrew (chord names stay in Latin letters, e.g. "Am9")'
+    : 'English';
   try {
     const tensionInstructions =
       tension <= 2
@@ -40,7 +46,7 @@ export async function reharmonize(
 
     const msg = await createAIMessage({
       model: AI_MODEL.fast,
-      max_tokens: 500,
+      max_tokens: 700,
       messages: [
         {
           role: 'user',
@@ -71,13 +77,13 @@ CRITICAL — Chord name format rules (must be compatible with tonaljs Chord.get(
 - Add9: "Cadd9"
 
 You MUST return exactly ${chords.length} chords — one for each chord in the original progression.
-Write "analysis" and "theory" in clear, concise English.
+Write "analysis" and "theory" in clear, plain ${language} that a guitarist with no theory background understands. Name a technique only if you explain it in a few words.
 
 Return valid JSON only, no markdown:
 {
   "chords": [<exactly ${chords.length} chord name strings>],
-  "analysis": "<1 sentence in English describing the harmonic character of the re-harmonization>",
-  "theory": "<2 sentences in English explaining the substitution techniques used>"
+  "analysis": "<1 sentence in ${language} describing how the new version sounds>",
+  "theory": "<2 sentences in ${language} explaining what was changed and why it works>"
 }`,
         },
       ],

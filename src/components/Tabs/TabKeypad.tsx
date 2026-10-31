@@ -39,21 +39,23 @@ function flash(el: HTMLElement) {
 }
 
 export function TabKeypad({ where, prefix, tech, barOn, onDigit, onPrefix, onTech, onBackspace, onString, onBar, onDone, he }: Props) {
-  const fg = T.white, bg = T.secondary;
+  // Glass keys like the iOS keypad: light glass, the chosen key white.
+  const fg = T.text, bg = '#000';
   const off = where == null;
   const hold = useRef<{ t: ReturnType<typeof setTimeout> | null; fired: boolean }>({ t: null, fired: false });
 
   const keyCss = (on = false): CSSProperties => ({
-    minHeight: 52, minWidth: 0, borderRadius: 0, cursor: off ? 'default' : 'pointer', padding: 0,
-    border: `1.5px solid ${fg}`, background: on ? fg : 'transparent', color: on ? bg : fg,
-    fontFamily: 'var(--su-display)', fontStretch: 'var(--su-display-semi)', fontWeight: 800, fontSize: 22,
+    minHeight: 52, minWidth: 0, borderRadius: 16, cursor: off ? 'default' : 'pointer', padding: 0,
+    border: 'none', background: on ? fg : 'rgba(255,255,255,0.12)', color: on ? bg : fg,
+    boxShadow: on ? undefined : 'inset 0 1px 0 rgba(255,255,255,0.14)',
+    fontFamily: 'var(--su-display)', fontWeight: 600, fontSize: 24,
     display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: off ? 0.45 : 1,
     touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none',
   });
   const small: CSSProperties = {
-    height: 40, minWidth: 40, padding: '0 12px', borderRadius: 'var(--su-pill)', cursor: 'pointer',
-    border: `1.5px solid ${fg}`, background: 'transparent', color: fg, fontSize: 12, fontWeight: 700,
-    fontFamily: 'var(--gc-font)', letterSpacing: '0.08em', flexShrink: 0, textTransform: 'none',
+    height: 40, minWidth: 40, padding: '0 14px', borderRadius: 20, cursor: 'pointer',
+    border: 'none', background: 'rgba(255,255,255,0.10)', color: fg, fontSize: 15, fontWeight: 600,
+    fontFamily: 'var(--gc-font)', flexShrink: 0, textTransform: 'none',
   };
 
   // Long-press 1 or 2 arms it as the tens digit of a two-digit fret.
@@ -75,11 +77,11 @@ export function TabKeypad({ where, prefix, tech, barOn, onDigit, onPrefix, onTec
   );
 
   return (
-    <div role="group" aria-label={he ? 'מקלדת שריגים' : 'Fret keypad'} dir="ltr" style={{
-      background: bg, color: fg, padding: 12, display: 'flex', flexDirection: 'column', gap: 10,
+    <div role="group" aria-label={he ? 'מקלדת שריגים' : 'Fret keypad'} dir="ltr" className="lg" style={{
+      color: fg, padding: 12, borderRadius: 28, display: 'flex', flexDirection: 'column', gap: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 40 }}>
-        <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--gc-mono)', fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, color: T.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {where == null ? (he ? 'בחרו תא בטאב' : 'Tap a cell') : prefix ? `${where} · ${prefix}_` : where}
         </span>
         <button type="button" onClick={() => onString(-1)} disabled={off} aria-label={he ? 'מיתר למעלה' : 'String up'} className="gc-no-bar" style={{ ...small, padding: 0, opacity: off ? 0.45 : 1 }}>▲</button>

@@ -33,23 +33,23 @@ export function Sheet({ onClose, title, kicker, maxWidth = 440, zIndex = 9000, d
   return createPortal(
     <div onClick={onClose} style={{
       position: 'fixed', inset: 0, zIndex, padding: 16,
-      background: 'color-mix(in srgb, var(--gc-text) 55%, transparent)',
+      background: 'rgba(0,0,0,0.55)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} dir={dir ?? (rtl ? 'rtl' : 'ltr')} style={{
+      <div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} dir={dir ?? (rtl ? 'rtl' : 'ltr')} className="lg su-in" style={{
         width: '100%', maxWidth, maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box',
-        background: T.bgDeep, color: T.text, border: `var(--su-rule) solid ${T.text}`,
-        padding: '16px 20px 22px', fontFamily: 'var(--gc-font)',
+        background: 'rgba(36,36,40,0.78)', color: T.text, borderRadius: 32,
+        padding: '18px 22px 24px', fontFamily: 'var(--gc-font)',
         display: 'flex', flexDirection: 'column', gap: 14,
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0, paddingTop: 6 }}>
             {kicker && <span className="su-label" style={{ display: 'block', marginBottom: 10 }}>{kicker}</span>}
-            {title && <h2 className="su-poster" style={{ margin: 0, fontSize: titleSize, overflowWrap: 'anywhere' }}>{title}</h2>}
+            {title && <h2 style={{ margin: 0, fontFamily: 'var(--su-display)', fontSize: Math.min(titleSize, 30), lineHeight: 1.15, fontWeight: 700, letterSpacing: '-0.03em', overflowWrap: 'anywhere' }}>{title}</h2>}
           </div>
           <button type="button" onClick={onClose} aria-label={lang === 'he' ? 'סגירה' : 'Close'} className="gc-no-bar" style={{
-            width: 44, height: 44, flexShrink: 0, borderRadius: '50%', cursor: 'pointer',
-            border: `1.5px solid ${T.text}`, background: 'transparent', color: T.text, fontSize: 15,
+            width: 36, height: 36, flexShrink: 0, borderRadius: '50%', cursor: 'pointer',
+            border: 'none', background: 'rgba(255,255,255,0.12)', color: T.text, fontSize: 14, fontWeight: 600,
           }}>✕</button>
         </div>
         {children}
