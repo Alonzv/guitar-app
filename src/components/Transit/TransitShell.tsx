@@ -95,8 +95,9 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, userM
 
   if (home) {
     return (
-      <div dir={rtl ? 'rtl' : 'ltr'} style={{ minHeight: '100dvh', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)' }}>
+      <div dir={rtl ? 'rtl' : 'ltr'} style={{ minHeight: '100dvh', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', isolation: 'isolate' }}>
         <GlassDefs />
+        <div className="su-ambient su-ambient-quiet" aria-hidden />
         {sharedBanner}
         <div style={{ maxWidth: 560, margin: '0 auto', padding: 'calc(12px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 4 }}>
@@ -122,8 +123,9 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, userM
 
   const topic = helpTopic(stop, sub);
   return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ minHeight: '100dvh', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', display: 'flex', flexDirection: 'column' }}>
+    <div dir={rtl ? 'rtl' : 'ltr'} style={{ minHeight: '100dvh', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', display: 'flex', flexDirection: 'column', isolation: 'isolate' }}>
       <GlassDefs />
+      <div className="su-ambient su-ambient-quiet" aria-hidden />
       {sharedBanner}
       {/* Floating glass controls; no bar behind them, the content scrolls under. */}
       <header style={{
@@ -177,8 +179,9 @@ function DesktopTransit({ stop: stopId, sub, onGo, onSub, userMenu, sharedBanner
   }, []);
 
   return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ height: '100vh', position: 'relative', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', overflow: 'hidden' }}>
+    <div dir={rtl ? 'rtl' : 'ltr'} style={{ height: '100vh', position: 'relative', background: T.bgDeep, color: T.text, fontFamily: 'var(--gc-font)', overflow: 'hidden', isolation: 'isolate' }}>
       <GlassDefs />
+      <div className="su-ambient" aria-hidden />
 
       {/* The floating glass sidebar */}
       <aside className="lg lg-bar" style={{
