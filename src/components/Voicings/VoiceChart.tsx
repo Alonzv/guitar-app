@@ -53,7 +53,7 @@ export function VoiceChart({ result, chords, playCol, selVoice, selDeg, degOf, o
     (selVoice != null && selVoice !== vi) || (selDeg != null && degOf(deg) !== selDeg);
 
   return (
-    <div ref={box} dir="ltr" style={{ overflowX: 'auto', borderTop: `var(--su-rule) solid ${T.border}`, borderBottom: `var(--su-rule) solid ${T.border}` }}>
+    <div ref={box} dir="ltr" className="gc-no-scrollbar" style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
       {boxW > 0 && (
         <svg width={W} height={H} role="group" aria-label={voiceLabel} style={{ display: 'block' }}>
           {/* Columns: the chord, its Roman numeral, a hairline between them */}
@@ -62,20 +62,20 @@ export function VoiceChart({ result, chords, playCol, selVoice, selDeg, degOf, o
             const an = chords[ci];
             return (
               <g key={ci}>
-                {now && <rect x={ci * col} y={0} width={col} height={H} fill={T.primary} opacity={0.07} />}
-                {ci > 0 && <line x1={ci * col} y1={0} x2={ci * col} y2={H} stroke={T.hairline} strokeWidth={1} />}
-                <text x={x(ci)} y={30} textAnchor="middle" fontFamily="var(--su-display)" fontWeight={800} fontSize={24}
-                  style={{ fontStretch: '75%' }} fill={now ? T.primary : T.text}>{toDisplayChord(name)}</text>
+                {now && <rect x={ci * col + 3} y={0} width={col - 6} height={H} rx={18} fill={T.text} opacity={0.08} />}
+                {ci > 0 && <line x1={ci * col} y1={HEAD} x2={ci * col} y2={H} stroke={T.hairline} strokeWidth={1} opacity={0.5} />}
+                <text x={x(ci)} y={30} textAnchor="middle" fontFamily="var(--su-display)" fontWeight={700} fontSize={22}
+                  letterSpacing="-0.02em" fill={T.text}>{toDisplayChord(name)}</text>
                 {an?.roman && (
-                  <text x={x(ci)} y={48} textAnchor="middle" fontFamily="var(--gc-mono)" fontSize={11} fontWeight={700}
-                    letterSpacing="0.06em" fill={an.diatonic === false ? T.text : T.textMuted}>
+                  <text x={x(ci)} y={48} textAnchor="middle" fontFamily="var(--su-display)" fontSize={12} fontWeight={600}
+                    fontStyle="italic" fill={an.diatonic === false ? T.text : T.textMuted}>
                     {an.roman}{an.diatonic === false ? ` ${warn}` : ''}
                   </text>
                 )}
               </g>
             );
           })}
-          <line x1={0} y1={HEAD - 4} x2={W} y2={HEAD - 4} stroke={T.border} strokeWidth={2} />
+          <line x1={0} y1={HEAD - 4} x2={W} y2={HEAD - 4} stroke={T.hairline} strokeWidth={1} />
 
           {/* Voices, lowest first so the soprano draws on top */}
           {[...result.voices.keys()].reverse().map(vi => {
@@ -103,9 +103,9 @@ export function VoiceChart({ result, chords, playCol, selVoice, selDeg, degOf, o
                       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPickVoice(vi); } }}
                       style={{ opacity: fade ? 0.2 : 1, transition: 'opacity var(--gc-dur-base) var(--gc-ease-out)' }}>
                       <title>{`${cell.note} · ${cell.deg}`}</title>
-                      <circle cx={x(ci)} cy={y(cell.midi)} r={R} fill={now ? T.primary : T.secondary} stroke={T.bgDeep} strokeWidth={2} />
+                      <circle cx={x(ci)} cy={y(cell.midi)} r={R} fill={now ? T.text : T.secondary} stroke="rgba(0,0,0,0.35)" strokeWidth={2} />
                       <text x={x(ci)} y={y(cell.midi) + 4} textAnchor="middle" fontFamily="var(--gc-mono)" fontWeight={700}
-                        fontSize={cell.note.length > 2 ? 9 : 11} fill={now ? T.onPrimary : T.white}>{cell.note}</text>
+                        fontSize={cell.note.length > 2 ? 9 : 11} fill={now ? '#000' : T.white}>{cell.note}</text>
                     </g>
                   );
                 })}

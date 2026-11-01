@@ -4,15 +4,15 @@ import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { fretToNote, CHROMATIC, STANDARD_OPEN_MIDI, ALL_NOTES } from '../../utils/musicTheory';
 import { playScale, playChord } from '../../utils/audioPlayback';
 import { T } from '../../theme';
-import { Rule, Pill, PillRow, KeyGrid, Formula } from '../Transit/parts';
+import { Fold, Chips, ChordStage, PlayButton, SoftButton, icon } from '../ChordBuilder/Stage';
+import { Sheet } from '../Workspace/Sheet';
+import { formatChordName } from '../../utils/chordIdentifier';
 import { StopActions } from '../Transit/StopActions';
 import { Neck, type NeckDot } from '../Fretboard/Neck';
 import { useLang } from '../../contexts/LanguageContext';
-import { TwoPane } from '../desktop/TwoPane';
 import type { Note, ChordInProgression } from '../../types/music';
 import { previewVoicing, previewRun, pcToMidi } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
-import { DiceButton } from '../DiceButton';
 import { pickOne } from '../../utils/random';
 
 const OPEN_MIDI = STANDARD_OPEN_MIDI;
@@ -48,6 +48,9 @@ const DEGREE_COLORS: Record<Degree, string> = {
 const DEGREES: Degree[] = ['root', 'third', 'fifth'];
 const INVERSION_LABELS  = ['Root', '1st Inv', '2nd Inv'] as const;
 const INV_SHORT_LABELS  = ['Root', '1st', '2nd'] as const;
+const INV_HE            = ['שורש למטה', 'היפוך 1', 'היפוך 2'] as const;
+const INV_HE_SHORT      = ['שורש', 'היפוך 1', 'היפוך 2'] as const;
+const TYPE_HE: Record<TriadType, string> = { major: 'מז׳ור', minor: 'מינור', diminished: 'מוקטן', augmented: 'מוגדל' };
 
 const FRET_AREAS: { id: FretArea; label: string }[] = [
   { id: 'all',  label: 'All'  },
@@ -155,22 +158,13 @@ function shapeInArea(shape: PosDot[], area: FretArea): boolean {
   return minFret >= lo && minFret <= hi;
 }
 
-// Immutable toggle for Set-based multi-select filters.
-function toggleInSet<T>(set: Set<T>, value: T): Set<T> {
-  const next = new Set(set);
-  if (next.has(value)) next.delete(value); else next.add(value);
-  return next;
-}
-
 export function TriadsGenerator({ desktop, globalProgression }: { desktop?: boolean; globalProgression?: ChordInProgression[] } = {}) {
   const { lang } = useLang();
   const he = lang === 'he';
   const [root,               setRoot]               = useState<Note>('C');
   // Same reason as Scale Explorer: open on something, not on a prompt.
   const [triadType,          setTriadType]          = useState<TriadType | null>('major');
-  // Chords imported from the user's progression (Chords tab). Click one to load
-  // its root + closest triad quality into the generator.
-  const [imported,           setImported]           = useState<string[] | null>(null);
+  // A chord from the user's song loads its root + closest triad quality.
   const loadChord = (name: string) => {
     const info = TonalChord.get(name);
     if (!info.tonic) return;
@@ -299,16 +293,17 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
   // Walk the neck: every shape on screen, lowest fret first — each lights on
   // its diagram as it sounds, so the triad is heard climbing the neck.
   const [walking, setWalking] = useState(false);
+  const [walkOn, setWalkOn] = useState<number | null>(null);
   const walkTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => walkTimers.current.forEach(clearTimeout), []);
   const walkNeck = () => {
     walkTimers.current.forEach(clearTimeout); walkTimers.current = [];
-    if (walking) { setWalking(false); return; }
+    if (walking) { setWalking(false); setWalkOn(null); return; }
     const route = [...allVisibleCards].sort((a, b) => a.minFret - b.minFret || a.setIdx - b.setIdx);
     if (!route.length) return;
     setWalking(true);
-    route.forEach((c, i) => walkTimers.current.push(setTimeout(() => playChord(c.fretPositions), i * 650)));
-    walkTimers.current.push(setTimeout(() => setWalking(false), route.length * 650 + 400));
+    route.forEach((c, i) => walkTimers.current.push(setTimeout(() => { playChord(c.fretPositions); setWalkOn(c.globalIdx); }, i * 650)));
+    walkTimers.current.push(setTimeout(() => { setWalking(false); setWalkOn(null); }, route.length * 650 + 400));
   };
 
   const handlePlay = () => {
@@ -337,270 +332,220 @@ export function TriadsGenerator({ desktop, globalProgression }: { desktop?: bool
 
   const visibleSets = selectedSets.size ? [0, 1, 2, 3].filter(i => selectedSets.has(i)) : [0, 1, 2, 3];
 
-  // A small label + pills row inside the filters.
-  const filterRow = (title: string, children: React.ReactNode) => (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-      <span className="su-label" style={{ minWidth: 76 }}>{title}</span>
-      {children}
-    </div>
-  );
+  const small = (text: string) => <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>{text}</span>;
+  const noteInk = (d: Degree) => d === 'fifth' ? T.textMuted : d === 'root' ? T.tintLabel : T.text;
 
-  // One shape: a square tile on a 2px rule — its inversion and frets, the
-  // diagram, and the notes from low to high in their degree's ink.
+  // One shape: a rounded card with its inversion and frets, the diagram, and
+  // the notes from low to high in their degree's ink.
   const shapeTile = (c: ExpandedCard, top: string) => (
     <button key={`${c.setIdx}_${c.inv}`} type="button"
       onClick={() => { setExpandedIdx(c.globalIdx); previewVoicing(c.fretPositions); }}
       aria-label={`${c.chordName} · ${c.setLabel} · ${c.invLabel} · ${c.fretBadge}`}
-      className="gc-pressable gc-no-bar"
+      className="gc-no-bar su-row"
       style={{
         display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, cursor: 'pointer', textAlign: 'start',
-        background: 'transparent', color: T.text, padding: '8px 0 6px', borderRadius: 0,
-        borderWidth: 'var(--su-rule) 0 0 0', borderStyle: 'solid', borderColor: T.border,
+        background: 'rgba(255,255,255,0.06)', color: T.text, padding: '10px 10px 8px', borderRadius: 20,
+        boxShadow: walkOn === c.globalIdx ? `inset 0 0 0 2px ${T.text}` : undefined, transition: 'box-shadow 160ms ease',
       }}>
-      <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6, width: '100%' }}>
-        <span className="su-semi" style={{ fontSize: 15, textTransform: 'uppercase' }}>{top}</span>
-        <span className="su-label" style={{ color: T.text }}>{c.fretBadge}</span>
+      <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6, width: '100%', minWidth: 0 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{top}</span>
+        {desktop && <span style={{ fontSize: 12, fontWeight: 600, color: T.textMuted }}>{c.fretBadge}</span>}
       </span>
-      <MiniFretboard voicing={c.fretPositions} dotColors={c.colors} dotLabels={c.labels} hideFretLabel showStringLabels showFretNumbers />
-      <span style={{ display: 'flex', gap: 8, justifyContent: 'center', width: '100%', fontFamily: 'var(--gc-mono)', fontSize: 11, fontWeight: 700 }}>
+      <span dir="ltr" style={{ display: 'block' }}>
+        <MiniFretboard voicing={c.fretPositions} dotColors={c.colors} dotLabels={c.labels} hideFretLabel showStringLabels showFretNumbers />
+      </span>
+      <span dir="ltr" style={{ display: 'flex', gap: 8, justifyContent: 'center', width: '100%', fontSize: 12, fontWeight: 700 }}>
         {[...c.shape].sort((a, b) => a.string - b.string).map((p, j) => (
-          <span key={j} style={{ color: p.degree === 'fifth' ? T.textMuted : p.degree === 'root' ? T.primary : T.text }}>
-            {fretToNote(p.string, p.fret)}
-          </span>
+          <span key={j} style={{ color: noteInk(p.degree) }}>{fretToNote(p.string, p.fret)}</span>
         ))}
       </span>
     </button>
   );
 
   const legend = (
-    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 11, fontFamily: 'var(--gc-mono)' }}>
+    <div dir="ltr" style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: T.textMuted }}>
       {DEGREES.map((deg, i) => (
         <span key={deg} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span aria-hidden style={{ width: 12, height: 12, borderRadius: '50%', background: DEGREE_COLORS[deg], display: 'inline-block' }} />
+          <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: DEGREE_COLORS[deg], display: 'inline-block' }} />
           {def?.intervalLabels[i]} · {notes[i]}
         </span>
       ))}
     </div>
   );
 
-  const triadsLeft = (
-    <>
-      {/* Import from the user's progression */}
-      {globalProgression && globalProgression.length > 0 && (
-        <Rule label={he ? 'מהמהלך שלך' : 'From your progression'}
-          right={<Pill size="sm" active={!!imported}
-            onClick={() => setImported(imported ? null : globalProgression.map(c => c.chord.name))}>
-            {imported ? (he ? 'הסתרה' : 'Hide') : `${he ? 'ייבוא' : 'Import'} (${globalProgression.length})`}
-          </Pill>}>
-          {imported && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {imported.map((name, i) => (
-                <Pill key={i} size="sm" onClick={() => loadChord(name)} title={`Load ${name} triad`}
-                  style={{ textTransform: 'none', letterSpacing: 'normal', fontSize: 13 }}>{name}</Pill>
-              ))}
-            </div>
-          )}
-        </Rule>
-      )}
-
-      {/* Root */}
-      <Rule label={he ? 'תו שורש' : 'Root note'} right={<DiceButton onRoll={roll} />}>
-        <KeyGrid label={he ? 'תו שורש' : 'Root note'} cols={6}
+  // ── Choosing: one fold-out panel at the top ─────────────────────────────
+  const [open, setOpen] = useState(false);
+  const chooser = (
+    <Fold title={he ? 'בחירת טריאדה' : 'Choose a triad'} open={open} onToggle={() => setOpen(o => !o)}
+      summary={`${root} ${def ? (he ? TYPE_HE[triadType!] : def.label) : ''}`}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Chips label={he ? 'תו שורש' : 'Root note'} cols={6} value={root}
           items={ALL_NOTES.map(n => ({ id: n as Note, label: n }))}
-          value={root} onChange={n => { setRoot(n); hearTriad(n, triadType); }} />
-      </Rule>
-
-      {/* Triad type */}
-      <Rule label={he ? 'סוג טריאדה' : 'Triad type'}>
-        <PillRow wrap label={he ? 'סוג טריאדה' : 'Triad type'}
-          items={(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => ({
-            id: type, label: d.label, title: d.intervalLabels.join(' · '),
-          }))}
-          value={triadType} onChange={type => { setTriadType(type); hearTriad(root, type); }} />
-      </Rule>
-    </>
+          onChange={n => { setRoot(n); hearTriad(n, triadType); }} />
+        <Chips label={he ? 'סוג' : 'Type'} value={triadType}
+          items={(Object.entries(TRIADS) as [TriadType, TriadDef][]).map(([type, d]) => ({ id: type, label: he ? TYPE_HE[type] : d.label }))}
+          onChange={type => { setTriadType(type); hearTriad(root, type); }} />
+        {globalProgression && globalProgression.length > 0 && (
+          <Chips label={he ? 'מהשיר שלכם' : 'From your song'} value={null}
+            items={[...new Set(globalProgression.map(c => c.chord.name))].map(n => ({ id: n, label: formatChordName(n) }))}
+            onChange={loadChord} />
+        )}
+      </div>
+    </Fold>
   );
 
-  const triadsRight = (
+  const toolbar = (
+    <StopActions>
+      <button onClick={roll} className="lg lg-circle gc-no-bar" aria-label={he ? 'טריאדה אקראית' : 'Random triad'} style={{ color: T.text }}>
+        {icon(<><rect x="4" y="4" width="16" height="16" rx="4" /><circle cx="9" cy="9" r="0.6" fill="currentColor" /><circle cx="15" cy="15" r="0.6" fill="currentColor" /><circle cx="15" cy="9" r="0.6" fill="currentColor" /><circle cx="9" cy="15" r="0.6" fill="currentColor" /></>)}
+      </button>
+    </StopActions>
+  );
+
+  // The triad: its name, its three notes as tiles, and what to do with it.
+  const stage = def && (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+      <ChordStage name={`${root}${def.suffix === '°' ? 'dim' : def.suffix === '+' ? 'aug' : def.suffix}`} empty="" desktop={desktop}
+        line={he ? 'שלושה תווים · כל אחד בתפקיד משלו' : 'Three notes, each with its own job'} />
+      <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 76px)', gap: 8 }}>
+        {notes.map((n, i) => (
+          <button key={i} onClick={() => { const m = pcToMidi(n, 4); if (m != null) previewRun([m]); }} className="gc-no-bar"
+            aria-label={`${def.intervalLabels[i]} · ${n}`}
+            style={{
+              height: 64, borderRadius: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+              background: i === 0 ? T.primaryBg : 'rgba(255,255,255,0.08)', color: i === 0 ? T.tintLabel : T.text,
+            }}>
+            <span dir="ltr" style={{ fontSize: 20, fontWeight: 700, lineHeight: 1 }}>{def.intervalLabels[i]}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.75 }}>{n}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <PlayButton onPlay={handlePlay} label={he ? 'נגן' : 'Play'} />
+        <SoftButton onClick={walkNeck}>
+          {walking
+            ? <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" /></svg>
+            : icon(<path d="M4 18h4v-4h4v-4h4V6h4" />, 17)}
+          {walking ? (he ? 'עצירה' : 'Stop') : (he ? 'לאורך הצוואר' : 'Up the neck')}
+        </SoftButton>
+      </div>
+    </div>
+  );
+
+  // ── Filters: one fold, single choices ────────────────────────────────────
+  const one = <V,>(s: Set<V>) => s.size === 1 ? [...s][0] : null;
+  const activeLabels = [
+    ...STRING_SETS.filter((_, i) => selectedSets.has(i)).map(ss => ss.label),
+    ...([0, 1, 2] as const).filter(i => selectedInversions.has(i)).map(i => he ? INV_HE[i] : INV_SHORT_LABELS[i]),
+    ...FRET_AREAS.filter(a => a.id !== 'all' && selectedAreas.has(a.id as Exclude<FretArea, 'all'>)).map(a => `${he ? 'סריגים' : 'Frets'} ${a.label}`),
+  ];
+  const allLabel = he ? 'הכול' : 'All';
+  const filters = def && (
+    <Fold title={he ? 'אילו צורות להראות' : 'Which shapes to show'} open={filtersOpen} onToggle={() => setFiltersOpen(o => !o)}
+      summary={activeLabels.length ? <span dir="ltr">{activeLabels.join(' · ')}</span>
+        : (he ? `כל הצורות · ${allVisibleCards.length}` : `All shapes · ${allVisibleCards.length}`)}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Chips label={he ? 'קבוצת מיתרים' : 'String group'} value={one(selectedSets) === null ? 'all' : String(one(selectedSets))}
+          onChange={v => setSelectedSets(v === 'all' ? new Set() : new Set([Number(v)]))}
+          items={[{ id: 'all', label: allLabel }, ...STRING_SETS.map((ss, i) => ({ id: String(i), label: ss.label }))]} />
+        <Chips label={he ? 'איזה תו למטה (היפוך)' : 'Which note is lowest (inversion)'} value={one(selectedInversions) === null ? 'all' : String(one(selectedInversions))}
+          onChange={v => setSelectedInversions(v === 'all' ? new Set() : new Set([Number(v) as 0 | 1 | 2]))}
+          items={[{ id: 'all', label: allLabel }, ...([0, 1, 2] as const).map(i => ({ id: String(i), label: he ? INV_HE[i] : INV_SHORT_LABELS[i] }))]} />
+        <Chips label={he ? 'איפה על הצוואר' : 'Where on the neck'} value={one(selectedAreas) ?? 'all'}
+          onChange={v => setSelectedAreas(v === 'all' ? new Set() : new Set([v as Exclude<FretArea, 'all'>]))}
+          items={FRET_AREAS.map(a => ({ id: a.id, label: a.id === 'all' ? allLabel : a.label }))} />
+        <Chips label={he ? 'סידור' : 'Arrange by'} value={sortMode} onChange={setSortMode}
+          items={[{ id: 'strings' as const, label: he ? 'לפי מיתרים' : 'By strings' }, { id: 'position' as const, label: he ? 'מהאף כלפי מעלה' : 'Up the neck' }]} />
+        <Chips label={he ? 'על הנקודות' : 'On the dots'} value={displayMode} onChange={setDisplayMode}
+          items={[{ id: 'notes' as const, label: he ? 'שמות תווים' : 'Note names' }, { id: 'intervals' as const, label: '1 · 3 · 5' }]} />
+      </div>
+    </Fold>
+  );
+
+  const grid = def && (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-      {/* The chord: its name, its formula, and what to do with it */}
-      {def && (
-        <>
-          <StopActions>
-            <Pill size="sm" onClick={handlePlay}>{he ? 'נגן' : 'Play'}</Pill>
-          </StopActions>
-          <Rule>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-              <span className="su-poster" style={{ fontSize: desktop ? 72 : 60, textTransform: 'none' }}>{root}{def.suffix}</span>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <Pill size="sm" active={displayMode === 'intervals'}
-                  onClick={() => setDisplayMode(m => m === 'notes' ? 'intervals' : 'notes')}
-                  title={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}
-                  label={displayMode === 'notes' ? 'Show intervals' : 'Show note names'}>1·3·5</Pill>
-                <Pill size="sm" active={walking} onClick={walkNeck} title="Play every shape below, from the nut up the neck">
-                  {walking ? '■ ' : ''}{he ? 'הליכה על הצוואר' : 'Walk the neck'}
-                </Pill>
-              </div>
-            </div>
-            <Formula mark={0}
-              tones={notes.map((n, i) => ({ degree: def.intervalLabels[i], note: n }))}
-              onTone={i => { const m = pcToMidi(notes[i], 4); if (m != null) previewRun([m]); }} />
-          </Rule>
-        </>
-      )}
-
-      {/* ── Filters + Sort by ────────────────────────────────────────────── */}
-      {def && <>
-
-      {(() => {
-        const activeLabels = [
-          ...STRING_SETS.filter((_, i) => selectedSets.has(i)).map(ss => ss.label),
-          ...([0, 1, 2] as const).filter(i => selectedInversions.has(i)).map(i => INV_SHORT_LABELS[i]),
-          ...FRET_AREAS.filter(a => a.id !== 'all' && selectedAreas.has(a.id as Exclude<FretArea, 'all'>)).map(a => a.label),
-        ];
-        return (
-          <Rule
-            label={<>{he ? 'סינון' : 'Filters'}{activeLabels.length > 0 && <span style={{ color: T.text }}> · {activeLabels.join(' · ')}</span>}</>}
-            right={
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <Pill size="sm" active={filtersOpen} onClick={() => setFiltersOpen(o => !o)}>
-                  {filtersOpen ? (he ? 'סגירה' : 'Close') : (he ? 'סינון' : 'Filter')}
-                </Pill>
-              </div>
-            }>
-            {filtersOpen && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-                {filterRow(he ? 'מיתרים' : 'Strings', <>
-                  <Pill size="sm" active={selectedSets.size === 0} onClick={() => setSelectedSets(new Set())}>All</Pill>
-                  {STRING_SETS.map((ss, i) => (
-                    <Pill key={ss.label} size="sm" active={selectedSets.has(i)} onClick={() => setSelectedSets(s => toggleInSet(s, i))}>{ss.label}</Pill>
-                  ))}
-                </>)}
-                {filterRow(he ? 'היפוך' : 'Inversion', <>
-                  <Pill size="sm" active={selectedInversions.size === 0} onClick={() => setSelectedInversions(new Set())}>All</Pill>
-                  {([0, 1, 2] as const).map(inv => (
-                    <Pill key={inv} size="sm" active={selectedInversions.has(inv)} onClick={() => setSelectedInversions(s => toggleInSet(s, inv))}>{INV_SHORT_LABELS[inv]}</Pill>
-                  ))}
-                </>)}
-                {filterRow(he ? 'מיקום' : 'Position', <>
-                  {FRET_AREAS.map(a => a.id === 'all'
-                    ? <Pill key={a.id} size="sm" active={selectedAreas.size === 0} onClick={() => setSelectedAreas(new Set())}>{a.label}</Pill>
-                    : <Pill key={a.id} size="sm" active={selectedAreas.has(a.id as Exclude<FretArea, 'all'>)}
-                        onClick={() => setSelectedAreas(s => toggleInSet(s, a.id as Exclude<FretArea, 'all'>))}>{a.label}</Pill>)}
-                </>)}
-              </div>
-            )}
-            {filterRow(he ? 'מיון' : 'Sort by', (
-              <PillRow label={he ? 'מיון' : 'Sort by'} value={sortMode} onChange={setSortMode}
-                items={[{ id: 'strings', label: he ? 'מיתרים' : 'Strings' }, { id: 'position', label: he ? 'מיקום' : 'Position' }]} />
-            ))}
-          </Rule>
-        );
-      })()}
-
-      {/* ── Shape grid ───────────────────────────────────────────────────── */}
+      {small(he ? 'כל הדרכים לנגן אותה על שלושה מיתרים. הקישו על צורה כדי לשמוע ולהגדיל.' : 'Every way to play it on three strings. Tap a shape to hear it up close.')}
       {sortMode === 'position' ? (
-        // Flat grid sorted by fret position
-        <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: '14px 12px' }}>
-          {sortedCards.map(c => shapeTile(c, `${c.setLabel} · ${INV_SHORT_LABELS[c.inv]}`))}
+        <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(4, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+          {sortedCards.map(c => shapeTile(c, `${c.setLabel} · ${he ? INV_HE_SHORT[c.inv] : INV_SHORT_LABELS[c.inv]}`))}
         </div>
       ) : (
-        // Grouped by string set (default)
         visibleSets.map(setIdx => {
           const ss    = STRING_SETS[setIdx];
           const cards = cardsBySet.get(setIdx) ?? [];
           if (cards.length === 0) return null;
           return (
-            <div key={setIdx}>
-              <p className="su-label" style={{ margin: '0 0 6px', color: T.text }}>{ss.label}</p>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, minmax(0, 1fr))`, gap: 12 }}>
-                {cards.map(c => shapeTile(c, INV_SHORT_LABELS[c.inv]))}
+            <div key={setIdx} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>{he ? 'מיתרים' : 'Strings'} <bdi dir="ltr">{ss.label}</bdi></span>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(3, minmax(0, 1fr))`, gap: 10 }}>
+                {cards.map(c => shapeTile(c, he ? INV_HE_SHORT[c.inv] : INV_SHORT_LABELS[c.inv]))}
               </div>
             </div>
           );
         })
       )}
-
+      {allVisibleCards.length === 0 && <p className="su-sub" style={{ margin: 0, textAlign: 'center', padding: '20px 0' }}>{he ? 'אין צורות שמתאימות לבחירה' : 'No shapes match these choices'}</p>}
       {legend}
-      </>}
-
-      {/* ── Expanded shape (mobile + desktop) ────────────────────────────── */}
-      {expandedCard && (() => {
-        const frets = expandedCard.shape.map(p => p.fret);
-        const from = Math.max(0, Math.min(...frets) - 1);
-        const to = Math.max(from + 4, Math.max(...frets) + 1);
-        const neckDots: NeckDot[] = expandedCard.shape.map((p, j) => ({
-          string: p.string, fret: p.fret, id: `${p.string}`,
-          kind: p.degree === 'root' ? 'root' : 'tone', label: expandedCard.labels[j],
-        }));
-        const atStart = safeIdx === 0, atEnd = safeIdx === allVisibleCards.length - 1;
-        return (
-          <div onClick={() => setExpandedIdx(null)} style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'color-mix(in srgb, var(--gc-text) 55%, transparent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 16px',
-          }}>
-            <div role="dialog" aria-modal="true" aria-label={`${expandedCard.chordName} ${expandedCard.invLabel}`}
-              onClick={e => e.stopPropagation()} style={{
-              background: T.bgDeep, color: T.text, border: `var(--su-rule) solid ${T.border}`,
-              padding: '18px 20px 18px', width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto',
-              display: 'flex', flexDirection: 'column', gap: 16, boxSizing: 'border-box',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div className="su-poster" style={{ fontSize: 64, textTransform: 'none' }}>{expandedCard.chordName}</div>
-                  <div className="su-label" style={{ marginTop: 10 }}>
-                    {expandedCard.setLabel} · {expandedCard.invLabel} · <span style={{ color: T.text }}>{expandedCard.fretBadge}</span>
-                  </div>
-                </div>
-                <Pill onClick={() => setExpandedIdx(null)} label={he ? 'סגירה' : 'Close'} style={{ padding: 0, width: 44 }}>×</Pill>
-              </div>
-
-              <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 12 }}>
-                <Neck dots={neckDots} from={from} to={to} label={`${expandedCard.chordName} ${expandedCard.invLabel}`} />
-              </div>
-
-              <div style={{ display: 'flex', gap: 14, justifyContent: 'center', fontFamily: 'var(--gc-mono)', fontSize: 14, fontWeight: 700 }}>
-                {[...expandedCard.shape].sort((a, b) => a.string - b.string).map((p, j) => (
-                  <span key={j} style={{ color: p.degree === 'fifth' ? T.textMuted : p.degree === 'root' ? T.primary : T.text }}>
-                    {fretToNote(p.string, p.fret)}
-                  </span>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }} dir="ltr">
-                <Pill disabled={atStart} onClick={() => setExpandedIdx(i => i !== null ? i - 1 : i)} label={he ? 'הצורה הקודמת' : 'Previous shape'}
-                  style={{ flex: 1 }}>‹</Pill>
-                <span className="su-label" style={{ minWidth: 56, textAlign: 'center', color: T.text }}>
-                  {(safeIdx ?? 0) + 1} / {allVisibleCards.length}
-                </span>
-                <Pill disabled={atEnd} onClick={() => setExpandedIdx(i => i !== null ? i + 1 : i)} label={he ? 'הצורה הבאה' : 'Next shape'}
-                  style={{ flex: 1 }}>›</Pill>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'center' }}>{legend}</div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {!def && desktop && (
-        <div className="su-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
-          ← {he ? 'בחרו שורש וסוג' : 'Select root + triad type'}
-        </div>
-      )}
     </div>
   );
 
-  if (desktop) {
-    return <TwoPane left={triadsLeft} right={triadsRight} />;
-  }
+  // ── Expanded shape ───────────────────────────────────────────────────────
+  const sheet = expandedCard && (() => {
+    const frets = expandedCard.shape.map(p => p.fret);
+    const from = Math.max(0, Math.min(...frets) - 1);
+    const to = Math.max(from + 4, Math.max(...frets) + 1);
+    const neckDots: NeckDot[] = expandedCard.shape.map((p, j) => ({
+      string: p.string, fret: p.fret, id: `${p.string}`,
+      kind: p.degree === 'root' ? 'root' : 'tone', label: expandedCard.labels[j],
+    }));
+    const atStart = safeIdx === 0, atEnd = safeIdx === allVisibleCards.length - 1;
+    const step = (d: number) => setExpandedIdx(i => {
+      if (i === null) return i;
+      const n = i + d;
+      const c = allVisibleCards[n];
+      if (c) previewVoicing(c.fretPositions);
+      return c ? n : i;
+    });
+    const arrow = (d: number, disabled: boolean, label: string) => (
+      <button onClick={() => step(d)} disabled={disabled} aria-label={label} className="gc-no-bar"
+        style={{ width: 50, height: 50, borderRadius: 25, background: 'rgba(255,255,255,0.10)', color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.3 : 1 }}>
+        {icon(<path d={d < 0 ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'} />, 20)}
+      </button>
+    );
+    return (
+      <Sheet onClose={() => setExpandedIdx(null)} maxWidth={460}
+        kicker={<><bdi dir="ltr">{expandedCard.setLabel}</bdi> · {he ? INV_HE[expandedCard.inv] : expandedCard.invLabel} · <bdi dir="ltr">{expandedCard.fretBadge}</bdi></>}
+        title={<span className="gc-notation" dir="ltr">{expandedCard.chordName}</span>}>
+        <div dir="ltr" style={{ borderRadius: 22, background: 'rgba(255,255,255,0.06)', padding: '14px 12px' }}>
+          <Neck dots={neckDots} from={from} to={to} label={`${expandedCard.chordName} ${expandedCard.invLabel}`} />
+        </div>
+        <div dir="ltr" style={{ display: 'flex', gap: 14, justifyContent: 'center', fontSize: 16, fontWeight: 700 }}>
+          {[...expandedCard.shape].sort((a, b) => a.string - b.string).map((p, j) => (
+            <span key={j} style={{ color: noteInk(p.degree) }}>{fretToNote(p.string, p.fret)}</span>
+          ))}
+        </div>
+        <div dir="ltr" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          {arrow(-1, atStart, he ? 'הצורה הקודמת' : 'Previous shape')}
+          <button onClick={() => previewVoicing(expandedCard.fretPositions)} className="gc-no-bar"
+            style={{ height: 50, padding: '0 24px', borderRadius: 25, background: T.text, color: '#000', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden><path d="M7 4.5v15l13-7.5z" fill="currentColor" /></svg>
+            {(safeIdx ?? 0) + 1} / {allVisibleCards.length}
+          </button>
+          {arrow(1, atEnd, he ? 'הצורה הבאה' : 'Next shape')}
+        </div>
+        {legend}
+      </Sheet>
+    );
+  })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {triadsLeft}
-      {triadsRight}
+    <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: desktop ? 24 : 22, maxWidth: desktop ? 900 : undefined, margin: '0 auto', width: '100%' }}>
+      {toolbar}
+      {chooser}
+      {stage}
+      {filters}
+      {grid}
+      {sheet}
     </div>
   );
 }

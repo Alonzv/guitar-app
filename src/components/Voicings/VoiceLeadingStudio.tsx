@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChordInProgression, Tuning } from '../../types/music';
 import { playMidi, unlockAudio } from '../../utils/audioPlayback';
 import { analyzeProgression, keyName, ALL_KEYS } from '../../utils/harmonicAnalysis';
@@ -9,10 +9,10 @@ import { T } from '../../theme';
 import { useLang } from '../../contexts/LanguageContext';
 import { toDisplayChord } from '../../utils/chordName';
 import { ExampleChips } from '../ExampleChips';
-import { Rule, Pill, PillRow, KeyGrid, Cta } from '../Transit/parts';
-import { Route } from './Route';
+import { Fold, Chips, PlayButton, GlassSelect, icon } from '../ChordBuilder/Stage';
+import { StopActions } from '../Transit/StopActions';
+import { previewChordName } from '../../utils/previewSound';
 import { VoiceChart } from './VoiceChart';
-import { SelectPill } from './SelectPill';
 
 // ── Voice Leading Studio ─────────────────────────────────────────────────────
 // Build a progression, press Calculate, and see it arranged into four smooth
@@ -46,7 +46,7 @@ const degLabelShort = (n: number, lang: 'en' | 'he') => n === 1 ? (lang === 'he'
 
 const globalNames = (gp?: ChordInProgression[]) => (gp ?? []).map(c => c.chord.name).filter(Boolean).slice(0, 12);
 
-export function VoiceLeadingStudio({ globalProgression, onChordsChange }: {
+export function VoiceLeadingStudio({ desktop, globalProgression, onChordsChange }: {
   desktop?: boolean; globalProgression?: ChordInProgression[]; tuning?: Tuning;
   /** Report an edit so it flows back into the shared session progression. */
   onChordsChange?: (names: string[]) => void;
@@ -169,147 +169,147 @@ export function VoiceLeadingStudio({ globalProgression, onChordsChange }: {
 
   const addChord = () => {
     const name = buildName(pRoot, pTri, validExts(pTri).some(e => e.k === pExt) ? pExt : '');
-    setChords(c => [...c, name]); setResult(null); setPickOpen(false);
+    setChords(c => [...c, name]); setResult(null);
   };
   const removeChord = (i: number) => { setChords(c => c.filter((_, j) => j !== i)); setResult(null); };
   const clearChords = () => { setChords([]); setResult(null); setSelVoice(null); setSelDeg(null); setPickOpen(false); };
 
   const he = lang === 'he';
   const WARN = '⚠︎';   // text presentation, never the emoji
+  const small = (text: React.ReactNode) => <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>{text}</span>;
+  const pName = buildName(pRoot, pTri, validExts(pTri).some(e => e.k === pExt) ? pExt : '');
+  const TRI_HE: Record<string, string> = { M: 'מז׳ור', m: 'מינור', dim: 'מוקטן', aug: 'מוגדל', sus2: 'sus2', sus4: 'sus4' };
 
-  return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* The progression as a route — the chord sounding now is the cobalt station */}
-      <Rule label={he ? 'המהלך' : 'Progression'} right={chords.length > 0 && (
-        <Pill size="sm" onClick={clearChords}>{t.clear}</Pill>
-      )}>
-        <Route
-          label={he ? 'המהלך' : 'Progression'}
-          stations={chords.map(c => ({ name: toDisplayChord(c) }))}
-          current={playCol}
-          onRemove={removeChord}
-          trailing={
-            <Pill active={pickOpen} onClick={() => setPickOpen(o => !o)} label={he ? 'הוספת אקורד' : 'Add a chord'} style={{ padding: 0, width: 44 }}>+</Pill>
-          }
-        />
-        {pickOpen && (
-          <div dir="ltr" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14, maxWidth: 560 }}>
-            <KeyGrid label={he ? 'שורש' : 'Root'} items={ROOTS.map(r => ({ id: r, label: r }))} value={pRoot} onChange={setPRoot} />
-            <PillRow label={he ? 'סוג' : 'Quality'} items={TRIADS.map(q => ({ id: q.k, label: q.l }))} value={pTri}
-              onChange={k => { setPTri(k); setPExt(''); }} wrap />
-            <PillRow label={he ? 'הרחבה' : 'Extension'} items={validExts(pTri).map(e => ({ id: e.k || 'none', label: e.l }))}
-              value={pExt || 'none'} onChange={k => setPExt(k === 'none' ? '' : k)} wrap />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span className="su-semi gc-notation" style={{ fontSize: 26, flex: 1 }}>
-                {toDisplayChord(buildName(pRoot, pTri, validExts(pTri).some(e => e.k === pExt) ? pExt : ''))}
-              </span>
-              <Pill active onClick={addChord}>+ {t.addChord}</Pill>
-            </div>
-          </div>
-        )}
-      </Rule>
+  // ── Toolbar: the key ─────────────────────────────────────────────────────
+  const toolbar = analysis && (
+    <StopActions>
+      <GlassSelect label={t.key} text={`${t.key} · ${keyName(keyOverride ?? analysis.detected, lang)}`}
+        value={keyOverride ? keyToStr(keyOverride) : 'auto'}
+        onChange={v => setKeyOverride(v === 'auto' ? null : ALL_KEYS.find(k => keyToStr(k) === v) ?? null)}>
+        <option value="auto">{t.auto} · {keyName(analysis.detected, lang)}</option>
+        {ALL_KEYS.map(k => <option key={keyToStr(k)} value={keyToStr(k)}>{keyName(k, lang)}</option>)}
+      </GlassSelect>
+    </StopActions>
+  );
 
-      {/* Controls */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Cta onClick={calc} disabled={!chords.length}>{t.calc}</Cta>
-        {result && <Pill active={playCol != null} onClick={play}>{t.play}</Pill>}
-        {analysis && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginInlineStart: 'auto' }}>
-            <span className="su-label">{t.key}</span>
-            <SelectPill label={t.key}
-              value={keyOverride ? keyToStr(keyOverride) : 'auto'}
-              onChange={v => setKeyOverride(v === 'auto' ? null : ALL_KEYS.find(k => keyToStr(k) === v) ?? null)}>
-              <option value="auto">{t.auto} · {keyName(analysis.detected, lang)}</option>
-              {ALL_KEYS.map(k => <option key={keyToStr(k)} value={keyToStr(k)}>{keyName(k, lang)}</option>)}
-            </SelectPill>
-          </div>
+  const intro = (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}>
+      <h2 style={{ margin: 0, fontFamily: 'var(--su-display)', fontSize: 28, lineHeight: 1.15, fontWeight: 700, letterSpacing: '-0.02em' }}>
+        {he ? 'כל תו זז כמה שפחות' : 'Every note moves as little as it can'}
+      </h2>
+      <span className="su-sub" style={{ fontSize: 15, maxWidth: 520 }}>
+        {he ? 'ארבעה קולות עוברים מאקורד לאקורד. כל קו הוא קול אחד: עקבו אחריו משמאל לימין.' : 'Four voices walk from chord to chord. Each line is one voice: follow it from left to right.'}
+      </span>
+    </div>
+  );
+
+  // ── The chords ───────────────────────────────────────────────────────────
+  const chordsRow = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {small(he ? `האקורדים · ${chords.length}` : `Chords · ${chords.length}`)}
+        {chords.length > 0 && <button onClick={clearChords} className="gc-no-bar" style={{ fontSize: 14, color: T.tintLabel }}>{t.clear}</button>}
+      </div>
+      {chords.length === 0 ? (
+        <div style={{ borderRadius: 26, background: T.bgCard, padding: '26px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
+          <span style={{ fontSize: 17, fontWeight: 600 }}>{he ? 'עדיין אין אקורדים' : 'No chords yet'}</span>
+          <span className="su-sub" style={{ fontSize: 15 }}>{he ? 'הוסיפו אקורדים, או התחילו מדוגמה.' : 'Add some chords, or start from an example.'}</span>
+          <ExampleChips onPick={ex => setChords(ex)} title={he ? 'דוגמאות' : 'Examples'} />
+        </div>
+      ) : (
+        <div role="list" dir="ltr" className="gc-no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', padding: 2, margin: -2 }}>
+          {chords.map((c, i) => {
+            const now = playCol === i;
+            return (
+              <div key={i} role="listitem" style={{
+                position: 'relative', flex: chords.length <= 5 ? '1 1 0' : '0 0 78px', minWidth: 64, height: 60, borderRadius: 22,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: now ? T.text : 'rgba(255,255,255,0.08)', color: now ? '#000' : T.text, transition: 'background 200ms ease, color 200ms ease',
+              }}>
+                <button onClick={() => previewChordName(c)} className="gc-no-bar gc-notation" aria-label={he ? `השמעת ${c}` : `Play ${c}`}
+                  style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', color: 'inherit' }}>{toDisplayChord(c)}</button>
+                <button onClick={() => removeChord(i)} aria-label={he ? `הסרת ${c}` : `Remove ${c}`} className="gc-no-bar"
+                  style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'inherit', opacity: 0.45 }}>
+                  {icon(<path d="M6 6l12 12M18 6 6 18" />, 11)}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <Fold title={he ? 'הוספת אקורד' : 'Add a chord'} open={pickOpen} onToggle={() => setPickOpen(o => !o)}
+        summary={<span dir="ltr">{toDisplayChord(pName)}</span>}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Chips label={he ? 'שורש' : 'Root'} cols={6} value={pRoot} onChange={r => { setPRoot(r); previewChordName(buildName(r, pTri, pExt)); }}
+            items={ROOTS.map(r => ({ id: r, label: r.replace('#', '♯') }))} />
+          <Chips label={he ? 'איכות' : 'Quality'} value={pTri} onChange={k => { setPTri(k); setPExt(''); previewChordName(buildName(pRoot, k, '')); }}
+            items={TRIADS.map(q => ({ id: q.k, label: he ? TRI_HE[q.k] : q.l }))} />
+          {validExts(pTri).length > 1 && (
+            <Chips label={he ? 'צבע נוסף' : 'Add a colour'} value={pExt || 'none'} onChange={k => { const e = k === 'none' ? '' : k; setPExt(e); previewChordName(buildName(pRoot, pTri, e)); }}
+              items={validExts(pTri).map(e => ({ id: e.k || 'none', label: e.k === '' ? (he ? 'בלי' : 'None') : e.l }))} />
+          )}
+          <button onClick={addChord} className="su-primary gc-no-bar" style={{ height: 48 }}>
+            {he ? 'הוספת ' : 'Add '}<span dir="ltr" className="gc-notation">{toDisplayChord(pName)}</span>
+          </button>
+        </div>
+      </Fold>
+    </div>
+  );
+
+  // ── Play, or arrange when there is nothing yet ───────────────────────────
+  const actions = chords.length > 0 && (
+    <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+      {result
+        ? <PlayButton onPlay={play} label={playCol != null ? (he ? 'מנגן…' : 'Playing…') : (he ? 'נגן' : 'Play')} />
+        : <button onClick={calc} className="gc-no-bar" style={{ height: 50, padding: '0 26px', borderRadius: 25, background: T.text, color: '#000', fontSize: 17, fontWeight: 600 }}>{he ? 'סידור הקולות' : 'Arrange the voices'}</button>}
+    </div>
+  );
+
+  // ── The voices ───────────────────────────────────────────────────────────
+  const chart = result && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ borderRadius: 26, background: T.bgCard, padding: '14px 10px 10px' }}>
+        <VoiceChart result={result} chords={result.chords.map((_, ci) => ({ roman: analysis?.chords[ci]?.roman, diatonic: analysis?.chords[ci]?.diatonic }))}
+          playCol={playCol} selVoice={selVoice} selDeg={selDeg} degOf={degNum} onPickVoice={pickVoice} warn={WARN} voiceLabel={t.voice} />
+      </div>
+      {small(selVoice != null ? t.follow(String(selVoice + 1)) : selDeg != null ? t.degOf(degLabelShort(selDeg, lang))
+        : (he ? 'קו מקווקו = קפיצה גדולה. הקישו על קו כדי לעקוב אחרי קול אחד.' : 'A dashed line is a big leap. Tap a line to follow one voice.'))}
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+        <Chips label={he ? 'מעקב אחרי קול' : 'Follow a voice'} value={selVoice == null ? 'all' : String(selVoice)}
+          onChange={v => { if (v === 'all') { setSelVoice(null); setSelDeg(null); } else pickVoice(Number(v)); }}
+          items={[{ id: 'all', label: he ? 'כולם' : 'All' }, ...result.voices.map((_, vi) => ({ id: String(vi), label: String(vi + 1) }))]} />
+        {presentDegs.length > 0 && (
+          <Chips label={t.mark} value={selDeg == null ? 'none' : String(selDeg)}
+            onChange={v => { if (v === 'none') setSelDeg(null); else pickDeg(Number(v)); }}
+            items={[{ id: 'none', label: he ? 'בלי' : 'None' }, ...presentDegs.map(d => ({ id: String(d), label: degLabelShort(d, lang) }))]} />
         )}
       </div>
+    </div>
+  );
 
-      {/* Degree highlight */}
-      {result && presentDegs.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span className="su-label">{t.mark}</span>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {presentDegs.map(d => (
-              <Pill key={d} size="sm" active={selDeg === d} onClick={() => pickDeg(d)}>{degLabelShort(d, lang)}</Pill>
-            ))}
-          </div>
-        </div>
-      )}
+  // ── Things worth knowing ─────────────────────────────────────────────────
+  const hasNotes = result && (flagged.length > 0 || parallels.length > 0 || leaps.length > 0 || result.omitted.some(o => o.length > 0));
+  const line = (key: string, children: React.ReactNode) => (
+    <p key={key} dir="ltr" style={{ margin: 0, fontSize: 14, color: T.text, textAlign: he ? 'right' : 'left' }}>{children}</p>
+  );
+  const notesCard = hasNotes && (
+    <div style={{ borderRadius: 26, background: T.bgCard, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {small(he ? 'כדאי לשים לב' : 'Worth knowing')}
+      {flagged.map((c, i) => line(`k${i}`, <><b>{toDisplayChord(c.name)}</b> <span style={{ color: T.textMuted }}>· {c.roman} · {t.outKey}</span></>))}
+      {parallels.map((pl, i) => line(`p${i}`, <>{t.voice} {pl.a + 1} &amp; {pl.b + 1}: <b>{pl.type === '5' ? t.par5 : t.par8}</b> <span style={{ color: T.textMuted }}>({result!.chords[pl.ci - 1]} → {result!.chords[pl.ci]})</span></>))}
+      {leaps.map((lp, i) => line(`l${i}`, <>{t.voice} {lp.voice + 1}: <b>{lp.from} → {lp.to}</b> <span style={{ color: T.textMuted }}>· {t.leap}</span></>))}
+      {result!.omitted.map((o, ci) => o.length ? line(`o${ci}`, <><b>{toDisplayChord(result!.chords[ci])}</b> <span style={{ color: T.textMuted }}>· {t.omit}: {o.join(', ')}</span></>) : null)}
+    </div>
+  );
 
-      {/* Result — four-voice grid */}
-      {!result ? (
-        <Rule style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 18, padding: '22px 0 6px' }}>
-          <p style={{ margin: 0, fontSize: 14, color: T.textMuted }}>{t.build}</p>
-          {!chords.length && <ExampleChips onPick={ex => setChords(ex)} />}
-        </Rule>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <VoiceChart result={result} chords={result.chords.map((_, ci) => ({ roman: analysis?.chords[ci]?.roman, diatonic: analysis?.chords[ci]?.diatonic }))}
-            playCol={playCol} selVoice={selVoice} selDeg={selDeg} degOf={degNum} onPickVoice={pickVoice} warn={WARN} voiceLabel={t.voice} />
-          {/* Follow one voice — top line is voice 1 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span className="su-label">{he ? 'מעקב אחרי קול' : 'Follow a voice'}</span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {result.voices.map((_, vi) => (
-                <Pill key={vi} size="sm" active={selVoice === vi} onClick={() => pickVoice(vi)} label={`${t.voice} ${vi + 1}`}>{vi + 1}</Pill>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Omitted-tone info — extensions dropped to fit four voices (informational, not a warning) */}
-      {result && result.omitted.some(o => o.length > 0) && (
-        <Rule label={he ? 'הושמטו' : 'Omitted'}>
-          {result.omitted.map((o, ci) => o.length ? (
-            <p key={ci} dir="ltr" style={{ margin: 0, padding: '2px 0', fontSize: 12, color: T.textMuted }}>
-              <span style={{ fontWeight: 700, color: T.text }}>{result.chords[ci]}</span>
-              <span> — {t.omit}: </span>
-              <span style={{ fontFamily: 'var(--gc-mono)', fontWeight: 700 }}>{o.join(', ')}</span>
-            </p>
-          ) : null)}
-        </Rule>
-      )}
-
-      {/* Advisor strip — out-of-key chords, parallel 5ths/8ves, and large leaps */}
-      {(flagged.length > 0 || parallels.length > 0 || leaps.length > 0) && (
-        <Rule label={he ? 'הערות' : 'Notes'}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {flagged.map((c, i) => (
-              <p key={`k${i}`} dir="ltr" style={{ margin: 0, fontSize: 12, color: T.text }}>
-                <span style={{ fontWeight: 700 }}>{WARN} </span>
-                <span style={{ fontWeight: 700 }}>{toDisplayChord(c.name)}</span>
-                <span style={{ fontFamily: 'var(--gc-mono)', color: T.textMuted }}> · {c.roman}</span>
-                <span style={{ color: T.textMuted }}> — {t.outKey}</span>
-              </p>
-            ))}
-            {parallels.map((pl, i) => (
-              <p key={`p${i}`} dir="ltr" style={{ margin: 0, fontSize: 12, color: T.text }}>
-                <span style={{ fontWeight: 700 }}>{WARN} </span>
-                <span>{t.voice} {pl.a + 1} &amp; {pl.b + 1}: </span>
-                <span style={{ fontWeight: 700 }}>{pl.type === '5' ? t.par5 : t.par8}</span>
-                <span style={{ fontFamily: 'var(--gc-mono)', color: T.textMuted }}> ({result?.chords[pl.ci - 1]}→{result?.chords[pl.ci]})</span>
-              </p>
-            ))}
-            {leaps.map((lp, i) => (
-              <p key={`l${i}`} dir="ltr" style={{ margin: 0, fontSize: 12, color: T.text }}>
-                <span style={{ fontWeight: 700 }}>{WARN} </span>
-                <span>{t.voice} {lp.voice + 1}: </span>
-                <span style={{ fontWeight: 700 }}>{lp.from}→{lp.to}</span>
-                <span style={{ color: T.textMuted }}> — {t.leap}</span>
-              </p>
-            ))}
-          </div>
-        </Rule>
-      )}
-
-      {(selVoice != null || selDeg != null) && (
-        <p className="su-label" style={{ margin: 0, textAlign: 'center', color: T.text }}>
-          {selVoice != null ? t.follow(String(selVoice + 1)) : t.degOf(degLabelShort(selDeg!, lang))}
-        </p>
-      )}
+  return (
+    <div dir={rtl ? 'rtl' : 'ltr'} className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: desktop ? 24 : 20, maxWidth: desktop ? 900 : undefined, margin: '0 auto', width: '100%' }}>
+      {toolbar}
+      {intro}
+      {chordsRow}
+      {actions}
+      {chart}
+      {notesCard}
     </div>
   );
 }

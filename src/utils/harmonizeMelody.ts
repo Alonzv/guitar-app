@@ -108,6 +108,7 @@ export async function harmonizeMelody(
   // Lets the Node-based eval harness (scripts/evalHarmonizer.ts) supply a key
   // directly, bypassing the /api/anthropic proxy.
   apiKeyOverride?: string,
+  lang: 'en' | 'he' = 'en',
 ): Promise<HarmonizeResult | null> {
 
   const events = extractMelodyEvents(grid, tuning);
@@ -208,7 +209,7 @@ Return VALID JSON only, no markdown:
     { "col": <int>, "notes": [ { "str": "e|B|G|D|A|E", "fret": <int 0-24>, "added": <bool>, "tech": "<optional>" } ] }
   ],${hasManualAnchors ? '' : `
   "anchorSlots": [<int subset of ${originalSlots.join(', ')} — the slots you auto-selected as anchors>],`}
-  "analysis": "<1-2 sentences, English — describe the harmonic approach used>"
+  "analysis": "<1-2 sentences in ${lang === 'he' ? 'Hebrew' : 'English'}, plain words a beginner guitarist understands, describing the harmonic approach used>"
 }`,
         },
       ],

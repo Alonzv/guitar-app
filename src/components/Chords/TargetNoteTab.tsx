@@ -8,8 +8,9 @@ import { isPlayable } from '../../utils/chordVoicings';
 import { playChord, unlockAudio } from '../../utils/audioPlayback';
 import { SaveToLibraryButton } from '../Workspace/SaveToLibraryButton';
 import { T } from '../../theme';
-import { Rule, Pill, PillRow, Cta } from '../Transit/parts';
-import { pillStyle } from '../Transit/styles';
+import { Fold, Chips, icon } from '../ChordBuilder/Stage';
+import { Sheet } from '../Workspace/Sheet';
+import { formatChordName } from '../../utils/chordIdentifier';
 import { useLang } from '../../contexts/LanguageContext';
 import { previewFret, previewVoicing } from '../../utils/previewSound';
 import { useFlash } from '../../motion/useFlash';
@@ -44,6 +45,12 @@ const INTERVAL_DISPLAY: Record<string, string> = {
   '11': '11th', '#11': '♯11th', 'b13': '♭13th', '13': '13th',
 };
 
+const INTERVAL_HE: Record<string, string> = {
+  '1': 'השורש', 'b3': 'הטרצה הקטנה', '3': 'הטרצה', 'b5': 'הקווינטה המוקטנת', '5': 'הקווינטה',
+  'b7': 'הספטימה הקטנה', '7': 'הספטימה', 'b9': '♭9', '9': '9', '#9': '♯9',
+  '11': '11', '#11': '♯11', 'b13': '♭13', '13': '13',
+};
+
 const CHROMA_TO_NOTE    = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const CHROMA_ENHARMONIC: Record<number, string> = { 1: 'Db', 3: 'D#', 6: 'Gb', 8: 'G#', 10: 'A#' };
 
@@ -74,7 +81,7 @@ interface TargetPos { string: number; fret: number; }
 
 interface ResultItem {
   chordName: string;
-  intervalLabel: string;
+  interval: string;
   voicing: FretPosition[];
   targetVoicingIdx: number;
   priority: number;
@@ -207,7 +214,7 @@ function searchChords(
 
           results.push({
             chordName: displayName,
-            intervalLabel: INTERVAL_DISPLAY[interval],
+            interval,
             voicing,
             targetVoicingIdx,
             priority: chordSortPriority(suffix),
@@ -506,108 +513,99 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
 
   const stringName = (st: number) => STRING_LABELS[st];
   const posLabel = targetPos
-    ? (he ? `מיתר ${stringName(targetPos.string)} · ${targetPos.fret === 0 ? 'פתוח' : `שריג ${targetPos.fret}`}`
+    ? (he ? `מיתר ${stringName(targetPos.string)} · ${targetPos.fret === 0 ? 'פתוח' : `סריג ${targetPos.fret}`}`
           : `String ${stringName(targetPos.string)} · ${targetPos.fret === 0 ? 'Open' : `Fret ${targetPos.fret}`}`)
     : '';
+  const roleOf = (iv: string) => he ? INTERVAL_HE[iv] : INTERVAL_DISPLAY[iv];
+  const small = (text: string) => <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>{text}</span>;
 
-  const settingRow = (title: string, children: React.ReactNode) => (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-      <span className="su-label" style={{ minWidth: 84 }}>{title}</span>
-      {children}
+  // ── The note: big, then the neck to pick it on ──────────────────────────
+  const stage = (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}>
+      {targetPos ? (
+        <h2 className="gc-notation" dir="ltr" style={{ margin: 0, fontFamily: 'var(--su-display)', fontSize: desktop ? 96 : 76, lineHeight: 1.05, fontWeight: 700, letterSpacing: '-0.045em' }}>
+          {targetNoteName}
+        </h2>
+      ) : (
+        <h2 style={{ margin: 0, fontSize: desktop ? 34 : 28, fontWeight: 700, color: T.textMuted }}>{he ? 'בחרו תו' : 'Pick a note'}</h2>
+      )}
+      <span className="su-sub" style={{ fontSize: 15 }}>
+        {targetPos ? posLabel : (he ? 'הקישו על הצוואר' : 'Tap the neck')}
+      </span>
     </div>
   );
 
-  const controlsLeft = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* The target note: tap the neck */}
-      <Rule label={he ? 'בחרו תו מטרה' : 'Select target note'}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, minHeight: 64, marginBottom: 10 }}>
-          {targetPos ? (
-            <>
-              <span className="su-poster" style={{ fontSize: 64, textTransform: 'none' }}>{targetNoteName}</span>
-              <span className="su-label" style={{ color: T.text, paddingBottom: 4, textTransform: 'none' }}>{posLabel}</span>
-            </>
-          ) : (
-            <span className="su-label">{he ? 'הקישו על הצוואר כדי לבחור תו' : 'Tap the fretboard to select a target note'}</span>
-          )}
-        </div>
-        <InputFretboard
-          selected={targetPos}
-          tuning={tuning.notes}
-          label={he
-            ? `צוואר לבחירת תו מטרה${targetPos ? ` — ${targetNoteName}, ${posLabel}` : ''}. חיצים מזיזים`
-            : `Target note neck${targetPos ? ` — ${targetNoteName}, ${posLabel}` : ''}. Arrow keys move`}
-          onSelect={pos => {
-            setTargetPos(pos.string === -1 ? null : pos);
-            if (pos.string !== -1) previewFret(pos, tuning.openFreqs, capo);
-          }}
-        />
-      </Rule>
-
-      {/* Search settings */}
-      <Rule label={he ? 'הגדרות חיפוש' : 'Search settings'}
-        right={<Pill size="sm" active={controlsOpen} onClick={() => setControlsOpen(o => !o)}>
-          {controlsOpen ? (he ? 'סגירה' : 'Close') : (he ? 'הגדרות' : 'Settings')}
-        </Pill>}>
-        {controlsOpen && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {settingRow(he ? 'תפקיד — בסיס' : 'Role · core', CORE_INTERVALS.map(iv => (
-              <Pill key={iv} size="sm" active={selectedIntervals.has(iv)} onClick={() => toggleInterval(iv)}
-                style={{ textTransform: 'none' }}>{iv}</Pill>
-            )))}
-            {settingRow(he ? 'תפקיד — מתחים' : 'Role · tensions', TENSION_INTERVALS.map(iv => (
-              <Pill key={iv} size="sm" active={selectedIntervals.has(iv)} onClick={() => toggleInterval(iv)}
-                style={{ textTransform: 'none' }}>{iv}</Pill>
-            )))}
-            {settingRow(he ? 'נעילת מיקום' : 'Position lock', (
-              <PillRow wrap label={he ? 'נעילת מיקום' : 'Position lock'} value={positionLock} onChange={setPositionLock}
-                items={[
-                  { id: 'anywhere', label: he ? 'בכל מקום' : 'Anywhere' },
-                  { id: 'top', label: he ? 'קול עליון' : 'Top voice' },
-                  { id: 'bass', label: he ? 'בס' : 'Bass note' },
-                ]} />
-            ))}
-            {settingRow(he ? 'מורכבות' : 'Complexity', (
-              <PillRow wrap label={he ? 'מורכבות' : 'Complexity'} value={complexity} onChange={setComplexity}
-                items={[
-                  { id: 'triads', label: he ? 'טריאדות' : 'Triads' },
-                  { id: '7ths', label: '7ths' }, { id: '9ths', label: '9ths' },
-                  { id: 'full', label: he ? 'הכול' : 'Full' },
-                ]} />
-            ))}
-          </div>
-        )}
-      </Rule>
+  const neck = (
+    <div style={{ borderRadius: 26, background: T.bgCard, padding: '16px 14px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <InputFretboard
+        selected={targetPos}
+        tuning={tuning.notes}
+        label={he
+          ? `צוואר לבחירת תו מטרה${targetPos ? `: ${targetNoteName}, ${posLabel}` : ''}. חיצים מזיזים`
+          : `Target note neck${targetPos ? `: ${targetNoteName}, ${posLabel}` : ''}. Arrow keys move`}
+        onSelect={pos => {
+          setTargetPos(pos.string === -1 ? null : pos);
+          if (pos.string !== -1) previewFret(pos, tuning.openFreqs, capo);
+        }}
+      />
+      {small(he ? 'בחרו את התו שאתם רוצים לשמוע באקורד, ונמצא את כל האקורדים שמכילים אותו בדיוק במקום הזה.' : 'Pick the note you want to hear in the chord, and you get every chord that has it right there.')}
     </div>
   );
 
-  const resultsPanel = (
-    <Rule label={!targetPos ? (he ? 'תוצאות' : 'Results')
-      : results.length > 0
-        ? (he ? `${results.length} אקורדים` : `${results.length} chord${results.length !== 1 ? 's' : ''} found`)
-        : (he ? 'לא נמצאו אקורדים — נסו הגדרות אחרות' : 'No chords found — try different settings')}>
-      {!targetPos ? (
-        <p className="su-label" style={{ margin: 0, padding: '18px 0' }}>
-          {he ? 'בחרו תו על הצוואר' : '← Select a note on the fretboard'}
-        </p>
-      ) : results.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '14px 12px' }}>
+  // ── Settings: one fold ───────────────────────────────────────────────────
+  const multi = (label: string, items: readonly string[]) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>{label}</span>
+      <div dir="ltr" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {items.map(iv => {
+          const on = selectedIntervals.has(iv);
+          return (
+            <button key={iv} aria-pressed={on} onClick={() => toggleInterval(iv)} className="gc-no-bar gc-notation"
+              title={roleOf(iv)}
+              style={{ height: 40, minWidth: 48, padding: '0 14px', borderRadius: 20, fontSize: 15, fontWeight: 600,
+                background: on ? T.text : 'rgba(255,255,255,0.08)', color: on ? '#000' : T.text }}>
+              {iv.replace('b', '♭').replace('#', '♯')}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+  const COMPLEXITY_LABEL = { triads: he ? 'פשוטים' : 'Simple', '7ths': he ? 'עם 7' : 'With 7ths', '9ths': he ? 'עם 9' : 'With 9ths', full: he ? 'הכול' : 'Everything' };
+  const LOCK_LABEL = { anywhere: he ? 'בכל מקום' : 'Anywhere', top: he ? 'הכי גבוה' : 'On top', bass: he ? 'הכי נמוך' : 'In the bass' };
+  const roles = [...selectedIntervals].map(iv => iv.replace('b', '♭').replace('#', '♯')).join(' ');
+  const settings = (
+    <Fold title={he ? 'מה לחפש' : 'What to look for'} open={controlsOpen} onToggle={() => setControlsOpen(o => !o)}
+      summary={<>{he ? 'תפקיד' : 'Role'} <bdi dir="ltr">{roles}</bdi> · {COMPLEXITY_LABEL[complexity]} · {LOCK_LABEL[positionLock]}</>}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {small(he ? 'התפקיד של התו באקורד: 1 הוא השורש, 3 הטרצה, 5 הקווינטה. אפשר לבחור כמה.' : 'The note\'s job in the chord: 1 is the root, 3 the third, 5 the fifth. Pick as many as you like.')}
+        {multi(he ? 'תפקיד בסיסי' : 'Basic role', CORE_INTERVALS)}
+        {multi(he ? 'תפקיד צבעוני' : 'Colour role', TENSION_INTERVALS)}
+        <Chips label={he ? 'סוגי אקורדים' : 'Chord types'} value={complexity} onChange={setComplexity}
+          items={(['triads', '7ths', '9ths', 'full'] as const).map(id => ({ id, label: COMPLEXITY_LABEL[id] }))} />
+        <Chips label={he ? 'איפה התו באקורד' : 'Where the note sits'} value={positionLock} onChange={setPositionLock}
+          items={(['anywhere', 'top', 'bass'] as const).map(id => ({ id, label: LOCK_LABEL[id] }))} />
+      </div>
+    </Fold>
+  );
+
+  const resultsPanel = targetPos && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {small(results.length > 0
+        ? (he ? `${results.length} אקורדים עם ${targetNoteName} · הקישו כדי לשמוע ולהגדיל` : `${results.length} chord${results.length !== 1 ? 's' : ''} with ${targetNoteName} · tap to hear it up close`)
+        : (he ? 'לא נמצאו אקורדים. נסו לבחור עוד תפקידים או סוגי אקורדים.' : 'No chords found. Try more roles or chord types.'))}
+      {results.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(4, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
           {results.map((item, idx) => (
-            <button
-              key={idx}
-              type="button"
+            <button key={idx} type="button"
               onClick={() => { setExpandedIdx(idx); previewVoicing(item.voicing, tuning.openFreqs, capo); }}
-              aria-label={`${item.chordName} — ${targetNoteName} = ${item.intervalLabel}`}
-              className="gc-pressable gc-no-bar"
-              style={{
-                cursor: 'pointer', textAlign: 'start', display: 'flex', flexDirection: 'column', gap: 4, width: '100%', minWidth: 0,
-                background: 'transparent', color: T.text, padding: '8px 0 4px', borderRadius: 0,
-                borderWidth: 'var(--su-rule) 0 0 0', borderStyle: 'solid', borderColor: T.border,
-              }}
-            >
-              <span className="su-semi" style={{ fontSize: 22, lineHeight: 1, textTransform: 'none' }}>{item.chordName}</span>
-              <span className="su-label">{targetNoteName} = {item.intervalLabel}</span>
-              <span style={{ display: 'block', width: '100%', marginTop: 4 }}>
+              aria-label={`${item.chordName}: ${targetNoteName} = ${roleOf(item.interval)}`}
+              className="gc-no-bar su-row"
+              style={{ cursor: 'pointer', textAlign: 'start', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0,
+                background: 'rgba(255,255,255,0.06)', color: T.text, padding: '12px 12px 10px', borderRadius: 20 }}>
+              <span className="gc-notation" dir="ltr" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em', alignSelf: 'flex-start' }}>{formatChordName(item.chordName)}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.textMuted }}><bdi dir="ltr">{targetNoteName}</bdi> · {roleOf(item.interval)}</span>
+              <span dir="ltr" style={{ display: 'block', width: '100%', marginTop: 4 }}>
                 <XORow voicing={item.voicing} />
                 <MiniFretboard voicing={item.voicing} dotColors={dotColors(item)} tuning={tuning.notes} />
               </span>
@@ -615,144 +613,119 @@ export const TargetNoteTab: React.FC<Props> = ({ tuning, capo, desktop, onAddToP
           ))}
         </div>
       )}
-    </Rule>
+    </div>
   );
 
-  return (
-    <div style={desktop
-      ? { display: 'grid', gridTemplateColumns: '580px 1fr', gap: 32, alignItems: 'start' }
-      : { display: 'flex', flexDirection: 'column', gap: 18 }
-    }>
-      {controlsLeft}
-      {desktop
-        ? <div style={{ position: 'sticky', top: 24 }}>{resultsPanel}</div>
-        : resultsPanel
-      }
+  // ── One chord, up close ──────────────────────────────────────────────────
+  const arrow = (d: number, disabled: boolean, label: string) => (
+    <button onClick={() => setExpandedIdx(i => {
+        const n = Math.min(Math.max((i ?? 0) + d, 0), results.length - 1);
+        if (n !== i && results[n]) previewVoicing(results[n].voicing, tuning.openFreqs, capo);
+        return n;
+      })} disabled={disabled} aria-label={label} className="gc-no-bar"
+      style={{ width: 50, height: 50, flex: 'none', borderRadius: 25, background: 'rgba(255,255,255,0.10)', color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.3 : 1 }}>
+      {icon(<path d={d < 0 ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'} />, 20)}
+    </button>
+  );
+  const sheet = expandedResult !== null && expandedIdx !== null && (
+    <Sheet onClose={() => setExpandedIdx(null)} maxWidth={440}
+      kicker={<><bdi dir="ltr">{targetNoteName}</bdi> · {roleOf(expandedResult.interval)} · {expandedIdx + 1}/{results.length}</>}
+      title={<span className="gc-notation" dir="ltr">{formatChordName(expandedResult.chordName)}</span>}>
+      <div dir="ltr" style={{ borderRadius: 22, background: 'rgba(255,255,255,0.06)', padding: '14px 18px 10px' }}>
+        <XORow voicing={expandedResult.voicing} />
+        <MiniFretboard voicing={expandedResult.voicing} dotColors={dotColors(expandedResult, true)} tuning={tuning.notes} showStringLabels showFretNumbers />
+      </div>
 
-      {/* Expanded modal */}
-      {expandedResult !== null && expandedIdx !== null && (
-        <div
-          onClick={e => { if (e.target === e.currentTarget) setExpandedIdx(null); }}
-          style={{
-            position: 'fixed', inset: 0, background: 'color-mix(in srgb, var(--gc-text) 55%, transparent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 200, padding: 16,
-          }}
-        >
-          <div role="dialog" aria-modal="true" aria-label={expandedResult.chordName} style={{
-            background: T.bgDeep, color: T.text, border: `var(--su-rule) solid ${T.border}`,
-            width: '100%', maxWidth: 420, boxSizing: 'border-box',
-            maxHeight: '88vh', overflowY: 'auto',
-            padding: '18px 20px 18px',
-            display: 'flex', flexDirection: 'column', gap: 14,
-          }}>
-            {/* Name + close */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-              <div style={{ minWidth: 0 }}>
-                <div className="su-poster" style={{ fontSize: 64, textTransform: 'none' }}>{expandedResult.chordName}</div>
-                <div className="su-label" style={{ marginTop: 10, color: T.text }}>
-                  {targetNoteName} = {expandedResult.intervalLabel}
-                </div>
-              </div>
-              <Pill onClick={() => setExpandedIdx(null)} label={he ? 'סגירה' : 'Close'} style={{ padding: 0, width: 44 }}>×</Pill>
-            </div>
-
-            {/* Large diagram */}
-            <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, padding: '12px 16px 0' }}>
-              <XORow voicing={expandedResult.voicing} />
-              <MiniFretboard
-                voicing={expandedResult.voicing}
-                dotColors={dotColors(expandedResult, true)}
-                tuning={tuning.notes}
-                showStringLabels
-                showFretNumbers
-              />
-            </div>
-
-            {/* Play · add to the song (the one cobalt action) */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Pill onClick={() => { unlockAudio(); playChord(expandedResult!.voicing, tuning.openFreqs, capo); }}
-                style={{ flex: onAddToProgression ? '0 0 auto' : 1, padding: '0 22px' }}>{he ? 'נגן' : 'Play'}</Pill>
-              {onAddToProgression && (
-                <Cta
-                  onClick={() => {
-                    onAddToProgression({
-                      id: `chord-${Date.now()}`,
-                      chord: { name: expandedResult!.chordName, notes: [], aliases: [] },
-                      fretPositions: [...expandedResult!.voicing],
-                    });
-                    flashAdded();
-                  }}
-                  style={{ flex: 1 }}
-                ><RollLabel>{added ? '✓ Added' : '+ Add to song'}</RollLabel></Cta>
-              )}
-            </div>
-
-            <SaveToLibraryButton
-              style={{ ...pillStyle(false), width: '100%', justifyContent: 'center' }}
-              label="Save voicing to Library"
-              getPayload={() => ({
-                kind: 'progression',
-                name: expandedResult!.chordName,
-                chords: [{
+      <div dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {arrow(-1, expandedIdx === 0, he ? 'האקורד הקודם' : 'Previous chord')}
+        <div style={{ flex: 1, display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }} dir={he ? 'rtl' : 'ltr'}>
+          <button onClick={() => { unlockAudio(); playChord(expandedResult!.voicing, tuning.openFreqs, capo); }} className="gc-no-bar"
+            style={{ height: 50, padding: '0 20px', borderRadius: 25, background: T.text, color: '#000', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden><path d="M7 4.5v15l13-7.5z" fill="currentColor" /></svg>
+            {he ? 'נגן' : 'Play'}
+          </button>
+          {onAddToProgression && (
+            <button onClick={() => {
+                onAddToProgression({
                   id: `chord-${Date.now()}`,
                   chord: { name: expandedResult!.chordName, notes: [], aliases: [] },
                   fretPositions: [...expandedResult!.voicing],
-                }],
-              })}
-            />
+                });
+                flashAdded();
+              }} className="gc-no-bar"
+              style={{ height: 50, padding: '0 18px', borderRadius: 25, background: 'rgba(255,255,255,0.10)', color: T.text, fontSize: 16, fontWeight: 600 }}>
+              <RollLabel>{added ? (he ? '✓ נוסף' : '✓ Added') : (he ? '+ לשיר' : '+ To song')}</RollLabel>
+            </button>
+          )}
+        </div>
+        {arrow(1, expandedIdx === results.length - 1, he ? 'האקורד הבא' : 'Next chord')}
+      </div>
 
-            {/* Fits in — scales this chord lives in */}
-            {fitScales.length > 0 && (
-              <Rule label={he ? 'מתאים לסולמות' : 'Fits in'}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {fitScales.map((sc, i) => (
-                    <Pill key={sc.name} size="sm" active={scaleIdx === i}
-                      onClick={() => setScaleIdx(prev => prev === i ? null : i)}
-                      style={{ textTransform: 'none', letterSpacing: '0.02em' }}>{sc.name}</Pill>
-                  ))}
-                </div>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <SaveToLibraryButton
+          style={{ height: 40, padding: '0 14px', borderRadius: 20, fontSize: 15, fontWeight: 500, color: T.tintLabel, background: 'transparent', border: 'none' }}
+          label={he ? 'שמירה לספרייה' : 'Save to Library'}
+          getPayload={() => ({
+            kind: 'progression',
+            name: expandedResult!.chordName,
+            chords: [{
+              id: `chord-${Date.now()}`,
+              chord: { name: expandedResult!.chordName, notes: [], aliases: [] },
+              fretPositions: [...expandedResult!.voicing],
+            }],
+          })}
+        />
+      </div>
 
-                {scaleIdx !== null && fitScales[scaleIdx] && targetNoteName && (
-                  <>
-                    <div className="su-label" style={{ marginTop: 10, color: T.text }}>
-                      {targetNoteName} is the {degreeInScale(targetNoteName, fitScales[scaleIdx].root)} of {fitScales[scaleIdx].name}
-                    </div>
-                    <ScaleStrip
-                      positions={getScalePositions(fitScales[scaleIdx].root, fitScales[scaleIdx].type, tuning.notes)}
-                      tuning={tuning.notes}
-                      targetChroma={TonalNote.chroma(targetNoteName) ?? -1}
-                      rootChroma={TonalNote.chroma(fitScales[scaleIdx].root) ?? -1}
-                    />
-                    <div className="su-label" style={{ display: 'flex', gap: 14, marginTop: 6, alignItems: 'center' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.secondary, outline: `1.5px solid ${T.text}`, outlineOffset: 2 }} />{he ? 'מטרה' : 'target'}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.secondary }} />{he ? 'שורש' : 'root'}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.coral }} />{he ? 'סולם' : 'scale'}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </Rule>
-            )}
-
-            {/* Carousel */}
-            <div dir="ltr" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Pill onClick={() => setExpandedIdx(i => Math.max((i ?? 0) - 1, 0))} disabled={expandedIdx === 0}
-                label={he ? 'האקורד הקודם' : 'Previous chord'} style={{ flex: 1 }}>‹</Pill>
-              <span className="su-label" style={{ minWidth: 56, textAlign: 'center', color: T.text }}>
-                {expandedIdx + 1} / {results.length}
-              </span>
-              <Pill onClick={() => setExpandedIdx(i => Math.min((i ?? 0) + 1, results.length - 1))} disabled={expandedIdx === results.length - 1}
-                label={he ? 'האקורד הבא' : 'Next chord'} style={{ flex: 1 }}>›</Pill>
-            </div>
+      {fitScales.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {small(he ? 'סולמות שהאקורד הזה יושב בהם' : 'Scales this chord lives in')}
+          <div dir="ltr" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {fitScales.map((sc, i) => {
+              const on = scaleIdx === i;
+              return (
+                <button key={sc.name} aria-pressed={on} onClick={() => setScaleIdx(prev => prev === i ? null : i)} className="gc-no-bar"
+                  style={{ height: 36, padding: '0 14px', borderRadius: 18, fontSize: 14, fontWeight: 600,
+                    background: on ? T.text : 'rgba(255,255,255,0.08)', color: on ? '#000' : T.text }}>{sc.name}</button>
+              );
+            })}
           </div>
+          {scaleIdx !== null && fitScales[scaleIdx] && targetNoteName && (
+            <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }} dir="ltr">
+                {targetNoteName} is the {degreeInScale(targetNoteName, fitScales[scaleIdx].root)} of {fitScales[scaleIdx].name}
+              </span>
+              <ScaleStrip
+                positions={getScalePositions(fitScales[scaleIdx].root, fitScales[scaleIdx].type, tuning.notes)}
+                tuning={tuning.notes}
+                targetChroma={TonalNote.chroma(targetNoteName) ?? -1}
+                rootChroma={TonalNote.chroma(fitScales[scaleIdx].root) ?? -1}
+              />
+              <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontSize: 12, fontWeight: 600, color: T.textMuted }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.secondary, outline: `1.5px solid ${T.text}`, outlineOffset: 2 }} />{he ? 'התו שלכם' : 'your note'}
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.secondary }} />{he ? 'שורש' : 'root'}
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: T.coral }} />{he ? 'סולם' : 'scale'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
+    </Sheet>
+  );
+
+  return (
+    <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: desktop ? 24 : 20, maxWidth: desktop ? 900 : undefined, margin: '0 auto', width: '100%' }}>
+      {stage}
+      {neck}
+      {settings}
+      {resultsPanel}
+      {sheet}
     </div>
   );
 };
