@@ -12,16 +12,31 @@ export function matches(text: string, query: string | undefined): boolean {
 
 /** The tile grid: two up on a phone, more as the column widens. */
 export const TILE_GRID: CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 160px), 1fr))', gap: 8,
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 156px), 1fr))', gap: 10,
 };
 export const TILE_GRID_DESKTOP: CSSProperties = {
   display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12,
 };
 
-export function formatDate(iso: string): string {
+export function formatDate(iso: string, he = false): string {
   const d = new Date(iso);
   const now = new Date();
+  const loc = he ? 'he-IL' : undefined;
   const sameDay = d.toDateString() === now.toDateString();
-  if (sameDay) return `Today, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (sameDay) return `${he ? 'היום' : 'Today'}, ${d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}`;
+  return d.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** The words every section shares: its menu, the delete question, no matches. */
+export function libWords(he: boolean) {
+  return {
+    rename:    he ? 'שינוי שם' : 'Rename',
+    duplicate: he ? 'שכפול' : 'Duplicate',
+    pdf:       he ? 'ייצוא PDF' : 'Export PDF',
+    midi:      he ? 'ייצוא MIDI' : 'Export MIDI',
+    del:       he ? 'מחיקה' : 'Delete',
+    confirmDelete: (name: string) => he ? `למחוק את "${name}"?` : `Delete "${name}"?`,
+    noMatchTitle: he ? 'לא נמצא כלום' : 'Nothing matches',
+    noMatchHint:  he ? 'נסו מילה אחרת, או נקו את החיפוש.' : 'Try another word, or clear the search.',
+  };
 }

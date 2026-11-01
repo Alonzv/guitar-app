@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { savedReharms } from '../../services/workspace';
 import type { SavedReharm } from '../../services/types';
 import { requestOpenVoicings } from '../../services/handoff';
 import { exportMidi } from '../../utils/midiExport';
 import { ItemMenu } from './ItemMenu';
-import { EmptyState, RenameDialog, Tile, Tag } from './shared';
-import { matches, formatDate, TILE_GRID, TILE_GRID_DESKTOP } from './library';
+import { EmptyState, Loading, RenameDialog, Tile, Tag, ChordLine } from './shared';
+import { formatChordName } from '../../utils/chordIdentifier';
+import { matches, formatDate, libWords, TILE_GRID, TILE_GRID_DESKTOP } from './library';
 
 export const ReharmsSection: React.FC<{ desktop?: boolean; query?: string; onCount?: (n: number) => void }> = ({ desktop, query, onCount }) => {
   const { user } = useAuth();
+  const { lang } = useLang();
+  const he = lang === 'he';
+  const w = libWords(he);
   const [items, setItems]       = useState<SavedReharm[]>([]);
   const [loading, setLoading]   = useState(true);
   const [renaming, setRenaming] = useState<SavedReharm | null>(null);
@@ -27,10 +31,10 @@ export const ReharmsSection: React.FC<{ desktop?: boolean; query?: string; onCou
   // Report the count to the Library's filter pills.
   useEffect(() => { if (!loading) onCount?.(items.length); }, [items, loading, onCount]);
 
-  if (loading) return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 20 }}>Loading…</p>;
+  if (loading) return <Loading />;
   if (items.length === 0) return (
-    <EmptyState title="No re-harmonizations yet"
-      hint="Re-harmonize a progression at Reharmonize (L1) and save the result to see it here." />
+    <EmptyState title={he ? 'עוד אין רה-הרמוניזציות' : 'No re-harmonizations yet'}
+      hint={he ? 'עשו רה-הרמוניזציה למהלך ושמרו את התוצאה, והיא תופיע כאן.' : 'Re-harmonize a progression and save the result to see it here.'} />
   );
 
   const open = (it: SavedReharm) => {
@@ -42,7 +46,7 @@ export const ReharmsSection: React.FC<{ desktop?: boolean; query?: string; onCou
   };
 
   const remove = async (it: SavedReharm) => {
-    if (!confirm(`Delete "${it.name}"?`)) return;
+    if (!confirm(w.confirmDelete(it.name))) return;
     await savedReharms.remove(it.id);
     setItems(prev => prev.filter(x => x.id !== it.id));
   };
@@ -60,35 +64,30 @@ export const ReharmsSection: React.FC<{ desktop?: boolean; query?: string; onCou
     setRenaming(null);
   };
 
+  const openL = he ? 'פתיחה ברה-הרמוניזציה' : 'Open in Reharmonize';
   const shown = items.filter(it => matches(`${it.name} ${it.genre ?? ''} ${it.original.join(' ')} ${(it.result?.chords ?? []).join(' ')}`, query));
-  if (!shown.length) return <EmptyState title="Nothing matches" hint="Try another word, or clear the search." />;
+  if (!shown.length) return <EmptyState title={w.noMatchTitle} hint={w.noMatchHint} />;
 
-  const chips = (cs: string[], strong: boolean) => (
-    <div dir="ltr" style={{ fontSize: 12, fontFamily: 'var(--gc-mono)', fontWeight: strong ? 700 : 400, color: strong ? T.text : T.textMuted, lineHeight: 1.5, overflowWrap: 'anywhere' }}>
-      {cs.join(' · ')}
-    </div>
-  );
 
   return (
     <div style={desktop ? TILE_GRID_DESKTOP : TILE_GRID}>
       {shown.map(it => (
-        <Tile key={it.id} line="L1" type="Re-harmonization" name={it.name} date={formatDate(it.updated_at)}
-          action={{ label: 'Open in Reharm', onClick: () => open(it) }}
+        <Tile key={it.id} type={he ? 'רה-הרמוניזציה' : 'Re-harmonization'} name={it.name} date={formatDate(it.updated_at, he)}
+          action={{ label: openL, onClick: () => open(it) }}
           menu={<ItemMenu items={[
-            { label: 'Open in Reharm', onClick: () => open(it) },
-            { label: 'Rename',         onClick: () => setRenaming(it) },
-            { label: 'Duplicate',      onClick: () => duplicate(it) },
-            { label: 'Export MIDI',    onClick: () => exportMidi(it.result.chords, it.name) },
-            { label: 'Delete',         onClick: () => remove(it), danger: true },
+            { label: openL, onClick: () => open(it) },
+            { label: w.rename,         onClick: () => setRenaming(it) },
+            { label: w.duplicate,      onClick: () => duplicate(it) },
+            { label: w.midi,    onClick: () => exportMidi(it.result.chords, it.name) },
+            { label: w.del,         onClick: () => remove(it), danger: true },
           ]} />}>
           {/* Original → re-harmonized */}
-          {chips(it.original, false)}
-          <span aria-hidden className="su-label" style={{ lineHeight: 1 }}>↓</span>
-          {chips(it.result?.chords ?? [], true)}
+          <ChordLine chords={it.original.map(formatChordName)} strong={false} />
+          <ChordLine chords={(it.result?.chords ?? []).map(formatChordName)} />
           {(it.genre || it.tension != null) && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {it.genre && <Tag>{it.genre}</Tag>}
-              {it.tension != null && <Tag>Tension {it.tension}</Tag>}
+              {it.tension != null && <Tag>{he ? `מתח ${it.tension}` : `Tension ${it.tension}`}</Tag>}
             </div>
           )}
         </Tile>

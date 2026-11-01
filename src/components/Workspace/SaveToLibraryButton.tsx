@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { pillStyle } from '../Transit/styles';
+import { useLang } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../Auth/AuthModal';
 import { savedProgressions, savedTabs, savedHarmonizations, savedReharms, audioTabs, uploadAudioClip } from '../../services/workspace';
@@ -31,6 +32,8 @@ interface Props {
 
 export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', label = 'Save to Library', style }) => {
   const { user, configured } = useAuth();
+  const { lang } = useLang();
+  const he = lang === 'he';
   const [status, setStatus]   = useState<Status>('idle');
   const [authOpen, setAuthOpen] = useState(false);
   const pendingRef = useRef(false);
@@ -71,9 +74,9 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
     } catch (e) {
       console.error('save failed', e);
       setStatus('idle');
-      alert('Could not save. Please try again.');
+      alert(he ? 'השמירה לא הצליחה. נסו שוב.' : 'Could not save. Please try again.');
     }
-  }, [getPayload, persist]);
+  }, [getPayload, persist, he]);
 
   // After a guest signs in through the modal, finish the save they intended.
   useEffect(() => {
@@ -106,7 +109,7 @@ export const SaveToLibraryButton: React.FC<Props> = ({ getPayload, size = 'md', 
         cursor: status === 'saving' ? 'wait' : 'pointer',
         ...style,
       }}>
-        <RollLabel>{saved ? '✓ Saved' : status === 'saving' ? 'Saving…' : label}</RollLabel>
+        <RollLabel>{saved ? (he ? '✓ נשמר' : '✓ Saved') : status === 'saving' ? (he ? 'שומר…' : 'Saving…') : label}</RollLabel>
       </button>
       {authOpen && <AuthModal onClose={() => { pendingRef.current = false; setAuthOpen(false); }} />}
     </>

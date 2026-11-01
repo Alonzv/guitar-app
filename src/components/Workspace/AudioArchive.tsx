@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { audioTabs } from '../../services/workspace';
 import type { AudioTab } from '../../services/types';
 import { ItemMenu } from './ItemMenu';
-import { EmptyState, RenameDialog, MiniAudioPlayer, Tile } from './shared';
-import { matches, formatDate, TILE_GRID, TILE_GRID_DESKTOP } from './library';
+import { EmptyState, Loading, RenameDialog, MiniAudioPlayer, Tile } from './shared';
+import { matches, formatDate, libWords, TILE_GRID, TILE_GRID_DESKTOP } from './library';
 
 export const AudioArchive: React.FC<{ desktop?: boolean; query?: string; onCount?: (n: number) => void }> = ({ desktop, query, onCount }) => {
   const { user } = useAuth();
+  const { lang } = useLang();
+  const he = lang === 'he';
+  const w = libWords(he);
   const [items, setItems]     = useState<AudioTab[]>([]);
   const [loading, setLoading] = useState(true);
   const [renaming, setRenaming] = useState<AudioTab | null>(null);
@@ -25,14 +28,14 @@ export const AudioArchive: React.FC<{ desktop?: boolean; query?: string; onCount
   // Report the count to the Library's filter pills.
   useEffect(() => { if (!loading) onCount?.(items.length); }, [items, loading, onCount]);
 
-  if (loading) return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 20 }}>Loading…</p>;
+  if (loading) return <Loading />;
   if (items.length === 0) return (
-    <EmptyState title="No audio transcriptions yet"
-      hint="Record or upload a clip at Audio → Tab (L3) and it will be archived here for quick playback." />
+    <EmptyState title={he ? 'עוד אין תמלולי אודיו' : 'No audio transcriptions yet'}
+      hint={he ? 'הקליטו או העלו קטע באודיו לטאב ושמרו אותו, והוא יחכה כאן להשמעה.' : 'Record or upload a clip in Audio to Tab and save it; it will wait here for playback.'} />
   );
 
   const remove = async (it: AudioTab) => {
-    if (!confirm(`Delete "${it.name}"?`)) return;
+    if (!confirm(w.confirmDelete(it.name))) return;
     await audioTabs.remove(it.id);
     setItems(prev => prev.filter(x => x.id !== it.id));
   };
@@ -56,7 +59,7 @@ export const AudioArchive: React.FC<{ desktop?: boolean; query?: string; onCount
 
   const exportPdf = async (it: AudioTab) => {
     const { exportTabPDF } = await import('../../utils/pdfExport');
-    await exportTabPDF(it.name, 'Audio transcription', parseGrid(it), [], ['e','B','G','D','A','E'], 0);
+    await exportTabPDF(it.name, he ? 'תמלול אודיו' : 'Audio transcription', parseGrid(it), [], ['e','B','G','D','A','E'], 0);
   };
 
   const exportMidiFile = async (it: AudioTab) => {
@@ -65,23 +68,23 @@ export const AudioArchive: React.FC<{ desktop?: boolean; query?: string; onCount
   };
 
   const shown = items.filter(it => matches(it.name, query));
-  if (!shown.length) return <EmptyState title="Nothing matches" hint="Try another word, or clear the search." />;
+  if (!shown.length) return <EmptyState title={w.noMatchTitle} hint={w.noMatchHint} />;
 
   const menu = (it: AudioTab) => (
     <ItemMenu items={[
-      { label: 'Rename',      onClick: () => setRenaming(it) },
-      { label: 'Duplicate',   onClick: () => duplicate(it) },
-      { label: 'Export PDF',  onClick: () => exportPdf(it) },
-      { label: 'Export MIDI', onClick: () => exportMidiFile(it) },
-      { label: 'Delete',      onClick: () => remove(it), danger: true },
+      { label: w.rename,      onClick: () => setRenaming(it) },
+      { label: w.duplicate,   onClick: () => duplicate(it) },
+      { label: w.pdf,  onClick: () => exportPdf(it) },
+      { label: w.midi, onClick: () => exportMidiFile(it) },
+      { label: w.del,      onClick: () => remove(it), danger: true },
     ]} />
   );
 
   return (
     <div style={desktop ? TILE_GRID_DESKTOP : TILE_GRID}>
       {shown.map(it => (
-        <Tile key={it.id} line="L3" type="Audio" name={it.name} menu={menu(it)}
-          date={`${formatDate(it.updated_at)}${it.duration_seconds ? ` · ${Math.round(it.duration_seconds)}s` : ''}`}
+        <Tile key={it.id} type={he ? 'אודיו' : 'Audio'} name={it.name} menu={menu(it)}
+          date={`${formatDate(it.updated_at, he)}${it.duration_seconds ? ` · ${Math.round(it.duration_seconds)}${he ? ' שניות' : 's'}` : ''}`}
           lead={it.original_audio_url ? <MiniAudioPlayer url={it.original_audio_url} /> : undefined} />
       ))}
 

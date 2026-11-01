@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 
 export interface MenuItem {
   label: string;
-  icon?: string;
   onClick: () => void;
   danger?: boolean;
 }
@@ -15,10 +15,11 @@ interface Props {
 }
 
 /**
- * Reusable kebab (⋮) dropdown. Closes on outside-click or Esc and flips above
- * the trigger when there isn't room below.
+ * A small glass "…" button that opens a glass menu. Closes on outside-click
+ * or Esc and flips above the trigger when there isn't room below.
  */
-export const ItemMenu: React.FC<Props> = ({ items, label = 'Actions' }) => {
+export const ItemMenu: React.FC<Props> = ({ items, label }) => {
+  const { lang } = useLang();
   const [open, setOpen]   = useState(false);
   const [flip, setFlip]   = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -41,36 +42,39 @@ export const ItemMenu: React.FC<Props> = ({ items, label = 'Actions' }) => {
   const toggle = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setFlip(window.innerHeight - rect.bottom < 180);
+      setFlip(window.innerHeight - rect.bottom < 300);
     }
     setOpen(o => !o);
   };
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={wrapRef} style={{ position: 'relative', display: 'inline-block', flex: 'none' }}>
       <button
         ref={btnRef}
-        aria-label={label}
+        aria-label={label ?? (lang === 'he' ? 'פעולות' : 'Actions')}
         onClick={toggle}
         aria-expanded={open}
         className="gc-no-bar"
         style={{
-          width: 44, height: 44, borderRadius: '50%', cursor: 'pointer',
-          background: open ? T.secondary : 'transparent',
-          border: `1.5px solid ${T.text}`,
-          color: open ? T.white : T.text, fontSize: 17, lineHeight: 1, padding: 0,
+          width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', border: 'none', padding: 0,
+          background: open ? T.text : 'rgba(255,255,255,0.08)', color: open ? '#000' : T.text,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
-      >⋮</button>
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden fill="currentColor">
+          <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+        </svg>
+      </button>
 
       {open && (
         <div
           role="menu"
+          className="lg"
           style={{
             position: 'absolute', insetInlineEnd: 0,
-            ...(flip ? { bottom: 50 } : { top: 50 }),
-            minWidth: 190, zIndex: 50,
-            background: T.bgDeep, border: `var(--su-rule) solid ${T.text}`,
+            ...(flip ? { bottom: 44 } : { top: 44 }),
+            minWidth: 210, zIndex: 50, borderRadius: 18,
+            background: 'rgba(36,36,40,0.92)',
             display: 'flex', flexDirection: 'column', padding: 6,
           }}
         >
@@ -82,18 +86,16 @@ export const ItemMenu: React.FC<Props> = ({ items, label = 'Actions' }) => {
               className="gc-no-bar"
               style={{
                 display: 'flex', alignItems: 'center', minHeight: 44,
-                padding: '0 10px', borderRadius: 0, cursor: 'pointer',
+                padding: '0 12px', borderRadius: 12, cursor: 'pointer',
                 background: 'transparent', border: 'none', textAlign: 'start',
-                color: it.danger ? T.textMuted : T.text,
-                fontSize: 12, fontWeight: 700,
-                textTransform: 'uppercase', letterSpacing: '0.1em',
-                fontFamily: 'inherit',
-                borderTop: it.danger ? `1px solid ${T.hairline}` : 'none',
+                color: it.danger ? T.error : T.text,
+                fontSize: 15, fontWeight: 500, fontFamily: 'inherit',
+                marginTop: it.danger ? 4 : 0,
+                boxShadow: it.danger ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = T.bgInput; }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
-              {/* Labels only: the icons were decoration. */}
               {it.label}
             </button>
           ))}

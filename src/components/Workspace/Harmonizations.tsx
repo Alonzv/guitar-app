@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { T } from '../../theme';
+import { useLang } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { savedHarmonizations } from '../../services/workspace';
 import type { SavedHarmonization, HarmonizationResult } from '../../services/types';
 import { requestOpenHarmonization } from '../../services/handoff';
 import { ItemMenu } from './ItemMenu';
-import { EmptyState, RenameDialog, Tile, Tag } from './shared';
-import { matches, formatDate, TILE_GRID, TILE_GRID_DESKTOP } from './library';
+import { EmptyState, Loading, RenameDialog, Tile, Tag } from './shared';
+import { matches, formatDate, libWords, TILE_GRID, TILE_GRID_DESKTOP } from './library';
 
 // Compact a saved arrangement's sparse slot columns into a printable
 // 6-row grid + bar positions — same collapse the Harmonizer's result view
@@ -44,12 +44,15 @@ function chordCount(result: HarmonizationResult | null | undefined): number {
   ).length;
 }
 
-const STYLE_LABEL: Record<string, string> = {
-  melodic: 'Melodic', '3rds': '3rds', chordmelody: 'Chord-Melody',
+const STYLE_LABEL: Record<string, { en: string; he: string }> = {
+  melodic: { en: 'Melodic', he: 'מלודי' }, '3rds': { en: '3rds', he: 'טרצות' }, chordmelody: { en: 'Chord-melody', he: 'אקורד-מלודיה' },
 };
 
 export const Harmonizations: React.FC<{ desktop?: boolean; query?: string; onCount?: (n: number) => void }> = ({ desktop, query, onCount }) => {
   const { user } = useAuth();
+  const { lang } = useLang();
+  const he = lang === 'he';
+  const w = libWords(he);
   const [items, setItems]       = useState<SavedHarmonization[]>([]);
   const [loading, setLoading]   = useState(true);
   const [renaming, setRenaming] = useState<SavedHarmonization | null>(null);
@@ -66,10 +69,10 @@ export const Harmonizations: React.FC<{ desktop?: boolean; query?: string; onCou
   // Report the count to the Library's filter pills.
   useEffect(() => { if (!loading) onCount?.(items.length); }, [items, loading, onCount]);
 
-  if (loading) return <p style={{ color: T.textDim, fontSize: 12, textAlign: 'center', padding: 20 }}>Loading…</p>;
+  if (loading) return <Loading />;
   if (items.length === 0) return (
-    <EmptyState title="No harmonizations yet"
-      hint="Harmonize a melody at Harmonize (L1) and save it to your library to see it here." />
+    <EmptyState title={he ? 'עוד אין הרמוניות שמורות' : 'No harmonizations yet'}
+      hint={he ? 'הוסיפו הרמוניה למלודיה ושמרו אותה לספרייה, והיא תופיע כאן.' : 'Harmonize a melody and save it to your library to see it here.'} />
   );
 
   const open = (it: SavedHarmonization) => {
@@ -80,7 +83,7 @@ export const Harmonizations: React.FC<{ desktop?: boolean; query?: string; onCou
   };
 
   const remove = async (it: SavedHarmonization) => {
-    if (!confirm(`Delete "${it.name}"?`)) return;
+    if (!confirm(w.confirmDelete(it.name))) return;
     await savedHarmonizations.remove(it.id);
     setItems(prev => prev.filter(x => x.id !== it.id));
   };
@@ -104,27 +107,28 @@ export const Harmonizations: React.FC<{ desktop?: boolean; query?: string; onCou
     await exportTabPDF(it.name, it.result?.analysis ?? '', grid, bars, STRS, 20);
   };
 
+  const openL = he ? 'פתיחה בהרמוניה למלודיה' : 'Open in Harmonize';
   const shown = items.filter(it => matches(`${it.name} ${it.scale ?? ''} ${(it.styles ?? []).join(' ')}`, query));
-  if (!shown.length) return <EmptyState title="Nothing matches" hint="Try another word, or clear the search." />;
+  if (!shown.length) return <EmptyState title={w.noMatchTitle} hint={w.noMatchHint} />;
 
   return (
     <div style={desktop ? TILE_GRID_DESKTOP : TILE_GRID}>
       {shown.map(it => (
-        <Tile key={it.id} line="L1" type="Harmonization" name={it.name} date={formatDate(it.updated_at)}
-          action={{ label: 'Open in Harmonizer', onClick: () => open(it) }}
+        <Tile key={it.id} type={he ? 'הרמוניה' : 'Harmonization'} name={it.name} date={formatDate(it.updated_at, he)}
+          action={{ label: openL, onClick: () => open(it) }}
           menu={<ItemMenu items={[
-            { label: 'Open in Harmonizer', onClick: () => open(it) },
-            { label: 'Rename',             onClick: () => setRenaming(it) },
-            { label: 'Duplicate',          onClick: () => duplicate(it) },
-            { label: 'Export PDF',         onClick: () => exportPdf(it) },
-            { label: 'Export MIDI',        onClick: async () => { const { grid } = resultToTab(it); const { exportTabMidi } = await import('../../utils/midiExport'); exportTabMidi(grid, it.name); } },
-            { label: 'Delete',             onClick: () => remove(it), danger: true },
+            { label: openL, onClick: () => open(it) },
+            { label: w.rename,             onClick: () => setRenaming(it) },
+            { label: w.duplicate,          onClick: () => duplicate(it) },
+            { label: w.pdf,         onClick: () => exportPdf(it) },
+            { label: w.midi,        onClick: async () => { const { grid } = resultToTab(it); const { exportTabMidi } = await import('../../utils/midiExport'); exportTabMidi(grid, it.name); } },
+            { label: w.del,             onClick: () => remove(it), danger: true },
           ]} />}>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {it.scale && <Tag>{it.scale}</Tag>}
-            {(it.styles ?? []).map(s => <Tag key={s}>{STYLE_LABEL[s] ?? s}</Tag>)}
+            {(it.styles ?? []).map(s => <Tag key={s}>{STYLE_LABEL[s]?.[lang] ?? s}</Tag>)}
             {it.bpm ? <Tag>{it.bpm} BPM</Tag> : null}
-            {chordCount(it.result) > 0 && <Tag>{chordCount(it.result)} chords</Tag>}
+            {chordCount(it.result) > 0 && <Tag>{he ? `${chordCount(it.result)} אקורדים` : `${chordCount(it.result)} chords`}</Tag>}
           </div>
         </Tile>
       ))}

@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { T } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../Auth/AuthModal';
-import { SignInPrompt } from './shared';
-import { PillRow } from '../Transit/parts';
+import { SignInPrompt, Loading } from './shared';
+import { icon } from '../ChordBuilder/Stage';
 import { useLang } from '../../contexts/LanguageContext';
 import { savedProgressions, savedTabs, savedHarmonizations, savedReharms, audioTabs } from '../../services/workspace';
 import { AudioArchive } from './AudioArchive';
@@ -21,7 +21,7 @@ type Sub = 'progressions' | 'harmonizations' | 'reharms' | 'tabs' | 'audio';
 const SUBS: { id: Sub; label: { en: string; he: string } }[] = [
   { id: 'progressions',   label: { en: 'Progressions', he: 'מהלכים' }    },
   { id: 'harmonizations', label: { en: 'Harmonized',   he: 'הרמוניות' }   },
-  { id: 'reharms',        label: { en: 'Reharms',      he: 'רה-הרמוניה' } },
+  { id: 'reharms',        label: { en: 'Reharms',      he: 'רה-הרמוניזציות' } },
   { id: 'tabs',           label: { en: 'Tabs',         he: 'טאבים' }      },
   { id: 'audio',          label: { en: 'Audio',        he: 'אודיו' }      },
 ];
@@ -56,15 +56,13 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
   const onCount = useCallback((n: number) => setCounts(c => c[sub] === n ? c : { ...c, [sub]: n }), [sub]);
 
   if (loading) {
-    return <p className="su-label" style={{ textAlign: 'center', padding: 30 }}>{he ? 'טוען…' : 'Loading…'}</p>;
+    return <Loading />;
   }
 
   if (!configured) {
     return (
-      <div style={{ borderTop: `var(--su-rule) solid ${T.border}`, color: T.textMuted, fontSize: 13, lineHeight: 1.6, padding: '18px 0' }}>
-        Accounts aren&apos;t configured in this build. Add your Supabase keys to
-        <code style={{ margin: '0 4px', color: T.text }}>.env</code> to enable the
-        personal library.
+      <div className="su-sub" style={{ background: T.bgCard, borderRadius: 26, padding: '24px 22px', textAlign: 'center', fontSize: 15, lineHeight: 1.55 }}>
+        {he ? 'החשבונות לא מוגדרים בגרסה הזו, ולכן הספרייה האישית לא זמינה.' : 'Accounts aren’t set up in this build, so the personal library isn’t available.'}
       </div>
     );
   }
@@ -80,34 +78,41 @@ export const WorkspacePanel: React.FC<Props> = ({ onOpenTabInBuilder, onOpenProg
 
   const common = { desktop, query, onCount };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Search pill */}
-      <div style={{
-        height: 50, border: `var(--su-rule) solid ${T.text}`, borderRadius: 'var(--su-pill)', background: T.bgCard,
-        display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px 0 18px', maxWidth: desktop ? 520 : undefined,
-      }}>
-        <span aria-hidden style={{ fontSize: 15, fontWeight: 700 }}>⌕</span>
+    <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%', maxWidth: desktop ? 900 : undefined, margin: '0 auto', paddingTop: 4 }}>
+      {/* Search */}
+      <div className="lg" style={{ height: 50, borderRadius: 25, display: 'flex', alignItems: 'center', gap: 10, paddingInlineStart: 16, paddingInlineEnd: 8 }}>
+        <span aria-hidden style={{ color: T.textMuted, display: 'flex', flex: 'none' }}>{icon(<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>, 18)}</span>
         <input value={query} onChange={e => setQuery(e.target.value)} dir="auto"
           onKeyDown={e => { if (e.key === 'Escape') setQuery(''); }}
           aria-label={he ? 'חיפוש בספרייה' : 'Search the library'}
-          placeholder={he ? 'חיפוש בספרייה…' : 'Search your library…'}
-          style={{ flex: 1, minWidth: 0, height: 40, border: 'none', outline: 'none', background: 'transparent', color: T.text, fontFamily: 'var(--gc-font)', fontSize: 13 }} />
+          placeholder={he ? 'חיפוש בספרייה' : 'Search your library'}
+          style={{ flex: 1, minWidth: 0, height: 40, border: 'none', outline: 'none', background: 'transparent', color: T.text, fontFamily: 'var(--gc-font)', fontSize: 16 }} />
         {query && (
           <button onClick={() => setQuery('')} aria-label={he ? 'ניקוי החיפוש' : 'Clear search'} className="gc-no-bar"
-            style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: T.text, color: T.bgDeep, fontSize: 14, cursor: 'pointer', flex: 'none' }}>×</button>
+            style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.12)', color: T.text, cursor: 'pointer', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+            {icon(<path d="M18 6 6 18M6 6l12 12" />, 15)}
+          </button>
         )}
       </div>
 
-      {/* Filter pills with counts — one per kind of saved work. */}
-      <PillRow<Sub>
-        label={he ? 'סוג' : 'Kind'}
-        value={sub}
-        onChange={setSub}
-        items={SUBS.map(s => ({
-          id: s.id,
-          label: <>{s.label[lang]}{counts[s.id] != null && <span style={{ opacity: 0.7, marginInlineStart: 6, fontFamily: 'var(--gc-mono)' }}>{counts[s.id]}</span>}</>,
-        }))}
-      />
+      {/* One chip per kind of saved work, with its count */}
+      <div role="radiogroup" aria-label={he ? 'סוג' : 'Kind'} className="gc-no-scrollbar"
+        style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', padding: 2, margin: -2 }}>
+        {SUBS.map(s => {
+          const on = s.id === sub;
+          return (
+            <button key={s.id} role="radio" aria-checked={on} onClick={() => setSub(s.id)} className="gc-no-bar"
+              style={{
+                flex: 'none', height: 40, padding: '0 16px', borderRadius: 20, fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap',
+                background: on ? T.text : 'rgba(255,255,255,0.08)', color: on ? '#000' : T.text,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+              {s.label[lang]}
+              {counts[s.id] != null && <span style={{ opacity: 0.55, fontVariantNumeric: 'tabular-nums' }}>{counts[s.id]}</span>}
+            </button>
+          );
+        })}
+      </div>
 
       {/* key={sub} remounts the section so the fade plays on every switch */}
       <div key={sub} className="gc-fadein" style={{ minWidth: 0 }}>
