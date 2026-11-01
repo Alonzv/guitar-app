@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Scale, Note } from '@tonaljs/tonal';
 import { findChordVoicings } from '../../utils/chordVoicings';
 import { MiniFretboard } from '../Fretboard/MiniFretboard';
 import { T } from '../../theme';
-import { Rule, PillRow, KeyGrid } from '../Transit/parts';
+import { Fold, GlassSelect, PlayButton } from '../ChordBuilder/Stage';
+import { StopActions } from '../Transit/StopActions';
+import { Sheet } from '../Workspace/Sheet';
+import { formatChordName } from '../../utils/chordIdentifier';
 import { useLang } from '../../contexts/LanguageContext';
 import { previewRun, previewChordName, chordMidis } from '../../utils/previewSound';
 import { useOptionalSong } from '../../song/SongContext';
@@ -50,55 +53,54 @@ const KEYS_MINOR = ['A', 'E', 'B', 'F#', 'C#', 'G#', 'D', 'G', 'C', 'F', 'Bb', '
 const COPY = {
   en: {
     title: 'Diatonic Extensions',
-    intro: 'Pick a key to see its seven chords and how far each one can be extended.',
+    heading: 'How far each chord can stretch',
+    intro: 'The seven chords of the key, and the notes each one can add on top.',
     key: 'Key', mode: 'Mode', major: 'Major', minor: 'Minor',
     families: { major: 'Major', minor: 'Minor', dominant: 'Dominant', dim: 'Diminished' } as Record<Family, string>,
     familiesShort: { major: 'Maj', minor: 'Min', dominant: 'Dom', dim: 'Dim' } as Record<Family, string>,
     feel: {
       major: 'Open and settled',
       minor: 'Soft and moodier',
-      dominant: 'Tense — pulls home',
-      dim: 'Very tense — leads to 1',
+      dominant: 'Tense, pulls home',
+      dim: 'Very tense, leads to 1',
     } as Record<Family, string>,
     legendTitle: 'How to read it',
     legend: [
-      'Each column is one degree of the key.',
-      'The big name is the plain chord — an “m” means minor.',
-      'Below it: the extensions that degree can take.',
-      'A dash means that extension clashes there, so players stop at the one above.',
+      'Each row is one degree of the key.',
+      'The big name is the plain chord; an “m” means minor.',
+      'Beside it: the extensions that degree can take. Tap one to hear it and see shapes.',
+      'A crossed-out number means that extension clashes there, so players stop at the one before it.',
     ],
     sharp11: 'The 11th is raised (#11) so it does not clash with the chord’s 3rd.',
-    shapes: 'shapes on the neck',
+    shapes: 'Shapes on the neck',
     noShapes: 'No comfortable shape found.',
+    play: 'Play', addHint: 'Tap a shape to add it to your song',
   },
   he: {
     title: 'הרחבות אקורדים בסולם',
-    intro: 'בוחרים סולם ורואים את שבעת האקורדים שלו ועד כמה כל אחד יכול להתרחב.',
+    heading: 'עד כמה כל אקורד יכול להתרחב',
+    intro: 'שבעת האקורדים של הסולם, והתווים שכל אחד יכול להוסיף מעליו.',
     key: 'סולם', mode: 'סוג', major: 'מז׳ור', minor: 'מינור',
     families: { major: 'מז׳ור', minor: 'מינור', dominant: 'דומיננטה', dim: 'מוקטן' } as Record<Family, string>,
     familiesShort: { major: 'מז׳', minor: 'מינ', dominant: 'דומ', dim: 'מוק' } as Record<Family, string>,
     feel: {
       major: 'פתוח ויציב',
       minor: 'רך ועגום יותר',
-      dominant: 'מתוח — מושך הביתה',
-      dim: 'מתוח מאוד — מוביל ל-1',
+      dominant: 'מתוח, מושך הביתה',
+      dim: 'מתוח מאוד, מוביל ל-1',
     } as Record<Family, string>,
     legendTitle: 'איך לקרוא',
     legend: [
-      'כל עמודה היא דרגה אחת בסולם.',
-      'השם הגדול הוא האקורד הבסיסי — האות m מציינת מינור.',
-      'מתחתיו: ההרחבות שהדרגה יכולה לקבל.',
-      'מקף מציין הרחבה שיוצרת דיסוננס — שם עוצרים בהרחבה שמעליה.',
+      'כל שורה היא דרגה אחת בסולם.',
+      'השם הגדול הוא האקורד הבסיסי. האות m אומרת מינור.',
+      'לידו: ההרחבות שהדרגה יכולה לקבל. הקישו כדי לשמוע ולראות אחיזות.',
+      'מספר מחוק אומר שההרחבה הזו נשמעת צורמת שם, אז עוצרים בהרחבה שלפניה.',
     ],
     sharp11: 'האחת־עשרה מוגבהת (#11) כדי שלא תתנגש עם השלישית של האקורד.',
     shapes: 'אחיזות על הצוואר',
     noShapes: 'לא נמצאה אחיזה נוחה.',
+    play: 'נגן', addHint: 'הקישו על אחיזה כדי להוסיף אותה לשיר',
   },
-};
-
-const LBL: React.CSSProperties = {
-  margin: 0, fontSize: 10, color: T.textMuted, fontFamily: 'var(--gc-mono)',
-  letterSpacing: '0.14em', textTransform: 'uppercase',
 };
 
 export function DiatonicExtensions({ desktop, onAddToProgression }: {
@@ -111,7 +113,6 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
   const [key, setKey] = useState('C');
   const t = COPY[lang];
 
-  const keys = mode === 'major' ? KEYS_MAJOR : KEYS_MINOR;
   const pattern = mode === 'major' ? MAJOR_PATTERN : MINOR_PATTERN;
   const romans = mode === 'major' ? ROMAN_MAJOR : ROMAN_MINOR;
 
@@ -121,51 +122,17 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
     [key, mode],
   );
 
-  // ── Chord-shape popover ────────────────────────────────────────────────────
-  // Hovering (or tapping, for touch) a chord name floats its shapes on the neck.
-  // A hover shows the popover; a tap pins it, and a pinned popover's shapes
-  // can be tapped to add that chord to the song.
-  const [peek, setPeek] = useState<{ name: string; x: number; y: number; pinned?: boolean } | null>(null);
-  const shapeCount = desktop ? 3 : 2;
-  const shapes = useMemo(
-    () => (peek ? findChordVoicings(peek.name, shapeCount) : []),
-    [peek, shapeCount],
-  );
-  useEffect(() => {
-    if (!peek) return;
-    const close = () => setPeek(null);
-    window.addEventListener('scroll', close, true);
-    return () => window.removeEventListener('scroll', close, true);
-  }, [peek]);
-
-  const peekAt = (name: string, el: HTMLElement, pinned = false) => {
-    const r = el.getBoundingClientRect();
-    setPeek({ name, x: r.left + r.width / 2, y: r.bottom, pinned });
+  // A tapped chord opens a sheet with its shapes; a shape adds it to the song.
+  const [sheet, setSheet] = useState<{ name: string; family: Family } | null>(null);
+  const shapes = useMemo(() => (sheet ? findChordVoicings(sheet.name, 3) : []), [sheet]);
+  // Built up from the root, note by note, so each added 7th, 9th, 11th or 13th
+  // is heard landing on top of the stack.
+  const hearTower = (name: string) => {
+    const tower = chordMidis(name, 3);
+    if (tower.length) previewRun(tower); else previewChordName(name);
   };
-  // A pinned popover closes on a tap anywhere else.
-  useEffect(() => {
-    if (!peek?.pinned) return;
-    const close = (e: PointerEvent) => {
-      if (!(e.target instanceof Element) || !e.target.closest('[data-shape-popover], [data-peek-name]')) setPeek(null);
-    };
-    document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
-  }, [peek?.pinned]);
-  const peekProps = (name: string) => ({
-    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { if (!peek?.pinned) peekAt(name, e.currentTarget); },
-    onMouseLeave: () => setPeek(p => (p?.pinned ? p : null)),
-    // Touch has no hover — tapping toggles the same popover.
-    onClick: (e: React.MouseEvent<HTMLElement>) => {
-      // A tap sounds the chord built up from its root, note by note, so each
-      // added 7th, 9th, 11th or 13th is heard landing on top of the stack.
-      const tower = chordMidis(name, 3);
-      if (tower.length) previewRun(tower); else previewChordName(name);
-      if (peek?.name === name && peek.pinned) { setPeek(null); return; }
-      peekAt(name, e.currentTarget, true);
-    },
-    style: { cursor: 'pointer' } as React.CSSProperties,
-    'data-peek-name': name,
-  });
+  const openChord = (name: string, family: Family) => { hearTower(name); setSheet({ name, family }); };
+  const [legendOpen, setLegendOpen] = useState(false);
 
   // Opens on the song's key, and follows it when the song's key changes.
   const songKey = useOptionalSong()?.key ?? null;
@@ -182,103 +149,64 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
     }
   }
 
-  const switchMode = (m: 'major' | 'minor') => {
-    setMode(m);
-    // Keep a valid key for the new mode; C major ↔ A minor as the default pair.
-    setKey(k => ((m === 'major' ? KEYS_MAJOR : KEYS_MINOR).includes(k) ? k : (m === 'major' ? 'C' : 'A')));
-  };
-
-  const legend = (
-    <Rule label={t.legendTitle}>
-      <ul style={{ margin: 0, paddingInlineStart: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {t.legend.map((line, i) => (
-          <li key={i} style={{ fontSize: 12, lineHeight: 1.5, color: T.text }}>{line}</li>
-        ))}
-      </ul>
-    </Rule>
+  const toolbar = (
+    <StopActions>
+      <GlassSelect label={t.key} value={`${mode}:${key}`}
+        text={<><bdi dir="ltr">{key}</bdi> {mode === 'major' ? t.major : t.minor}</>}
+        onChange={v => { const [m, k] = v.split(':') as ['major' | 'minor', string]; setMode(m); setKey(k); }}>
+        <optgroup label={t.major}>{KEYS_MAJOR.map(k => <option key={k} value={`major:${k}`}>{k} {t.major}</option>)}</optgroup>
+        <optgroup label={t.minor}>{KEYS_MINOR.map(k => <option key={k} value={`minor:${k}`}>{k} {t.minor}</option>)}</optgroup>
+      </GlassSelect>
+    </StopActions>
   );
 
-  const pickers = (
-    <Rule label={`${t.mode} · ${t.key}`}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <PillRow label={t.mode} items={[{ id: 'major' as const, label: t.major }, { id: 'minor' as const, label: t.minor }]}
-          value={mode} onChange={switchMode} />
-        <div dir="ltr">
-          <KeyGrid cols={6} label={t.key} value={key} items={keys.map(k => ({ id: k, label: `${k}${mode === 'minor' ? 'm' : ''}` }))}
-            onChange={setKey} />
-        </div>
-      </div>
-    </Rule>
-  );
-
-  const controls = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {pickers}
-      {legend}
+  const intro = (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}>
+      <h2 style={{ margin: 0, fontFamily: 'var(--su-display)', fontSize: desktop ? 34 : 28, lineHeight: 1.15, fontWeight: 700, letterSpacing: '-0.02em' }}>{t.heading}</h2>
+      <span className="su-sub" style={{ fontSize: 15, maxWidth: 460 }}>{t.intro}</span>
     </div>
   );
 
-  // Seven equal columns that shrink to whatever width is available — the whole
-  // key is meant to be readable at a glance, so nothing ever scrolls. Type sizes
-  // scale with the viewport so the narrowest phone still fits all seven.
-  const fs = (min: number, vw: number, max: number) => `clamp(${min}px, ${vw}vw, ${max}px)`;
-  const grid = (
-    <div dir="ltr" style={{
-      display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-      gap: desktop ? 10 : 4, minWidth: 0, alignItems: 'stretch',
-    }}>
+  // One row per degree: the plain chord, then the extensions it can take.
+  const rows = (
+    <div style={{ borderRadius: 26, background: T.bgCard, padding: 6, display: 'flex', flexDirection: 'column' }}>
       {pattern.map((shape, i) => {
         const root = roots[i] ?? '';
-        const raised11 = shape.ext['11'] === 'maj7#11';
+        const plain = `${root}${shape.triad}`;
         return (
-          <div key={i} style={{
-            borderTop: `var(--su-rule) solid ${T.border}`, padding: desktop ? '10px 0 0' : '8px 0 0',
-            minWidth: 0, display: 'flex', flexDirection: 'column', gap: desktop ? 6 : 4,
-            overflowWrap: 'anywhere',
-          }}>
-            {/* Degree + plain chord */}
-            <div style={{ textAlign: 'center', minWidth: 0 }}>
-              <div style={{ fontFamily: 'var(--gc-mono)', fontSize: fs(8, 1.1, 11), fontWeight: 700, color: T.textMuted }}>{romans[i]}</div>
-              <div {...peekProps(`${root}${shape.triad}`)} className="su-semi" style={{
-                fontSize: fs(15, 3.2, 30), lineHeight: 1.05, cursor: 'pointer', marginTop: 2,
-                color: peek?.name === `${root}${shape.triad}` ? T.primary : T.text,
-              }}>{root}{shape.triad}</div>
-              <div style={{ ...LBL, fontSize: fs(7, 0.9, 9), marginTop: 2, letterSpacing: '0.06em' }}>
-                {(desktop ? t.families : t.familiesShort)[shape.family]}
-              </div>
-              {desktop && (
-                <div style={{ fontSize: 10.5, color: T.textMuted, marginTop: 3, minHeight: 26, lineHeight: 1.25 }}>{t.feel[shape.family]}</div>
-              )}
-            </div>
-
-            {/* Extensions */}
-            <div style={{ borderTop: `1px solid ${T.hairline}`, paddingTop: desktop ? 6 : 4, display: 'flex', flexDirection: 'column', gap: desktop ? 4 : 3 }}>
+          <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: desktop ? 16 : 10, padding: desktop ? '12px 14px' : '12px 10px',
+            borderTop: i ? `1px solid ${T.hairline}` : undefined }}>
+            <button onClick={() => openChord(plain, shape.family)} className="gc-no-bar"
+              style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, color: T.text, textAlign: 'start', padding: 0 }}>
+              <span className="gc-notation" dir="ltr" style={{ width: 40, flex: 'none', fontSize: 14, fontWeight: 600, fontStyle: 'italic', color: T.textMuted, textAlign: 'center' }}>{romans[i]}</span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                <span className="gc-notation" dir="ltr" style={{ fontFamily: 'var(--su-display)', fontSize: 26, lineHeight: 1.1, fontWeight: 700, letterSpacing: '-0.02em', textAlign: rtl ? 'right' : 'left' }}>
+                  {formatChordName(plain)}
+                </span>
+                <span style={{ fontSize: 13, color: T.textMuted }}>{t.families[shape.family]} · {t.feel[shape.family]}</span>
+              </span>
+            </button>
+            <div style={{ flex: '1 1 300px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
               {STEPS.map(step => {
                 const suffix = shape.ext[step];
-                return (
-                  <div key={step} style={{ display: 'flex', alignItems: 'baseline', gap: 3, minWidth: 0 }}>
-                    {/* On mobile the suffix already names the step (maj9, m11…), so the
-                        number is only spelled out on the rows that have no chord. */}
-                    {(desktop || !suffix) && (
-                      <span style={{ fontFamily: 'var(--gc-mono)', fontSize: fs(7, 0.9, 10), fontWeight: 700, color: T.textMuted, flexShrink: 0 }}>{step}</span>
-                    )}
-                    {suffix ? (
-                      // The root is already the column title, so narrow screens list
-                      // just the suffix — that keeps names from wrapping mid-word.
-                      <span {...peekProps(`${root}${suffix}`)} style={{
-                        fontSize: fs(8.5, 1.5, 12.5), fontWeight: 700, cursor: 'pointer', minWidth: 0,
-                        color: peek?.name === `${root}${suffix}` ? T.primary : T.text,
-                      }}>{desktop ? `${root}${suffix}` : suffix}</span>
-                    ) : (
-                      <span style={{ fontSize: fs(8.5, 1.5, 12.5), color: T.textMuted }}>—</span>
-                    )}
-                  </div>
+                const name = suffix ? `${root}${suffix}` : null;
+                return name ? (
+                  <button key={step} onClick={() => openChord(name, shape.family)} className="gc-no-bar gc-notation"
+                    aria-label={formatChordName(name)}
+                    style={{ height: 44, minWidth: 0, padding: '0 4px', borderRadius: 22, background: 'rgba(255,255,255,0.08)', color: T.text, fontSize: 14, fontWeight: 600,
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {formatChordName(name)}
+                  </button>
+                ) : (
+                  <span key={step} aria-label={`${step}: ${rtl ? 'לא נהוג' : 'usually avoided'}`}
+                    style={{ height: 44, borderRadius: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 13, color: T.textMuted, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)' }}>
+                    <span style={{ fontWeight: 600, textDecoration: 'line-through', opacity: 0.7 }}>{step}</span>
+                  </span>
                 );
               })}
             </div>
-
-            {raised11 && desktop && (
-              <p style={{ margin: 0, fontSize: 10, lineHeight: 1.4, color: T.textMuted }}>{t.sharp11}</p>
+            {shape.ext['11'] === 'maj7#11' && (
+              <p style={{ flexBasis: '100%', margin: 0, paddingInlineStart: 52, fontSize: 13, lineHeight: 1.45, color: T.textMuted }}>{t.sharp11}</p>
             )}
           </div>
         );
@@ -286,79 +214,49 @@ export function DiatonicExtensions({ desktop, onAddToProgression }: {
     </div>
   );
 
-  return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)' }}>
-      {/* The shell names the stop; the tool keeps its one line of intro. */}
-      <p style={{ margin: '0 0 16px', fontSize: 13, lineHeight: 1.6, color: T.textMuted }}>{t.intro}</p>
-
-      {desktop ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gap: 32, alignItems: 'start' }}>
-          {controls}
-          {grid}
-        </div>
-      ) : (
-        // Mobile: pickers, then the chart itself, then the legend — so the seven
-        // degrees are on screen straight away rather than pushed below the fold.
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
-          {pickers}
-          {grid}
-          {legend}
-        </div>
-      )}
-
-
-      {peek && <ShapePopover name={peek.name} x={peek.x} y={peek.y} shapes={shapes} title={t.shapes} empty={t.noShapes}
-        onPick={peek.pinned && onAddToProgression ? (v => {
-          onAddToProgression({ id: `chord-${Date.now()}`, chord: { name: peek.name, notes: [], aliases: [] }, fretPositions: v });
-          setPeek(null);
-        }) : undefined}
-        pickHint={lang === 'he' ? 'הקישו על צורה כדי להוסיף לשיר' : 'Tap a shape to add it to the song'} />}
-    </div>
+  const legend = (
+    <Fold title={t.legendTitle} open={legendOpen} onToggle={() => setLegendOpen(o => !o)} summary={t.legend[0]}>
+      <ul style={{ margin: 0, paddingInlineStart: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {t.legend.map((line, i) => <li key={i} style={{ fontSize: 15, lineHeight: 1.5 }}>{line}</li>)}
+      </ul>
+    </Fold>
   );
-}
 
-// Floating chord-shape panel. Sized so each diagram is properly readable —
-// wide enough to see the dots, not blown up out of proportion — and clamped so
-// it never runs off the edge of the viewport.
-function ShapePopover({ name, x, y, shapes, title, empty, onPick, pickHint }: {
-  name: string; x: number; y: number; shapes: { string: number; fret: number }[][]; title: string; empty: string;
-  onPick?: (shape: { string: number; fret: number }[]) => void; pickHint?: string;
-}) {
-  const DIAGRAM = 168;                       // per-shape width — clear, not miniature
-  const cols = Math.max(shapes.length, 1);
-  const PAD = 14;
-  const width = Math.min(cols * DIAGRAM + (cols - 1) * 10 + PAD * 2, window.innerWidth - 16);
-  const left = Math.max(8, Math.min(x - width / 2, window.innerWidth - width - 8));
-  const estH = 190;
-  const flipUp = y + estH > window.innerHeight;
-  const top = flipUp ? Math.max(8, y - estH - 28) : y + 8;
-
-  return (
-    <div dir="ltr" data-shape-popover className="gc-drop-in" style={{
-      position: 'fixed', left, top, width, zIndex: 1000,
-      background: T.bgDeep, border: `var(--su-rule) solid ${T.border}`,
-      padding: PAD,
-      pointerEvents: onPick ? 'auto' : 'none',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-        <span className="su-semi" style={{ fontSize: 24, color: T.text }}>{name}</span>
-        <span className="su-label">{title}</span>
-      </div>
+  const chordSheet = sheet && (
+    <Sheet onClose={() => setSheet(null)} maxWidth={desktop ? 620 : 460}
+      kicker={`${t.families[sheet.family]} · ${t.shapes}`}
+      title={<span className="gc-notation" dir="ltr">{formatChordName(sheet.name)}</span>}>
       {shapes.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 12, color: T.textMuted }}>{empty}</p>
+        <p style={{ margin: 0, fontSize: 15, color: T.textMuted, textAlign: 'center' }}>{t.noShapes}</p>
       ) : (
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: `repeat(${desktop ? 3 : 2}, minmax(0, 1fr))`, gap: 10 }}>
           {shapes.map((v, i) => (
-            <div key={i} onClick={onPick ? () => onPick(v) : undefined} className={onPick ? 'gc-pressable' : undefined}
-              style={{ width: DIAGRAM, flexShrink: 0, cursor: onPick ? 'pointer' : 'default' }}>
+            <button key={i} className="gc-no-bar" disabled={!onAddToProgression}
+              onClick={() => {
+                if (!onAddToProgression) return;
+                onAddToProgression({ id: `chord-${Date.now()}`, chord: { name: sheet.name, notes: [], aliases: [] }, fretPositions: v });
+                setSheet(null);
+              }}
+              style={{ borderRadius: 20, background: 'rgba(255,255,255,0.06)', padding: '10px 8px 6px', color: T.text, cursor: onAddToProgression ? 'pointer' : 'default' }}>
               <MiniFretboard voicing={v} showStringLabels showFretNumbers />
-            </div>
+            </button>
           ))}
         </div>
       )}
-      {onPick && shapes.length > 0 && pickHint && (
-        <p style={{ margin: '8px 0 0', fontSize: 11, color: T.textMuted }}>{pickHint}</p>
-      )}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        <PlayButton onPlay={() => hearTower(sheet.name)} label={t.play} />
+        {onAddToProgression && shapes.length > 0 && <span style={{ fontSize: 13, color: T.textMuted }}>{t.addHint}</span>}
+      </div>
+    </Sheet>
+  );
+
+  return (
+    <div className="su-in" dir={rtl ? 'rtl' : 'ltr'} style={{ display: 'flex', flexDirection: 'column', gap: desktop ? 24 : 22, maxWidth: desktop ? 900 : undefined, margin: '0 auto', width: '100%' }}>
+      {toolbar}
+      {intro}
+      {rows}
+      {legend}
+      {chordSheet}
     </div>
   );
 }
