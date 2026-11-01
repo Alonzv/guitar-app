@@ -9,9 +9,9 @@ import { answeredRight, answeredWrong } from '../../practice/feedback';
 import { StreakBoard } from '../Practice/StreakBoard';
 import { PlayToAnswer } from '../Practice/PlayToAnswer';
 import { useMicNotes } from '../../practice/useMicNotes';
-import { T, btn } from '../../theme';
-import { PosterTitle, Rule, Pill, PillRow, Cta } from '../Transit/parts';
-import { keyStyle } from '../Transit/styles';
+import { icon, SoftButton } from '../ChordBuilder/Stage';
+import { Segment } from '../Intervals/names';
+import { PracticeColumn, StartPanel, Ask, SpellBoxes, AnswerTile, Status, Card, WhiteButton, playGlyph } from '../Practice/kit';
 import { useLang } from '../../contexts/LanguageContext';
 import { useOptionalSong } from '../../song/SongContext';
 
@@ -144,123 +144,95 @@ export function ScalesPracticeTab({ desktop }: { desktop?: boolean } = {}) {
 
   const onDiff = (d: Diff) => { setDiff(d); if (ch) startSpell(d); if (earCh) startEar(d); };
 
+  const he = lang === 'he';
   const t = {
-    en: { theory: 'Theory', ear: 'Ear Training', basic: 'Basic', advanced: 'Advanced', streak: 'Streak', best: 'Best',
-      start: 'Start', next: 'Next →', spell: 'Spell the scale — fill the boxes in order', noteBank: 'Note bank',
-      retry: 'Not in this scale — try again.', reset: 'Streak reset — check the formula.',
-      spellPrompt: 'Spell scales from their formulas, note by note.',
-      earPrompt: 'Hear a scale and name it by ear.', which: 'Which scale?', play: '▶ Play scale', earStart: 'Play a scale' },
-    he: { theory: 'תאוריה', ear: 'שמיעה', basic: 'בסיסי', advanced: 'מתקדם', streak: 'רצף', best: 'שיא',
-      start: 'התחל', next: 'הבא →', spell: 'אייתו את הסולם — מלאו את הקופסאות לפי הסדר', noteBank: 'בנק תווים',
-      retry: 'לא בסולם — נסו שוב.', reset: 'הרצף אופס — בדקו את הנוסחה.',
-      spellPrompt: 'אייתו סולמות מהנוסחה שלהם, תו אחר תו.',
-      earPrompt: 'שמעו סולם וזהו אותו לפי האוזן.', which: 'איזה סולם?', play: '▶ נגן סולם', earStart: 'נגן סולם' },
+    en: { theory: 'Theory', ear: 'Ear training', basic: 'Basic', advanced: 'Advanced', song: 'My song',
+      startTitle: 'Spell scales', startHint: 'You get a scale name and write its notes from the formula, one by one.', start: 'Start',
+      earTitle: 'Scales by ear', earHint: 'Hear a scale and pick it from four options.', earStart: 'Play a scale',
+      spell: 'Spell the scale', done: 'Correct!', formula: 'Formula', nextNote: 'The next note',
+      retry: 'That note isn’t in this scale. Try again.', reset: 'Streak reset. Check the formula.',
+      next: 'Next scale', hear: 'Hear the scale', listen: 'Listen and choose', which: 'Which scale?', again: 'Play again', answer: 'The answer:' },
+    he: { theory: 'תאוריה', ear: 'שמיעה', basic: 'בסיסי', advanced: 'מתקדם', song: 'השיר שלי',
+      startTitle: 'אייתו סולמות', startHint: 'מקבלים שם של סולם וכותבים את התווים שלו לפי הנוסחה, תו אחרי תו.', start: 'התחלה',
+      earTitle: 'סולמות בשמיעה', earHint: 'שומעים סולם ובוחרים אותו מתוך ארבע אפשרויות.', earStart: 'השמעת סולם',
+      spell: 'אייתו את הסולם', done: 'נכון!', formula: 'נוסחה', nextNote: 'התו הבא',
+      retry: 'התו הזה לא בסולם. נסו שוב.', reset: 'הרצף התאפס. בדקו את הנוסחה.',
+      next: 'הסולם הבא', hear: 'השמעת הסולם', listen: 'האזינו ובחרו', which: 'איזה סולם?', again: 'השמעה שוב', answer: 'התשובה:' },
   }[lang];
 
   const diffs = (songRoot ? ['basic', 'advanced', 'song'] : ['basic', 'advanced']) as Diff[];
-  const tile = (bg: string, fg: string): React.CSSProperties => ({
-    ...keyStyle(false), background: bg, color: fg, letterSpacing: 'normal', textTransform: 'none',
-  });
+  const scaleGlyph = icon(<><path d="M4 19h4v-4h4v-4h4V7h4" /></>, 32);
+  const earGlyph = icon(<><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><rect x="3" y="14" width="5" height="7" rx="2" /><rect x="16" y="14" width="5" height="7" rx="2" /></>, 32);
+  const label = (c: Challenge) => <><bdi dir="ltr">{c.root}</bdi> {scaleName(c.scale)}</>;
 
   return (
-    <div dir={rtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'var(--gc-font)', width: '100%', maxWidth: desktop ? 720 : undefined, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <PillRow items={[{ id: 'theory' as Mode, label: t.theory }, { id: 'ear' as Mode, label: t.ear }]} value={mode} onChange={setMode} wrap
-          label={lang === 'he' ? 'סוג תרגול' : 'Drill'} />
-        <PillRow items={diffs.map(d => ({ id: d, label: d === 'basic' ? t.basic : d === 'advanced' ? t.advanced : (lang === 'he' ? 'השיר שלי' : 'My song') }))}
-          value={diff} onChange={onDiff} wrap label={lang === 'he' ? 'רמה' : 'Level'} />
+    <PracticeColumn desktop={desktop} rtl={rtl}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <Segment label={he ? 'סוג תרגול' : 'Drill'} value={mode} onChange={setMode}
+          items={[{ id: 'theory' as Mode, label: t.theory }, { id: 'ear' as Mode, label: t.ear }]} />
+        <Segment label={he ? 'רמה' : 'Level'} value={diff} onChange={onDiff}
+          items={diffs.map(d => ({ id: d, label: d === 'basic' ? t.basic : d === 'advanced' ? t.advanced : t.song }))} />
       </div>
 
-      <StreakBoard streak={streak} best={best} lang={lang} />
+      <StreakBoard streak={streak} best={best} lang={lang} flush />
 
       {mode === 'ear' ? (
         !earCh ? (
-          <Rule>
-            <p style={{ margin: '4px 0 16px', fontSize: 14, lineHeight: 1.6, color: T.text }}>{t.earPrompt}</p>
-            <Cta onClick={() => startEar()}>{t.earStart}</Cta>
-          </Rule>
+          <StartPanel glyph={earGlyph} title={t.earTitle} hint={t.earHint} label={t.earStart} onStart={() => startEar()} />
         ) : (
-          <Rule>
-            <PosterTitle head={t.which} max={desktop ? 96 : 64} min={32} as="div" style={{ marginBottom: 14 }} />
-            <div style={{ display: 'flex', marginBottom: 16 }}>
-              <Pill onClick={() => playRun(earCh)}>{t.play}</Pill>
+          <>
+            <Ask desktop={desktop} kicker={t.listen} title={t.which} />
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <WhiteButton onClick={() => playRun(earCh)} icon={playGlyph}>{t.again}</WhiteButton>
             </div>
-            <p className="su-label" style={{ margin: '0 0 8px' }}>{lang === 'he' ? 'אפשרויות' : 'Options'}</p>
-            <div ref={answerArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 4 }}>
+            <div ref={answerArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
               {earOpts.map(opt => {
                 const isAnswer = revealed && opt.root === earCh.root && opt.scale === earCh.scale;
-                const isWrong = wrongPicks.has(optKey(opt));
                 return (
-                  <button key={optKey(opt)} onClick={() => guess(opt)} disabled={revealed} className="gc-no-bar gc-notation" style={{
-                    ...tile(isAnswer ? T.primary : isWrong ? T.secondary : T.bgInput, isAnswer ? T.onPrimary : isWrong ? T.white : T.text),
-                    minHeight: 60, fontSize: 18, cursor: revealed ? 'default' : 'pointer', textDecoration: isWrong ? 'line-through' : undefined,
-                  }}><span dir="ltr">{opt.root} {scaleName(opt.scale)}</span></button>
+                  <AnswerTile key={optKey(opt)} onClick={() => guess(opt)} disabled={revealed} height={64} size={18}
+                    state={isAnswer ? 'right' : wrongPicks.has(optKey(opt)) ? 'wrong' : 'idle'}>
+                    {label(opt)}
+                  </AnswerTile>
                 );
               })}
             </div>
-            {revealed && (
-              <button onClick={() => startEar()} className="gc-no-bar" style={{ ...btn.primary(), width: '100%', marginTop: 14 }}>{t.next}</button>
-            )}
-          </Rule>
+            <Status good={revealed && wrongPicks.size < 2}>
+              {revealed && (wrongPicks.size < 2 ? t.done : <>{t.answer} {label(earCh)}</>)}
+            </Status>
+            {revealed && <WhiteButton wide onClick={() => startEar()}>{t.next}</WhiteButton>}
+          </>
         )
       ) : !ch ? (
-        <Rule>
-          <p style={{ margin: '4px 0 16px', fontSize: 14, lineHeight: 1.6, color: T.text }}>{t.spellPrompt}</p>
-          <Cta onClick={() => startSpell()}>{t.start}</Cta>
-        </Rule>
+        <StartPanel glyph={scaleGlyph} title={t.startTitle} hint={t.startHint} label={t.start} onStart={() => startSpell()} />
       ) : (
-        <Rule>
-          <div dir="ltr">
-            <PosterTitle head={`${ch.root} `} tail={<span style={{ WebkitTextStrokeColor: T.text }}>{scaleName(ch.scale)}</span>} max={desktop ? 120 : 76} min={32} as="div" />
-          </div>
-          <p className="su-label" style={{ margin: '12px 0 14px', color: phase === 'done' ? T.primary : T.textMuted }}>
-            {phase === 'spell' ? `${t.spell} · ${SCALE_DATA[ch.scale][lang].formula}` : '✓'}
-          </p>
-          {/* Degree boxes — the finished scale is the one cobalt thing */}
-          <div dir="ltr" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-            {ch.notes.map((n, i) => {
-              const isFilled = i < filled;
-              const isCurrent = phase === 'spell' && i === filled;
-              const done = phase === 'done';
-              return (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div className={`su-semi${isFilled && i > 0 ? ' gc-pop' : ''}`} style={{
-                    width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', fontSize: 22,
-                    background: isFilled ? (done ? T.primary : T.secondary) : T.bgInput,
-                    color: isFilled ? (done ? T.onPrimary : T.white) : T.textMuted,
-                    border: isCurrent ? `var(--su-rule) solid ${T.text}` : 'none',
-                  }}>{isFilled ? n : ''}</div>
-                  <span style={{ fontSize: 11, color: isCurrent ? T.text : T.textMuted, fontFamily: 'var(--gc-mono)', fontWeight: 700 }}>{i + 1}</span>
-                </div>
-              );
-            })}
-          </div>
+        <>
+          <Ask desktop={desktop} notation
+            kicker={phase === 'done' ? t.done : t.spell}
+            title={ch.root}
+            name={scaleName(ch.scale)}
+            line={<>{t.formula} <bdi dir="auto">{SCALE_DATA[ch.scale][lang].formula}</bdi></>} />
+          <SpellBoxes small notes={ch.notes} filled={filled} labels={ch.notes.map((_, i) => String(i + 1))} done={phase === 'done'} />
+
           {phase === 'spell' ? (
             <>
+              <Status>{hint && t[hint]}</Status>
+              <Card ref={answerArea} title={t.nextNote}>
+                <div dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(56px, 1fr))', gap: 6 }}>
+                  {NOTE_BANK.map(n => (
+                    <AnswerTile key={n} onClick={() => pick(n)} state={errBtn === n ? 'flash' : 'idle'}>{n}</AnswerTile>
+                  ))}
+                </div>
+              </Card>
               <PlayToAnswer lang={lang} mic={mic} />
-              <p className="su-label" style={{ margin: '0 0 8px' }}>{t.noteBank}</p>
-              <div ref={answerArea} dir="ltr" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 4 }}>
-                {NOTE_BANK.map(n => {
-                  const isErr = errBtn === n;
-                  return (
-                    <button key={n} onClick={() => pick(n)} className="gc-no-bar gc-notation"
-                      style={tile(isErr ? T.secondary : T.bgInput, isErr ? T.white : T.text)}>{n}</button>
-                  );
-                })}
-              </div>
-              <div role="status" style={{ minHeight: 34, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {hint === 'retry' && <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>✕ {t.retry}</span>}
-                {hint === 'reset' && <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>✕ {t.reset}</span>}
-              </div>
             </>
           ) : (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <Pill onClick={() => playScale(ch.midis)}>{t.play}</Pill>
-              <button onClick={() => startSpell()} className="gc-no-bar" style={{ ...btn.primary(), flex: 1 }}>{t.next}</button>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <WhiteButton onClick={() => startSpell()}>{t.next}</WhiteButton>
+              <SoftButton onClick={() => playScale(ch.midis)}>{icon(<path d="M7 4.5v15l13-7.5z" fill="currentColor" stroke="none" />, 15)}{t.hear}</SoftButton>
             </div>
           )}
-        </Rule>
+        </>
       )}
-    </div>
+    </PracticeColumn>
   );
 }

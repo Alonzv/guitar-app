@@ -59,29 +59,26 @@ export function StreakBoard({ streak, best, lang, flush }: Props) {
   const lit = streak > 0 && toNext === 0 ? 4 : Math.round((toNext / MILESTONE) * 4);
   const goalPct = Math.min(100, (daily.count / DAILY_GOAL) * 100);
 
-  const LBL: React.CSSProperties = {
-    margin: '0 0 6px', fontSize: 10, color: T.textMuted,
-    fontFamily: 'var(--gc-mono)', letterSpacing: '0.14em', textTransform: 'uppercase',
-  };
+  const LBL: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 600, color: T.textMuted };
 
   return (
-    <div style={{ position: 'relative', marginBottom: flush ? 0 : 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10 }}>
-        <div ref={streakCard} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+    <div style={{ position: 'relative', marginBottom: flush ? 0 : 16, background: T.bgCard, borderRadius: 26, padding: '14px 18px 16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div ref={streakCard} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, borderRadius: 16 }}>
           <div>
             <p style={LBL}>{he ? 'רצף' : 'Streak'}</p>
             <RollingNumber value={streak} />
           </div>
           {/* The logo's four bars, filling toward the next milestone */}
-          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden style={{ marginBottom: 8 }}>
             {[0, 1, 2, 3].map(i => (
-              <rect key={i} x={i * 6} y={22 - (7 + i * 5)} width="4" height={7 + i * 5}
-                fill={i < lit ? T.text : T.hairline}
+              <rect key={i} x={i * 6} y={22 - (7 + i * 5)} width="4" height={7 + i * 5} rx="2"
+                fill={i < lit ? T.text : 'rgba(255,255,255,0.14)'}
                 style={{ transition: 'fill var(--gc-dur-base) var(--gc-ease-out)', transitionDelay: `${i * 40}ms` }} />
             ))}
           </svg>
         </div>
-        <div ref={bestCard}>
+        <div ref={bestCard} style={{ borderRadius: 16, paddingInlineStart: 16, boxShadow: he ? 'inset -1px 0 0 rgba(255,255,255,0.08)' : 'inset 1px 0 0 rgba(255,255,255,0.08)' }}>
           <p style={LBL}>{he ? 'שיא' : 'Best'}</p>
           <RollingNumber value={best} />
         </div>
@@ -89,24 +86,24 @@ export function StreakBoard({ streak, best, lang, flush }: Props) {
 
       {/* Today's goal — every practice tab counts toward it */}
       <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ ...LBL, margin: 0, flexShrink: 0 }}>{he ? 'היום' : 'Today'}</span>
-        <div style={{ flex: 1, height: 8, background: T.bgInput, position: 'relative', overflow: 'hidden' }}>
+        <span style={{ ...LBL, flexShrink: 0 }}>{he ? 'היום' : 'Today'}</span>
+        <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.1)', position: 'relative', overflow: 'hidden' }}>
           <div style={{
-            position: 'absolute', inset: 0, background: T.text, transformOrigin: 'left center',
+            position: 'absolute', inset: 0, borderRadius: 3, background: T.text, transformOrigin: he ? 'right center' : 'left center',
             transform: `scaleX(${goalPct / 100})`, transition: 'transform var(--gc-dur-slow) var(--gc-ease-snap)',
           }} />
         </div>
-        <span dir="ltr" style={{ fontSize: 11, fontFamily: 'var(--gc-mono)', color: T.textMuted, flexShrink: 0 }}>
-          {daily.count}/{DAILY_GOAL}{daily.days > 0 && ` · ${daily.days}${he ? ' ימים' : 'd'}`}
+        <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted, flexShrink: 0 }}>
+          <bdi dir="ltr">{daily.count}/{DAILY_GOAL}</bdi>{daily.days > 0 && <> · {he ? `${daily.days} ימים` : `${daily.days}d`}</>}
         </span>
       </div>
 
       {stamp && (
-        <div key={stamp.n} className="gc-stamp" aria-live="polite" style={{
+        <div key={stamp.n} className="gc-stamp lg" aria-live="polite" style={{
           position: 'absolute', left: '50%', top: 18, zIndex: 2, pointerEvents: 'none',
-          padding: '10px 16px 6px', border: `var(--su-rule) solid ${T.text}`, background: T.bgDeep, color: T.text,
-          fontSize: 34, whiteSpace: 'nowrap',
-        }}><span className="su-poster">{stamp.text}</span></div>
+          padding: '10px 20px', borderRadius: 24, color: T.text,
+          fontSize: 22, fontWeight: 700, whiteSpace: 'nowrap',
+        }}>{stamp.text}</div>
       )}
     </div>
   );
@@ -120,8 +117,8 @@ function RollingNumber({ value }: { value: number }) {
   const digits = String(value).split('');
   return (
     <span dir="ltr" aria-label={String(value)} style={{
-      display: 'inline-flex', fontFamily: 'var(--su-display)', fontStretch: 'var(--su-display-cond)', fontWeight: 900,
-      fontSize: 52, color: T.text, lineHeight: '1.1em', height: '1.1em', overflow: 'hidden',
+      display: 'inline-flex', fontFamily: 'var(--su-display)', fontWeight: 700, letterSpacing: '-0.03em',
+      fontSize: 44, color: T.text, lineHeight: '1.1em', height: '1.1em', overflow: 'hidden',
     }}>
       {digits.map((d, i) => (
         <span key={digits.length - i} aria-hidden style={{

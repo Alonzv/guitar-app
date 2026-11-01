@@ -13,5 +13,5 @@ export function IntervalsTab({ desktop, sub }: { desktop?: boolean; sub: string 
   if (sub === 'explore') return <IntervalExplore desktop={desktop} />;
   if (sub === 'measure') return <IntervalPlayground desktop={desktop} />;
   if (sub === 'inchord') return <IntervalInChord desktop={desktop} />;
-  return <div style={{ maxWidth: desktop ? 680 : undefined, width: '100%' }}><EarTrainingTab desktop={desktop} /></div>;
+  return <EarTrainingTab desktop={desktop} />;
 }
