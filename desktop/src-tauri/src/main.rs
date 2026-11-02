@@ -16,7 +16,7 @@
 //      starts the session.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{webview::Color, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{webview::Color, Manager, Theme, TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 const APP_URL: &str = "https://guitar-app-zeta.vercel.app";
@@ -32,7 +32,12 @@ fn main() {
                 .inner_size(1360.0, 880.0)
                 .min_inner_size(960.0, 640.0)
                 .center()
-                .background_color(Color(0xEC, 0xEA, 0xE3, 0xFF))
+                // The title bar takes the app's black instead of the light
+                // system grey, so the window reads as one dark surface.
+                .background_color(Color(0x00, 0x00, 0x00, 0xFF))
+                .theme(Some(Theme::Dark))
+                .title_bar_style(TitleBarStyle::Transparent)
+                .hidden_title(true)
                 // Lets the page know it runs in the Mac app (sign-in returns here).
                 .initialization_script("window.__SCALEUP_DESKTOP__ = true;")
                 .on_navigation(|url| {
