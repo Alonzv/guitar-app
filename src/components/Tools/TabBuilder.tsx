@@ -27,6 +27,8 @@ import { keyName } from '../../utils/harmonicAnalysis';
 import { Pill, Cta } from '../Transit/parts';
 import { StopActions } from '../Transit/StopActions';
 import { Sheet } from '../Workspace/Sheet';
+import { SoftButton, icon } from '../ChordBuilder/Stage';
+import { playGlyph } from '../Practice/kit';
 import { TabKeypad } from '../Tabs/TabKeypad';
 
 type Lang = 'he' | 'en';
@@ -39,21 +41,21 @@ const L: Record<Lang, {
 }> = {
   he: {
     dir: 'rtl', heading: 'ניתוח טאב', bestScale: 'הסולם המתאים ביותר', match: 'התאמה',
-    progTitle: 'הצעות לפרוגרסיות אקורדים', reanalyze: 'נתח מחדש', play: 'נגן',
-    loading: 'מחפש פרוגרסיות אקורדים שמתאימות למלודיה…',
-    empty: 'כתוב כמה תווים בטאב לפני הניתוח',
-    ai: 'לא ניתן ליצור הצעות כרגע (חסר חיבור ל-AI)',
+    progTitle: 'הצעות לפרוגרסיות אקורדים', reanalyze: 'ניתוח מחדש', play: 'נגינה',
+    loading: 'מחפשים פרוגרסיות שמתאימות למלודיה…',
+    empty: 'כתבו כמה תווים בטאב לפני הניתוח',
+    ai: 'אי אפשר להציע פרוגרסיות כרגע. נסו שוב מאוחר יותר.',
     gen: 'אירעה שגיאה בניתוח',
-    tapHint: 'לחץ על אקורד לתצוגה', scaleHint: 'לחץ להצגה על הצוואר',
+    tapHint: 'לחיצה על אקורד מראה איך מנגנים אותו', scaleHint: 'הצגה על הצוואר',
   },
   en: {
     dir: 'ltr', heading: 'Tab Analysis', bestScale: 'Best matching scale', match: 'match',
     progTitle: 'Suggested chord progressions', reanalyze: 'Re-analyze', play: 'Play',
     loading: 'Finding chord progressions that fit your melody…',
     empty: 'Write some notes in the tab before analyzing',
-    ai: 'Couldn’t generate suggestions right now (AI not connected)',
+    ai: 'Couldn’t suggest progressions right now. Try again later.',
     gen: 'Analysis error',
-    tapHint: 'Tap a chord to view it', scaleHint: 'Tap to see it on the neck',
+    tapHint: 'Tap a chord to see how to play it', scaleHint: 'Show on the neck',
   },
 };
 
@@ -722,20 +724,20 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
       {recoverOpen && (
         <Sheet onClose={() => setRecoverOpen(false)} kicker={he ? `עד ${MAX_BACKUPS} שמירות אוטומטיות` : `Up to ${MAX_BACKUPS} auto-saves`}
           title={he ? 'שחזור' : 'Recover'} maxWidth={500} zIndex={300}>
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[...backups].reverse().map((b, i) => {
               const d = new Date(b.ts);
               const noteCount = b.tab.grid.reduce((n, r) => n + r.filter(c => c.fret).length, 0);
               return (
                 <button key={i} type="button" onClick={() => {
-                  if (!window.confirm('Restore this version? Your current tab will be replaced.')) return;
+                  if (!window.confirm(he ? 'לשחזר את הגרסה הזאת? הטאב הנוכחי יוחלף.' : 'Restore this version? Your current tab will be replaced.')) return;
                   withHistory(() => b.tab);
                   setRecoverOpen(false);
                 }} className="gc-no-bar" style={{
-                  display: 'block', width: '100%', minHeight: 56, padding: '10px 0', cursor: 'pointer', textAlign: 'start',
-                  background: 'transparent', color: T.text, border: 'none', borderTop: `1px solid ${T.hairline}`,
+                  display: 'block', width: '100%', minHeight: 60, padding: '12px 16px', cursor: 'pointer', textAlign: 'start',
+                  background: 'rgba(255,255,255,0.06)', color: T.text, border: 'none', borderRadius: 18,
                 }}>
-                  <span className="su-semi" style={{ display: 'block', fontSize: 20, textTransform: 'uppercase' }}>{b.tab.title || (he ? 'ללא שם' : 'Untitled')}</span>
+                  <span style={{ display: 'block', fontSize: 17, fontWeight: 600 }} dir="auto">{b.tab.title || (he ? 'ללא שם' : 'Untitled')}</span>
                   <span className="su-label" style={{ display: 'block', marginTop: 4 }}>
                     {noteCount} {he ? 'תווים' : noteCount === 1 ? 'note' : 'notes'} · {d.toLocaleDateString()} {d.toLocaleTimeString()}
                   </span>
@@ -751,37 +753,50 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
         <Sheet onClose={() => setAnalyzeOpen(false)} title={t.heading} maxWidth={600} zIndex={200} dir={t.dir}>
           {analyzeScale && (
             <button type="button" onClick={() => setScaleModal(true)} className="gc-no-bar" style={{
-              display: 'block', width: '100%', padding: '10px 0 0', cursor: 'pointer', textAlign: 'start', color: T.text,
-              background: 'transparent', border: 'none', borderTop: `var(--su-rule) solid ${T.border}`,
+              width: '100%', padding: '18px 18px 16px', cursor: 'pointer', textAlign: 'center', color: T.text,
+              background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 22,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
             }}>
-              <span className="su-label" style={{ display: 'block' }}>{t.bestScale} · {analyzeScale.fitPercent}% {t.match}</span>
-              <span className="su-poster" style={{ display: 'block', fontSize: 40, marginTop: 10 }}>{analyzeScale.name}</span>
-              <span className="su-label" style={{ display: 'block', marginTop: 8, color: T.text }}>{t.scaleHint} ↗</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: T.textMuted }}>{t.bestScale}</span>
+              <span className="gc-notation" dir="ltr" style={{ fontFamily: 'var(--su-display)', fontSize: 40, lineHeight: '46px', fontWeight: 700, letterSpacing: '-0.03em' }}>{analyzeScale.name}</span>
+              <span style={{ fontSize: 15, color: T.textMuted }}>{analyzeScale.fitPercent}% {t.match}</span>
+              <span style={{ fontSize: 15, fontWeight: 500, color: T.tintLabel, marginTop: 6 }}>{t.scaleHint}</span>
             </button>
           )}
-          {analyzeErr && <p style={{ margin: 0, fontSize: 14, color: T.textMuted, padding: '8px 0' }}>{t[analyzeErr]}</p>}
-          {analyzing && <p className="su-label" style={{ margin: 0, padding: '10px 0' }}>{t.loading}</p>}
+          {analyzeErr && <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: T.textMuted, textAlign: 'center', padding: '4px 0' }}>{t[analyzeErr]}</p>}
+          {analyzing && <p className="su-sub" style={{ margin: 0, fontSize: 15, textAlign: 'center', padding: '8px 0' }}>{t.loading}</p>}
           {analyzeProgs && analyzeProgs.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <span className="su-label">{t.progTitle} · {t.tapHint}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 17, fontWeight: 700 }}>{t.progTitle}</span>
+                <span className="su-sub" style={{ fontSize: 14 }}>{t.tapHint}</span>
+              </div>
               {analyzeProgs.map((p, i) => (
-                <div key={i} style={{ borderTop: `var(--su-rule) solid ${T.border}`, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div key={i} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 22, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span className="su-semi" style={{ fontSize: 20, textTransform: 'uppercase' }}>{lang === 'he' ? p.name_he : p.name_en}</span>
-                    <Pill size="sm" onClick={() => playProgression(p.chords)}>▶ {t.play}</Pill>
+                    <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em' }}>{lang === 'he' ? p.name_he : p.name_en}</span>
+                    <button onClick={() => playProgression(p.chords)} className="gc-no-bar" aria-label={t.play} style={{
+                      height: 36, padding: '0 14px', borderRadius: 18, border: 'none', cursor: 'pointer', flex: 'none',
+                      background: T.text, color: '#000', display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 600,
+                    }}>{playGlyph}{t.play}</button>
                   </div>
                   <div dir="ltr" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {p.chords.map((c, j) => (
-                      <Pill key={j} size="sm" onClick={() => setChordModal(c)} style={{ textTransform: 'none', letterSpacing: 'normal', fontSize: 14 }}>{c}</Pill>
+                      <button key={j} onClick={() => setChordModal(c)} className="gc-no-bar gc-notation" style={{
+                        height: 38, padding: '0 14px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.08)', color: T.text, fontSize: 16, fontWeight: 600,
+                      }}>{c}</button>
                     ))}
                   </div>
-                  <p style={{ margin: 0, fontSize: 13, color: T.textMuted, lineHeight: 1.65 }}>{lang === 'he' ? p.why_he : p.why_en}</p>
+                  <p style={{ margin: 0, fontSize: 14, color: T.textMuted, lineHeight: 1.55 }}>{lang === 'he' ? p.why_he : p.why_en}</p>
                 </div>
               ))}
             </div>
           )}
           {!analyzing && (analyzeProgs || analyzeErr) && (
-            <Pill onClick={runAnalysis} style={{ alignSelf: 'flex-start' }}>↻ {t.reanalyze}</Pill>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <SoftButton onClick={runAnalysis}>{icon(<><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 4v5h-5" /></>, 18)}{t.reanalyze}</SoftButton>
+            </div>
           )}
         </Sheet>
       )}
@@ -797,7 +812,7 @@ export const TabBuilder: React.FC<{ desktop?: boolean }> = ({ desktop }) => {
                 : <div style={{ textAlign: 'center', color: T.textMuted, fontSize: 13, padding: '12px 0' }}>—</div>}
             </div>
             {voicing.length > 0 && (
-              <Cta onClick={() => { unlockAudio(); playChord(voicing.map(p => ({ string: p.string, fret: p.fret }))); }}>▶ {t.play}</Cta>
+              <Cta onClick={() => { unlockAudio(); playChord(voicing.map(p => ({ string: p.string, fret: p.fret }))); }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>{playGlyph}{t.play}</span></Cta>
             )}
           </Sheet>
         );

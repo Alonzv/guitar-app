@@ -28,6 +28,12 @@ import { Fold, Chips, icon } from '../ChordBuilder/Stage';
 import { StopActions } from '../Transit/StopActions';
 import { previewChordName } from '../../utils/previewSound';
 
+// The engine names each way to play by where it sits on the neck.
+const ZONE_HE: Record<string, string> = {
+  'Open Drones': 'מיתרים פתוחים', 'Open Position': 'מצב פתוח', 'Lower Neck': 'תחילת הצוואר',
+  'Mid Neck': 'אמצע הצוואר', 'Upper Neck': 'גבוה בצוואר', 'High Neck': 'הכי גבוה',
+};
+
 // Reharmonisation is the one tool that can fail for reasons outside the app,
 // so it is the one tool with error copy. Written for a guitarist: the old text
 // was Hebrew-only and told them to go and check an API key they do not have.
@@ -258,13 +264,13 @@ const HOW = {
     steps: [
       'האקורדים של השיר שלכם כבר כאן. אפשר להוסיף או לשנות בבוחר האקורדים.',
       'בוחרים סגנון וכמה להעז, ולוחצים על רה-הרמוניזציה.',
-      'משווים באוזן בין המקור לגרסה החדשה. אם אהבתם, לוחצים "השתמש בשיר".',
+      'משווים באוזן בין המקור לגרסה החדשה. אם אהבתם, לוחצים "השתמשו בשיר".',
     ],
   },
 } as const;
 const HINT = {
   tension: { en: 'How far to stray: 1–2 gentle, 3 colourful, 4–5 bold and surprising.', he: 'כמה להתרחק מהמקור: 1–2 עדין, 3 צבעוני, 4–5 נועז ומפתיע.' },
-  shapes: { en: 'How the new chords are played. Full uses every string; Triads are three-note shapes, lighter and easier to move. Low and High keep them on the thick or thin strings.', he: 'איך מנגנים את האקורדים החדשים. Full על כל המיתרים; Triads הן צורות של שלושה תווים, קלילות וקלות להזזה. Low ו-High משאירים אותן על המיתרים העבים או הדקים.' },
+  shapes: { en: 'How the new chords are played. Full uses every string; Triads are three-note shapes, lighter and easier to move. Low and High keep them on the thick or thin strings.', he: 'איך מנגנים את האקורדים החדשים. "אקורד מלא" על כל המיתרים; "טריאדות" הן צורות של שלושה תווים, קלילות וקלות להזזה. "מיתרים עבים" ו"מיתרים דקים" משאירים אותן בצד אחד של הצוואר.' },
   why: { en: 'Why these chords work.', he: 'למה האקורדים האלה עובדים.' },
   paths: { en: 'Ways to play the new chords on the neck, picked so your hand moves as little as possible. The first is the smoothest.', he: 'דרכים לנגן את האקורדים החדשים על הצוואר, כך שהיד זזה כמה שפחות. הראשונה היא החלקה ביותר.' },
 } as const;
@@ -637,13 +643,15 @@ export function ReharmonizeTab({
               <button key={path.id} role="radio" aria-checked={on} onClick={() => setSelectedPathIdx(pi)} className="gc-no-bar"
                 style={{ height: 36, padding: '0 14px', borderRadius: 18, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
                   background: on ? T.text : 'rgba(255,255,255,0.08)', color: on ? '#000' : T.text }}>
-                {path.label}
+                {he ? (ZONE_HE[path.label] ?? path.label) : path.label}
                 {pi === 0 && <span style={{ fontSize: 11, fontWeight: 700, color: on ? T.primary : T.tintLabel }}>{he ? 'הכי חלק' : 'Smoothest'}</span>}
               </button>
             );
           })}
         </div>
-        {currentPath && <span dir="auto" style={{ fontSize: 13, color: T.textMuted }}>{currentPath.description}</span>}
+        {currentPath && <span dir="auto" style={{ fontSize: 13, color: T.textMuted }}>
+          {he ? (currentPath.avgFret <= 1.5 ? 'האקורדים יושבים בתחילת הצוואר, עם מיתרים פתוחים' : `האקורדים יושבים בסביבת שריג ${Math.round(currentPath.avgFret)}`) : currentPath.description}
+        </span>}
         {currentPath && (
           <div dir="ltr" className="gc-no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
             {currentPath.voicings.map((voicing, ci) => (
