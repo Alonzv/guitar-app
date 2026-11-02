@@ -12,7 +12,7 @@ export function ExampleChips({ onPick, title }: { onPick: (chords: string[]) => 
   const { lang } = useLang();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
-      <span className="su-label">
+      <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>
         {title ?? (lang === 'he' ? 'או התחילו מדוגמה' : 'or start from an example')}
       </span>
       <div dir="ltr" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -20,7 +20,7 @@ export function ExampleChips({ onPick, title }: { onPick: (chords: string[]) => 
           <button key={ex.label} type="button" onClick={() => onPick(ex.chords)} className="gc-notation gc-no-bar" style={{
             ...pillStyle(false, 'sm'), textTransform: 'none', letterSpacing: 'normal', gap: 8,
           }}>
-            <span style={{ fontFamily: 'var(--gc-mono)', fontSize: 9, color: T.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{ex.label}</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: T.textMuted }}>{ex.label}</span>
             <span style={{ fontWeight: 700 }}>{ex.chords.map(formatChordName).join(' – ')}</span>
           </button>
         ))}
