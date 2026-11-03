@@ -114,7 +114,7 @@ export function ChordBuilderTab({
   const stage = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
       <ChordStage desktop={desktop} name={name} empty={he ? 'איזה אקורד זה?' : 'Which chord is this?'} line={line} />
-      <BigShape voicing={activeDots} name={name} tuning={tuning.notes}>
+      <BigShape voicing={activeDots} name={name} tuning={tuning.notes} wide>
         <InteractiveFretboard activeDots={activeDots} onToggle={handleToggle} tuning={tuning.notes} capo={capo}
           labelFor={labelFor} isRoot={isRoot} />
       </BigShape>
@@ -160,7 +160,7 @@ export function ChordBuilderTab({
 
   if (desktop) {
     return (
-      <div className="su-in" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 400px)', gap: 48, alignItems: 'start' }}>
+      <div className="su-in" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 320px)', gap: 40, alignItems: 'start' }}>
         {toolbar}
         {stage}
         {side}

@@ -39,11 +39,12 @@ export function ChordStage({ name, empty, line, desktop }: { name: string | null
   );
 }
 
-/** The shape drawn large; it carries [data-strum-board] so Play ripples it. */
-export function BigShape({ voicing, name, tuning, children }: { voicing: FretPosition[]; name: string | null; tuning?: string[]; children?: ReactNode }) {
+/** The shape drawn large; it carries [data-strum-board] so Play ripples it.
+ *  `wide` is for a whole neck passed as children, which needs the full column. */
+export function BigShape({ voicing, name, tuning, wide, children }: { voicing: FretPosition[]; name: string | null; tuning?: string[]; wide?: boolean; children?: ReactNode }) {
   const colors = shapeColors(voicing, name, tuning);
   return (
-    <div data-strum-board dir="ltr" style={{ width: '100%', maxWidth: 380, alignSelf: 'center' }}>
+    <div data-strum-board dir="ltr" style={{ width: '100%', maxWidth: wide ? 720 : 380, alignSelf: 'center' }}>
       {children ?? (
         <MiniFretboard voicing={voicing} tuning={tuning} dotColors={colors}
           dotLabels={name ? degreeLabels(voicing, name, tuning) : undefined} showStringLabels showFretNumbers hideFretLabel />
