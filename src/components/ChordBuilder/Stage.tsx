@@ -44,7 +44,7 @@ export function ChordStage({ name, empty, line, desktop }: { name: string | null
 export function BigShape({ voicing, name, tuning, wide, children }: { voicing: FretPosition[]; name: string | null; tuning?: string[]; wide?: boolean; children?: ReactNode }) {
   const colors = shapeColors(voicing, name, tuning);
   return (
-    <div data-strum-board dir="ltr" style={{ width: '100%', maxWidth: wide ? 720 : 380, alignSelf: 'center' }}>
+    <div data-strum-board dir="ltr" style={{ width: '100%', maxWidth: wide ? 1100 : 380, alignSelf: 'center' }}>
       {children ?? (
         <MiniFretboard voicing={voicing} tuning={tuning} dotColors={colors}
           dotLabels={name ? degreeLabels(voicing, name, tuning) : undefined} showStringLabels showFretNumbers hideFretLabel />

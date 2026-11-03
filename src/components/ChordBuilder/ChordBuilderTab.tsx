@@ -146,27 +146,35 @@ export function ChordBuilderTab({
     </div>
   );
 
-  const side = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
-      {name && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>{he ? 'ממה הוא בנוי' : 'What it is made of'}</span>
-          <ChordStructure chordName={name} />
-        </div>
-      )}
-      {onGo && <SongStrip progression={progression} onOpen={() => onGo('progression')} />}
+  const structure = name && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}>{he ? 'ממה הוא בנוי' : 'What it is made of'}</span>
+      <ChordStructure chordName={name} />
     </div>
   );
+  const song = onGo && <SongStrip progression={progression} onOpen={() => onGo('progression')} />;
 
+  // Desktop: the neck runs the full width, like the guitar in your hands;
+  // what the chord is made of and the song sit side by side under it.
   if (desktop) {
     return (
-      <div className="su-in" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 320px)', gap: 40, alignItems: 'start' }}>
+      <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
         {toolbar}
         {stage}
-        {side}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 360px)', gap: 40, alignItems: 'start' }}>
+          <div style={{ minWidth: 0 }}>{structure}</div>
+          {song}
+        </div>
       </div>
     );
   }
+
+  const side = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
+      {structure}
+      {song}
+    </div>
+  );
 
   return (
     <div className="su-in" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>

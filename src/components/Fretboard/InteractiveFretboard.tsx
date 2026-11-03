@@ -39,7 +39,7 @@ export const InteractiveFretboard: React.FC<Props> = ({ activeDots, onToggle, re
   return (
     <div className="gc-fretboard-wrap">
       <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        style={{ width: '100%', maxHeight: 195, userSelect: 'none', display: 'block' }}>
+        style={{ width: '100%', userSelect: 'none', display: 'block' }}>
 
         {/* Fretboard background */}
         <rect x={NUT_X - FRET_SP * 0.5} y={TOP_Y - 13}
