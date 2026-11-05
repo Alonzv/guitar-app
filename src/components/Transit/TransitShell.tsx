@@ -220,10 +220,6 @@ function DesktopTransit({ stop: stopId, sub, onGo, onSub, userMenu, sharedBanner
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 8px', scrollbarWidth: 'none' }}>
           <StopList stops={results} current={stop.id} onGo={id => { onGo(id); setQ(''); }} dense />
         </div>
-        <div style={{ paddingTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>{userMenu}</div>
-          <SoundToggle compact /><LangToggle compact />
-        </div>
       </aside>
 
       {/* The tool */}
@@ -232,6 +228,9 @@ function DesktopTransit({ stop: stopId, sub, onGo, onSub, userMenu, sharedBanner
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
             <div ref={setActionsSlot} style={{ display: 'flex', alignItems: 'center', gap: 8 }} />
             {topic && <HelpButton topic={topic} />}
+            {/* App-wide controls sit with the rest, so the sidebar keeps its room for tools. */}
+            <span aria-hidden style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.14)', margin: '0 4px' }} />
+            <SoundToggle compact /><LangToggle compact />{userMenu}
           </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>

@@ -307,7 +307,7 @@ export default function App() {
         lastStop={lastStop}
         darkMode={darkMode}
         onToggleDark={() => setDarkMode(m => !m)}
-        userMenu={<UserMenu compact={!isDesktop} up={isDesktop} onOpenWorkspace={() => go('library')} />}
+        userMenu={<UserMenu compact={!isDesktop} onOpenWorkspace={() => go('library')} />}
         sharedBanner={sharedBanner}
         ownPoster={OWN_POSTER.has(shown)}
       >
