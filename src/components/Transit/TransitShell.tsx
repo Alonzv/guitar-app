@@ -126,14 +126,17 @@ function MobileTransit({ stop: stopId, sub, onGo, onSub, onHome, lastStop, userM
             </div>
           </div>
 
-          <HomeHero lastStop={lastStop} onGo={onGo} />
+          {/* Search first: it is how most people get to a tool. While a query
+              is typed the hero steps aside so the matches sit right under it. */}
+          <div style={{ marginTop: -16 }}>
+            <StopSearch value={q} onChange={setQ} onSubmit={() => { if (results[0]) onGo(results[0].id); }} />
+          </div>
+
+          {!q && <HomeHero lastStop={lastStop} onGo={onGo} />}
 
           <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <h2 className="su-h2">{he ? 'כל הכלים' : 'All tools'}</h2>
-            <StopSearch value={q} onChange={setQ} onSubmit={() => { if (results[0]) onGo(results[0].id); }} />
-            <div style={{ marginTop: 14 }}>
-              <StopList stops={results} current={lastStop} onGo={onGo} />
-            </div>
+            {!q && <h2 className="su-h2">{he ? 'כל הכלים' : 'All tools'}</h2>}
+            <StopList stops={results} current={lastStop} onGo={onGo} />
           </section>
         </div>
       </div>
